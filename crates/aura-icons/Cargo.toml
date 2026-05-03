@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 gpui.workspace = true
 aura-core = { path = "../aura-core" }
+aura-theme = { path = "../aura-theme" }
+aura-core = { path = "../aura-core" }
