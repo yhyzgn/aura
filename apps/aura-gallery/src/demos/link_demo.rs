@@ -18,7 +18,7 @@ impl RenderOnce for LinkDemo {
                 AuraLink::new("Success").success().href("https://github.com"),
                 AuraLink::new("Warning").warning().href("https://github.com"),
                 AuraLink::new("Danger").danger().href("https://github.com"),
-                AuraLink::new("Info").info().href("https://github.com"),
+                AuraLink::new("Info").info().href("https://github.com".to_string()),
             ]))
             .child(hdr(theme, "Underline 下划线"))
             .child(row(vec![

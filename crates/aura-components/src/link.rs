@@ -3,7 +3,7 @@ use aura_icons::AuraIcon;
 use aura_icons_lucide::IconName;
 use aura_theme::{AuraTheme, ButtonVariant};
 use gpui::{
-    App, Component, Hsla, IntoElement, RenderOnce, SharedString, Window,
+    App, Component, Hsla, IntoElement, MouseButton, RenderOnce, SharedString, Window,
     prelude::*, px,
 };
 use std::panic::Location;
@@ -61,7 +61,7 @@ impl AuraLink {
         let fs = theme.font_size.md;
         let icon_sz = 14.0;
         let id = SharedString::from(format!(
-            "l-{}", LINK_ID.fetch_add(1, Ordering::Relaxed)
+            "link-{}-{}", self.creation_site, LINK_ID.fetch_add(1, Ordering::Relaxed)
         ));
 
         let mut div = gpui::div()
@@ -86,7 +86,7 @@ impl AuraLink {
         if !self.disabled {
             if let Some(ref href) = self.href {
                 let url = href.clone();
-                div = div.on_click(move |_, _, _| { open_url(&url); });
+                div = div.on_mouse_up(MouseButton::Left, move |_, _, _| { open_url(&url); });
             }
             div = div.hover(move |style| style.text_color(hover_color));
         }
@@ -97,7 +97,11 @@ impl AuraLink {
 
 fn open_url(url: &str) {
     #[cfg(target_os = "linux")]
-    { let _ = std::process::Command::new("xdg-open").arg(url).spawn(); }
+    {
+        if let Err(e) = std::process::Command::new("xdg-open").arg(url).spawn() {
+            eprintln!("AuraLink: failed to open URL: {}", e);
+        }
+    }
     #[cfg(target_os = "macos")]
     { let _ = std::process::Command::new("open").arg(url).spawn(); }
     #[cfg(target_os = "windows")]
