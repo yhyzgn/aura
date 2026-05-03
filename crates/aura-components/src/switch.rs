@@ -1,8 +1,10 @@
-use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, MouseUpEvent, Focusable, FocusHandle};
+use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, Focusable, FocusHandle, KeyBinding};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
+
+gpui::actions!(switch, [SwitchToggle]);
 
 pub struct Switch {
     checked: bool,
@@ -21,7 +23,14 @@ impl Switch {
         self.on_change = Some(Box::new(cb)); self
     }
 
-    fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([
+            KeyBinding::new("space", SwitchToggle, None),
+            KeyBinding::new("enter", SwitchToggle, None),
+        ]);
+    }
+
+    fn toggle(&mut self, _: &SwitchToggle, window: &mut Window, cx: &mut Context<Self>) {
         if !self.disabled {
             self.checked = !self.checked;
             cx.notify();
@@ -39,6 +48,7 @@ impl Focusable for Switch {
 impl Render for Switch {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<aura_core::Config>().theme;
+        let focused = self.focus_handle.is_focused(_window);
         let w = 40.0; let h = 22.0; let thumb_sz = 16.0;
         let thumb_offset = if self.checked { w - thumb_sz - 3.0 } else { 3.0 };
 
@@ -52,15 +62,25 @@ impl Render for Switch {
         } else if self.checked {
             theme.primary.base
         } else {
-            theme.neutral.border
+            if focused { theme.primary.base } else { theme.neutral.border }
         };
 
         let mut el = gpui::div()
             .flex_none().w(px(w)).h(px(h)).rounded(px(h / 2.0))
-            .bg(track_color);
+            .bg(track_color)
+            .on_action(cx.listener(Self::toggle));
 
-        if !self.disabled { el = el.cursor_pointer(); }
-        else { el = el.cursor_not_allowed(); }
+        if !self.disabled { 
+            el = el.cursor_pointer().track_focus(&self.focus_handle);
+            el = el.on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                window.focus(&this.focus_handle, cx);
+            }));
+            el = el.on_mouse_up(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                this.toggle(&SwitchToggle, window, cx);
+            }));
+        } else { 
+            el = el.cursor_not_allowed(); 
+        }
 
         el.child(
                 gpui::div()
@@ -68,9 +88,5 @@ impl Render for Switch {
                     .w(px(thumb_sz)).h(px(thumb_sz)).rounded(px(thumb_sz / 2.0))
                     .bg(thumb_color)
             )
-            .on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>| {
-                this.toggle(window, cx);
-            }))
-            .track_focus(&self.focus_handle(cx))
     }
 }

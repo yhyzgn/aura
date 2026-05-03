@@ -7,12 +7,19 @@
   - 实现光标闪烁逻辑 (500ms 周期，仅在 Focus 时激活)
   - 实现全选功能 (`SelectAll`, Cmd/Ctrl+A)
   - 实现剪贴板集成 (Copy/Paste/Cut, Cmd/Ctrl+C/V/X)
-  - 实现鼠标选择逻辑 (拖拽选择、Shift+点击选择)
+  - 实现鼠标选择逻辑 (双击选单词、三击全选、拖拽选择、Shift+点击选择)
   - 实现键盘选择逻辑 (Shift+方向键/Home/End)
   - 修正多行模式下的鼠标索引计算 (通过存储 `last_line_layouts`)
   - 修正多行模式下的选择区域渲染 (支持跨行选择背景)
+- **表单组件通用增强**:
+  - `Checkbox`, `Radio`, `Switch` 支持键盘操作 (Space/Enter 触发)
+  - `Checkbox`, `Radio`, `Switch` 增加 Focus 视觉反馈 (Ring/Border 变色)
+  - `RadioGroup` 支持方向键切换选项
+  - 统一注册各组件键盘绑定到 Gallery
 - **清理与优化**:
-  - 移除 `input.rs`, `button_group.rs` 等文件中的冗余 import 和警告
+  - 修复 `checkbox` 与 `switch` 之间 `Toggle` 动作冲突 (重命名为专用名称)
+  - 修复 `input` 与 `radio_group` 之间 `Up`/`Down` 动作冲突
+  - 移除各文件中的冗余 import (`px`, `MouseUpEvent` 等)
   - 统一 `cx.spawn` 使用 `async move |this, mut cx|` 模式
 - **状态同步**:
   - 更新 `.memory/state.md` 记录 P2 进度

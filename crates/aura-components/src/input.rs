@@ -16,7 +16,7 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
 }
 
 actions!(input, [
-    Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, Up, Down, Copy, Paste, Cut,
+    Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, InputUp, InputDown, Copy, Paste, Cut,
     SelectLeft, SelectRight, SelectUp, SelectDown, SelectHome, SelectEnd
 ]);
 
@@ -65,8 +65,8 @@ impl Input {
             KeyBinding::new("cmd-v", Paste, None),          KeyBinding::new("ctrl-v", Paste, None),
             KeyBinding::new("cmd-x", Cut, None),            KeyBinding::new("ctrl-x", Cut, None),
             KeyBinding::new("enter", Enter, None),
-            KeyBinding::new("up", Up, None),                KeyBinding::new("shift-up", SelectUp, None),
-            KeyBinding::new("down", Down, None),            KeyBinding::new("shift-down", SelectDown, None),
+            KeyBinding::new("up", InputUp, None),           KeyBinding::new("shift-up", SelectUp, None),
+            KeyBinding::new("down", InputDown, None),       KeyBinding::new("shift-down", SelectDown, None),
         ]);
     }
 
@@ -160,9 +160,9 @@ impl Input {
         self.internal_replace("\n", cx);
     }
 
-    fn up(&mut self, _: &Up, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, false, cx); }
+    fn up(&mut self, _: &InputUp, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, false, cx); }
     fn select_up(&mut self, _: &SelectUp, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, true, cx); }
-    fn down(&mut self, _: &Down, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, false, cx); }
+    fn down(&mut self, _: &InputDown, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, false, cx); }
     fn select_down(&mut self, _: &SelectDown, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, true, cx); }
 
     fn move_vertical(&mut self, delta: isize, select: bool, cx: &mut Context<Self>) {
@@ -225,11 +225,51 @@ impl Input {
         }
         let idx = self.index_for_point(event.position, window);
 
-        if event.modifiers.shift {
-            self.select_to(idx, cx);
-        } else {
-            self.move_to(idx, cx);
+        match event.click_count {
+            1 => {
+                if event.modifiers.shift {
+                    self.select_to(idx, cx);
+                } else {
+                    self.move_to(idx, cx);
+                }
+            }
+            2 => {
+                let range = self.word_range_at(idx);
+                self.selected_range = range;
+                self.selection_reversed = false;
+                self.reset_blink(cx);
+            }
+            3 => {
+                self.selected_range = 0..self.value.len();
+                self.selection_reversed = false;
+                self.reset_blink(cx);
+            }
+            _ => {}
         }
+    }
+
+    fn word_range_at(&self, idx: usize) -> Range<usize> {
+        let text = self.value.as_ref();
+        if text.is_empty() { return 0..0; }
+        let idx = idx.min(text.len());
+        
+        let mut start = idx;
+        while start > 0 {
+            let prev = self.prev_char(start);
+            let c = text[prev..start].chars().next().unwrap();
+            if !c.is_alphanumeric() && c != '_' { break; }
+            start = prev;
+        }
+        
+        let mut end = idx;
+        while end < text.len() {
+            let next = self.next_char(end);
+            let c = text[end..next].chars().next().unwrap();
+            if !c.is_alphanumeric() && c != '_' { break; }
+            end = next;
+        }
+        
+        start..end
     }
 
     fn on_mouse_move(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {

@@ -1,9 +1,11 @@
 use aura_core::Config;
-use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, MouseUpEvent, Focusable, FocusHandle, SharedString, Entity};
+use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, MouseUpEvent, Focusable, FocusHandle, SharedString, KeyBinding};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
+
+gpui::actions!(radio_group, [RadioGroupUp, RadioGroupDown]);
 
 pub struct RadioGroup {
     selected: usize,
@@ -26,6 +28,35 @@ impl RadioGroup {
     pub fn on_change(mut self, cb: impl Fn(usize, &mut Window, &mut App) + 'static) -> Self {
         self.on_change = Some(Box::new(cb)); self
     }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([
+            KeyBinding::new("up", RadioGroupUp, None),
+            KeyBinding::new("down", RadioGroupDown, None),
+            KeyBinding::new("left", RadioGroupUp, None),
+            KeyBinding::new("right", RadioGroupDown, None),
+        ]);
+    }
+
+    fn up(&mut self, _: &RadioGroupUp, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.disabled && self.selected > 0 {
+            self.select(self.selected - 1, window, cx);
+        }
+    }
+
+    fn down(&mut self, _: &RadioGroupDown, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.disabled && self.selected + 1 < self.options.len() {
+            self.select(self.selected + 1, window, cx);
+        }
+    }
+
+    fn select(&mut self, idx: usize, window: &mut Window, cx: &mut Context<Self>) {
+        if idx != self.selected {
+            self.selected = idx;
+            cx.notify();
+            if let Some(ref cb) = self.on_change { cb(idx, window, cx); }
+        }
+    }
 }
 
 impl Focusable for RadioGroup {
@@ -35,9 +66,20 @@ impl Focusable for RadioGroup {
 impl Render for RadioGroup {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
+        let focused = self.focus_handle.is_focused(_window);
         let sz = 16.0; let inner_sz = 8.0;
 
-        let mut col = gpui::div().flex().flex_col().gap_2();
+        let mut col = gpui::div()
+            .flex().flex_col().gap_2()
+            .on_action(cx.listener(Self::up))
+            .on_action(cx.listener(Self::down));
+
+        if !self.disabled {
+            col = col.track_focus(&self.focus_handle);
+            col = col.on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                window.focus(&this.focus_handle, cx);
+            }));
+        }
 
         for (idx, label) in self.options.iter().enumerate() {
             let checked = idx == self.selected;
@@ -46,7 +88,7 @@ impl Render for RadioGroup {
             } else if checked {
                 (theme.primary.base, theme.primary.base)
             } else {
-                (theme.neutral.border, rgba(0,0,0,0.0))
+                (if focused && checked { theme.primary.base } else { theme.neutral.border }, rgba(0,0,0,0.0))
             };
 
             let label_text = label.clone();
@@ -66,11 +108,7 @@ impl Render for RadioGroup {
 
             if !self.disabled {
                 row = row.on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>| {
-                    if idx != this.selected {
-                        this.selected = idx;
-                        cx.notify();
-                        if let Some(ref cb) = this.on_change { cb(idx, window, cx); }
-                    }
+                    this.select(idx, window, cx);
                 }));
             }
 

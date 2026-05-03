@@ -1,4 +1,4 @@
-use gpui::{prelude::*, px, AnyElement, IntoElement, App, Component, DefiniteLength, RenderOnce, Window};
+use gpui::{prelude::*, AnyElement, IntoElement, App, Component, DefiniteLength, RenderOnce, Window};
 
 pub struct Space {
     children: Vec<AnyElement>,

@@ -1,4 +1,4 @@
-use gpui::{prelude::*, px, IntoElement, App, Component, RenderOnce, Window};
+use gpui::{prelude::*, IntoElement, App, Component, RenderOnce, Window};
 use crate::Row;
 
 pub struct Col {

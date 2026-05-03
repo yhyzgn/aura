@@ -1,8 +1,10 @@
-use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, MouseUpEvent, Focusable, FocusHandle, SharedString};
+use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, Focusable, FocusHandle, SharedString, KeyBinding};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
+
+gpui::actions!(radio, [Select]);
 
 pub struct Radio {
     checked: bool,
@@ -23,7 +25,14 @@ impl Radio {
         self.on_change = Some(Box::new(cb)); self
     }
 
-    fn select(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([
+            KeyBinding::new("space", Select, None),
+            KeyBinding::new("enter", Select, None),
+        ]);
+    }
+
+    fn select(&mut self, _: &Select, window: &mut Window, cx: &mut Context<Self>) {
         if !self.disabled && !self.checked {
             self.checked = true;
             cx.notify();
@@ -39,6 +48,7 @@ impl Focusable for Radio {
 impl Render for Radio {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<aura_core::Config>().theme;
+        let focused = self.focus_handle.is_focused(_window);
         let sz = 16.0;
         let inner_sz = 8.0;
 
@@ -47,18 +57,23 @@ impl Render for Radio {
         } else if self.checked {
             (theme.primary.base, theme.primary.base)
         } else {
-            (theme.neutral.border, rgba(0,0,0,0.0))
+            (if focused { theme.primary.base } else { theme.neutral.border }, rgba(0,0,0,0.0))
         };
 
-        let mut row = gpui::div().flex().flex_row().items_center().gap_2();
+        let mut row = gpui::div()
+            .flex().flex_row().items_center().gap_2()
+            .on_action(cx.listener(Self::select));
 
-        if !self.disabled { row = row.cursor_pointer(); }
-        else { row = row.cursor_not_allowed(); }
-
-        if !self.disabled {
-            row = row.on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>| {
-                this.select(window, cx);
+        if !self.disabled { 
+            row = row.cursor_pointer().track_focus(&self.focus_handle);
+            row = row.on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                window.focus(&this.focus_handle, cx);
             }));
+            row = row.on_mouse_up(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                this.select(&Select, window, cx);
+            }));
+        } else { 
+            row = row.cursor_not_allowed(); 
         }
 
         let circle = gpui::div()

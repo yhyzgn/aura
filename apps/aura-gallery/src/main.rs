@@ -3,7 +3,7 @@ mod demos;
 
 use aura_core::{ContextExt, init_aura};
 use aura_theme::Theme;
-use aura_components::{Switch, Checkbox, RadioGroup, Input};
+use aura_components::{Switch, Checkbox, Radio, RadioGroup, Input};
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
@@ -30,6 +30,10 @@ fn run_gallery() {
     gpui_platform::application().run(|cx: &mut App| {
         init_aura(cx, Theme::light());
         Input::register_key_bindings(cx);
+        Checkbox::register_key_bindings(cx);
+        Radio::register_key_bindings(cx);
+        RadioGroup::register_key_bindings(cx);
+        Switch::register_key_bindings(cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Maximized(Bounds::centered(None, size(px(1200.0), px(800.0)), cx))),
