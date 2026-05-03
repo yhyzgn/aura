@@ -1,4 +1,4 @@
-use gpui::{prelude::*, px, Hsla, IntoElement};
+use gpui::{prelude::*, px, Hsla, IntoElement, App, Component, RenderOnce, Window, SharedString};
 use std::borrow::Cow;
 
 pub trait IntoIconPath {
@@ -25,8 +25,11 @@ impl AuraIcon {
 
     pub fn size(mut self, px_size: f32) -> Self { self.size = Some(px_size); self }
     pub fn color(mut self, color: Hsla) -> Self { self.color = Some(color); self }
+}
 
-    pub fn build(self, theme: &aura_theme::AuraTheme) -> impl IntoElement {
+impl RenderOnce for AuraIcon {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = &cx.global::<aura_core::AuraConfig>().theme;
         let sz = self.size.unwrap_or(18.0);
         let color = self.color.unwrap_or(theme.neutral.icon);
 
@@ -34,5 +37,13 @@ impl AuraIcon {
             .external_path(self.asset_path)
             .size(px(sz))
             .text_color(color)
+    }
+}
+
+impl IntoElement for AuraIcon {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
     }
 }

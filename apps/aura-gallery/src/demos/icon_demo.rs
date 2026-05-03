@@ -57,7 +57,7 @@ fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
 }
 
 fn build_icon(theme: &AuraTheme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
-    AuraIcon::new(icon).size(sz).color(color).build(theme)
+    AuraIcon::new(icon).size(sz).color(color)
 }
 
 fn icon_labeled(theme: &AuraTheme, icon: IconName, sz: f32, label: &str) -> impl IntoElement {
