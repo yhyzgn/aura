@@ -28,15 +28,15 @@ impl AuraIcon {
 }
 
 impl RenderOnce for AuraIcon {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = &cx.global::<aura_core::AuraConfig>().theme;
         let sz = self.size.unwrap_or(18.0);
-        let mut el = gpui::svg()
+        let color = self.color.unwrap_or(theme.neutral.icon);
+
+        gpui::svg()
             .external_path(self.asset_path)
-            .size(px(sz));
-        if let Some(color) = self.color {
-            el = el.text_color(color);
-        }
-        el
+            .size(px(sz))
+            .text_color(color)
     }
 }
 
