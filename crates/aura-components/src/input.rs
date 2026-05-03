@@ -115,6 +115,10 @@ impl Input {
 
     fn on_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         window.focus(&self.focus_handle, cx);
+        if self.value.is_empty() {
+            self.move_to(0, cx);
+            return;
+        }
         let idx = if let (Some(bounds), Some(line)) = (self.last_bounds.as_ref(), self.last_layout.as_ref()) {
             let x = event.position.x - bounds.left();
             line.index_for_x(x).unwrap_or(self.value.len())
