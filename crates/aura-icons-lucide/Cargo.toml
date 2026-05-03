@@ -1,0 +1,7 @@
+[package]
+name = "aura-icons-lucide"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aura-icons = { path = "../aura-icons" }

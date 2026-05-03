@@ -452,6 +452,7 @@ dependencies = [
  "aura-components",
  "aura-core",
  "aura-icons",
+ "aura-icons-lucide",
  "aura-theme",
  "gpui",
  "gpui_platform",
@@ -461,7 +462,15 @@ dependencies = [
 name = "aura-icons"
 version = "0.1.0"
 dependencies = [
+ "aura-theme",
  "gpui",
+]
+
+[[package]]
+name = "aura-icons-lucide"
+version = "0.1.0"
+dependencies = [
+ "aura-icons",
 ]
 
 [[package]]

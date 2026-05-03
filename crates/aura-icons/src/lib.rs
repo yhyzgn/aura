@@ -1,108 +1,39 @@
-use gpui::{Hsla, Styled, prelude::*, px};
+use gpui::{prelude::*, px, Hsla, IntoElement};
+use std::borrow::Cow;
 
-pub trait AuraIcon: IntoElement + Styled + Sized {
-    fn icon_size(self, size: IconSize) -> Self {
-        let px_size = size.px();
-        self.size(px(px_size)).size(px(px_size))
+pub trait IntoIconPath {
+    fn icon_path(&self) -> Cow<'static, str>;
+}
+
+impl IntoIconPath for &str {
+    fn icon_path(&self) -> Cow<'static, str> { Cow::Owned(self.to_string()) }
+}
+impl IntoIconPath for String {
+    fn icon_path(&self) -> Cow<'static, str> { Cow::Owned(self.clone()) }
+}
+
+pub struct AuraIcon {
+    size: Option<f32>,
+    color: Option<Hsla>,
+    file_path: String,
+}
+
+impl AuraIcon {
+    pub fn new(path: impl IntoIconPath) -> Self {
+        Self { size: None, color: None, file_path: path.icon_path().into_owned() }
     }
 
-    fn icon_color(self, color: Hsla) -> Self {
-        self.text_color(color)
+    pub fn size(mut self, px_size: f32) -> Self { self.size = Some(px_size); self }
+
+    pub fn color(mut self, color: Hsla) -> Self { self.color = Some(color); self }
+
+    pub fn build(self, theme: &aura_theme::AuraTheme) -> impl IntoElement {
+        let sz = self.size.unwrap_or(18.0);
+        let color = self.color.unwrap_or(theme.neutral.icon);
+
+        gpui::div()
+            .size(px(sz))
+            .text_color(color)
+            .child(gpui::svg().external_path(self.file_path))
     }
-}
-
-pub enum IconSize {
-    Small,
-    Default,
-    Large,
-}
-
-impl IconSize {
-    pub fn px(&self) -> f32 {
-        match self {
-            IconSize::Small => 14.0,
-            IconSize::Default => 18.0,
-            IconSize::Large => 24.0,
-        }
-    }
-}
-
-pub fn icon_check() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("✓")
-}
-
-pub fn icon_close() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("✕")
-}
-
-pub fn icon_chevron_down() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("▼")
-}
-
-pub fn icon_chevron_right() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("▶")
-}
-
-pub fn icon_search() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("🔍")
-}
-
-pub fn icon_star() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("★")
-}
-
-pub fn icon_info() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("ℹ")
-}
-
-pub fn icon_warning() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("⚠")
-}
-
-pub fn icon_error() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("✕")
-}
-
-pub fn icon_loading() -> impl IntoElement {
-    gpui::div()
-        .flex()
-        .items_center()
-        .justify_center()
-        .child("⟳")
 }
