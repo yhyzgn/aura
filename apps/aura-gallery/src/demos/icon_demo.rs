@@ -14,7 +14,7 @@ impl RenderOnce for IconDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<AuraConfig>().theme;
         let icons: &[(IconName, &str)] = &[
-            (IconName::Home, "Home"), (IconName::User, "User"),
+            (IconName::House, "Home"), (IconName::User, "User"),
             (IconName::Search, "Search"), (IconName::Check, "Check"),
             (IconName::ChevronDown, "ChevronDown"), (IconName::Settings, "Settings"),
             (IconName::X, "X"), (IconName::Star, "Star"),
@@ -33,10 +33,10 @@ impl RenderOnce for IconDemo {
         page = page.child(hdr(theme, "Sizes"));
         page = page.child(
             div().flex().flex_row().gap_4().items_end()
-                .child(icon_labeled(theme, IconName::Home, 12.0, "12"))
-                .child(icon_labeled(theme, IconName::Home, 18.0, "18"))
-                .child(icon_labeled(theme, IconName::Home, 24.0, "24"))
-                .child(icon_labeled(theme, IconName::Home, 32.0, "32"))
+                .child(icon_labeled(theme, IconName::House, 12.0, "12"))
+                .child(icon_labeled(theme, IconName::House, 18.0, "18"))
+                .child(icon_labeled(theme, IconName::House, 24.0, "24"))
+                .child(icon_labeled(theme, IconName::House, 32.0, "32"))
         );
         page = page.child(hdr(theme, "Colors"));
         page = page.child(
