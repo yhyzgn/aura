@@ -140,6 +140,12 @@ pub struct AuraFontSize {
 // AuraTheme
 // ---------------------------------------------------------------------------
 
+pub struct SecondaryColors {
+    pub bg: Hsla,
+    pub hover: Hsla,
+    pub pressed: Hsla,
+}
+
 pub struct AuraTheme {
     pub name: String,
     pub spacing: AuraSpacing,
@@ -155,6 +161,9 @@ pub struct AuraTheme {
 
     // Neutral tokens
     pub neutral: NeutralTokens,
+
+    // Secondary button style (NaiveUI buttonColor2)
+    pub secondary: SecondaryColors,
 
     // Shadows
     pub shadow_1: &'static str,
@@ -211,18 +220,18 @@ impl AuraTheme {
             ),
 
             neutral: NeutralTokens {
-                body:      rgb(255, 255, 255), // #FFF
+                body:      rgb(255, 255, 255),
                 card:      rgb(255, 255, 255),
                 modal:     rgb(255, 255, 255),
                 popover:   rgb(255, 255, 255),
-                inverted:  rgb(0, 20, 40),     // darker blue-black for contrast
+                inverted:  rgb(0, 20, 40),
 
-                text_1:        rgb(31, 34, 37),     // primary text
-                text_2:        rgb(51, 54, 57),     // regular text
-                text_3:        rgb(118, 124, 130),  // secondary text
-                text_disabled: rgba(0, 0, 0, 0.38),
-                placeholder:   rgba(0, 0, 0, 0.38),
-                icon:          rgba(0, 0, 0, 0.38),
+                text_1:        rgb(31, 34, 37),
+                text_2:        rgb(51, 54, 57),
+                text_3:        rgb(118, 124, 130),
+                text_disabled: rgba(194, 194, 194, 1.0),
+                placeholder:   rgba(194, 194, 194, 1.0),
+                icon:          rgba(194, 194, 194, 1.0),
 
                 border:  rgb(224, 224, 230),
                 divider: rgb(239, 239, 245),
@@ -234,6 +243,12 @@ impl AuraTheme {
 
                 overlay: rgba(0, 0, 0, 0.50),
                 mask:    rgba(255, 255, 255, 0.90),
+            },
+            // NaiveUI button secondary colors
+            secondary: SecondaryColors {
+                bg: rgba(46, 51, 56, 0.05),
+                hover: rgba(46, 51, 56, 0.09),
+                pressed: rgba(46, 51, 56, 0.13),
             },
 
             shadow_1: "0 1px 2px -2px rgba(0,0,0,.08), 0 3px 6px 0 rgba(0,0,0,.06), 0 5px 12px 4px rgba(0,0,0,.04)",
@@ -250,7 +265,13 @@ impl AuraTheme {
             name: "dark".into(),
             spacing: AuraSpacing { xs: 4.0, sm: 8.0, md: 12.0, lg: 20.0, xl: 32.0 },
             radius: AuraRadius { sm: 2.0, md: 4.0, lg: 8.0, full: 9999.0 },
-            font_size: AuraFontSize { xs: 10.0, sm: 12.0, md: 14.0, lg: 16.0, xl: 20.0 },
+            font_size: AuraFontSize {
+                xs: 12.0,
+                sm: 14.0,
+                md: 14.0,
+                lg: 15.0,
+                xl: 16.0,
+            },
 
             primary: ColorFamily::new(
                 rgb(99, 226, 183),   // #63E2B7 — brighter green for dark
@@ -312,6 +333,12 @@ impl AuraTheme {
             shadow_1: "0 1px 2px -2px rgba(0,0,0,.24), 0 3px 6px 0 rgba(0,0,0,.18), 0 5px 12px 4px rgba(0,0,0,.12)",
             shadow_2: "0 3px 6px -4px rgba(0,0,0,.24), 0 6px 12px 0 rgba(0,0,0,.16), 0 9px 18px 8px rgba(0,0,0,.10)",
             shadow_3: "0 6px 16px -9px rgba(0,0,0,.08), 0 9px 28px 0 rgba(0,0,0,.05), 0 12px 48px 16px rgba(0,0,0,.03)",
+
+            secondary: SecondaryColors {
+                bg: rgba(255, 255, 255, 0.08),
+                hover: rgba(255, 255, 255, 0.12),
+                pressed: rgba(255, 255, 255, 0.08),
+            },
         }
     }
 
@@ -384,17 +411,17 @@ pub enum ButtonSize {
 impl ButtonSize {
     pub fn height(&self) -> f32 {
         match self {
-            ButtonSize::Small => 24.0,
-            ButtonSize::Default => 32.0,
-            ButtonSize::Large => 40.0,
+            ButtonSize::Small => 28.0,    // NaiveUI heightSmall
+            ButtonSize::Default => 34.0,  // NaiveUI heightMedium
+            ButtonSize::Large => 40.0,    // NaiveUI heightLarge
         }
     }
 
     pub fn padding_x(&self) -> f32 {
         match self {
-            ButtonSize::Small => 8.0,
-            ButtonSize::Default => 15.0,
-            ButtonSize::Large => 19.0,
+            ButtonSize::Small => 12.0,   // NaiveUI: 0 12px
+            ButtonSize::Default => 14.0, // NaiveUI: 0 14px
+            ButtonSize::Large => 18.0,   // NaiveUI: 0 18px
         }
     }
 }
