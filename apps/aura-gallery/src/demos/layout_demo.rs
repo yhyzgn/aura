@@ -29,9 +29,9 @@ impl RenderOnce for LayoutDemo {
         page = page.child(Title::new("Grid 栅格").h2());
         page = page.child(
             Row::new()
-                .child(Col::new(6).child(div().bg(theme.primary.base).h(px(32.0)).rounded(px(4.0))))
-                .child(Col::new(6).child(div().bg(theme.success.base).h(px(32.0)).rounded(px(4.0))))
-                .child(Col::new(12).child(div().bg(theme.info.base).h(px(32.0)).rounded(px(4.0))))
+                .column(Col::new(6).child(div().bg(theme.primary.base).h(px(32.0)).rounded(px(4.0))))
+                .column(Col::new(6).child(div().bg(theme.success.base).h(px(32.0)).rounded(px(4.0))))
+                .column(Col::new(12).child(div().bg(theme.info.base).h(px(32.0)).rounded(px(4.0))))
         );
 
         page

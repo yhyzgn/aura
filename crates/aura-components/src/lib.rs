@@ -7,6 +7,7 @@ pub mod space;
 pub mod divider;
 pub mod row;
 pub mod col;
+pub mod container;
 
 pub use button::*;
 pub use link::*;
@@ -17,3 +18,4 @@ pub use space::*;
 pub use divider::*;
 pub use row::*;
 pub use col::*;
+pub use container::*;
