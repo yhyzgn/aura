@@ -125,7 +125,7 @@ impl AuraButton {
                 s
             });
         } else {
-            el = el.cursor_default();
+            el = el.cursor_not_allowed();
         }
 
         el.child(label_text).into_any_element()
