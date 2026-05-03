@@ -1,5 +1,5 @@
 use aura_core::AuraConfig;
-use aura_icons::AuraIcon;
+use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::AuraTheme;
 use gpui::{
@@ -137,11 +137,11 @@ fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
 }
 
 fn build_icon(_theme: &AuraTheme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
-    AuraIcon::new(icon).size(sz).color(color)
+    Icon::new(icon).size(sz).color(color)
 }
 
 fn build_icon_default_color(_theme: &AuraTheme, icon: IconName, sz: f32) -> impl IntoElement {
-    AuraIcon::new(icon).size(sz)
+    Icon::new(icon).size(sz)
 }
 
 fn icon_labeled(theme: &AuraTheme, icon: IconName, sz: f32, label: &str) -> impl IntoElement {

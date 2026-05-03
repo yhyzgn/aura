@@ -1,5 +1,5 @@
 use aura_core::AuraConfig;
-use aura_icons::AuraIcon;
+use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{AuraTheme, ButtonSize, ButtonVariant, ButtonVariantColors};
 use gpui::{
@@ -18,7 +18,7 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     .into()
 }
 
-pub struct AuraButton {
+pub struct Button {
     label: SharedString,
     variant: ButtonVariant,
     size: ButtonSize,
@@ -37,7 +37,7 @@ pub struct AuraButton {
     creation_site: &'static Location<'static>,
 }
 
-impl AuraButton {
+impl Button {
     #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
@@ -241,7 +241,7 @@ impl AuraButton {
                 let sz = icon_sz * 2.0;
                 let group = hover_group.clone();
                 return div.child(
-                    AuraIcon::new(icon).size(sz).color(c.text)
+                    Icon::new(icon).size(sz).color(c.text)
                         .group_hover_color(group, c.text_hover)
                 ).into_any_element();
             }
@@ -255,14 +255,14 @@ impl AuraButton {
             let icon = self.icon_only.unwrap();
             let group = hover_group.clone();
             children.push(Box::new(move || {
-                AuraIcon::new(icon).size(icon_sz).color(c.text)
+                Icon::new(icon).size(icon_sz).color(c.text)
                     .group_hover_color(group, c.text_hover).into_any_element()
             }));
         } else if self.loading {
             let sz = icon_sz;
             let group = hover_group.clone();
             children.push(Box::new(move || {
-                AuraIcon::new(IconName::LoaderCircle).size(sz).color(c.text)
+                Icon::new(IconName::LoaderCircle).size(sz).color(c.text)
                     .group_hover_color(group, c.text_hover).into_any_element()
             }));
             children.push(Box::new(move || gpui::div().child(label.clone()).into_any_element()));
@@ -272,7 +272,7 @@ impl AuraButton {
             if let Some(icon) = self.icon_top {
                 let sz = icon_sz; let group = hover_group.clone();
                 children.push(Box::new(move || {
-                    AuraIcon::new(icon).size(sz).color(c.text)
+                    Icon::new(icon).size(sz).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
                 }));
             }
@@ -280,7 +280,7 @@ impl AuraButton {
             if let Some(icon) = self.icon_start {
                 let sz = icon_sz; let group = hover_group.clone();
                 children.push(Box::new(move || {
-                    AuraIcon::new(icon).size(sz).color(c.text)
+                    Icon::new(icon).size(sz).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
                 }));
             }
@@ -290,7 +290,7 @@ impl AuraButton {
             if let Some(icon) = self.icon_end {
                 let sz = icon_sz; let group = hover_group.clone();
                 children.push(Box::new(move || {
-                    AuraIcon::new(icon).size(sz).color(c.text)
+                    Icon::new(icon).size(sz).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
                 }));
             }
@@ -298,7 +298,7 @@ impl AuraButton {
             if let Some(icon) = self.icon_bottom {
                 let sz = icon_sz; let group = hover_group.clone();
                 children.push(Box::new(move || {
-                    AuraIcon::new(icon).size(sz).color(c.text)
+                    Icon::new(icon).size(sz).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
                 }));
             }
@@ -319,14 +319,14 @@ impl AuraButton {
     }
 }
 
-impl RenderOnce for AuraButton {
+impl RenderOnce for Button {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<AuraConfig>().theme;
         self.render_with_theme(theme)
     }
 }
 
-impl IntoElement for AuraButton {
+impl IntoElement for Button {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)

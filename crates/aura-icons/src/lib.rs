@@ -17,14 +17,14 @@ impl IntoIconPath for String {
     }
 }
 
-pub struct AuraIcon {
+pub struct Icon {
     size: Option<f32>,
     color: Option<Hsla>,
     group_hover_color: Option<(SharedString, Hsla)>,
     asset_path: String,
 }
 
-impl AuraIcon {
+impl Icon {
     pub fn new(path: impl IntoIconPath) -> Self {
         Self {
             size: None,
@@ -52,7 +52,7 @@ impl AuraIcon {
     }
 }
 
-impl RenderOnce for AuraIcon {
+impl RenderOnce for Icon {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<AuraConfig>().theme;
 
@@ -70,7 +70,7 @@ impl RenderOnce for AuraIcon {
     }
 }
 
-impl IntoElement for AuraIcon {
+impl IntoElement for Icon {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)

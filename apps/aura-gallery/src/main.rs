@@ -61,7 +61,7 @@ impl Render for Gallery {
             .flex_col()
             .size_full()
             .bg(theme.neutral.body)
-            .gap_4()
+            .gap_8()
             .p_8()
             .id("gallery-body")
             .overflow_y_scroll()

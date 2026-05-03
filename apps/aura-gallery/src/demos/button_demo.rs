@@ -1,4 +1,4 @@
-use aura_components::AuraButton;
+use aura_components::Button;
 use aura_core::AuraConfig;
 use aura_icons_lucide::IconName;
 use aura_theme::AuraTheme;
@@ -58,102 +58,102 @@ fn row(elements: Vec<impl IntoElement>) -> impl IntoElement {
 
 fn types() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default"),
-        AuraButton::new("Tertiary").tertiary(),
-        AuraButton::new("Primary").primary(),
-        AuraButton::new("Info").info(),
-        AuraButton::new("Success").success(),
-        AuraButton::new("Warning").warning(),
-        AuraButton::new("Error").danger(),
+        Button::new("Default"),
+        Button::new("Tertiary").tertiary(),
+        Button::new("Primary").primary(),
+        Button::new("Info").info(),
+        Button::new("Success").success(),
+        Button::new("Warning").warning(),
+        Button::new("Error").danger(),
     ]
 }
 
 fn secondary() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default").secondary(),
-        AuraButton::new("Tertiary").tertiary().secondary(),
-        AuraButton::new("Primary").primary().secondary(),
-        AuraButton::new("Info").info().secondary(),
-        AuraButton::new("Success").success().secondary(),
-        AuraButton::new("Warning").warning().secondary(),
-        AuraButton::new("Error").danger().secondary(),
+        Button::new("Default").secondary(),
+        Button::new("Tertiary").tertiary().secondary(),
+        Button::new("Primary").primary().secondary(),
+        Button::new("Info").info().secondary(),
+        Button::new("Success").success().secondary(),
+        Button::new("Warning").warning().secondary(),
+        Button::new("Error").danger().secondary(),
     ]
 }
 
 fn secondary_nb() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default").secondary().border(false),
-        AuraButton::new("Tertiary")
+        Button::new("Default").secondary().border(false),
+        Button::new("Tertiary")
             .tertiary()
             .secondary()
             .border(false),
-        AuraButton::new("Primary")
+        Button::new("Primary")
             .primary()
             .secondary()
             .border(false),
-        AuraButton::new("Info").info().secondary().border(false),
-        AuraButton::new("Success")
+        Button::new("Info").info().secondary().border(false),
+        Button::new("Success")
             .success()
             .secondary()
             .border(false),
-        AuraButton::new("Warning")
+        Button::new("Warning")
             .warning()
             .secondary()
             .border(false),
-        AuraButton::new("Error").danger().secondary().border(false),
+        Button::new("Error").danger().secondary().border(false),
     ]
 }
 
 fn sizes() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Small").primary().small(),
-        AuraButton::new("Default").primary(),
-        AuraButton::new("Large").primary().large(),
+        Button::new("Small").primary().small(),
+        Button::new("Default").primary(),
+        Button::new("Large").primary().large(),
     ]
 }
 
 fn icons() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Search").primary().icon_start(IconName::Search),
-        AuraButton::new("Settings").primary().icon_start(IconName::Settings),
-        AuraButton::new("Done").success().icon_end(IconName::Check),
-        AuraButton::new("Delete").danger().icon_end(IconName::X),
-        AuraButton::new("Home").tertiary().icon_start(IconName::House),
-        AuraButton::new("External").tertiary().icon_end(IconName::ArrowRight),
-        AuraButton::new("Upload").info().icon_top(IconName::ArrowUp),
-        AuraButton::new("Download").info().icon_bottom(IconName::ArrowDown),
-        AuraButton::new("").primary().icon_only(IconName::Search),
-        AuraButton::new("").danger().icon_only(IconName::X),
-        AuraButton::new("").success().icon_only(IconName::Check),
+        Button::new("Search").primary().icon_start(IconName::Search),
+        Button::new("Settings").primary().icon_start(IconName::Settings),
+        Button::new("Done").success().icon_end(IconName::Check),
+        Button::new("Delete").danger().icon_end(IconName::X),
+        Button::new("Home").tertiary().icon_start(IconName::House),
+        Button::new("External").tertiary().icon_end(IconName::ArrowRight),
+        Button::new("Upload").info().icon_top(IconName::ArrowUp),
+        Button::new("Download").info().icon_bottom(IconName::ArrowDown),
+        Button::new("").primary().icon_only(IconName::Search),
+        Button::new("").danger().icon_only(IconName::X),
+        Button::new("").success().icon_only(IconName::Check),
     ]
 }
 
 fn secondary_icons() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default")
+        Button::new("Default")
             .secondary()
             .icon_start(IconName::Search),
-        AuraButton::new("Tertiary")
+        Button::new("Tertiary")
             .tertiary()
             .secondary()
             .icon_start(IconName::Search),
-        AuraButton::new("Search")
+        Button::new("Search")
             .primary()
             .secondary()
             .icon_start(IconName::Search),
-        AuraButton::new("Info")
+        Button::new("Info")
             .info()
             .secondary()
             .icon_start(IconName::Info),
-        AuraButton::new("Success")
+        Button::new("Success")
             .success()
             .secondary()
             .icon_start(IconName::Check),
-        AuraButton::new("Warning")
+        Button::new("Warning")
             .warning()
             .secondary()
             .icon_start(IconName::Goal),
-        AuraButton::new("Error")
+        Button::new("Error")
             .danger()
             .secondary()
             .icon_start(IconName::X),
@@ -162,8 +162,8 @@ fn secondary_icons() -> Vec<impl IntoElement> {
 
 fn states() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Disabled").primary().disabled(true),
-        AuraButton::new("Sec Disabled")
+        Button::new("Disabled").primary().disabled(true),
+        Button::new("Sec Disabled")
             .primary()
             .secondary()
             .disabled(true),
@@ -172,17 +172,17 @@ fn states() -> Vec<impl IntoElement> {
 
 fn loading_states() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Loading").primary().loading(true),
-        AuraButton::new("Saving").success().loading(true),
-        AuraButton::new("Uploading").info().loading(true),
+        Button::new("Loading").primary().loading(true),
+        Button::new("Saving").success().loading(true),
+        Button::new("Uploading").info().loading(true),
     ]
 }
 
 fn rounded() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("4px").primary().rounded(4.0),
-        AuraButton::new("12px").primary().rounded(12.0),
-        AuraButton::new("20px").primary().rounded(20.0),
-        AuraButton::new("Pill").primary().rounded(9999.0),
+        Button::new("4px").primary().rounded(4.0),
+        Button::new("12px").primary().rounded(12.0),
+        Button::new("20px").primary().rounded(20.0),
+        Button::new("Pill").primary().rounded(9999.0),
     ]
 }

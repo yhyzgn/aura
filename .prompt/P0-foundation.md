@@ -22,14 +22,14 @@
 - Z-Index 工具函数: `z_index_popup/modal/notification/tooltip`
 
 ### aura-components (组件)
-- `AuraButton` Builder 模式组件
+- `Button` Builder 模式组件
   - 6 种变体: `.primary()` `.success()` `.warning()` `.danger()` `.info()`
   - 3 种尺寸: `.small()` `.large()` + 默认
   - 状态: `.disabled(bool)` `.loading(bool)`
   - 构建: `.build(&theme) -> impl IntoElement`
 
 ### aura-icons (图标)
-- `AuraIcon` trait (需 `Styled` supertrait)
+- `Icon` trait (需 `Styled` supertrait)
 - `IconSize` 枚举 (Small/Default/Large)
 - 10 个占位图标函数 (纯文本, 待替换为 SVG)
 

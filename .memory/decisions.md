@@ -1,5 +1,15 @@
 # Architecture Decisions
 
+## ADR-009: Component Naming — No `Aura` Prefix
+
+**Decision**: Components are named directly (Button, Icon, Link, Text), not prefixed (AuraButton, AuraIcon).
+Library-level types keep the prefix (AuraTheme, AuraConfig, AuraContextExt).
+
+**Rationale**:
+- `use aura_components::Button` is cleaner than `use aura_components::AuraButton`
+- The namespace already disambiguates
+- Theme/config types are less frequently used, prefix indicates they're framework types
+
 ## ADR-008: Component API — RenderOnce + IntoElement (codex Paradigm)
 
 **Decision**: All components implement `RenderOnce` + `IntoElement` (via `Component::new(self)`). Theme is read from `cx.global::<AuraConfig>().theme` inside `render()`, never passed as a parameter.
@@ -80,7 +90,7 @@
 
 ## ADR-008: Components Read Theme from GPUI Global
 
-**Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `AuraConfig.theme` from `App` during render. Business usage is `AuraButton::new("Save").primary()` without `.build(&theme)`.
+**Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `AuraConfig.theme` from `App` during render. Business usage is `Button::new("Save").primary()` without `.build(&theme)`.
 
 **Supersedes**: ADR-001's `.build(&theme)` conversion detail and ADR-006's explicit theme-parameter policy.
 

@@ -40,7 +40,7 @@ aura/
 │   ├── aura-theme/      lib.rs      # Design Tokens、亮/暗主题、ButtonVariant/Size
 │   ├── aura-components/ src/        # 全部业务组件 (button.rs, input.rs, ...)
 │   │   └── lib.rs
-│   └── aura-icons/      lib.rs      # AuraIcon trait、图标函数
+│   └── aura-icons/      lib.rs      # Icon trait、图标函数
 ├── apps/
 │   ├── aura-gallery/    src/        # Native 组件看板 (GPUI 窗口)
 │   │   ├── main.rs
@@ -134,8 +134,8 @@ aura/
 
 ```rust
 // ✅ 正确 — RenderOnce + IntoElement，主题从 cx.global 自动读取
-AuraButton::new("Save").primary().large()
-AuraIcon::new(IconName::House).size(24.0)
+Button::new("Save").primary().large()
+Icon::new(IconName::House).size(24.0)
 
 // 实现范式
 impl RenderOnce for MyComponent {

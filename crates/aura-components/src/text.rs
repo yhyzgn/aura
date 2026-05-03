@@ -5,14 +5,14 @@ use gpui::{
     prelude::*, px,
 };
 
-pub struct AuraText {
+pub struct Text {
     content: SharedString,
     size: Option<f32>,
     color: Option<gpui::Hsla>,
     truncate: bool,
 }
 
-impl AuraText {
+impl Text {
     pub fn new(content: impl Into<SharedString>) -> Self {
         Self { content: content.into(), size: None, color: None, truncate: true }
     }
@@ -34,14 +34,14 @@ impl AuraText {
     }
 }
 
-impl RenderOnce for AuraText {
+impl RenderOnce for Text {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<AuraConfig>().theme;
         self.render_with_theme(theme)
     }
 }
 
-impl IntoElement for AuraText {
+impl IntoElement for Text {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element { Component::new(self) }
 }

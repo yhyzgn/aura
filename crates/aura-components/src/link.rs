@@ -1,5 +1,5 @@
 use aura_core::AuraConfig;
-use aura_icons::AuraIcon;
+use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{AuraTheme, ButtonVariant};
 use gpui::{
@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static LINK_ID: AtomicU64 = AtomicU64::new(0);
 
-pub struct AuraLink {
+pub struct Link {
     label: SharedString,
     href: Option<SharedString>,
     variant: ButtonVariant,
@@ -22,7 +22,7 @@ pub struct AuraLink {
     creation_site: &'static Location<'static>,
 }
 
-impl AuraLink {
+impl Link {
     #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
@@ -75,12 +75,12 @@ impl AuraLink {
 
         let mut children: Vec<Box<dyn FnOnce() -> gpui::AnyElement>> = Vec::new();
         if let Some(icon) = self.icon_start {
-            children.push(Box::new(move || AuraIcon::new(icon).size(icon_sz).color(color).into_any_element()));
+            children.push(Box::new(move || Icon::new(icon).size(icon_sz).color(color).into_any_element()));
         }
         let label = self.label.clone();
         children.push(Box::new(move || gpui::div().child(label).into_any_element()));
         if let Some(icon) = self.icon_end {
-            children.push(Box::new(move || AuraIcon::new(icon).size(icon_sz).color(color).into_any_element()));
+            children.push(Box::new(move || Icon::new(icon).size(icon_sz).color(color).into_any_element()));
         }
 
         if !self.disabled {
@@ -99,7 +99,7 @@ fn open_url(url: &str) {
     #[cfg(target_os = "linux")]
     {
         if let Err(e) = std::process::Command::new("xdg-open").arg(url).spawn() {
-            eprintln!("AuraLink: failed to open URL: {}", e);
+            eprintln!("Link: failed to open URL: {}", e);
         }
     }
     #[cfg(target_os = "macos")]
@@ -108,14 +108,14 @@ fn open_url(url: &str) {
     { let _ = std::process::Command::new("cmd").args(["/c", "start", "", url]).spawn(); }
 }
 
-impl RenderOnce for AuraLink {
+impl RenderOnce for Link {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<AuraConfig>().theme;
         self.render_with_theme(theme)
     }
 }
 
-impl IntoElement for AuraLink {
+impl IntoElement for Link {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element { Component::new(self) }
 }

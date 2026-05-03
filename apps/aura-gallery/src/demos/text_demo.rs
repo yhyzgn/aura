@@ -1,4 +1,4 @@
-use aura_components::AuraText;
+use aura_components::Text;
 use aura_core::AuraConfig;
 use aura_theme::AuraTheme;
 use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
@@ -12,19 +12,19 @@ impl RenderOnce for TextDemo {
         div().flex().flex_col().gap_3()
             .child(hdr(theme, "Sizes"))
             .child(row(vec![
-                AuraText::new("xs text").size(theme.font_size.xs),
-                AuraText::new("sm text").size(theme.font_size.sm),
-                AuraText::new("md text (default)"),
-                AuraText::new("lg text").size(theme.font_size.lg),
-                AuraText::new("xl text").size(theme.font_size.xl),
+                Text::new("xs text").size(theme.font_size.xs),
+                Text::new("sm text").size(theme.font_size.sm),
+                Text::new("md text (default)"),
+                Text::new("lg text").size(theme.font_size.lg),
+                Text::new("xl text").size(theme.font_size.xl),
             ]))
             .child(hdr(theme, "Truncate"))
             .child(div().w(px(200.0)).child(
-                AuraText::new("This is a very long text that should be truncated with ellipsis at the end")
+                Text::new("This is a very long text that should be truncated with ellipsis at the end")
             ))
             .child(hdr(theme, "No truncate"))
             .child(div().w(px(200.0)).child(
-                AuraText::new("This text wraps naturally without truncation").no_truncate()
+                Text::new("This text wraps naturally without truncation").no_truncate()
             ))
     }
 }

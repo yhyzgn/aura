@@ -9,14 +9,14 @@
 | AuraContextExt trait | `crates/aura-core/src/lib.rs` | — | — |
 | AuraElement trait | `crates/aura-core/src/lib.rs` | — | — |
 | Z-Index utils | `crates/aura-core/src/lib.rs` | — | — |
-| AuraButton | `crates/aura-components/src/button.rs` | — | ✅ |
+| Button | `crates/aura-components/src/button.rs` | — | ✅ |
 | Gallery app | `apps/aura-gallery/src/` | — | ✅ |
 
 ## P1 Basic Elements 🔄 (6/13)
 
 | # | Component | File | Demo | Status |
 |---|-----------|------|------|--------|
-| 1 | AuraIcon + aura-icons-lucide | `crates/aura-icons/` `crates/aura-icons-lucide/` | ✅ | ✅ Icon system done |
+| 1 | Icon + aura-icons-lucide | `crates/aura-icons/` `crates/aura-icons-lucide/` | ✅ | ✅ Icon system done |
 | 2 | Button (codex refactor) | `crates/aura-components/src/button.rs` | ✅ | ✅ codex complete |
 | 3 | Link | `crates/aura-components/src/link.rs` | ⬜ | |
 | 4 | Text | `crates/aura-components/src/text.rs` | ⬜ | |
