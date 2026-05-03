@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{Theme, ButtonSize, ButtonVariant, ButtonVariantColors};
 use gpui::{
-    App, Component, ElementId, Hsla, IntoElement, RenderOnce, Rgba, SharedString, Window,
+    App, Component, ElementId, Hsla, IntoElement, AbsoluteLength, RenderOnce, Rgba, SharedString, Window,
     prelude::*, px,
 };
 use std::panic::Location;
@@ -27,7 +27,7 @@ pub struct Button {
     secondary: bool,
     background: bool,
     border: bool,
-    rounded: Option<f32>,
+    rounded: Option<AbsoluteLength>,
     id: Option<ElementId>,
     icon_start: Option<IconName>,
     icon_end: Option<IconName>,
@@ -119,8 +119,8 @@ impl Button {
         self.border = show;
         self
     }
-    pub fn rounded(mut self, r: f32) -> Self {
-        self.rounded = Some(r);
+    pub fn rounded(mut self, r: impl Into<AbsoluteLength>) -> Self {
+        self.rounded = Some(r.into());
         self
     }
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
@@ -196,7 +196,7 @@ impl Button {
             ButtonSize::Default => theme.font_size.md,
             ButtonSize::Large => theme.font_size.lg,
         };
-        let r = self.rounded.unwrap_or(theme.radius.md);
+        let r = self.rounded.unwrap_or_else(|| px(theme.radius.md).into());
         let id = self.id.clone().unwrap_or_else(|| self.auto_id());
         let icon_sz = self.icon_size();
 
@@ -212,7 +212,7 @@ impl Button {
             .items_center()
             .gap_1()
             .h(px(if vertical { h + icon_sz + 6.0 } else { h }))
-            .rounded(px(r))
+            .rounded(r)
             .bg(c.bg)
             .text_color(c.text)
             .text_size(px(fs));

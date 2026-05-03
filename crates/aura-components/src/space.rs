@@ -1,20 +1,20 @@
-use gpui::{prelude::*, px, IntoElement, App, Component, RenderOnce, Window};
+use gpui::{prelude::*, px, IntoElement, App, Component, DefiniteLength, RenderOnce, Window};
 
 pub struct Space {
-    w: f32,
-    h: f32,
+    w: Option<DefiniteLength>,
+    h: Option<DefiniteLength>,
 }
 
 impl Space {
-    pub fn horizontal(w: f32) -> Self { Self { w, h: 0.0 } }
-    pub fn vertical(h: f32) -> Self   { Self { w: 0.0, h } }
+    pub fn horizontal(w: impl Into<DefiniteLength>) -> Self { Self { w: Some(w.into()), h: None } }
+    pub fn vertical(h: impl Into<DefiniteLength>) -> Self   { Self { w: None, h: Some(h.into()) } }
 }
 
 impl RenderOnce for Space {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let mut div = gpui::div().flex_none();
-        if self.w > 0.0 { div = div.w(px(self.w)); }
-        if self.h > 0.0 { div = div.h(px(self.h)); }
+        if let Some(w) = self.w { div = div.w(w); }
+        if let Some(h) = self.h { div = div.h(h); }
         div
     }
 }

@@ -29,14 +29,14 @@ impl RenderOnce for LayoutDemo {
         page = page.child(
             div().flex().flex_row().items_center()
                 .child(div().px_2().py_1().bg(theme.primary.base).rounded(px(4.0)).child("A"))
-                .child(Space::horizontal(16.0))
+                .child(Space::horizontal(px(16.0)))
                 .child(div().px_2().py_1().bg(theme.primary.base).rounded(px(4.0)).child("B"))
         );
         page = page.child(Text::new("Vertical gap 8px:"));
         page = page.child(
             div().flex().flex_col()
                 .child(div().px_2().py_1().bg(theme.success.base).rounded(px(4.0)).child("Top"))
-                .child(Space::vertical(8.0))
+                .child(Space::vertical(px(8.0)))
                 .child(div().px_2().py_1().bg(theme.success.base).rounded(px(4.0)).child("Bottom"))
         );
 

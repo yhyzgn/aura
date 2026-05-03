@@ -180,9 +180,9 @@ fn loading_states() -> Vec<impl IntoElement> {
 
 fn rounded() -> Vec<impl IntoElement> {
     vec![
-        Button::new("4px").primary().rounded(4.0),
-        Button::new("12px").primary().rounded(12.0),
-        Button::new("20px").primary().rounded(20.0),
-        Button::new("Pill").primary().rounded(9999.0),
+        Button::new("4px").primary().rounded(px(4.0)),
+        Button::new("12px").primary().rounded(px(12.0)),
+        Button::new("20px").primary().rounded(px(20.0)),
+        Button::new("Pill").primary().rounded(px(9999.0)),
     ]
 }
