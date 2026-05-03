@@ -233,9 +233,6 @@ impl Input {
 
 struct InputElement {
     input: Entity<Input>,
-    icon_prefix: Option<IconName>,
-    icon_suffix: Option<IconName>,
-    clearable: bool,
     disabled: bool,
 }
 
@@ -270,10 +267,12 @@ impl Element for InputElement {
         let cursor = input.cursor_offset();
         let selected = input.selected_range.clone();
         let style = window.text_style();
+        let theme = &cx.global::<Config>().theme;
+        let text_c = if self.disabled { theme.neutral.text_disabled } else { style.color };
         let (display, text_color) = if input.value.is_empty() {
             (input.placeholder.clone(), rgba(0,0,0,0.3))
         } else {
-            (text, style.color)
+            (text, text_c)
         };
         let run = TextRun { len: display.len(), font: style.font(), color: text_color, background_color: None, underline: None, strikethrough: None };
         let runs = if let Some(ref marked) = input.marked_range {
@@ -327,11 +326,14 @@ impl Render for Input {
         let mut row = gpui::div()
             .flex().flex_row().items_center().gap_2()
             .h(px(h)).px(px(12.0)).rounded(px(theme.radius.md))
-            .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md))
-            .track_focus(&fh);
+            .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md));
 
-        if !self.disabled { row = row.cursor_text(); }
-        else { row = row.cursor_not_allowed(); }
+        if !self.disabled {
+            row = row.track_focus(&fh);
+            row = row.cursor_text();
+        } else {
+            row = row.cursor_not_allowed();
+        }
 
         if !self.disabled {
             row = row
@@ -351,9 +353,6 @@ impl Render for Input {
 
         row = row.child(InputElement {
             input: cx.entity(),
-            icon_prefix: self.icon_prefix,
-            icon_suffix: self.icon_suffix,
-            clearable: self.clearable,
             disabled: self.disabled,
         });
 
