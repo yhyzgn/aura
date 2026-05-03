@@ -1,5 +1,9 @@
-use gpui::{prelude::*, px, SharedString};
+use gpui::{prelude::*, px, SharedString, Hsla};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
+
+fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
+    gpui::hsla(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a)
+}
 
 pub struct AuraButton {
     label: SharedString,
@@ -7,7 +11,6 @@ pub struct AuraButton {
     size: ButtonSize,
     disabled: bool,
     loading: bool,
-    icon_start: Option<fn() -> gpui::AnyElement>,
 }
 
 impl AuraButton {
@@ -18,7 +21,6 @@ impl AuraButton {
             size: ButtonSize::Default,
             disabled: false,
             loading: false,
-            icon_start: None,
         }
     }
 
@@ -27,60 +29,19 @@ impl AuraButton {
         self
     }
 
-    pub fn primary(mut self) -> Self {
-        self.variant = ButtonVariant::Primary;
-        self
-    }
+    pub fn primary(mut self) -> Self { self.variant = ButtonVariant::Primary; self }
+    pub fn success(mut self) -> Self { self.variant = ButtonVariant::Success; self }
+    pub fn warning(mut self) -> Self { self.variant = ButtonVariant::Warning; self }
+    pub fn danger(mut self) -> Self  { self.variant = ButtonVariant::Danger; self }
+    pub fn info(mut self) -> Self    { self.variant = ButtonVariant::Info; self }
 
-    pub fn success(mut self) -> Self {
-        self.variant = ButtonVariant::Success;
-        self
-    }
+    pub fn size(mut self, size: ButtonSize) -> Self { self.size = size; self }
 
-    pub fn warning(mut self) -> Self {
-        self.variant = ButtonVariant::Warning;
-        self
-    }
+    pub fn small(mut self) -> Self  { self.size = ButtonSize::Small; self }
+    pub fn large(mut self) -> Self  { self.size = ButtonSize::Large; self }
 
-    pub fn danger(mut self) -> Self {
-        self.variant = ButtonVariant::Danger;
-        self
-    }
-
-    pub fn info(mut self) -> Self {
-        self.variant = ButtonVariant::Info;
-        self
-    }
-
-    pub fn size(mut self, size: ButtonSize) -> Self {
-        self.size = size;
-        self
-    }
-
-    pub fn small(mut self) -> Self {
-        self.size = ButtonSize::Small;
-        self
-    }
-
-    pub fn large(mut self) -> Self {
-        self.size = ButtonSize::Large;
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
-
-    pub fn loading(mut self, loading: bool) -> Self {
-        self.loading = loading;
-        self
-    }
-
-    pub fn icon_start(mut self, icon: fn() -> gpui::AnyElement) -> Self {
-        self.icon_start = Some(icon);
-        self
-    }
+    pub fn disabled(mut self, disabled: bool) -> Self { self.disabled = disabled; self }
+    pub fn loading(mut self, loading: bool) -> Self   { self.loading = loading; self }
 
     pub fn build(self, theme: &AuraTheme) -> impl IntoElement {
         let height = self.size.height();
@@ -94,11 +55,13 @@ impl AuraButton {
 
         let colors = if self.disabled {
             ButtonVariantColors {
-                bg: theme.disabled_bg,
-                hover_bg: theme.disabled_bg,
-                active_bg: theme.disabled_bg,
-                text: theme.disabled_text,
-                border: theme.disabled_border,
+                bg: rgba(0,0,0,0.0),
+                hover_bg: rgba(0,0,0,0.0),
+                active_bg: rgba(0,0,0,0.0),
+                text: theme.neutral.text_disabled,
+                border: theme.neutral.border,
+                text_hover: theme.neutral.text_disabled,
+                border_hover: theme.neutral.border,
             }
         } else {
             theme.color_by_variant(self.variant)
@@ -126,13 +89,17 @@ impl AuraButton {
             .text_size(px(font_size));
 
         if !self.disabled {
-            el = el
-                .hover(|style| style.bg(colors.hover_bg).cursor_pointer());
+            el = el.hover(|style| {
+                style
+                    .bg(colors.hover_bg)
+                    .text_color(colors.text_hover)
+                    .border_color(colors.border_hover)
+                    .cursor_pointer()
+            });
         } else {
             el = el.cursor_default();
         }
 
-        el.child(label_text)
-        .into_any_element()
+        el.child(label_text).into_any_element()
     }
 }

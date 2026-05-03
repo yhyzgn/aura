@@ -574,21 +574,52 @@ AuraCard::new()
 
 ## 六、设计 Token 体系
 
-### 6.1 色板
+> 色板方案: **NaiveUI Forest Green** — 参考 [NaiveUI](https://www.naiveui.com/) 色彩体系
+
+### 6.1 语义色板
 
 ```
-Primary:   #409EFF (Blue)   | Hover: #79BBFF  | Active: #337ECC
-Success:   #67C23A (Green)  | Hover: #85CE61  | Active: #529B2E
-Warning:   #E6A23C (Orange) | Hover: #EBB563  | Active: #CF9236
-Danger:    #F56C6C (Red)    | Hover: #F78989  | Active: #DC5959
-Info:      #909399 (Gray)   | Hover: #A6A9AD  | Active: #73767A
-
-Text Primary:    #303133     Background: #FFFFFF
-Text Secondary:  #909399     Border:     #DCDFE6
-Text Disabled:   #C0C4CC
+Primary (Green):  #18A058  | Hover: #36AD6A  | Active: #0C7A43
+Info (Blue):      #2080F0  | Hover: #4098FC  | Active: #1060C9
+Success (Green):  #18A058  | Hover: #36AD6A  | Active: #0C7A43
+Warning (Gold):   #F0A020  | Hover: #FCB040  | Active: #C97C10
+Danger (Red):     #D03050  | Hover: #DE576D  | Active: #AB1F3F
 ```
 
-### 6.2 间距
+### 6.2 中性色 (Light)
+
+```
+Text Primary:    rgb(31, 34, 37)     Body:       #FFFFFF
+Text Secondary:  rgb(51, 54, 57)     Card:       #FFFFFF
+Text Tertiary:   rgb(118, 124, 130)  Modal:      #FFFFFF
+Text Disabled:   rgba(0,0,0,0.38)    Popover:    #FFFFFF
+Placeholder:     rgba(0,0,0,0.38)
+Icon:            rgba(0,0,0,0.38)
+
+Border:          rgb(224, 224, 230)  Divider:    rgb(239, 239, 245)
+Hover:           rgb(243, 243, 245)  Pressed:    rgb(237, 237, 239)
+Overlay:         rgba(0,0,0,0.50)    Mask:       rgba(255,255,255,0.90)
+```
+
+### 6.3 暗色模式 (Dark)
+
+```
+Primary (Green):  #63E2B7  | Hover: #7FE7C4  | Active: #5ACEA7
+Info (Blue):      #70C0E8  | Hover: #8ACBEC  | Active: #66AFD3
+Success (Green):  #63E2B7  | Hover: #7FE7C4  | Active: #5ACEA7
+Warning (Gold):   #F2C97D  | Hover: #F5D599  | Active: #E6C260
+Danger (Red):     #E88080  | Hover: #E98B8B  | Active: #E57272
+
+Text 1:    rgba(255,255,255,0.90)    Body:       #101014
+Text 2:    rgba(255,255,255,0.82)    Card:       #18181C
+Text 3:    rgba(255,255,255,0.52)    Modal:      #2C2C32
+Disabled:  rgba(255,255,255,0.38)    Popover:    #48484E
+
+Border:    rgba(255,255,255,0.24)    Divider:    rgba(255,255,255,0.09)
+Hover:     rgba(255,255,255,0.09)    Pressed:    rgba(255,255,255,0.05)
+```
+
+### 6.4 间距
 
 ```
 xs:  4px    sm:  8px    md: 12px

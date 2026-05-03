@@ -1,27 +1,117 @@
 use gpui::Hsla;
 
+/// NaiveUI-inspired Forest Green theme.
+///
+/// Reference: https://github.com/tusen-ai/naive-ui
+/// Light theme base: neutralBase=#FFF, primary=#18A058 (green)
+/// Dark theme base: neutralBase=#000, primary=#63E2B7 (green)
+
+// ---------------------------------------------------------------------------
+// Color helpers
+// ---------------------------------------------------------------------------
+
 fn rgb(r: u8, g: u8, b: u8) -> Hsla {
-    gpui::hsla(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0)
+    hsla(r, g, b, 1.0)
 }
 
-pub struct AuraColorPalette {
-    pub primary: Hsla,
-    pub primary_hover: Hsla,
-    pub primary_active: Hsla,
-    pub primary_light: Hsla,
-    pub success: Hsla,
-    pub success_hover: Hsla,
-    pub success_active: Hsla,
-    pub warning: Hsla,
-    pub warning_hover: Hsla,
-    pub warning_active: Hsla,
-    pub danger: Hsla,
-    pub danger_hover: Hsla,
-    pub danger_active: Hsla,
-    pub info: Hsla,
-    pub info_hover: Hsla,
-    pub info_active: Hsla,
+fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
+    hsla(r, g, b, a)
 }
+
+fn hsla(r: u8, g: u8, b: u8, a: f32) -> Hsla {
+    gpui::hsla(
+        r as f32 / 255.0,
+        g as f32 / 255.0,
+        b as f32 / 255.0,
+        a,
+    )
+}
+
+/// Mix a color with white (toward lighter shades)
+fn lighten(base: Hsla, factor: f32) -> Hsla {
+    gpui::hsla(
+        base.h + (1.0 - base.h) * factor,
+        base.s * (1.0 - factor),
+        base.l + (1.0 - base.l) * factor,
+        base.a,
+    )
+}
+
+/// Darken a color by mixing with black
+#[allow(dead_code)]
+fn darken(base: Hsla, factor: f32) -> Hsla {
+    gpui::hsla(
+        base.h,
+        base.s,
+        base.l * (1.0 - factor),
+        base.a,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Semantic Color Family
+// ---------------------------------------------------------------------------
+
+pub struct ColorFamily {
+    pub base: Hsla,
+    pub hover: Hsla,
+    pub active: Hsla,
+    pub suppl: Hsla,
+    /// light-9: for subtle backgrounds
+    pub light_9: Hsla,
+    /// light-8
+    pub light_8: Hsla,
+    /// light-7: for hover backgrounds
+    pub light_7: Hsla,
+}
+
+impl ColorFamily {
+    fn new(base: Hsla, hover: Hsla, active: Hsla, suppl: Hsla) -> Self {
+        Self {
+            base,
+            hover,
+            active,
+            suppl,
+            light_9: lighten(base, 0.9),
+            light_8: lighten(base, 0.8),
+            light_7: lighten(base, 0.7),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Neutral Tokens
+// ---------------------------------------------------------------------------
+
+pub struct NeutralTokens {
+    pub body: Hsla,
+    pub card: Hsla,
+    pub modal: Hsla,
+    pub popover: Hsla,
+    pub inverted: Hsla,
+
+    pub text_1: Hsla,
+    pub text_2: Hsla,
+    pub text_3: Hsla,
+    pub text_disabled: Hsla,
+    pub placeholder: Hsla,
+    pub icon: Hsla,
+
+    pub border: Hsla,
+    pub divider: Hsla,
+
+    pub hover: Hsla,
+    pub pressed: Hsla,
+
+    pub rail: Hsla,
+
+    pub overlay: Hsla,
+    pub mask: Hsla,
+}
+
+// ---------------------------------------------------------------------------
+// Spacing / Radius / Font (unchanged structure, refined values)
+// ---------------------------------------------------------------------------
 
 pub struct AuraSpacing {
     pub xs: f32,
@@ -46,21 +136,30 @@ pub struct AuraFontSize {
     pub xl: f32,
 }
 
+// ---------------------------------------------------------------------------
+// AuraTheme
+// ---------------------------------------------------------------------------
+
 pub struct AuraTheme {
     pub name: String,
-    pub color: AuraColorPalette,
     pub spacing: AuraSpacing,
     pub radius: AuraRadius,
     pub font_size: AuraFontSize,
-    pub background: Hsla,
-    pub text_primary: Hsla,
-    pub text_secondary: Hsla,
-    pub text_on_primary: Hsla,
-    pub border: Hsla,
-    pub border_light: Hsla,
-    pub disabled_bg: Hsla,
-    pub disabled_text: Hsla,
-    pub disabled_border: Hsla,
+
+    // Semantic color families
+    pub primary: ColorFamily,
+    pub info: ColorFamily,
+    pub success: ColorFamily,
+    pub warning: ColorFamily,
+    pub danger: ColorFamily,
+
+    // Neutral tokens
+    pub neutral: NeutralTokens,
+
+    // Shadows
+    pub shadow_1: &'static str,
+    pub shadow_2: &'static str,
+    pub shadow_3: &'static str,
 }
 
 impl Default for AuraTheme {
@@ -70,121 +169,190 @@ impl Default for AuraTheme {
 }
 
 impl AuraTheme {
+    // ========================================================================
+    // Light Theme
+    // ========================================================================
     pub fn light() -> Self {
         Self {
             name: "light".into(),
-            color: AuraColorPalette {
-                primary: rgb(64, 158, 255),
-                primary_hover: rgb(121, 187, 255),
-                primary_active: rgb(51, 126, 204),
-                primary_light: rgb(236, 245, 255),
-                success: rgb(103, 194, 58),
-                success_hover: rgb(133, 206, 97),
-                success_active: rgb(82, 155, 46),
-                warning: rgb(230, 162, 60),
-                warning_hover: rgb(235, 181, 99),
-                warning_active: rgb(207, 146, 54),
-                danger: rgb(245, 108, 108),
-                danger_hover: rgb(247, 137, 137),
-                danger_active: rgb(220, 89, 89),
-                info: rgb(144, 147, 153),
-                info_hover: rgb(166, 169, 173),
-                info_active: rgb(115, 118, 122),
+            spacing: AuraSpacing { xs: 4.0, sm: 8.0, md: 12.0, lg: 20.0, xl: 32.0 },
+            radius: AuraRadius { sm: 2.0, md: 4.0, lg: 8.0, full: 9999.0 },
+            font_size: AuraFontSize { xs: 10.0, sm: 12.0, md: 14.0, lg: 16.0, xl: 20.0 },
+
+            primary: ColorFamily::new(
+                rgb(24, 160, 88),    // #18A058 — NaiveUI primary green
+                rgb(54, 173, 106),   // #36AD6A
+                rgb(12, 122, 67),    // #0C7A43
+                rgb(54, 173, 106),   // #36AD6A
+            ),
+            info: ColorFamily::new(
+                rgb(32, 128, 240),   // #2080F0 — NaiveUI info blue
+                rgb(64, 152, 252),   // #4098FC
+                rgb(16, 96, 201),    // #1060C9
+                rgb(64, 152, 252),   // #4098FC
+            ),
+            success: ColorFamily::new(
+                rgb(24, 160, 88),    // #18A058
+                rgb(54, 173, 106),   // #36AD6A
+                rgb(12, 122, 67),    // #0C7A43
+                rgb(54, 173, 106),   // #36AD6A
+            ),
+            warning: ColorFamily::new(
+                rgb(240, 160, 32),   // #F0A020 — NaiveUI warning gold
+                rgb(252, 176, 64),   // #FCB040
+                rgb(201, 124, 16),   // #C97C10
+                rgb(252, 176, 64),   // #FCB040
+            ),
+            danger: ColorFamily::new(
+                rgb(208, 48, 80),    // #D03050 — NaiveUI error red
+                rgb(222, 87, 109),   // #DE576D
+                rgb(171, 31, 63),    // #AB1F3F
+                rgb(222, 87, 109),   // #DE576D
+            ),
+
+            neutral: NeutralTokens {
+                body:      rgb(255, 255, 255), // #FFF
+                card:      rgb(255, 255, 255),
+                modal:     rgb(255, 255, 255),
+                popover:   rgb(255, 255, 255),
+                inverted:  rgb(0, 20, 40),     // darker blue-black for contrast
+
+                text_1:        rgb(31, 34, 37),     // primary text
+                text_2:        rgb(51, 54, 57),     // regular text
+                text_3:        rgb(118, 124, 130),  // secondary text
+                text_disabled: rgba(0, 0, 0, 0.38),
+                placeholder:   rgba(0, 0, 0, 0.38),
+                icon:          rgba(0, 0, 0, 0.38),
+
+                border:  rgb(224, 224, 230),
+                divider: rgb(239, 239, 245),
+
+                hover:   rgb(243, 243, 245),
+                pressed: rgb(237, 237, 239),
+
+                rail:    rgb(219, 219, 223),
+
+                overlay: rgba(0, 0, 0, 0.50),
+                mask:    rgba(255, 255, 255, 0.90),
             },
-            spacing: AuraSpacing {
-                xs: 4.0,
-                sm: 8.0,
-                md: 12.0,
-                lg: 20.0,
-                xl: 32.0,
-            },
-            radius: AuraRadius {
-                sm: 2.0,
-                md: 4.0,
-                lg: 8.0,
-                full: 9999.0,
-            },
-            font_size: AuraFontSize {
-                xs: 10.0,
-                sm: 12.0,
-                md: 14.0,
-                lg: 16.0,
-                xl: 20.0,
-            },
-            background: rgb(255, 255, 255),
-            text_primary: rgb(48, 49, 51),
-            text_secondary: rgb(144, 147, 153),
-            text_on_primary: rgb(255, 255, 255),
-            border: rgb(220, 223, 230),
-            border_light: rgb(235, 238, 245),
-            disabled_bg: rgb(245, 247, 250),
-            disabled_text: rgb(192, 196, 204),
-            disabled_border: rgb(228, 231, 237),
+
+            shadow_1: "0 1px 2px -2px rgba(0,0,0,.08), 0 3px 6px 0 rgba(0,0,0,.06), 0 5px 12px 4px rgba(0,0,0,.04)",
+            shadow_2: "0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px 0 rgba(0,0,0,.08), 0 9px 28px 8px rgba(0,0,0,.05)",
+            shadow_3: "0 6px 16px -9px rgba(0,0,0,.08), 0 9px 28px 0 rgba(0,0,0,.05), 0 12px 48px 16px rgba(0,0,0,.03)",
         }
     }
 
+    // ========================================================================
+    // Dark Theme
+    // ========================================================================
     pub fn dark() -> Self {
-        let mut dark = Self::light();
-        dark.name = "dark".into();
-        dark.background = rgb(29, 30, 31);
-        dark.text_primary = rgb(229, 234, 243);
-        dark.text_secondary = rgb(163, 166, 173);
-        dark.border = rgb(76, 77, 79);
-        dark.border_light = rgb(54, 54, 55);
-        dark.color.primary_light = rgb(31, 45, 61);
-        dark.disabled_bg = rgb(54, 54, 55);
-        dark.disabled_text = rgb(76, 77, 79);
-        dark.disabled_border = rgb(54, 54, 55);
-        dark
+        Self {
+            name: "dark".into(),
+            spacing: AuraSpacing { xs: 4.0, sm: 8.0, md: 12.0, lg: 20.0, xl: 32.0 },
+            radius: AuraRadius { sm: 2.0, md: 4.0, lg: 8.0, full: 9999.0 },
+            font_size: AuraFontSize { xs: 10.0, sm: 12.0, md: 14.0, lg: 16.0, xl: 20.0 },
+
+            primary: ColorFamily::new(
+                rgb(99, 226, 183),   // #63E2B7 — brighter green for dark
+                rgb(127, 231, 196),  // #7FE7C4
+                rgb(90, 206, 167),   // #5ACEA7
+                rgb(42, 148, 125),   // #2A947D (suppl)
+            ),
+            info: ColorFamily::new(
+                rgb(112, 192, 232),  // #70C0E8
+                rgb(138, 203, 236),  // #8ACBEC
+                rgb(102, 175, 211),  // #66AFD3
+                rgb(56, 137, 197),   // #3889C5
+            ),
+            success: ColorFamily::new(
+                rgb(99, 226, 183),   // #63E2B7
+                rgb(127, 231, 196),  // #7FE7C4
+                rgb(90, 206, 167),   // #5ACEA7
+                rgb(42, 148, 125),   // #2A947D
+            ),
+            warning: ColorFamily::new(
+                rgb(242, 201, 125),  // #F2C97D
+                rgb(245, 213, 153),  // #F5D599
+                rgb(230, 194, 96),   // #E6C260
+                rgb(240, 138, 0),    // #F08A00
+            ),
+            danger: ColorFamily::new(
+                rgb(232, 128, 128),  // #E88080
+                rgb(233, 139, 139),  // #E98B8B
+                rgb(229, 114, 114),  // #E57272
+                rgb(208, 58, 82),    // #D03A52
+            ),
+
+            neutral: NeutralTokens {
+                body:      rgb(16, 16, 20),    // #101014
+                card:      rgb(24, 24, 28),    // #18181C
+                modal:     rgb(44, 44, 50),    // #2C2C32
+                popover:   rgb(72, 72, 78),    // #48484E
+                inverted:  rgb(255, 255, 255),
+
+                text_1:        rgba(255, 255, 255, 0.90),
+                text_2:        rgba(255, 255, 255, 0.82),
+                text_3:        rgba(255, 255, 255, 0.52),
+                text_disabled: rgba(255, 255, 255, 0.38),
+                placeholder:   rgba(255, 255, 255, 0.38),
+                icon:          rgba(255, 255, 255, 0.38),
+
+                border:  rgba(255, 255, 255, 0.24),
+                divider: rgba(255, 255, 255, 0.09),
+
+                hover:   rgba(255, 255, 255, 0.09),
+                pressed: rgba(255, 255, 255, 0.05),
+
+                rail:    rgba(255, 255, 255, 0.20),
+
+                overlay: rgba(0, 0, 0, 0.60),
+                mask:    rgba(0, 0, 0, 0.70),
+            },
+
+            shadow_1: "0 1px 2px -2px rgba(0,0,0,.24), 0 3px 6px 0 rgba(0,0,0,.18), 0 5px 12px 4px rgba(0,0,0,.12)",
+            shadow_2: "0 3px 6px -4px rgba(0,0,0,.24), 0 6px 12px 0 rgba(0,0,0,.16), 0 9px 18px 8px rgba(0,0,0,.10)",
+            shadow_3: "0 6px 16px -9px rgba(0,0,0,.08), 0 9px 28px 0 rgba(0,0,0,.05), 0 12px 48px 16px rgba(0,0,0,.03)",
+        }
     }
 
+    // ========================================================================
+    // Convenience: resolve BuilderColor for a ButtonVariant
+    // ========================================================================
     pub fn color_by_variant(&self, variant: ButtonVariant) -> ButtonVariantColors {
         match variant {
             ButtonVariant::Default => ButtonVariantColors {
-                bg: self.background,
-                hover_bg: self.border_light,
-                active_bg: self.border,
-                text: self.text_primary,
-                border: self.border,
+                bg: rgba(0, 0, 0, 0.0),
+                hover_bg: rgba(0, 0, 0, 0.0),
+                active_bg: rgba(0, 0, 0, 0.0),
+                text: self.neutral.text_2,
+                border: self.neutral.border,
+                text_hover: self.primary.base,
+                border_hover: self.primary.base,
             },
-            ButtonVariant::Primary => ButtonVariantColors {
-                bg: self.color.primary,
-                hover_bg: self.color.primary_hover,
-                active_bg: self.color.primary_active,
-                text: self.text_on_primary,
-                border: self.color.primary,
-            },
-            ButtonVariant::Success => ButtonVariantColors {
-                bg: self.color.success,
-                hover_bg: self.color.success_hover,
-                active_bg: self.color.success_active,
-                text: self.text_on_primary,
-                border: self.color.success,
-            },
-            ButtonVariant::Warning => ButtonVariantColors {
-                bg: self.color.warning,
-                hover_bg: self.color.warning_hover,
-                active_bg: self.color.warning_active,
-                text: self.text_on_primary,
-                border: self.color.warning,
-            },
-            ButtonVariant::Danger => ButtonVariantColors {
-                bg: self.color.danger,
-                hover_bg: self.color.danger_hover,
-                active_bg: self.color.danger_active,
-                text: self.text_on_primary,
-                border: self.color.danger,
-            },
-            ButtonVariant::Info => ButtonVariantColors {
-                bg: self.color.info,
-                hover_bg: self.color.info_hover,
-                active_bg: self.color.info_active,
-                text: self.text_on_primary,
-                border: self.color.info,
-            },
+            ButtonVariant::Primary => self.filled_colors(&self.primary),
+            ButtonVariant::Success => self.filled_colors(&self.success),
+            ButtonVariant::Warning => self.filled_colors(&self.warning),
+            ButtonVariant::Danger => self.filled_colors(&self.danger),
+            ButtonVariant::Info => self.filled_colors(&self.info),
+        }
+    }
+
+    fn filled_colors(&self, family: &ColorFamily) -> ButtonVariantColors {
+        ButtonVariantColors {
+            bg: family.base,
+            hover_bg: family.hover,
+            active_bg: family.active,
+            text: rgb(255, 255, 255),
+            border: family.base,
+            text_hover: rgb(255, 255, 255),
+            border_hover: family.hover,
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -202,6 +370,8 @@ pub struct ButtonVariantColors {
     pub active_bg: Hsla,
     pub text: Hsla,
     pub border: Hsla,
+    pub text_hover: Hsla,
+    pub border_hover: Hsla,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

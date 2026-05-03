@@ -49,7 +49,7 @@ pub fn render(theme: &AuraTheme) -> AnyElement {
 fn section_header(theme: &AuraTheme, label: impl IntoElement) -> impl IntoElement {
     div()
         .text_size(px(theme.font_size.lg))
-        .text_color(theme.text_primary)
+        .text_color(theme.neutral.text_1)
         .font_weight(gpui::FontWeight::BOLD)
         .mt_2()
         .child(label)

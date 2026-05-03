@@ -26,17 +26,17 @@ fn category_section(theme: &AuraTheme, category: Category, entries: &[&demos::De
                 .mb_4()
                 .pb_2()
                 .border_b_1()
-                .border_color(theme.border)
+                .border_color(theme.neutral.border)
                 .child(
                     div()
                         .text_xl()
-                        .text_color(theme.color.primary)
+                        .text_color(theme.primary.base)
                         .child(format!("{} {}", category.icon(), category.name())),
                 )
                 .child(
                     div()
                         .text_size(px(theme.font_size.sm))
-                        .text_color(theme.text_secondary)
+                        .text_color(theme.neutral.text_3)
                         .child(format!("{} components", entries.len())),
                 ),
         )
@@ -50,9 +50,9 @@ fn component_card(theme: &AuraTheme, entry: &demos::DemoEntry) -> impl IntoEleme
         .gap_4()
         .p_4()
         .border_1()
-        .border_color(theme.border_light)
+        .border_color(theme.neutral.divider)
         .rounded(px(theme.radius.lg))
-        .bg(theme.background)
+        .bg(theme.neutral.card)
         .child(
             div()
                 .flex()
@@ -61,21 +61,18 @@ fn component_card(theme: &AuraTheme, entry: &demos::DemoEntry) -> impl IntoEleme
                 .child(
                     div()
                         .text_size(px(theme.font_size.lg))
-                        .text_color(theme.text_primary)
+                        .text_color(theme.neutral.text_1)
                         .font_weight(gpui::FontWeight::BOLD)
                         .child(entry.name),
                 )
                 .child(
                     div()
                         .text_size(px(theme.font_size.sm))
-                        .text_color(theme.text_secondary)
+                        .text_color(theme.neutral.text_3)
                         .child(entry.description),
                 ),
         )
-        .child(
-            div()
-                .child((entry.render)(theme))
-        )
+        .child((entry.render)(theme))
 }
 
 impl Render for Gallery {
@@ -86,10 +83,7 @@ impl Render for Gallery {
         let grouped: Vec<(Category, Vec<&demos::DemoEntry>)> = Category::ALL
             .iter()
             .map(|&cat| {
-                let entries: Vec<_> = registry
-                    .iter()
-                    .filter(|e| e.category == cat)
-                    .collect();
+                let entries: Vec<_> = registry.iter().filter(|e| e.category == cat).collect();
                 (cat, entries)
             })
             .filter(|(_, entries)| !entries.is_empty())
@@ -99,10 +93,9 @@ impl Render for Gallery {
             .flex()
             .flex_col()
             .size_full()
-            .bg(theme.background)
+            .bg(theme.neutral.body)
             .gap_4()
             .p_8()
-
             .child(
                 div()
                     .flex()
@@ -111,20 +104,20 @@ impl Render for Gallery {
                     .mb_4()
                     .pb_4()
                     .border_b_1()
-                    .border_color(theme.border)
+                    .border_color(theme.neutral.border)
                     .child(
                         div()
                             .text_2xl()
-                            .text_color(theme.text_primary)
+                            .text_color(theme.neutral.text_1)
                             .font_weight(gpui::FontWeight::BOLD)
                             .child("Aura UI"),
                     )
                     .child(
                         div()
                             .text_size(px(theme.font_size.md))
-                            .text_color(theme.text_secondary)
+                            .text_color(theme.neutral.text_3)
                             .child(format!(
-                                "Native Component Library — {} components",
+                                "Native Component Library · {} components",
                                 registry.len()
                             )),
                     ),
