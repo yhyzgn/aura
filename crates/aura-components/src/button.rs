@@ -203,6 +203,9 @@ impl AuraButton {
         let icon_only = self.icon_only.is_some();
         let vertical = self.icon_top.is_some() || self.icon_bottom.is_some() || icon_only;
 
+        // Auto-increase height for vertical icon layout
+        let h = if vertical { h + icon_sz + 4.0 } else { h };
+
         let label = self.label.clone();
         let hover_group = SharedString::from(format!("{}:hover", id));
 
@@ -253,10 +256,9 @@ impl AuraButton {
 
         if icon_only {
             let icon = self.icon_only.unwrap();
-            let sz = icon_sz * 2.0;
             let group = hover_group.clone();
             children.push(Box::new(move || {
-                AuraIcon::new(icon).size(sz).color(c.text)
+                AuraIcon::new(icon).size(icon_sz).color(c.text)
                     .group_hover_color(group, c.text_hover).into_any_element()
             }));
         } else if self.loading {
