@@ -16,7 +16,7 @@ fn run_gallery() {
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                     None,
-                    size(px(960.0), px(720.0)),
+                    size(px(1920.0), px(1080.0)),
                     cx,
                 ))),
                 ..Default::default()

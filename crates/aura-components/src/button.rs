@@ -114,17 +114,17 @@ impl AuraButton {
 
         if self.loading {
             let sz = icon_sz;
-            children.push(Box::new(move || AuraIcon::new(IconName::LoaderCircle).size(sz).color(c.text).into_any_element()));
+            children.push(Box::new(move || AuraIcon::new(IconName::LoaderCircle).size(sz).into_any_element()));
             children.push(Box::new(move || gpui::div().child(self.label.clone()).into_any_element()));
         } else {
             if let Some(icon) = self.icon_start {
                 let sz = icon_sz;
-                children.push(Box::new(move || AuraIcon::new(icon).size(sz).color(c.text).into_any_element()));
+                children.push(Box::new(move || AuraIcon::new(icon).size(sz).into_any_element()));
             }
             children.push(Box::new(move || gpui::div().child(self.label.clone()).into_any_element()));
             if let Some(icon) = self.icon_end {
                 let sz = icon_sz;
-                children.push(Box::new(move || AuraIcon::new(icon).size(sz).color(c.text).into_any_element()));
+                children.push(Box::new(move || AuraIcon::new(icon).size(sz).into_any_element()));
             }
         }
 
