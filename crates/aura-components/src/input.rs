@@ -315,7 +315,7 @@ impl Element for InputElement {
             if i == cursor_line && input.selected_range.is_empty() && !input.value.is_empty() {
                 let col = cursor_offset - byte_offset;
                 let x = shaped.x_for_index(col);
-                let ch = (bounds.bottom() - bounds.top()) * 0.65;
+                let ch = font_size; // fixed cursor height = font size
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
             }
@@ -363,7 +363,7 @@ impl Render for Input {
 
         let mut row = gpui::div()
             .flex().flex_row().items_center().gap_2()
-            .h(px(h)).px(px(12.0)).rounded(px(theme.radius.md))
+            .px(px(12.0)).rounded(px(theme.radius.md))
             .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md));
 
         if !self.disabled {
