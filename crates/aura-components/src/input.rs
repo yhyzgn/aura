@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, FocusHandle, Focusable, Hsla, Rgba, Render, SharedString,
-    Window, Context, MouseButton, MouseUpEvent, MouseDownEvent, KeyDownEvent,
+    Window, Context, MouseButton, MouseDownEvent, MouseUpEvent, KeyDownEvent,
     actions, KeyBinding,
 };
 use std::ops::Range;
@@ -24,6 +24,7 @@ pub struct Input {
     focus_handle: FocusHandle,
     selected_range: Range<usize>,
     selection_reversed: bool,
+    cursor_visible: bool,
 }
 
 impl Input {
@@ -32,6 +33,7 @@ impl Input {
             value: value.into(), placeholder: SharedString::default(), disabled: false,
             clearable: false, icon_prefix: None, icon_suffix: None,
             focus_handle: cx.focus_handle(), selected_range: 0..0, selection_reversed: false,
+            cursor_visible: true,
         }
     }
     pub fn placeholder(mut self, p: impl Into<SharedString>) -> Self { self.placeholder = p.into(); self }
@@ -40,31 +42,43 @@ impl Input {
     pub fn icon_prefix(mut self, icon: IconName) -> Self { self.icon_prefix = Some(icon); self }
     pub fn icon_suffix(mut self, icon: IconName) -> Self { self.icon_suffix = Some(icon); self }
 
-    /// Call once at app startup to enable Input keyboard shortcuts.
     pub fn register_key_bindings(cx: &mut App) {
         cx.bind_keys([
-            KeyBinding::new("backspace", Backspace, None),
-            KeyBinding::new("delete", Delete, None),
-            KeyBinding::new("left", Left, None),
-            KeyBinding::new("right", Right, None),
-            KeyBinding::new("home", Home, None),
-            KeyBinding::new("end", End, None),
+            KeyBinding::new("backspace", Backspace, None),  KeyBinding::new("delete", Delete, None),
+            KeyBinding::new("left", Left, None),            KeyBinding::new("right", Right, None),
+            KeyBinding::new("home", Home, None),            KeyBinding::new("end", End, None),
             KeyBinding::new("cmd-a", SelectAll, None),
         ]);
     }
 
     fn clear(&mut self, cx: &mut Context<Self>) { self.value = SharedString::default(); cx.notify(); }
+
     fn cursor_offset(&self) -> usize {
         if self.selection_reversed { self.selected_range.start } else { self.selected_range.end }
     }
 
+    fn prev_char_boundary(&self, offset: usize) -> usize {
+        if offset == 0 { return 0; }
+        let mut prev = offset - 1;
+        while prev > 0 && !self.value.is_char_boundary(prev) { prev -= 1; }
+        prev
+    }
+
+    fn next_char_boundary(&self, offset: usize) -> usize {
+        if offset >= self.value.len() { return self.value.len(); }
+        let mut next = offset + 1;
+        while next < self.value.len() && !self.value.is_char_boundary(next) { next += 1; }
+        next
+    }
+
     fn move_to(&mut self, offset: usize, cx: &mut Context<Self>) {
-        self.selected_range = offset..offset; cx.notify()
+        self.selected_range = offset..offset; self.cursor_visible = true; cx.notify()
     }
 
     fn backspace(&mut self, _: &Backspace, _: &mut Window, cx: &mut Context<Self>) {
         if self.selected_range.is_empty() {
-            let prev = self.cursor_offset().saturating_sub(1);
+            let prev = self.prev_char_boundary(self.cursor_offset());
+            if prev == self.cursor_offset() { return; }
             self.select_to(prev, cx);
         }
         self.replace_text("", cx);
@@ -72,25 +86,23 @@ impl Input {
 
     fn delete(&mut self, _: &Delete, _: &mut Window, cx: &mut Context<Self>) {
         if self.selected_range.is_empty() {
-            let next = (self.cursor_offset() + 1).min(self.value.len());
+            let next = self.next_char_boundary(self.cursor_offset());
+            if next == self.cursor_offset() { return; }
             self.select_to(next, cx);
         }
         self.replace_text("", cx);
     }
 
     fn left(&mut self, _: &Left, _: &mut Window, cx: &mut Context<Self>) {
-        self.move_to(self.cursor_offset().saturating_sub(1), cx);
+        self.move_to(self.prev_char_boundary(self.cursor_offset()), cx);
     }
-
     fn right(&mut self, _: &Right, _: &mut Window, cx: &mut Context<Self>) {
-        let off = (self.cursor_offset() + 1).min(self.value.len());
-        self.move_to(off, cx);
+        self.move_to(self.next_char_boundary(self.cursor_offset()), cx);
     }
-
     fn home(&mut self, _: &Home, _: &mut Window, cx: &mut Context<Self>) { self.move_to(0, cx); }
     fn end(&mut self, _: &End, _: &mut Window, cx: &mut Context<Self>) { self.move_to(self.value.len(), cx); }
     fn select_all(&mut self, _: &SelectAll, _: &mut Window, cx: &mut Context<Self>) {
-        self.selected_range = 0..self.value.len(); cx.notify();
+        self.selected_range = 0..self.value.len(); self.cursor_visible = true; cx.notify();
     }
 
     fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
@@ -110,6 +122,7 @@ impl Input {
         self.value = SharedString::from(v);
         let new_pos = self.selected_range.start + new_text.len();
         self.selected_range = new_pos..new_pos;
+        self.cursor_visible = true;
         cx.notify();
     }
 
@@ -117,6 +130,10 @@ impl Input {
         if let Some(text) = &event.keystroke.key_char {
             self.replace_text(text, cx);
         }
+    }
+
+    fn request_focus(&self, window: &mut Window, cx: &mut App) {
+        window.focus(&self.focus_handle, cx);
     }
 }
 
@@ -128,30 +145,34 @@ impl Render for Input {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
         let h = 34.0; let icon_sz = 16.0;
+        let focused = self.focus_handle(cx).is_focused(_window);
 
         let (bg, text_c, border_c) = if self.disabled {
             (theme.neutral.hover, theme.neutral.text_disabled, theme.neutral.border)
+        } else if focused {
+            (theme.neutral.card, theme.neutral.text_1, theme.primary.base)
         } else {
             (theme.neutral.card, theme.neutral.text_1, theme.neutral.border)
         };
 
-        let display = if self.value.is_empty() { self.placeholder.clone() } else { self.value.clone() };
-        let is_placeholder = self.value.is_empty();
+        let is_empty = self.value.is_empty();
+        let display = if is_empty { self.placeholder.clone() } else { self.value.clone() };
         let ph_color = theme.neutral.text_3;
+        let fh = self.focus_handle(cx);
 
         let mut row = gpui::div()
             .flex().flex_row().items_center().gap_2()
             .h(px(h)).px(px(12.0)).rounded(px(theme.radius.md))
             .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md))
-            .track_focus(&self.focus_handle(cx));
+            .track_focus(&fh);
 
         if !self.disabled { row = row.cursor_text(); }
         else { row = row.cursor_not_allowed(); }
 
         if !self.disabled {
-            let focus_handle = self.focus_handle(cx);
+            let fh2 = fh.clone();
             row = row
-                .on_mouse_down(MouseButton::Left, move |_, window, cx| { window.focus(&focus_handle, cx); })
+                .on_mouse_down(MouseButton::Left, move |_, window, cx| { window.focus(&fh2, cx); })
                 .on_key_down(cx.listener(Self::on_key_down))
                 .on_action(cx.listener(Self::backspace))
                 .on_action(cx.listener(Self::delete))
@@ -166,11 +187,22 @@ impl Render for Input {
             row = row.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
         }
 
-        row = row.child(
-            gpui::div().flex_1().h_full().flex().items_center()
-                .text_color(if is_placeholder { ph_color } else { text_c })
-                .child(display)
-        );
+        // Text display with cursor indicator
+        if is_empty {
+            row = row.child(
+                gpui::div().flex_1().flex().items_center()
+                    .text_color(ph_color).child(display)
+            );
+        } else {
+            let before = &self.value[..self.cursor_offset()];
+            let after = &self.value[self.cursor_offset()..];
+            let cursor_char = if focused && self.cursor_visible { "|" } else { "" };
+
+            row = row.child(
+                gpui::div().flex_1().flex().items_center().text_color(text_c)
+                    .child(format!("{}{}{}", before, cursor_char, after))
+            );
+        }
 
         if self.clearable && !self.value.is_empty() && !self.disabled {
             row = row.child(
