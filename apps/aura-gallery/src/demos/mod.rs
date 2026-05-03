@@ -4,6 +4,8 @@ pub mod link_demo;
 pub mod typography_demo;
 pub mod layout_demo;
 pub mod container_demo;
+pub mod scrollbar_demo;
+pub mod splitter_demo;
 
 use gpui::AnyElement;
 
@@ -20,6 +22,8 @@ pub fn registry() -> Vec<DemoEntry> {
         DemoEntry { name: "Typography 排版", description: "标题、段落、文本", render: typography_demo::render },
         DemoEntry { name: "Layout 布局", description: "分割线、间距、栅格", render: layout_demo::render },
         DemoEntry { name: "Container 容器", description: "页面框架布局", render: container_demo::render },
+        DemoEntry { name: "Scrollbar 滚动条", description: "原生滚动容器", render: scrollbar_demo::render },
+        DemoEntry { name: "Splitter 分隔面板", description: "左右面板分割", render: splitter_demo::render },
         DemoEntry { name: "Icon 图标", description: "基于 Lucide 的图标系统", render: icon_demo::render },
     ]
 }
