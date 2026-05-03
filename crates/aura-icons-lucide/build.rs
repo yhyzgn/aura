@@ -2,18 +2,13 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::process::Command;
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let svg_dir = Path::new("assets/svgs");
 
     if !svg_dir.is_dir() || fs::read_dir(svg_dir).map_or(true, |mut d| d.next().is_none()) {
-        let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/sync-lucide.sh");
-        if script.exists() {
-            println!("cargo:warning=Syncing Lucide icons...");
-            let _ = Command::new("bash").arg(&script).status();
-        }
+        println!("cargo:warning=No SVG icons found. Run: ./scripts/sync-lucide.sh");
     }
 
     let mut entries = Vec::new();

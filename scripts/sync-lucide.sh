@@ -1,42 +1,82 @@
 #!/usr/bin/env bash
-# Sync Lucide SVG icons from GitHub.
-# Usage: ./scripts/sync-lucide.sh [--all]
+# Sync Lucide SVG icons from GitHub — incremental, hash-based.
 #
-#   --all   Download ALL ~1500 icons (default: only missing ones)
+#   ./scripts/sync-lucide.sh         # incremental (hash compare)
+#   ./scripts/sync-lucide.sh --full  # force full refresh
 #
-# Output: crates/aura-icons-lucide/assets/svgs/*.svg
+# Rules:
+#   1. Never delete existing SVGs
+#   2. Cache lucide repo at ../../target/lucide-cache (fetch if >24h old)
+#   3. Only add new icons; only update if upstream hash differs
+#   4. First run does full sync
 
 set -euo pipefail
 
 LUCIDE_REPO="https://github.com/lucide-icons/lucide.git"
-SVG_DIR="$(dirname "$0")/../crates/aura-icons-lucide/assets/svgs"
-TMP_DIR=$(mktemp -d)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SVG_DIR="$SCRIPT_DIR/../crates/aura-icons-lucide/assets/svgs"
+HASH_FILE="$SVG_DIR/.hashes"
+CACHE_DIR="$SCRIPT_DIR/../target/lucide-cache"
+CACHE_STAMP="$CACHE_DIR/.stamp"
+FULL="${1:-}"
+CACHE_TTL=$((24 * 3600))  # 24 hours
 
-cleanup() { rm -rf "$TMP_DIR"; }
-trap cleanup EXIT
+mkdir -p "$SVG_DIR" "$CACHE_DIR"
 
-echo "=== Cloning lucide-icons/lucide (shallow) ==="
-git clone --depth 1 --filter=blob:none --sparse "$LUCIDE_REPO" "$TMP_DIR/lucide" 2>&1 | tail -1
-
-cd "$TMP_DIR/lucide"
-git sparse-checkout set icons
-
-echo "=== Copying SVG icons ==="
-mkdir -p "$SVG_DIR"
-
-if [ "${1:-}" = "--all" ]; then
-    cp icons/*.svg "$SVG_DIR/"
-    echo "Copied $(ls icons/*.svg | wc -l) icons."
-else
-    count=0
-    for svg in icons/*.svg; do
-        name=$(basename "$svg")
-        if [ ! -f "$SVG_DIR/$name" ]; then
-            cp "$svg" "$SVG_DIR/"
-            count=$((count + 1))
+# ── Clone or update cache ──────────────────────────────────
+need_fetch=true
+if [ -d "$CACHE_DIR/.git" ] && [ "$FULL" != "--full" ]; then
+    now=$(date +%s)
+    if [ -f "$CACHE_STAMP" ]; then
+        last=$(cat "$CACHE_STAMP")
+        if [ $((now - last)) -lt $CACHE_TTL ]; then
+            need_fetch=false
         fi
-    done
-    echo "Copied $count new icons (total: $(ls "$SVG_DIR" | wc -l))."
+    fi
 fi
 
-echo "=== Done ==="
+if $need_fetch; then
+    if [ -d "$CACHE_DIR/.git" ]; then
+        echo "=== Updating lucide cache (git fetch) ==="
+        git -C "$CACHE_DIR" fetch --depth 1 origin main 2>&1 | tail -1
+        git -C "$CACHE_DIR" reset --hard origin/main 2>&1 | tail -1
+    else
+        echo "=== Cloning lucide-icons/lucide to cache ==="
+        git clone --depth 1 --filter=blob:none "$LUCIDE_REPO" "$CACHE_DIR" 2>&1 | tail -1
+    fi
+    date +%s > "$CACHE_STAMP"
+fi
+
+# ── Compare hashes ─────────────────────────────────────────
+declare -A known
+if [ -f "$HASH_FILE" ] && [ "$FULL" != "--full" ]; then
+    while IFS='  ' read -r hash name; do
+        known["$name"]="$hash"
+    done < "$HASH_FILE"
+fi
+
+added=0; updated=0; skipped=0
+
+for svg in "$CACHE_DIR/icons"/*.svg; do
+    [ -f "$svg" ] || continue
+    name=$(basename "$svg")
+    new_hash=$(sha256sum "$svg" | awk '{print $1}')
+
+    if [ ! -f "$SVG_DIR/$name" ]; then
+        cp "$svg" "$SVG_DIR/"
+        added=$((added + 1))
+    elif [ "$FULL" = "--full" ]; then
+        cp "$svg" "$SVG_DIR/"
+        updated=$((updated + 1))
+    elif [ "${known[$name]:-}" != "$new_hash" ]; then
+        cp "$svg" "$SVG_DIR/"
+        updated=$((updated + 1))
+    else
+        skipped=$((skipped + 1))
+    fi
+    echo "$new_hash  $name" >> "$SVG_DIR/.hashes.tmp"
+done
+
+mv "$SVG_DIR/.hashes.tmp" "$HASH_FILE" 2>/dev/null || true
+
+echo "=== Lucide sync: +$added added, ~$updated updated, =$skipped skipped (total: $(ls "$SVG_DIR"/*.svg 2>/dev/null | wc -l)) ==="
