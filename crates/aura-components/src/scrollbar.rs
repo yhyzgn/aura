@@ -19,16 +19,13 @@ impl RenderOnce for Scrollbar {
         let child_count = self.children.len().max(1);
         let thumb_ratio = (5.0 / child_count as f32).clamp(0.05, 1.0);
         let thumb_h = (150.0 * thumb_ratio).max(20.0);
-        let scroll_handle = ScrollHandle::new();
         let h = self.height.unwrap_or(200.0);
 
         gpui::div()
-            .flex().flex_row()
-            .h(px(h))
+            .flex().flex_row().h(px(h))
             .child(
-                gpui::div().flex_1().flex().flex_col()
+                gpui::div().flex_1()
                     .id("scrollbar-content")
-                    .track_scroll(&scroll_handle)
                     .overflow_y_scroll()
                     .children(self.children)
             )
