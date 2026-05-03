@@ -3,8 +3,8 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, FocusHandle, Focusable, Hsla, Rgba, Render, SharedString,
-    Window, Context, MouseButton, MouseUpEvent, KeyDownEvent, Bounds, Pixels,
-    actions,
+    Window, Context, MouseButton, MouseUpEvent, KeyDownEvent,
+    actions, KeyBinding,
 };
 use std::ops::Range;
 
@@ -39,6 +39,19 @@ impl Input {
     pub fn clearable(mut self, c: bool) -> Self { self.clearable = c; self }
     pub fn icon_prefix(mut self, icon: IconName) -> Self { self.icon_prefix = Some(icon); self }
     pub fn icon_suffix(mut self, icon: IconName) -> Self { self.icon_suffix = Some(icon); self }
+
+    /// Call once at app startup to enable Input keyboard shortcuts.
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([
+            KeyBinding::new("backspace", Backspace, None),
+            KeyBinding::new("delete", Delete, None),
+            KeyBinding::new("left", Left, None),
+            KeyBinding::new("right", Right, None),
+            KeyBinding::new("home", Home, None),
+            KeyBinding::new("end", End, None),
+            KeyBinding::new("cmd-a", SelectAll, None),
+        ]);
+    }
 
     fn clear(&mut self, cx: &mut Context<Self>) { self.value = SharedString::default(); cx.notify(); }
     fn cursor_offset(&self) -> usize {
