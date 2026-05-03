@@ -14,7 +14,7 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
-actions!(input, [Backspace, Delete, Left, Right, Home, End, SelectAll]);
+actions!(input, [Backspace, Delete, Left, Right, Home, End, SelectAll, Enter]);
 
 pub struct Input {
     value: SharedString,
@@ -52,6 +52,7 @@ impl Input {
             KeyBinding::new("left", Left, None),            KeyBinding::new("right", Right, None),
             KeyBinding::new("home", Home, None),            KeyBinding::new("end", End, None),
             KeyBinding::new("cmd-a", SelectAll, None),
+            KeyBinding::new("enter", Enter, None),
         ]);
     }
 
@@ -111,6 +112,10 @@ impl Input {
     fn end(&mut self, _: &End, _: &mut Window, cx: &mut Context<Self>) { self.move_to(self.value.len(), cx); }
     fn select_all(&mut self, _: &SelectAll, _: &mut Window, cx: &mut Context<Self>) {
         self.selected_range = 0..self.value.len(); cx.notify();
+    }
+
+    fn enter(&mut self, _: &Enter, _: &mut Window, cx: &mut Context<Self>) {
+        self.internal_replace("\n", cx);
     }
 
     fn on_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
@@ -241,9 +246,10 @@ struct InputElement {
 }
 
 struct InputPrepaint {
-    line: Option<ShapedLine>,
+    lines: Vec<(ShapedLine, Pixels)>, // (line, y_offset)
     cursor: Option<gpui::PaintQuad>,
     selection: Option<gpui::PaintQuad>,
+    total_height: Pixels,
 }
 
 impl IntoElement for InputElement {
@@ -259,57 +265,83 @@ impl Element for InputElement {
     fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
 
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
+        let line_count = self.input.read(cx).text_for_display().split('\n').count().max(1) as f32;
         let mut style = Style::default();
         style.size.width = gpui::relative(1.).into();
-        style.size.height = window.line_height().into();
+        style.size.height = (window.line_height() * line_count).into();
         (window.request_layout(style, [], cx), ())
     }
 
     fn prepaint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), window: &mut Window, cx: &mut App) -> InputPrepaint {
         let input = self.input.read(cx);
-        let text = input.text_for_display();
-        let cursor = input.cursor_offset();
-        let selected = input.selected_range.clone();
         let style = window.text_style();
         let theme = &cx.global::<Config>().theme;
         let text_c = if self.disabled { theme.neutral.text_disabled } else { style.color };
-        let (display, text_color) = if input.value.is_empty() {
-            (input.placeholder.clone(), rgba(0,0,0,0.3))
-        } else {
-            (text, text_c)
-        };
-        let run = TextRun { len: display.len(), font: style.font(), color: text_color, background_color: None, underline: None, strikethrough: None };
-        let runs = if let Some(ref marked) = input.marked_range {
-            vec![
-                TextRun { len: marked.start, ..run.clone() },
-                TextRun { len: marked.end - marked.start, underline: Some(UnderlineStyle { color: Some(run.color), thickness: px(1.0), wavy: false }), ..run.clone() },
-                TextRun { len: display.len() - marked.end, ..run },
-            ].into_iter().filter(|r| r.len > 0).collect()
-        } else { vec![run] };
-
         let font_size = style.font_size.to_pixels(window.rem_size());
-        let line = window.text_system().shape_line(display, font_size, &runs, None);
-        let cursor_pos = line.x_for_index(cursor);
-        let cursor_h = (bounds.bottom() - bounds.top()) * 0.65;
-        let cursor_top = bounds.top() + (bounds.bottom() - bounds.top() - cursor_h) / 2.0;
-        let (selection, cursor_quad) = if selected.is_empty() {
-            (None, Some(fill(Bounds::new(point(bounds.left() + cursor_pos, cursor_top), size(px(2.), cursor_h)), theme.primary.base)))
-        } else {
-            (Some(fill(Bounds::from_corners(point(bounds.left() + line.x_for_index(selected.start), bounds.top()), point(bounds.left() + line.x_for_index(selected.end), bounds.bottom())), gpui::rgba(0x3311ff30))), None)
-        };
-        InputPrepaint { line: Some(line), cursor: cursor_quad, selection }
+        let line_height = window.line_height();
+        let cursor_offset = input.cursor_offset();
+
+        let text = input.text_for_display();
+        let text_lines: Vec<&str> = text.split('\n').collect();
+        let cursor_line = text[..cursor_offset].chars().filter(|&c| c == '\n').count();
+
+        let mut lines = Vec::new();
+        let mut y = bounds.top();
+        let mut cursor_quad = None;
+        let mut byte_offset = 0;
+
+        for (i, line_text) in text_lines.iter().enumerate() {
+            let (display, color) = if input.value.is_empty() {
+                (input.placeholder.clone(), rgba(0,0,0,0.3))
+            } else {
+                (SharedString::from(*line_text), text_c)
+            };
+            let run = TextRun { len: display.len(), font: style.font(), color, background_color: None, underline: None, strikethrough: None };
+            let runs = if let Some(ref marked) = input.marked_range {
+                if byte_offset < marked.end && byte_offset + line_text.len() > marked.start {
+                    let ms = marked.start.saturating_sub(byte_offset);
+                    let me = (marked.end - byte_offset).min(line_text.len());
+                    vec![
+                        TextRun { len: ms, ..run.clone() },
+                        TextRun { len: me - ms, underline: Some(UnderlineStyle { color: Some(run.color), thickness: px(1.0), wavy: false }), ..run.clone() },
+                        TextRun { len: line_text.len().saturating_sub(me), ..run },
+                    ].into_iter().filter(|r| r.len > 0).collect()
+                } else { vec![run.clone()] }
+            } else { vec![run] };
+
+            let shaped = window.text_system().shape_line(display, font_size, &runs, None);
+
+            // Cursor on this line?
+            if i == cursor_line && input.selected_range.is_empty() && !input.value.is_empty() {
+                let col = cursor_offset - byte_offset;
+                let x = shaped.x_for_index(col);
+                let ch = (bounds.bottom() - bounds.top()) * 0.65;
+                let ct = y + (line_height - ch) / 2.0;
+                cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
+            }
+
+            lines.push((shaped, y));
+            y = y + line_height;
+            byte_offset += line_text.len() + 1; // +1 for the newline
+        }
+
+        let total_height = if lines.is_empty() { line_height } else { lines.last().unwrap().1 + line_height - bounds.top() };
+        InputPrepaint { lines, cursor: cursor_quad, selection: None, total_height }
     }
 
     fn paint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), prepaint: &mut InputPrepaint, window: &mut Window, cx: &mut App) {
         let focus_handle = self.input.read(cx).focus_handle.clone();
         window.handle_input(&focus_handle, ElementInputHandler::new(bounds, self.input.clone()), cx);
         if let Some(s) = prepaint.selection.take() { window.paint_quad(s); }
-        let line = prepaint.line.take().unwrap();
-        line.paint(bounds.origin, window.line_height(), gpui::TextAlign::Left, None, window, cx).unwrap();
+        for (line, y) in &prepaint.lines {
+            line.paint(point(bounds.left(), *y), window.line_height(), gpui::TextAlign::Left, None, window, cx).unwrap();
+        }
         if focus_handle.is_focused(window) {
             if let Some(c) = prepaint.cursor.take() { window.paint_quad(c); }
         }
-        self.input.update(cx, |input, _| { input.last_layout = Some(line); input.last_bounds = Some(bounds); });
+        if let Some((first_line, _)) = prepaint.lines.first() {
+            self.input.update(cx, |input, _| { input.last_layout = Some(first_line.clone()); input.last_bounds = Some(bounds); });
+        }
     }
 }
 
@@ -350,7 +382,8 @@ impl Render for Input {
                 .on_action(cx.listener(Self::right))
                 .on_action(cx.listener(Self::home))
                 .on_action(cx.listener(Self::end))
-                .on_action(cx.listener(Self::select_all));
+                .on_action(cx.listener(Self::select_all))
+                .on_action(cx.listener(Self::enter));
         }
 
         if let Some(icon) = self.icon_prefix {
