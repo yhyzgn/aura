@@ -108,6 +108,12 @@ impl AuraButton {
             .text_color(colors.text)
             .text_size(px(font_size));
 
+        if !self.disabled {
+            el = el.cursor_pointer();
+        } else {
+            el = el.cursor_not_allowed();
+        }
+
         // border only if color is not fully transparent
         if !colors.border.is_transparent() {
             el = el.border_1().border_color(colors.border);
@@ -117,15 +123,12 @@ impl AuraButton {
             el = el.hover(|style| {
                 let mut s = style
                     .bg(colors.hover_bg)
-                    .text_color(colors.text_hover)
-                    .cursor_pointer();
+                    .text_color(colors.text_hover);
                 if !colors.border_hover.is_transparent() {
                     s = s.border_color(colors.border_hover);
                 }
                 s
             });
-        } else {
-            el = el.cursor_not_allowed();
         }
 
         el.child(label_text).into_any_element()
