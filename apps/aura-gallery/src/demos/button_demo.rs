@@ -1,7 +1,7 @@
 use aura_components::Button;
-use aura_core::AuraConfig;
+use aura_core::Config;
 use aura_icons_lucide::IconName;
-use aura_theme::AuraTheme;
+use aura_theme::Theme;
 use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
 
 pub fn render() -> AnyElement {
@@ -12,7 +12,7 @@ struct ButtonDemo;
 
 impl RenderOnce for ButtonDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         div()
             .flex()
             .flex_col()
@@ -37,7 +37,7 @@ impl RenderOnce for ButtonDemo {
     }
 }
 
-fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
+fn hdr(theme: &Theme, s: &str) -> impl IntoElement {
     div()
         .text_size(px(theme.font_size.lg))
         .text_color(theme.neutral.text_1)

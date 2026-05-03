@@ -1,7 +1,7 @@
-use aura_core::AuraConfig;
+use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use aura_theme::{AuraTheme, ButtonSize, ButtonVariant, ButtonVariantColors};
+use aura_theme::{Theme, ButtonSize, ButtonVariant, ButtonVariantColors};
 use gpui::{
     App, Component, ElementId, Hsla, IntoElement, RenderOnce, Rgba, SharedString, Window,
     prelude::*, px,
@@ -148,7 +148,7 @@ impl Button {
         self
     }
 
-    fn colors(&self, theme: &AuraTheme) -> ButtonVariantColors {
+    fn colors(&self, theme: &Theme) -> ButtonVariantColors {
         if self.disabled {
             ButtonVariantColors {
                 bg: rgba(0, 0, 0, 0.0),
@@ -187,7 +187,7 @@ impl Button {
         }
     }
 
-    fn render_with_theme(self, theme: &AuraTheme) -> impl IntoElement {
+    fn render_with_theme(self, theme: &Theme) -> impl IntoElement {
         let c = self.colors(theme);
         let h = self.size.height();
         let px_h = self.size.padding_x();
@@ -321,7 +321,7 @@ impl Button {
 
 impl RenderOnce for Button {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         self.render_with_theme(theme)
     }
 }

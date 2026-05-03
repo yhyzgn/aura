@@ -1,6 +1,6 @@
 use aura_components::Text;
-use aura_core::AuraConfig;
-use aura_theme::AuraTheme;
+use aura_core::Config;
+use aura_theme::Theme;
 use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
 
 pub fn render() -> AnyElement { Component::new(TextDemo).into_any_element() }
@@ -8,7 +8,7 @@ pub fn render() -> AnyElement { Component::new(TextDemo).into_any_element() }
 struct TextDemo;
 impl RenderOnce for TextDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         div().flex().flex_col().gap_3()
             .child(hdr(theme, "Sizes"))
             .child(row(vec![
@@ -29,7 +29,7 @@ impl RenderOnce for TextDemo {
     }
 }
 
-fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
+fn hdr(theme: &Theme, s: &str) -> impl IntoElement {
     div().text_size(px(theme.font_size.lg)).text_color(theme.neutral.text_1)
         .font_weight(gpui::FontWeight::BOLD).mt_2().child(s.to_string())
 }

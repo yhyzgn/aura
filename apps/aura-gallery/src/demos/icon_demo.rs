@@ -1,7 +1,7 @@
-use aura_core::AuraConfig;
+use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use aura_theme::AuraTheme;
+use aura_theme::Theme;
 use gpui::{
     AnyElement, App, Component, Hsla, IntoElement, RenderOnce, Window, div, prelude::*, px,
 };
@@ -14,7 +14,7 @@ struct IconDemo;
 
 impl RenderOnce for IconDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         let icons: &[(IconName, &str)] = &[
             (IconName::House, "Home"),
             (IconName::User, "User"),
@@ -127,7 +127,7 @@ impl RenderOnce for IconDemo {
     }
 }
 
-fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
+fn hdr(theme: &Theme, s: &str) -> impl IntoElement {
     div()
         .text_size(px(theme.font_size.lg))
         .text_color(theme.neutral.text_1)
@@ -136,15 +136,15 @@ fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
         .child(s.to_string())
 }
 
-fn build_icon(_theme: &AuraTheme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
+fn build_icon(_theme: &Theme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
     Icon::new(icon).size(sz).color(color)
 }
 
-fn build_icon_default_color(_theme: &AuraTheme, icon: IconName, sz: f32) -> impl IntoElement {
+fn build_icon_default_color(_theme: &Theme, icon: IconName, sz: f32) -> impl IntoElement {
     Icon::new(icon).size(sz)
 }
 
-fn icon_labeled(theme: &AuraTheme, icon: IconName, sz: f32, label: &str) -> impl IntoElement {
+fn icon_labeled(theme: &Theme, icon: IconName, sz: f32, label: &str) -> impl IntoElement {
     div()
         .flex()
         .flex_col()
@@ -160,7 +160,7 @@ fn icon_labeled(theme: &AuraTheme, icon: IconName, sz: f32, label: &str) -> impl
 }
 
 fn icon_labeled_color(
-    theme: &AuraTheme,
+    theme: &Theme,
     icon: IconName,
     color: Hsla,
     label: &str,

@@ -9,16 +9,16 @@
 - GPUI git 依赖策略: workspace `default-features=false`, app 显式 `features=["wayland","x11","font-kit"]`
 
 ### aura-theme (设计系统)
-- `AuraTheme` struct: 亮/暗双主题，Design Tokens（色板/间距/圆角/字号）
+- `Theme` struct: 亮/暗双主题，Design Tokens（色板/间距/圆角/字号）
 - `ButtonVariant` (6 种), `ButtonSize` (3 种), `ButtonVariantColors`
 - `color_by_variant()` 自动计算配色
 - 完整 Element-Plus 色板: Primary/Success/Warning/Danger/Info + hover/active 态
 
 ### aura-core (核心层)
-- `AuraConfig` 实现 `gpui::Global` trait
+- `Config` 实现 `gpui::Global` trait
 - `init_aura(cx: &mut App, theme)` 全局注入
-- `AuraContextExt` trait: 为 `Context<'_, V>` 提供 `.aura() -> &AuraTheme`
-- `AuraElement` 通用 trait 骨架
+- `ContextExt` trait: 为 `Context<'_, V>` 提供 `.aura() -> &Theme`
+- `ElementExt` 通用 trait 骨架
 - Z-Index 工具函数: `z_index_popup/modal/notification/tooltip`
 
 ### aura-components (组件)
@@ -43,7 +43,7 @@
 ## 关键架构决策
 
 1. **Builder Pattern**: 所有组件 Builder::new().method().build(&theme)
-2. **Global Theme**: cx.set_global() → cx.global::<AuraConfig>()
+2. **Global Theme**: cx.set_global() → cx.global::<Config>()
 3. **组件/主题解耦**: .build(&theme) 显式传参，不隐式读 Global
 4. **Demo 注册表**: 函数指针 + AnyElement 返回，类型统一存储
 

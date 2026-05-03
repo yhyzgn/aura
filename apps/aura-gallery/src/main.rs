@@ -1,8 +1,8 @@
 mod category;
 mod demos;
 
-use aura_core::{AuraContextExt, init_aura};
-use aura_theme::AuraTheme;
+use aura_core::{ContextExt, init_aura};
+use aura_theme::Theme;
 use gpui::{
     App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
@@ -11,7 +11,7 @@ pub struct Gallery;
 
 fn run_gallery() {
     gpui_platform::application().run(|cx: &mut App| {
-        init_aura(cx, AuraTheme::light());
+        init_aura(cx, Theme::light());
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Maximized(Bounds::centered(

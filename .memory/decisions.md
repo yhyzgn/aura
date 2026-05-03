@@ -1,18 +1,18 @@
 # Architecture Decisions
 
-## ADR-009: Component Naming — No `Aura` Prefix
+## ADR-009: No `Aura` Prefix on Any Public Type
 
-**Decision**: Components are named directly (Button, Icon, Link, Text), not prefixed (AuraButton, AuraIcon).
-Library-level types keep the prefix (AuraTheme, AuraConfig, AuraContextExt).
+**Decision**: Remove `Aura` prefix from ALL public types. Components: Button, Icon, Link, Text.
+Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radius, FontSize.
 
 **Rationale**:
-- `use aura_components::Button` is cleaner than `use aura_components::AuraButton`
-- The namespace already disambiguates
-- Theme/config types are less frequently used, prefix indicates they're framework types
+- `aura_theme::Theme` is already namespaced by the crate
+- No conflict with GPUI types (verified at compile time)
+- Consistent with component naming decision
 
 ## ADR-008: Component API — RenderOnce + IntoElement (codex Paradigm)
 
-**Decision**: All components implement `RenderOnce` + `IntoElement` (via `Component::new(self)`). Theme is read from `cx.global::<AuraConfig>().theme` inside `render()`, never passed as a parameter.
+**Decision**: All components implement `RenderOnce` + `IntoElement` (via `Component::new(self)`). Theme is read from `cx.global::<Config>().theme` inside `render()`, never passed as a parameter.
 
 **Rationale**:
 - Eliminates `.build(theme)` anti-pattern
@@ -32,7 +32,7 @@ Library-level types keep the prefix (AuraTheme, AuraConfig, AuraContextExt).
 
 ## ADR-002: Global Theme via GPUI Global
 
-**Decision**: Theme injected via `cx.set_global(AuraConfig{})` and read via `cx.global::<AuraConfig>()`.
+**Decision**: Theme injected via `cx.set_global(Config{})` and read via `cx.global::<Config>()`.
 
 **Rationale**:
 - GPUI's Global mechanism is O(1) and thread-safe
@@ -71,7 +71,7 @@ Library-level types keep the prefix (AuraTheme, AuraConfig, AuraContextExt).
 
 ## ADR-006: Component ↔ Theme Decoupling
 
-**Decision**: Components receive `&AuraTheme` via `.build(&theme)` parameter, not via implicit Global read.
+**Decision**: Components receive `&Theme` via `.build(&theme)` parameter, not via implicit Global read.
 
 **Rationale**:
 - Pure function: same theme + same props = same output
@@ -90,14 +90,14 @@ Library-level types keep the prefix (AuraTheme, AuraConfig, AuraContextExt).
 
 ## ADR-008: Components Read Theme from GPUI Global
 
-**Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `AuraConfig.theme` from `App` during render. Business usage is `Button::new("Save").primary()` without `.build(&theme)`.
+**Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `Config.theme` from `App` during render. Business usage is `Button::new("Save").primary()` without `.build(&theme)`.
 
 **Supersedes**: ADR-001's `.build(&theme)` conversion detail and ADR-006's explicit theme-parameter policy.
 
 **Rationale**:
-- Preserves the global theme model established by `init_aura(cx, AuraTheme::...)`.
-- Avoids threading `&AuraTheme` through every component call and demo registry.
+- Preserves the global theme model established by `init_aura(cx, Theme::...)`.
+- Avoids threading `&Theme` through every component call and demo registry.
 - Matches GPUI/Zed component patterns where `RenderOnce::render(..., cx: &mut App)` resolves theme and style.
 - Keeps chainable builder API while making components directly usable as `IntoElement` children.
 
-**Escape hatch**: Low-level private helpers may accept `&AuraTheme` for tests or style extraction, but public component use should not require theme parameters.
+**Escape hatch**: Low-level private helpers may accept `&Theme` for tests or style extraction, but public component use should not require theme parameters.

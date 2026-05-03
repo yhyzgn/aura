@@ -1,4 +1,4 @@
-use aura_core::AuraConfig;
+use aura_core::Config;
 use gpui::{App, Component, Hsla, IntoElement, RenderOnce, SharedString, Window, prelude::*, px};
 use std::borrow::Cow;
 
@@ -54,7 +54,7 @@ impl Icon {
 
 impl RenderOnce for Icon {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
 
         let sz = self.size.unwrap_or(18.0);
         let mut el = gpui::svg().external_path(self.asset_path).size(px(sz));

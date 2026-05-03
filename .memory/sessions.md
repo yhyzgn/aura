@@ -7,7 +7,7 @@
 - aura-icons: AuraIcon 容器，RenderOnce + IntoElement (Component)
 - aura-icons-lucide: build.rs 代码生成，1,703 Lucide 图标
 - scripts/sync-lucide.sh: 自动克隆 Lucide 仓库同步 SVG
-- AuraIcon 主题色自动从 cx.global::<AuraConfig>() 读取
+- AuraIcon 主题色自动从 cx.global::<Config>() 读取
 - 修复 SVG 渲染：text_color 必须挂 svg() 元素上（不能靠父 div 继承）
 - 修复 GPUI SVG 加载：external_path 走 SvgAsset::load (fs::read 直接读文件系统)
 - 确立 codex 范式：组件 RenderOnce + IntoElement，禁止 .build(theme)
@@ -33,8 +33,8 @@
 
 ### Actions
 - 搭建 Cargo workspace 结构 (4 crate + 2 app per structure.txt)
-- 实现 aura-theme: AuraTheme, Design Tokens, light/dark 模式
-- 实现 aura-core: AuraConfig (Global), init_aura(), AuraContextExt, Z-Index utils
+- 实现 aura-theme: Theme, Design Tokens, light/dark 模式
+- 实现 aura-core: Config (Global), init_aura(), ContextExt, Z-Index utils
 - 实现 aura-icons: AuraIcon trait, IconSize, 10 个占位图标
 - 实现 aura-components: AuraButton (6 variants × 3 sizes × disabled/loading)
 - 适配 GPUI 0.2.2 API (Render trait, Context<'_, V>, InteractiveElement, AnyElement)
@@ -82,7 +82,7 @@
 - Added aura-components tests for automatic id generation and explicit id override.
 
 ### Follow-up — Global theme API
-- Replaced public `AuraButton::build(&theme)` usage with GPUI `IntoElement + RenderOnce`; Button now reads `AuraConfig.theme` from `App` during render.
+- Replaced public `AuraButton::build(&theme)` usage with GPUI `IntoElement + RenderOnce`; Button now reads `Config.theme` from `App` during render.
 - Gallery demo registry no longer passes theme through function pointers; button demo wraps content in a `RenderOnce` demo component and reads global theme internally.
 - Updated prompt.md, P1 prompt, and decisions to supersede explicit `.build(&theme)` policy.
 

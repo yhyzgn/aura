@@ -59,7 +59,7 @@ struct NameDemo;
 
 impl RenderOnce for NameDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+        let theme = &cx.global::<aura_core::Config>().theme;
         div().flex().flex_col().gap_4()
             .child(section(theme, "Variants 变体"))
             .child(demo_row(vec![...]))

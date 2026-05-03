@@ -1,7 +1,7 @@
-use aura_core::AuraConfig;
+use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use aura_theme::{AuraTheme, ButtonVariant};
+use aura_theme::{Theme, ButtonVariant};
 use gpui::{
     App, Component, Hsla, IntoElement, MouseButton, RenderOnce, SharedString, Window,
     prelude::*, px,
@@ -43,7 +43,7 @@ impl Link {
     pub fn icon_start(mut self, icon: IconName) -> Self { self.icon_start = Some(icon); self }
     pub fn icon_end(mut self, icon: IconName) -> Self   { self.icon_end = Some(icon); self }
 
-    fn color_for(&self, theme: &AuraTheme) -> (Hsla, Hsla) {
+    fn color_for(&self, theme: &Theme) -> (Hsla, Hsla) {
         if self.disabled { return (theme.neutral.text_disabled, theme.neutral.text_disabled); }
         let family = match self.variant {
             ButtonVariant::Default | ButtonVariant::Tertiary => &theme.primary,
@@ -56,7 +56,7 @@ impl Link {
         (family.base, family.hover)
     }
 
-    fn render_with_theme(self, theme: &AuraTheme) -> impl IntoElement {
+    fn render_with_theme(self, theme: &Theme) -> impl IntoElement {
         let (color, hover_color) = self.color_for(theme);
         let fs = theme.font_size.md;
         let icon_sz = 14.0;
@@ -110,7 +110,7 @@ fn open_url(url: &str) {
 
 impl RenderOnce for Link {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         self.render_with_theme(theme)
     }
 }

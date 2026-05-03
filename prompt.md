@@ -36,7 +36,7 @@
 aura/
 ├── Cargo.toml                       # [workspace] root
 ├── crates/
-│   ├── aura-core/       lib.rs      # Global 配置、AuraElement trait、Z-Index
+│   ├── aura-core/       lib.rs      # Global 配置、ElementExt trait、Z-Index
 │   ├── aura-theme/      lib.rs      # Design Tokens、亮/暗主题、ButtonVariant/Size
 │   ├── aura-components/ src/        # 全部业务组件 (button.rs, input.rs, ...)
 │   │   └── lib.rs
@@ -140,7 +140,7 @@ Icon::new(IconName::House).size(24.0)
 // 实现范式
 impl RenderOnce for MyComponent {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<AuraConfig>().theme;
+        let theme = &cx.global::<Config>().theme;
         // ...
     }
 }
@@ -165,7 +165,7 @@ gpui::InteractiveElement // hover/on_mouse_up 等交互 trait
 
 // 读取主题
 fn render(&mut self, _w: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-    let theme = _cx.aura(); // AuraContextExt trait
+    let theme = _cx.aura(); // ContextExt trait
     // ...
 }
 ```
@@ -214,7 +214,7 @@ struct NameDemo;
 
 impl gpui::RenderOnce for NameDemo {
     fn render(self, _window: &mut gpui::Window, cx: &mut gpui::App) -> impl gpui::IntoElement {
-        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+        let theme = &cx.global::<aura_core::Config>().theme;
         div().flex().flex_col().gap_4()
             .child(section_header(theme, "Variants 变体"))
             .child(demo_row(vec![...]))

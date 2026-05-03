@@ -105,7 +105,7 @@ pub struct NeutralTokens {
 // Spacing / Radius / Font (unchanged structure, refined values)
 // ---------------------------------------------------------------------------
 
-pub struct AuraSpacing {
+pub struct Spacing {
     pub xs: f32,
     pub sm: f32,
     pub md: f32,
@@ -113,14 +113,14 @@ pub struct AuraSpacing {
     pub xl: f32,
 }
 
-pub struct AuraRadius {
+pub struct Radius {
     pub sm: f32,
     pub md: f32,
     pub lg: f32,
     pub full: f32,
 }
 
-pub struct AuraFontSize {
+pub struct FontSize {
     pub xs: f32,
     pub sm: f32,
     pub md: f32,
@@ -129,7 +129,7 @@ pub struct AuraFontSize {
 }
 
 // ---------------------------------------------------------------------------
-// AuraTheme
+// Theme
 // ---------------------------------------------------------------------------
 
 pub struct SecondaryColors {
@@ -138,11 +138,11 @@ pub struct SecondaryColors {
     pub pressed: Hsla,
 }
 
-pub struct AuraTheme {
+pub struct Theme {
     pub name: String,
-    pub spacing: AuraSpacing,
-    pub radius: AuraRadius,
-    pub font_size: AuraFontSize,
+    pub spacing: Spacing,
+    pub radius: Radius,
+    pub font_size: FontSize,
 
     // Semantic color families
     pub primary: ColorFamily,
@@ -163,33 +163,33 @@ pub struct AuraTheme {
     pub shadow_3: &'static str,
 }
 
-impl Default for AuraTheme {
+impl Default for Theme {
     fn default() -> Self {
         Self::light()
     }
 }
 
-impl AuraTheme {
+impl Theme {
     // ========================================================================
     // Light Theme
     // ========================================================================
     pub fn light() -> Self {
         Self {
             name: "light".into(),
-            spacing: AuraSpacing {
+            spacing: Spacing {
                 xs: 4.0,
                 sm: 8.0,
                 md: 12.0,
                 lg: 20.0,
                 xl: 32.0,
             },
-            radius: AuraRadius {
+            radius: Radius {
                 sm: 2.0,
                 md: 4.0,
                 lg: 8.0,
                 full: 9999.0,
             },
-            font_size: AuraFontSize {
+            font_size: FontSize {
                 xs: 10.0,
                 sm: 12.0,
                 md: 14.0,
@@ -272,20 +272,20 @@ impl AuraTheme {
     pub fn dark() -> Self {
         Self {
             name: "dark".into(),
-            spacing: AuraSpacing {
+            spacing: Spacing {
                 xs: 4.0,
                 sm: 8.0,
                 md: 12.0,
                 lg: 20.0,
                 xl: 32.0,
             },
-            radius: AuraRadius {
+            radius: Radius {
                 sm: 2.0,
                 md: 4.0,
                 lg: 8.0,
                 full: 9999.0,
             },
-            font_size: AuraFontSize {
+            font_size: FontSize {
                 xs: 12.0,
                 sm: 14.0,
                 md: 14.0,
@@ -556,7 +556,7 @@ mod tests {
 
     #[test]
     fn filled_button_hover_and_active_backgrounds_get_progressively_darker() {
-        let theme = AuraTheme::light();
+        let theme = Theme::light();
         let colors = theme.color_by_variant(ButtonVariant::Primary, false, true, true);
 
         let bg = rgba_color(colors.bg);
@@ -582,7 +582,7 @@ mod tests {
 
     #[test]
     fn default_button_hover_and_active_backgrounds_are_visible_overlays() {
-        let theme = AuraTheme::light();
+        let theme = Theme::light();
         let colors = theme.color_by_variant(ButtonVariant::Default, false, true, true);
 
         let bg = rgba_color(colors.bg);

@@ -4,10 +4,10 @@
 
 | Component | File | Tests | Demo |
 |-----------|------|-------|------|
-| AuraTheme (light/dark) | `crates/aura-theme/src/lib.rs` | — | — |
-| AuraConfig (Global) | `crates/aura-core/src/lib.rs` | — | — |
-| AuraContextExt trait | `crates/aura-core/src/lib.rs` | — | — |
-| AuraElement trait | `crates/aura-core/src/lib.rs` | — | — |
+| Theme (light/dark) | `crates/aura-theme/src/lib.rs` | — | — |
+| Config (Global) | `crates/aura-core/src/lib.rs` | — | — |
+| ContextExt trait | `crates/aura-core/src/lib.rs` | — | — |
+| ElementExt trait | `crates/aura-core/src/lib.rs` | — | — |
 | Z-Index utils | `crates/aura-core/src/lib.rs` | — | — |
 | Button | `crates/aura-components/src/button.rs` | — | ✅ |
 | Gallery app | `apps/aura-gallery/src/` | — | ✅ |
