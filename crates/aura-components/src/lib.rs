@@ -1,4 +1,5 @@
 pub mod button;
+pub mod button_group;
 pub mod link;
 pub mod text;
 pub mod title;
@@ -17,6 +18,7 @@ pub mod radio_group;
 pub mod input;
 
 pub use button::*;
+pub use button_group::*;
 pub use link::*;
 pub use text::*;
 pub use title::*;

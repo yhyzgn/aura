@@ -1,22 +1,38 @@
 # Session History
 
-## Session 3 — 2026-05-03
+## Session 4 — 2026-05-04
 
 ### Actions
-- 实现完整图标系统（见 icon-design.md）
-- aura-icons: AuraIcon 容器，RenderOnce + IntoElement (Component)
-- aura-icons-lucide: build.rs 代码生成，1,703 Lucide 图标
-- scripts/sync-lucide.sh: 自动克隆 Lucide 仓库同步 SVG
-- AuraIcon 主题色自动从 cx.global::<Config>() 读取
-- 修复 SVG 渲染：text_color 必须挂 svg() 元素上（不能靠父 div 继承）
-- 修复 GPUI SVG 加载：external_path 走 SvgAsset::load (fs::read 直接读文件系统)
-- 确立 codex 范式：组件 RenderOnce + IntoElement，禁止 .build(theme)
-- 更新 architecture-design.md/prompt.md/.memory/.prompt 文档
+- 完成 P1 Basic Elements 所有 13 个组件的开发与验证
+- **Button 增强**: 
+  - 支持 `icon_start`/`icon_end` 接受任意元素 (`AnyElement`) 或直接接受 `IconName`
+  - 为 `IconName` 实现 `IntoElement` trait
+  - 添加 `Text` 变体 (Ghost 按钮)
+  - 实现 `ButtonGroup` 容器
+  - 更新 Button Demo 包含全部新特性，验证 `.icon_start(IconName::Check)` 语法
+- **Typography**:
+  - 创建 `typography_demo` 整合 Text, Title, Paragraph, Link
+  - 修复 `Link` 对新 `ButtonVariant::Text` 的处理
+- **Layout & Container**:
+  - 重构 `Space` 为容器模式，支持 `gap` 和 `vertical`
+  - 修正 `Col` 栅格宽度计算 (使用 `gpui::relative`)
+  - 更新 `layout_demo` 展示 24 栅格系统
+  - 更新 `container_demo` 包含 `Container` (Header/Aside/Main/Footer) 示例
+- **验证**:
+  - `cargo check` 0 errors (已清理大部分新增警告)
+  - 13/13 组件在 Gallery 中均有 Demo 且符合 codex 范式
+- **状态同步**:
+  - 更新 `.memory/inventory.md` 和 `.memory/state.md`
+  - 标记 P1 阶段完成，准备进入 P2
 
 ### Key Discoveries
-- GPUI SvgAsset::load() 直接 fs::read()，不走 AssetSource 抽象层
-- external_path 渲染需要 style.text.color 在 SVG 元素自身上
-- Lucide 将 home.svg 重命名为 house.svg
+- GPUI 0.2.2 `AnyElement` 不实现 `Clone`，在 `RenderOnce` 中需注意所有权转移
+- `ButtonGroup` 这种复合组件需要子组件提供更细粒度的样式覆盖 (如 `rounded_none`) 才能实现完美连接，当前版本采用简化 Flex 布局实现
+- 栅格系统百分比宽度在 GPUI 中通过 `relative(span/24.0)` 实现最为准确
+
+### Decisions Made
+- 统一使用 `AnyElement` 作为组件 Icon/Child 的通用类型
+- P1 剩余组件 (Row, Col, Divider, Space) 均已按照 Element-Plus 规范进行功能补齐
 
 ## Session 2 — 2026-05-03
 

@@ -13,3 +13,10 @@ impl aura_icons::IntoIconPath for IconName {
         Cow::Owned(self.svg_path())
     }
 }
+
+impl gpui::IntoElement for IconName {
+    type Element = gpui::Component<aura_icons::Icon>;
+    fn into_element(self) -> Self::Element {
+        aura_icons::Icon::new(self).into_element()
+    }
+}

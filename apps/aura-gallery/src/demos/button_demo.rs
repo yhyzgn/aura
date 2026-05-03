@@ -1,5 +1,6 @@
-use aura_components::Button;
+use aura_components::{Button, ButtonGroup};
 use aura_core::Config;
+use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::Theme;
 use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
@@ -19,6 +20,8 @@ impl RenderOnce for ButtonDemo {
             .gap_3()
             .child(hdr(theme, "Types 按钮类型"))
             .child(row(types()))
+            .child(hdr(theme, "Text 幽灵按钮 / 文字按钮"))
+            .child(row(text_buttons()))
             .child(hdr(theme, "Secondary 次要按钮"))
             .child(row(secondary()))
             .child(hdr(theme, "Secondary · no border"))
@@ -27,8 +30,10 @@ impl RenderOnce for ButtonDemo {
             .child(row(sizes()))
             .child(hdr(theme, "Icons 图标"))
             .child(row(icons()))
-            .child(hdr(theme, "Icons 图标的次要按钮"))
-            .child(row(secondary_icons()))
+            .child(hdr(theme, "Custom Icons 自定义图标 (AnyElement)"))
+            .child(row(custom_icons()))
+            .child(hdr(theme, "Button Group 按钮组"))
+            .child(button_groups())
             .child(hdr(theme, "States 状态"))
             .child(row(states()))
             .child(row(loading_states()))
@@ -65,6 +70,17 @@ fn types() -> Vec<impl IntoElement> {
         Button::new("Success").success(),
         Button::new("Warning").warning(),
         Button::new("Error").danger(),
+    ]
+}
+
+fn text_buttons() -> Vec<impl IntoElement> {
+    vec![
+        Button::new("Default").text(),
+        Button::new("Primary").text().primary(),
+        Button::new("Info").text().info(),
+        Button::new("Success").text().success(),
+        Button::new("Warning").text().warning(),
+        Button::new("Danger").text().danger(),
     ]
 }
 
@@ -114,12 +130,20 @@ fn sizes() -> Vec<impl IntoElement> {
 
 fn icons() -> Vec<impl IntoElement> {
     vec![
-        Button::new("Search").primary().icon_start(IconName::Search),
-        Button::new("Settings").primary().icon_start(IconName::Settings),
+        Button::new("Search")
+            .primary()
+            .icon_start(IconName::Search),
+        Button::new("Settings")
+            .primary()
+            .icon_start(IconName::Settings),
         Button::new("Done").success().icon_end(IconName::Check),
         Button::new("Delete").danger().icon_end(IconName::X),
-        Button::new("Home").tertiary().icon_start(IconName::House),
-        Button::new("External").tertiary().icon_end(IconName::ArrowRight),
+        Button::new("Home")
+            .tertiary()
+            .icon_start(IconName::House),
+        Button::new("External")
+            .tertiary()
+            .icon_end(Icon::new(IconName::ArrowRight)),
         Button::new("Upload").info().icon_top(IconName::ArrowUp),
         Button::new("Download").info().icon_bottom(IconName::ArrowDown),
         Button::new("").primary().icon_only(IconName::Search),
@@ -128,35 +152,64 @@ fn icons() -> Vec<impl IntoElement> {
     ]
 }
 
+fn custom_icons() -> Vec<impl IntoElement> {
+    vec![
+        Button::new("Custom Element").primary().icon_start(
+            div()
+                .size(px(12.0))
+                .bg(gpui::red())
+                .rounded_full()
+                .into_any_element()
+        ),
+        Button::new("Multiple Icons")
+            .success()
+            .icon_start(Icon::new(IconName::Check))
+            .icon_end(Icon::new(IconName::Check)),
+    ]
+}
+
+fn button_groups() -> impl IntoElement {
+    div().flex().flex_col().gap_2().child(
+        ButtonGroup::new()
+            .button(Button::new("Previous").icon_start(Icon::new(IconName::ArrowLeft)))
+            .button(Button::new("Next").icon_end(Icon::new(IconName::ArrowRight)))
+    ).child(
+        ButtonGroup::new()
+            .button(Button::new("Edit").icon_start(Icon::new(IconName::Pencil)))
+            .button(Button::new("Share").icon_start(Icon::new(IconName::Share2)))
+            .button(Button::new("Delete").icon_start(Icon::new(IconName::Trash2)))
+    )
+}
+
 fn secondary_icons() -> Vec<impl IntoElement> {
     vec![
         Button::new("Default")
             .secondary()
-            .icon_start(IconName::Search),
+            .icon_start(Icon::new(IconName::Search)),
         Button::new("Tertiary")
             .tertiary()
             .secondary()
-            .icon_start(IconName::Search),
+            .icon_start(Icon::new(IconName::Search)),
         Button::new("Search")
             .primary()
             .secondary()
-            .icon_start(IconName::Search),
+            .icon_start(Icon::new(IconName::Search)),
         Button::new("Info")
             .info()
             .secondary()
-            .icon_start(IconName::Info),
+            .icon_start(Icon::new(IconName::Info)),
         Button::new("Success")
             .success()
             .secondary()
-            .icon_start(IconName::Check),
+            .icon_start(Icon::new(IconName::Check)),
         Button::new("Warning")
             .warning()
             .secondary()
-            .icon_start(IconName::Goal),
+            .icon_start(Icon::new(IconName::Goal)),
         Button::new("Error")
             .danger()
             .secondary()
-            .icon_start(IconName::X),
+            .icon_start(Icon::new(IconName::X)),
     ]
 }
 

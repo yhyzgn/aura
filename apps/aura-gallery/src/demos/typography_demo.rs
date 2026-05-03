@@ -1,42 +1,64 @@
-use aura_components::{Title, Paragraph, Text};
+use aura_components::{Link, Paragraph, Text, Title, Divider};
 use aura_core::Config;
+use aura_theme::Theme;
 use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
 
-pub fn render() -> AnyElement { Component::new(TypographyDemo).into_any_element() }
+pub fn render() -> AnyElement {
+    Component::new(TypographyDemo).into_any_element()
+}
 
 struct TypographyDemo;
+
 impl RenderOnce for TypographyDemo {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
-        div().flex().flex_col().gap_3()
-            .child(Title::new("Title 标题").h1())
-            .child(row(vec![
-                Title::new("H1").h1(),
-                Title::new("H2").h2(),
-                Title::new("H3").h3(),
-                Title::new("H4").h4(),
-                Title::new("H5").h5(),
-                Title::new("H6").h6(),
+        div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(hdr(theme, "Title 标题"))
+            .child(div().flex().flex_col().gap_2().children(vec![
+                Title::new("h1. Aura UI Title").h1().into_any_element(),
+                Title::new("h2. Aura UI Title").h2().into_any_element(),
+                Title::new("h3. Aura UI Title").h3().into_any_element(),
+                Title::new("h4. Aura UI Title").h4().into_any_element(),
+                Title::new("h5. Aura UI Title").h5().into_any_element(),
+                Title::new("h6. Aura UI Title").h6().into_any_element(),
             ]))
-            .child(div().h(px(8.0)))
-            .child(Title::new("Paragraph 段落").h2())
-            .child(Paragraph::new("Aura is a native component library built with Rust and GPUI. It provides a set of enterprise-grade UI components inspired by Element Plus and Naive UI. All components follow the RenderOnce + IntoElement pattern and read theme from global context automatically."))
-            .child(div().h(px(8.0)))
-            .child(Title::new("Text 文本").h2())
-            .child(row(vec![
-                Text::new("xs text").size(px(theme.font_size.xs)),
-                Text::new("sm text").size(px(theme.font_size.sm)),
-                Text::new("md text (default)"),
-                Text::new("lg text").size(px(theme.font_size.lg)),
-                Text::new("xl text").size(px(theme.font_size.xl)),
+            .child(Divider::new())
+            .child(hdr(theme, "Text 文本"))
+            .child(div().flex().flex_col().gap_2().children(vec![
+                Text::new("Default text color and size"),
+                Text::new("Primary color text").color(theme.primary.base),
+                Text::new("Success color text").color(theme.success.base),
+                Text::new("Warning color text").color(theme.warning.base),
+                Text::new("Danger color text").color(theme.danger.base),
+                Text::new("Small text").size(px(theme.font_size.sm)),
+                Text::new("Large text").size(px(theme.font_size.lg)),
             ]))
-            .child(div().w(px(300.0)).child(Text::new("Truncated text that is too long and gets cut with ellipsis...")))
-            .child(div().h(px(4.0)))
-            .child(Text::new("Rem-based sizing").size(gpui::rems(1.2)))
-            .child(Text::new("Px-based sizing").size(px(16.0)))
+            .child(Divider::new())
+            .child(hdr(theme, "Link 链接"))
+            .child(div().flex().flex_row().gap_4().children(vec![
+                Link::new("Default Link"),
+                Link::new("Primary Link").primary(),
+                Link::new("Success Link").success(),
+                Link::new("Warning Link").warning(),
+                Link::new("Danger Link").danger(),
+                Link::new("No Underline").underline(false),
+                Link::new("Disabled").disabled(true),
+            ]))
+            .child(Divider::new())
+            .child(hdr(theme, "Paragraph 段落"))
+            .child(div().w_80().child(
+                Paragraph::new("Aura UI is a professional desktop UI library for Rust, built on top of GPUI. It provides a comprehensive set of components inspired by Element Plus, designed to help developers build beautiful and performant native applications.")
+            ))
     }
 }
 
-fn row(elements: Vec<impl IntoElement>) -> impl IntoElement {
-    div().flex().flex_row().gap_4().items_center().flex_wrap().children(elements)
+fn hdr(theme: &Theme, s: &str) -> impl IntoElement {
+    div()
+        .text_size(px(theme.font_size.lg))
+        .text_color(theme.neutral.text_1)
+        .font_weight(gpui::FontWeight::BOLD)
+        .child(s.to_string())
 }

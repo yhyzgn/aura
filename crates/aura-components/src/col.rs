@@ -23,8 +23,10 @@ impl Col {
 
 impl RenderOnce for Col {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let flex = self.span as f32 / 24.0;
-        gpui::div().flex_none().w(px(flex * 100.0)) // simplified percentage
+        let span = self.span as f32 / 24.0;
+        gpui::div()
+            .flex_none()
+            .w(gpui::relative(span))
             .children(self.children)
     }
 }

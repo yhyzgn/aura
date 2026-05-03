@@ -8,7 +8,7 @@ use gpui::{
     Pixels, Point, Render, Rgba, SharedString, ShapedLine, Size, Style, TextRun,
     UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
 };
-use std::ops::Range;
+use std::ops::{Add, Range};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
@@ -342,7 +342,7 @@ impl Element for InputElement {
             if i == cursor_line && input.selected_range.is_empty() {
                 let col = cursor_offset - byte_offset;
                 let x = shaped.x_for_index(col);
-                let ch = font_size; // fixed cursor height = font size
+                let ch = font_size.add(px(6.0)); // fixed cursor height = font size
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
             }

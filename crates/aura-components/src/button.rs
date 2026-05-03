@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{Theme, ButtonSize, ButtonVariant, ButtonVariantColors};
 use gpui::{
-    App, Component, ElementId, Hsla, IntoElement, AbsoluteLength, RenderOnce, Rgba, SharedString, Window,
+    AnyElement, App, Component, ElementId, Hsla, IntoElement, AbsoluteLength, RenderOnce, Rgba, SharedString, Window,
     prelude::*, px,
 };
 use std::panic::Location;
@@ -18,6 +18,30 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     .into()
 }
 
+pub enum ButtonIcon {
+    IconName(IconName),
+    Icon(Icon),
+    Element(AnyElement),
+}
+
+impl From<IconName> for ButtonIcon {
+    fn from(name: IconName) -> Self {
+        ButtonIcon::IconName(name)
+    }
+}
+
+impl From<AnyElement> for ButtonIcon {
+    fn from(el: AnyElement) -> Self {
+        ButtonIcon::Element(el)
+    }
+}
+
+impl From<Icon> for ButtonIcon {
+    fn from(icon: Icon) -> Self {
+        ButtonIcon::Icon(icon)
+    }
+}
+
 pub struct Button {
     label: SharedString,
     variant: ButtonVariant,
@@ -29,8 +53,8 @@ pub struct Button {
     border: bool,
     rounded: Option<AbsoluteLength>,
     id: Option<ElementId>,
-    icon_start: Option<IconName>,
-    icon_end: Option<IconName>,
+    icon_start: Option<ButtonIcon>,
+    icon_end: Option<ButtonIcon>,
     icon_top: Option<IconName>,
     icon_bottom: Option<IconName>,
     icon_only: Option<IconName>,
@@ -71,6 +95,10 @@ impl Button {
     }
     pub fn tertiary(mut self) -> Self {
         self.variant = ButtonVariant::Tertiary;
+        self
+    }
+    pub fn text(mut self) -> Self {
+        self.variant = ButtonVariant::Text;
         self
     }
     pub fn info(mut self) -> Self {
@@ -129,12 +157,12 @@ impl Button {
         self.id = Some(id.into());
         self
     }
-    pub fn icon_start(mut self, icon: IconName) -> Self {
-        self.icon_start = Some(icon);
+    pub fn icon_start(mut self, icon: impl Into<ButtonIcon>) -> Self {
+        self.icon_start = Some(icon.into());
         self
     }
-    pub fn icon_end(mut self, icon: IconName) -> Self {
-        self.icon_end = Some(icon);
+    pub fn icon_end(mut self, icon: impl Into<ButtonIcon>) -> Self {
+        self.icon_end = Some(icon.into());
         self
     }
     pub fn icon_top(mut self, icon: IconName) -> Self {
@@ -254,58 +282,82 @@ impl Button {
         }
 
         // Build children: icons + label
-        let mut children: Vec<Box<dyn FnOnce() -> gpui::AnyElement>> = Vec::new();
+        let mut children: Vec<AnyElement> = Vec::new();
 
         if icon_only {
             let icon = self.icon_only.unwrap();
             let group = hover_group.clone();
-            children.push(Box::new(move || {
+            children.push(
                 Icon::new(icon).size(px(icon_sz)).color(c.text)
                     .group_hover_color(group, c.text_hover).into_any_element()
-            }));
+            );
         } else if self.loading {
             let sz = icon_sz;
             let group = hover_group.clone();
-            children.push(Box::new(move || {
+            children.push(
                 Icon::new(IconName::LoaderCircle).size(px(sz)).color(c.text)
                     .group_hover_color(group, c.text_hover).into_any_element()
-            }));
-            children.push(Box::new(move || gpui::div().child(label.clone()).into_any_element()));
+            );
+            children.push(gpui::div().child(label.clone()).into_any_element());
         } else {
             let lbl = label.clone();
             // icon_top
             if let Some(icon) = self.icon_top {
                 let sz = icon_sz; let group = hover_group.clone();
-                children.push(Box::new(move || {
+                children.push(
                     Icon::new(icon).size(px(sz)).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
-                }));
+                );
             }
             // icon_start
             if let Some(icon) = self.icon_start {
-                let sz = icon_sz; let group = hover_group.clone();
-                children.push(Box::new(move || {
-                    Icon::new(icon).size(px(sz)).color(c.text)
-                        .group_hover_color(group, c.text_hover).into_any_element()
-                }));
+                match icon {
+                    ButtonIcon::IconName(name) => {
+                        let group = hover_group.clone();
+                        children.push(
+                            Icon::new(name).size(px(icon_sz)).color(c.text)
+                                .group_hover_color(group, c.text_hover).into_any_element()
+                        );
+                    }
+                    ButtonIcon::Icon(icon) => {
+                        let group = hover_group.clone();
+                        children.push(
+                            icon.size(px(icon_sz)).color(c.text)
+                                .group_hover_color(group, c.text_hover).into_any_element()
+                        );
+                    }
+                    ButtonIcon::Element(el) => children.push(el),
+                }
             }
             // label
-            children.push(Box::new(move || gpui::div().child(lbl).into_any_element()));
+            children.push(gpui::div().child(lbl).into_any_element());
             // icon_end
             if let Some(icon) = self.icon_end {
-                let sz = icon_sz; let group = hover_group.clone();
-                children.push(Box::new(move || {
-                    Icon::new(icon).size(px(sz)).color(c.text)
-                        .group_hover_color(group, c.text_hover).into_any_element()
-                }));
+                match icon {
+                    ButtonIcon::IconName(name) => {
+                        let group = hover_group.clone();
+                        children.push(
+                            Icon::new(name).size(px(icon_sz)).color(c.text)
+                                .group_hover_color(group, c.text_hover).into_any_element()
+                        );
+                    }
+                    ButtonIcon::Icon(icon) => {
+                        let group = hover_group.clone();
+                        children.push(
+                            icon.size(px(icon_sz)).color(c.text)
+                                .group_hover_color(group, c.text_hover).into_any_element()
+                        );
+                    }
+                    ButtonIcon::Element(el) => children.push(el),
+                }
             }
             // icon_bottom
             if let Some(icon) = self.icon_bottom {
                 let sz = icon_sz; let group = hover_group.clone();
-                children.push(Box::new(move || {
+                children.push(
                     Icon::new(icon).size(px(sz)).color(c.text)
                         .group_hover_color(group, c.text_hover).into_any_element()
-                }));
+                );
             }
         }
 
@@ -322,7 +374,7 @@ impl Button {
             .on_click(move |event, window, cx| {
                 if let Some(ref handler) = click_handler { handler(event, window, cx); }
             })
-            .children(children.into_iter().map(|f| f()))
+            .children(children)
             .into_any_element()
     }
 }

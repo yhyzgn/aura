@@ -46,7 +46,7 @@ impl Link {
     fn color_for(&self, theme: &Theme) -> (Hsla, Hsla) {
         if self.disabled { return (theme.neutral.text_disabled, theme.neutral.text_disabled); }
         let family = match self.variant {
-            ButtonVariant::Default | ButtonVariant::Tertiary => &theme.primary,
+            ButtonVariant::Default | ButtonVariant::Tertiary | ButtonVariant::Text => &theme.primary,
             ButtonVariant::Primary => &theme.primary,
             ButtonVariant::Success => &theme.success,
             ButtonVariant::Warning => &theme.warning,
