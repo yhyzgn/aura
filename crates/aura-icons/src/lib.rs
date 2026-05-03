@@ -24,19 +24,21 @@ impl AuraIcon {
     }
 
     pub fn size(mut self, px_size: f32) -> Self { self.size = Some(px_size); self }
+
+    /// Set explicit color. If not called, inherits parent's text_color.
     pub fn color(mut self, color: Hsla) -> Self { self.color = Some(color); self }
 }
 
 impl RenderOnce for AuraIcon {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let sz = self.size.unwrap_or(18.0);
-        let color = self.color.unwrap_or(theme.neutral.icon);
-
-        gpui::svg()
+        let mut el = gpui::svg()
             .external_path(self.asset_path)
-            .size(px(sz))
-            .text_color(color)
+            .size(px(sz));
+        if let Some(color) = self.color {
+            el = el.text_color(color);
+        }
+        el
     }
 }
 

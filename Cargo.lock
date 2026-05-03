@@ -463,8 +463,6 @@ dependencies = [
 name = "aura-icons"
 version = "0.1.0"
 dependencies = [
- "aura-core",
- "aura-theme",
  "gpui",
 ]
 
