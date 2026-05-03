@@ -11,8 +11,8 @@ pub struct Gallery;
 
 fn run_gallery() {
     gpui_platform::application().run(|cx: &mut App| {
-            init_aura(cx, AuraTheme::light());
-            cx.open_window(
+        init_aura(cx, AuraTheme::light());
+        cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                     None,

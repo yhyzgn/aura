@@ -85,3 +85,15 @@
 - Replaced public `AuraButton::build(&theme)` usage with GPUI `IntoElement + RenderOnce`; Button now reads `AuraConfig.theme` from `App` during render.
 - Gallery demo registry no longer passes theme through function pointers; button demo wraps content in a `RenderOnce` demo component and reads global theme internally.
 - Updated prompt.md, P1 prompt, and decisions to supersede explicit `.build(&theme)` policy.
+
+### Follow-up — Button icon hover color
+- Re-read the icon library after adding `aura-icons-lucide` and Button icon support.
+- Root cause: `AuraIcon` intentionally inherits parent `text_color` when no explicit color is set, but `AuraButton` passed `.color(c.text)` to every internal icon, fixing the SVG text color at the normal state.
+- Fix: Button-created icons no longer set explicit icon color; they inherit the button container text color, including hover `text_color(c.text_hover)` and disabled text color.
+- Verified `cargo check`, `cargo test -p aura-theme`, and `cargo test -p aura-components`.
+
+### Correction — SVG color inheritance in GPUI
+- Previous assumption was wrong: GPUI `Svg::paint` requires the SVG element's own final `style.text.color`; it does not render from an ancestor div's text color automatically.
+- Removing explicit icon color caused Button icons to disappear because `style.text.color` on `svg()` was `None`.
+- Correct fix: keep normal icon `.color(c.text)` and add `AuraIcon::group_hover_color(group, c.text_hover)`; Button assigns a hover group to the button container so child icons switch color via GPUI `group_hover`.
+- Verified `cargo check`, `cargo test -p aura-icons`, and `cargo test -p aura-components`.

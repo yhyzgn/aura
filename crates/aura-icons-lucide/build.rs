@@ -30,17 +30,30 @@ fn main() {
     writeln!(f, "// Auto-generated — {} icons", entries.len()).unwrap();
     writeln!(f, "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]").unwrap();
     writeln!(f, "pub enum IconName {{").unwrap();
-    for (v, _) in &entries { writeln!(f, "    {},", v).unwrap(); }
+    for (v, _) in &entries {
+        writeln!(f, "    {},", v).unwrap();
+    }
     writeln!(f, "}}").unwrap();
-    writeln!(f, "impl IconName {{ pub fn file(&self) -> &'static str {{ match self {{").unwrap();
-    for (v, file) in &entries { writeln!(f, "    IconName::{} => \"{}\",", v, file).unwrap(); }
+    writeln!(
+        f,
+        "impl IconName {{ pub fn file(&self) -> &'static str {{ match self {{"
+    )
+    .unwrap();
+    for (v, file) in &entries {
+        writeln!(f, "    IconName::{} => \"{}\",", v, file).unwrap();
+    }
     writeln!(f, "}} }} }}").unwrap();
     println!("cargo:rerun-if-changed=assets/svgs/");
 }
 
 fn to_pascal_case(s: &str) -> String {
-    s.split(&['-', '_', ' ']).map(|w| {
-        let mut c = w.chars();
-        match c.next() { None=>String::new(), Some(f)=>f.to_uppercase().chain(c).collect() }
-    }).collect()
+    s.split(&['-', '_', ' '])
+        .map(|w| {
+            let mut c = w.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().chain(c).collect(),
+            }
+        })
+        .collect()
 }
