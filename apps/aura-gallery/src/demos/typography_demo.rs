@@ -24,13 +24,16 @@ impl RenderOnce for TypographyDemo {
             .child(div().h(px(8.0)))
             .child(Title::new("Text 文本").h2())
             .child(row(vec![
-                Text::new("xs text").size(theme.font_size.xs),
-                Text::new("sm text").size(theme.font_size.sm),
+                Text::new("xs text").size(px(theme.font_size.xs)),
+                Text::new("sm text").size(px(theme.font_size.sm)),
                 Text::new("md text (default)"),
-                Text::new("lg text").size(theme.font_size.lg),
-                Text::new("xl text").size(theme.font_size.xl),
+                Text::new("lg text").size(px(theme.font_size.lg)),
+                Text::new("xl text").size(px(theme.font_size.xl)),
             ]))
             .child(div().w(px(300.0)).child(Text::new("Truncated text that is too long and gets cut with ellipsis...")))
+            .child(div().h(px(4.0)))
+            .child(Text::new("Rem-based sizing").size(gpui::rems(1.2)))
+            .child(Text::new("Px-based sizing").size(px(16.0)))
     }
 }
 
