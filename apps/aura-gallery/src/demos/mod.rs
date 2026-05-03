@@ -1,5 +1,6 @@
 pub mod button_demo;
 pub mod icon_demo;
+pub mod link_demo;
 
 use gpui::AnyElement;
 
@@ -15,6 +16,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Button 按钮",
             description: "常用的操作按钮",
             render: button_demo::render,
+        },
+        DemoEntry {
+            name: "Link 链接",
+            description: "文字超链接",
+            render: link_demo::render,
         },
         DemoEntry {
             name: "Icon 图标",
