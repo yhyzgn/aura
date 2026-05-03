@@ -1,4 +1,4 @@
-use gpui::{prelude::*, px, SharedString, Hsla, Rgba};
+use gpui::{prelude::*, px, SharedString, Hsla, Rgba, ElementId};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
@@ -51,17 +51,11 @@ impl AuraButton {
     pub fn loading(mut self, loading: bool) -> Self   { self.loading = loading; self }
 
     // ── secondary style ──────────────────────────────────────
-    /// NaiveUI secondary button: colored text + light bg + same-color border
     pub fn secondary(mut self) -> Self { self.secondary = true; self }
-
-    /// Show light transparent background (default true for secondary)
     pub fn background(mut self, show: bool) -> Self { self.background = show; self }
-
-    /// Show border in text color (default true for secondary)
     pub fn border(mut self, show: bool) -> Self { self.border = show; self }
 
     // ── rounded ──────────────────────────────────────────────
-    /// Override border-radius; None = theme default
     pub fn rounded(mut self, radius: f32) -> Self { self.rounded = Some(radius); self }
 
     // ── build ────────────────────────────────────────────────
@@ -95,6 +89,9 @@ impl AuraButton {
             self.label.clone()
         };
 
+        // Build base Div styles, then convert to Stateful<Div> via .id()
+        // so that .active() (press-effect) and .hover() are both available.
+        let btn_id = ElementId::Name(SharedString::from("aura-btn"));
         let mut el = gpui::div()
             .flex()
             .flex_row()
@@ -106,7 +103,8 @@ impl AuraButton {
             .rounded(px(radius))
             .bg(colors.bg)
             .text_color(colors.text)
-            .text_size(px(font_size));
+            .text_size(px(font_size))
+            .id(btn_id);
 
         if !self.disabled {
             el = el.cursor_pointer();
@@ -114,21 +112,25 @@ impl AuraButton {
             el = el.cursor_not_allowed();
         }
 
-        // border only if color is not fully transparent
         if !colors.border.is_transparent() {
             el = el.border_1().border_color(colors.border);
         }
 
         if !self.disabled {
-            el = el.hover(|style| {
-                let mut s = style
-                    .bg(colors.hover_bg)
-                    .text_color(colors.text_hover);
-                if !colors.border_hover.is_transparent() {
-                    s = s.border_color(colors.border_hover);
-                }
-                s
-            });
+            el = el
+                .hover(|style| {
+                    let mut s = style
+                        .bg(colors.hover_bg)
+                        .text_color(colors.text_hover);
+                    if !colors.border_hover.is_transparent() {
+                        s = s.border_color(colors.border_hover);
+                    }
+                    s
+                })
+                // Pressed / active state — darken background
+                .active(|style| {
+                    style.bg(colors.active_bg)
+                });
         }
 
         el.child(label_text).into_any_element()
