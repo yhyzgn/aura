@@ -14,8 +14,8 @@ impl RenderOnce for ScrollbarDemo {
             .child(Title::new("Scrollbar 滚动条").h2())
             .child(Text::new("固定高度区域，滚动条独立于页面:"))
             .child(
-                div().h(px(150.0)).border_1().border_color(theme.neutral.border).rounded(px(4.0))
-                    .child(Scrollbar::new()
+                div().border_1().border_color(theme.neutral.border).rounded(px(4.0))
+                    .child(Scrollbar::new().height(150.0)
                         .child(div().flex().flex_col().p_2()
                             .children(items.iter().map(|s| {
                                 div().h(px(36.0)).flex().items_center().border_b_1()
