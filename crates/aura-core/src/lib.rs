@@ -67,10 +67,5 @@ pub fn z_index_tooltip<V>(cx: &Context<'_, V>) -> u32 {
 }
 
 pub fn hex_color(hex: u32) -> Hsla {
-    gpui::hsla(
-        ((hex >> 16) & 0xFF) as f32 / 255.0,
-        ((hex >> 8) & 0xFF) as f32 / 255.0,
-        (hex & 0xFF) as f32 / 255.0,
-        1.0,
-    )
+    gpui::rgb(hex).into()
 }

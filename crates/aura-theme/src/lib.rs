@@ -1,4 +1,4 @@
-use gpui::Hsla;
+use gpui::{Hsla, Rgba};
 
 /// NaiveUI-inspired Forest Green theme.
 ///
@@ -7,45 +7,25 @@ use gpui::Hsla;
 /// Dark theme base: neutralBase=#000, primary=#63E2B7 (green)
 
 // ---------------------------------------------------------------------------
-// Color helpers
+// Color helpers — construct via gpui::Rgba then .into() to Hsla
 // ---------------------------------------------------------------------------
 
 fn rgb(r: u8, g: u8, b: u8) -> Hsla {
-    hsla(r, g, b, 1.0)
+    Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: 1.0 }.into()
 }
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
-    hsla(r, g, b, a)
+    Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
-fn hsla(r: u8, g: u8, b: u8, a: f32) -> Hsla {
-    gpui::hsla(
-        r as f32 / 255.0,
-        g as f32 / 255.0,
-        b as f32 / 255.0,
-        a,
-    )
-}
-
-/// Mix a color with white (toward lighter shades)
+/// Lighten: blend with white. factor 0.9 = very light (90% white)
 fn lighten(base: Hsla, factor: f32) -> Hsla {
-    gpui::hsla(
-        base.h + (1.0 - base.h) * factor,
-        base.s * (1.0 - factor),
-        base.l + (1.0 - base.l) * factor,
-        base.a,
-    )
+    base.blend(gpui::white().opacity(factor))
 }
 
-/// Darken a color by mixing with black
 #[allow(dead_code)]
 fn darken(base: Hsla, factor: f32) -> Hsla {
-    gpui::hsla(
-        base.h,
-        base.s,
-        base.l * (1.0 - factor),
-        base.a,
-    )
+    base.blend(gpui::black().opacity(factor))
 }
 
 // ---------------------------------------------------------------------------
