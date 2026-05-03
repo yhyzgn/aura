@@ -1,9 +1,12 @@
 use gpui::{prelude::*, px, SharedString, Hsla, Rgba, ElementId};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
+
+static BTN_ID: AtomicU64 = AtomicU64::new(0);
 
 pub struct AuraButton {
     label: SharedString,
@@ -91,7 +94,9 @@ impl AuraButton {
 
         // Build base Div styles, then convert to Stateful<Div> via .id()
         // so that .active() (press-effect) and .hover() are both available.
-        let btn_id = ElementId::Name(SharedString::from("aura-btn"));
+        let btn_id = ElementId::Name(SharedString::from(
+            format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed))
+        ));
         let mut el = gpui::div()
             .flex()
             .flex_row()
