@@ -323,9 +323,20 @@ impl AuraTheme {
     }
 
     // ========================================================================
-    // Convenience: resolve BuilderColor for a ButtonVariant
+    // Convenience: resolve colors for a ButtonVariant
     // ========================================================================
-    pub fn color_by_variant(&self, variant: ButtonVariant) -> ButtonVariantColors {
+    pub fn color_by_variant(
+        &self,
+        variant: ButtonVariant,
+        secondary: bool,
+        background: bool,
+        border: bool,
+    ) -> ButtonVariantColors {
+        if secondary {
+            return self.secondary_colors(variant, background, border);
+        }
+
+        // Filled (primary) style
         match variant {
             ButtonVariant::Default => ButtonVariantColors {
                 bg: rgba(0, 0, 0, 0.0),
@@ -350,6 +361,48 @@ impl AuraTheme {
             ButtonVariant::Success => self.filled_colors(&self.success),
             ButtonVariant::Warning => self.filled_colors(&self.warning),
             ButtonVariant::Danger => self.filled_colors(&self.danger),
+        }
+    }
+
+    /// Secondary (light bg + colored text) for colored variants;
+    /// Default/Tertiary stay neutral.
+    fn secondary_colors(&self, variant: ButtonVariant, show_bg: bool, show_border: bool) -> ButtonVariantColors {
+        match variant {
+            ButtonVariant::Default => ButtonVariantColors {
+                bg: if show_bg { self.secondary.bg } else { rgba(0, 0, 0, 0.0) },
+                hover_bg: self.secondary.hover,
+                active_bg: self.secondary.pressed,
+                text: self.neutral.text_2,
+                border: if show_border { self.neutral.border } else { rgba(0, 0, 0, 0.0) },
+                text_hover: self.primary.base,
+                border_hover: self.primary.base,
+            },
+            ButtonVariant::Tertiary => ButtonVariantColors {
+                bg: if show_bg { self.secondary.bg } else { rgba(0, 0, 0, 0.0) },
+                hover_bg: self.secondary.hover,
+                active_bg: self.secondary.pressed,
+                text: self.neutral.text_2,
+                border: if show_border { self.neutral.border } else { rgba(0, 0, 0, 0.0) },
+                text_hover: self.neutral.text_1,
+                border_hover: rgba(0, 0, 0, 0.0),
+            },
+            ButtonVariant::Primary => self.secondary_family(&self.primary, show_bg, show_border),
+            ButtonVariant::Info    => self.secondary_family(&self.info, show_bg, show_border),
+            ButtonVariant::Success => self.secondary_family(&self.success, show_bg, show_border),
+            ButtonVariant::Warning => self.secondary_family(&self.warning, show_bg, show_border),
+            ButtonVariant::Danger  => self.secondary_family(&self.danger, show_bg, show_border),
+        }
+    }
+
+    fn secondary_family(&self, family: &ColorFamily, show_bg: bool, show_border: bool) -> ButtonVariantColors {
+        ButtonVariantColors {
+            bg: if show_bg { family.light_9 } else { rgba(0, 0, 0, 0.0) },
+            hover_bg: family.light_8,
+            active_bg: family.light_7,
+            text: family.base,
+            border: if show_border { family.base } else { rgba(0, 0, 0, 0.0) },
+            text_hover: family.hover,
+            border_hover: family.hover,
         }
     }
 
