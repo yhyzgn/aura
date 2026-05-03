@@ -1,4 +1,6 @@
-use gpui::{prelude::*, px, SharedString, Hsla, Rgba, ElementId};
+use gpui::{
+    prelude::*, px, SharedString, Hsla, Rgba, ElementId, MouseButton,
+};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -35,7 +37,6 @@ impl AuraButton {
         }
     }
 
-    // ── variant ──────────────────────────────────────────────
     pub fn variant(mut self, variant: ButtonVariant) -> Self { self.variant = variant; self }
     pub fn primary(mut self) -> Self   { self.variant = ButtonVariant::Primary; self }
     pub fn tertiary(mut self) -> Self  { self.variant = ButtonVariant::Tertiary; self }
@@ -44,24 +45,18 @@ impl AuraButton {
     pub fn warning(mut self) -> Self   { self.variant = ButtonVariant::Warning; self }
     pub fn danger(mut self) -> Self    { self.variant = ButtonVariant::Danger; self }
 
-    // ── size ─────────────────────────────────────────────────
     pub fn size(mut self, size: ButtonSize) -> Self { self.size = size; self }
     pub fn small(mut self) -> Self  { self.size = ButtonSize::Small; self }
     pub fn large(mut self) -> Self  { self.size = ButtonSize::Large; self }
 
-    // ── state ────────────────────────────────────────────────
     pub fn disabled(mut self, disabled: bool) -> Self { self.disabled = disabled; self }
     pub fn loading(mut self, loading: bool) -> Self   { self.loading = loading; self }
 
-    // ── secondary style ──────────────────────────────────────
     pub fn secondary(mut self) -> Self { self.secondary = true; self }
     pub fn background(mut self, show: bool) -> Self { self.background = show; self }
     pub fn border(mut self, show: bool) -> Self { self.border = show; self }
-
-    // ── rounded ──────────────────────────────────────────────
     pub fn rounded(mut self, radius: f32) -> Self { self.rounded = Some(radius); self }
 
-    // ── build ────────────────────────────────────────────────
     pub fn build(self, theme: &AuraTheme) -> impl IntoElement {
         let height = self.size.height();
         let padding_x = self.size.padding_x();
@@ -92,11 +87,10 @@ impl AuraButton {
             self.label.clone()
         };
 
-        // Build base Div styles, then convert to Stateful<Div> via .id()
-        // so that .active() (press-effect) and .hover() are both available.
         let btn_id = ElementId::Name(SharedString::from(
             format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed))
         ));
+
         let mut el = gpui::div()
             .flex()
             .flex_row()
@@ -123,19 +117,19 @@ impl AuraButton {
 
         if !self.disabled {
             el = el
+                // Hover: slightly lighter / tinted
                 .hover(|style| {
-                    let mut s = style
-                        .bg(colors.hover_bg)
-                        .text_color(colors.text_hover);
+                    let mut s = style.bg(colors.hover_bg);
                     if !colors.border_hover.is_transparent() {
                         s = s.border_color(colors.border_hover);
                     }
                     s
                 })
-                // Pressed / active state — darken background
-                .active(|style| {
-                    style.bg(colors.active_bg)
-                });
+                // Press / active: deeper background
+                .active(|style| style.bg(colors.active_bg))
+                // on_mouse_down is required for GPUI to track press → active state
+                .on_mouse_down(MouseButton::Left, |_, _, _| {})
+                .on_mouse_up(MouseButton::Left, |_, _, _| {});
         }
 
         el.child(label_text).into_any_element()
