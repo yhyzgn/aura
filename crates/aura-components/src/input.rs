@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, FocusHandle, Focusable, Hsla, Rgba, Render, SharedString,
-    Window, Context, MouseButton, MouseUpEvent, KeyDownEvent,
+    Window, Context, MouseButton, MouseUpEvent, MouseDownEvent, KeyDownEvent,
     actions, KeyBinding,
 };
 use std::ops::Range;
@@ -148,6 +148,20 @@ impl Render for Input {
         if !self.disabled { row = row.cursor_text(); }
         else { row = row.cursor_not_allowed(); }
 
+        if !self.disabled {
+            let focus_handle = self.focus_handle(cx);
+            row = row
+                .on_mouse_down(MouseButton::Left, move |_, window, cx| { window.focus(&focus_handle, cx); })
+                .on_key_down(cx.listener(Self::on_key_down))
+                .on_action(cx.listener(Self::backspace))
+                .on_action(cx.listener(Self::delete))
+                .on_action(cx.listener(Self::left))
+                .on_action(cx.listener(Self::right))
+                .on_action(cx.listener(Self::home))
+                .on_action(cx.listener(Self::end))
+                .on_action(cx.listener(Self::select_all));
+        }
+
         if let Some(icon) = self.icon_prefix {
             row = row.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
         }
@@ -156,14 +170,6 @@ impl Render for Input {
             gpui::div().flex_1().h_full().flex().items_center()
                 .text_color(if is_placeholder { ph_color } else { text_c })
                 .child(display)
-                .on_key_down(cx.listener(Self::on_key_down))
-                .on_action(cx.listener(Self::backspace))
-                .on_action(cx.listener(Self::delete))
-                .on_action(cx.listener(Self::left))
-                .on_action(cx.listener(Self::right))
-                .on_action(cx.listener(Self::home))
-                .on_action(cx.listener(Self::end))
-                .on_action(cx.listener(Self::select_all))
         );
 
         if self.clearable && !self.value.is_empty() && !self.disabled {
