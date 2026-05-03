@@ -1,14 +1,10 @@
-use gpui::{
-    prelude::*, px, SharedString, Hsla, Rgba, MouseButton,
-    MouseDownEvent, MouseUpEvent,
-};
+use gpui::{prelude::*, px, SharedString, Hsla, Rgba};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
-
 static BTN_ID: AtomicU64 = AtomicU64::new(0);
 
 pub struct AuraButton {
@@ -21,28 +17,16 @@ pub struct AuraButton {
     background: bool,
     border: bool,
     rounded: Option<f32>,
-    on_click: Option<Box<dyn Fn(&gpui::ClickEvent, &mut gpui::Window, &mut gpui::App) + 'static>>,
-    is_pressed: bool,
 }
 
 impl AuraButton {
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
-            label: label.into(),
-            variant: ButtonVariant::Default,
-            size: ButtonSize::Default,
-            disabled: false,
-            loading: false,
-            secondary: false,
-            background: true,
-            border: true,
+            label: label.into(), variant: ButtonVariant::Default, size: ButtonSize::Default,
+            disabled: false, loading: false, secondary: false, background: true, border: true,
             rounded: None,
-            on_click: None,
-            is_pressed: false,
         }
     }
-
-    // ── builders ────────────────────────
     pub fn variant(mut self, v: ButtonVariant) -> Self { self.variant = v; self }
     pub fn primary(mut self) -> Self   { self.variant = ButtonVariant::Primary; self }
     pub fn tertiary(mut self) -> Self  { self.variant = ButtonVariant::Tertiary; self }
@@ -59,18 +43,11 @@ impl AuraButton {
     pub fn background(mut self, show: bool) -> Self { self.background = show; self }
     pub fn border(mut self, show: bool) -> Self { self.border = show; self }
     pub fn rounded(mut self, r: f32) -> Self { self.rounded = Some(r); self }
-    pub fn on_click(
-        mut self,
-        handler: impl Fn(&gpui::ClickEvent, &mut gpui::Window, &mut gpui::App) + 'static,
-    ) -> Self {
-        self.on_click = Some(Box::new(handler));
-        self
-    }
 
     fn colors(&self, theme: &AuraTheme) -> ButtonVariantColors {
         if self.disabled {
             ButtonVariantColors {
-                bg: rgba(0, 0, 0, 0.0), hover_bg: rgba(0, 0, 0, 0.0), active_bg: rgba(0, 0, 0, 0.0),
+                bg: rgba(0,0,0,0.0), hover_bg: rgba(0,0,0,0.0), active_bg: rgba(0,0,0,0.0),
                 text: theme.neutral.text_disabled, border: theme.neutral.border,
                 text_hover: theme.neutral.text_disabled, border_hover: theme.neutral.border,
             }
@@ -78,61 +55,36 @@ impl AuraButton {
             theme.color_by_variant(self.variant, self.secondary, self.background, self.border)
         }
     }
-
-    // ── event handlers ────────────────
-    fn on_mouse_down(&mut self, _: &MouseDownEvent, _w: &mut gpui::Window, cx: &mut gpui::Context<Self>) {
-        self.is_pressed = true;
-        cx.notify();
-    }
-    fn on_mouse_up(&mut self, _: &MouseUpEvent, _w: &mut gpui::Window, cx: &mut gpui::Context<Self>) {
-        self.is_pressed = false;
-        cx.notify();
-    }
-    fn on_mouse_up_out(&mut self, _: &MouseUpEvent, _w: &mut gpui::Window, cx: &mut gpui::Context<Self>) {
-        self.is_pressed = false;
-        cx.notify();
-    }
-    fn on_click_handler(&mut self, event: &gpui::ClickEvent, window: &mut gpui::Window, cx: &mut gpui::Context<Self>) {
-        self.is_pressed = false;
-        cx.notify();
-        if let Some(ref handler) = self.on_click { handler(event, window, cx); }
-    }
 }
 
 impl gpui::Render for AuraButton {
     fn render(&mut self, _window: &mut gpui::Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<aura_core::AuraConfig>().theme;
-        let colors = self.colors(theme);
-        let h = self.size.height();
-        let px_h = self.size.padding_x();
+        let c = self.colors(theme);
+        let h = self.size.height(); let px_h = self.size.padding_x();
         let fs = match self.size { ButtonSize::Small=>theme.font_size.xs, ButtonSize::Default=>theme.font_size.md, ButtonSize::Large=>theme.font_size.lg };
         let r = self.rounded.unwrap_or(theme.radius.md);
         let label = if self.loading { SharedString::from(format!("⟳ {}", self.label)) } else { self.label.clone() };
-
-        // Press → darker bg; normal → base bg; hover → GPUI handles via .hover()
-        let bg = if self.is_pressed { colors.active_bg } else { colors.bg };
 
         let id = SharedString::from(format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed)));
         let mut el = gpui::div()
             .flex().flex_row().justify_center().items_center().gap_1()
             .h(px(h)).px(px(px_h)).rounded(px(r))
-            .bg(bg).text_color(colors.text).text_size(px(fs))
+            .bg(c.bg).text_color(c.text).text_size(px(fs))
             .id(id);
 
         if !self.disabled { el = el.cursor_pointer(); } else { el = el.cursor_not_allowed(); }
-        if !colors.border.is_transparent() { el = el.border_1().border_color(colors.border); }
+        if !c.border.is_transparent() { el = el.border_1().border_color(c.border); }
 
         if !self.disabled {
             el = el
-                .hover(|style| {
-                    let mut s = style.bg(colors.hover_bg);
-                    if !colors.border_hover.is_transparent() { s = s.border_color(colors.border_hover); }
+                .hover(move |style| {
+                    let mut s = style.bg(c.hover_bg);
+                    if !c.border_hover.is_transparent() { s = s.border_color(c.border_hover); }
                     s
                 })
-                .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
-                .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
-                .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up_out))
-                .on_click(cx.listener(Self::on_click_handler));
+                .active(move |style| style.bg(c.active_bg))
+                .on_click(|_, _, _| {});
         }
 
         el.child(label)
