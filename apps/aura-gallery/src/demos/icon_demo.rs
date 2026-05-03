@@ -56,7 +56,7 @@ fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
         .font_weight(gpui::FontWeight::BOLD).mt_2().child(s.to_string())
 }
 
-fn build_icon(theme: &AuraTheme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
+fn build_icon(_theme: &AuraTheme, icon: IconName, sz: f32, color: Hsla) -> impl IntoElement {
     AuraIcon::new(icon).size(sz).color(color)
 }
 

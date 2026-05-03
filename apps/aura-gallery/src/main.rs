@@ -6,7 +6,6 @@ use aura_theme::AuraTheme;
 use gpui::{
     App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
-use gpui_platform::application;
 
 pub struct Gallery;
 

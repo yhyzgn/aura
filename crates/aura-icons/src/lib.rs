@@ -1,4 +1,4 @@
-use gpui::{prelude::*, px, Hsla, IntoElement, App, Component, RenderOnce, Window, SharedString};
+use gpui::{prelude::*, px, Hsla, IntoElement, App, Component, RenderOnce, Window};
 use std::borrow::Cow;
 
 pub trait IntoIconPath {
