@@ -128,10 +128,6 @@ impl Input {
         self.move_to(idx, cx);
     }
 
-    fn enter(&mut self, _: &Enter, _: &mut Window, cx: &mut Context<Self>) {
-        self.internal_replace("\n", cx);
-    }
-
     fn internal_replace(&mut self, new_text: &str, cx: &mut Context<Self>) {
         let range = self.selected_range.clone();
         let mut v = self.value.to_string();
