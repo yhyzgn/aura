@@ -3,7 +3,7 @@ mod demos;
 
 use aura_core::{ContextExt, init_aura};
 use aura_theme::Theme;
-use aura_components::Switch;
+use aura_components::{Switch, Checkbox};
 use gpui::{
     App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
@@ -12,6 +12,10 @@ pub struct Gallery {
     switch_demo_on: Entity<Switch>,
     switch_demo_off: Entity<Switch>,
     switch_demo_disabled: Entity<Switch>,
+    cb_checked: Entity<Checkbox>,
+    cb_unchecked: Entity<Checkbox>,
+    cb_labeled: Entity<Checkbox>,
+    cb_disabled: Entity<Checkbox>,
 }
 
 fn run_gallery() {
@@ -26,7 +30,14 @@ fn run_gallery() {
                 let switch_on = cx.new(|cx| Switch::new(true, cx));
                 let switch_off = cx.new(|cx| Switch::new(false, cx));
                 let switch_disabled = cx.new(|cx| Switch::new(false, cx).disabled(true));
-                cx.new(|_| Gallery { switch_demo_on: switch_on, switch_demo_off: switch_off, switch_demo_disabled: switch_disabled })
+                let cb_checked = cx.new(|cx| Checkbox::new(true, cx));
+                let cb_unchecked = cx.new(|cx| Checkbox::new(false, cx));
+                let cb_labeled = cx.new(|cx| Checkbox::new(false, cx).label("Label"));
+                let cb_disabled = cx.new(|cx| Checkbox::new(true, cx).disabled(true));
+                cx.new(|_| Gallery {
+                    switch_demo_on: switch_on, switch_demo_off: switch_off, switch_demo_disabled: switch_disabled,
+                    cb_checked, cb_unchecked, cb_labeled, cb_disabled,
+                })
             },
         ).unwrap();
         cx.activate(true);
@@ -65,6 +76,19 @@ impl Render for Gallery {
                     .child(self.switch_demo_on.clone())
                     .child(self.switch_demo_off.clone())
                     .child(self.switch_demo_disabled.clone()))
+        );
+
+        // Checkbox demo
+        body = body.child(
+            div().flex().flex_col().gap_4().p_4().border_1().border_color(theme.neutral.divider).rounded(px(theme.radius.lg)).bg(theme.neutral.card)
+                .child(div().flex().flex_col().gap_1()
+                    .child(div().text_size(px(theme.font_size.lg)).text_color(theme.neutral.text_1).font_weight(gpui::FontWeight::BOLD).child("Checkbox 多选"))
+                    .child(div().text_size(px(theme.font_size.sm)).text_color(theme.neutral.text_3).child("多选框")))
+                .child(div().flex().flex_row().gap_4().items_center()
+                    .child(self.cb_checked.clone())
+                    .child(self.cb_unchecked.clone())
+                    .child(self.cb_labeled.clone())
+                    .child(self.cb_disabled.clone()))
         );
 
         body

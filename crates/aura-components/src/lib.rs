@@ -11,6 +11,7 @@ pub mod container;
 pub mod scrollbar;
 pub mod splitter;
 pub mod switch;
+pub mod checkbox;
 
 pub use button::*;
 pub use link::*;
@@ -25,3 +26,4 @@ pub use container::*;
 pub use scrollbar::*;
 pub use splitter::*;
 pub use switch::*;
+pub use checkbox::*;
