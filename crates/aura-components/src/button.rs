@@ -1,32 +1,23 @@
-use gpui::{prelude::*, px, SharedString, Hsla, Rgba};
+use gpui::{prelude::*, px, SharedString, Hsla, Rgba, MouseButton, MouseDownEvent, MouseUpEvent};
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
-
 static BTN_ID: AtomicU64 = AtomicU64::new(0);
 
 pub struct AuraButton {
-    label: SharedString,
-    variant: ButtonVariant,
-    size: ButtonSize,
-    disabled: bool,
-    loading: bool,
-    secondary: bool,
-    background: bool,
-    border: bool,
-    rounded: Option<f32>,
+    label: SharedString, variant: ButtonVariant, size: ButtonSize,
+    disabled: bool, loading: bool, secondary: bool, background: bool, border: bool,
+    rounded: Option<f32>, is_pressed: bool,
 }
 
 impl AuraButton {
     pub fn new(label: impl Into<SharedString>) -> Self {
-        Self {
-            label: label.into(), variant: ButtonVariant::Default, size: ButtonSize::Default,
+        Self { label: label.into(), variant: ButtonVariant::Default, size: ButtonSize::Default,
             disabled: false, loading: false, secondary: false, background: true, border: true,
-            rounded: None,
-        }
+            rounded: None, is_pressed: false }
     }
     pub fn variant(mut self, v: ButtonVariant) -> Self { self.variant = v; self }
     pub fn primary(mut self) -> Self   { self.variant = ButtonVariant::Primary; self }
@@ -46,18 +37,11 @@ impl AuraButton {
     pub fn rounded(mut self, r: f32) -> Self { self.rounded = Some(r); self }
 
     fn colors(&self, theme: &AuraTheme) -> ButtonVariantColors {
-        if self.disabled {
-            ButtonVariantColors {
-                bg: rgba(0,0,0,0.0), hover_bg: rgba(0,0,0,0.0), active_bg: rgba(0,0,0,0.0),
-                text: theme.neutral.text_disabled, border: theme.neutral.border,
-                text_hover: theme.neutral.text_disabled, border_hover: theme.neutral.border,
-            }
-        } else {
-            theme.color_by_variant(self.variant, self.secondary, self.background, self.border)
-        }
+        if self.disabled { ButtonVariantColors { bg: rgba(0,0,0,0.0), hover_bg: rgba(0,0,0,0.0), active_bg: rgba(0,0,0,0.0), text: theme.neutral.text_disabled, border: theme.neutral.border, text_hover: theme.neutral.text_disabled, border_hover: theme.neutral.border } }
+        else { theme.color_by_variant(self.variant, self.secondary, self.background, self.border) }
     }
 
-    /// Build a div element with GPUI-native hover + active refinements.
+    /// Simple builder — pass theme explicitly. No press effect.
     pub fn build(self, theme: &AuraTheme) -> impl IntoElement {
         let c = self.colors(theme);
         let h = self.size.height(); let px_h = self.size.padding_x();
@@ -65,22 +49,15 @@ impl AuraButton {
         let r = self.rounded.unwrap_or(theme.radius.md);
         let label = if self.loading { SharedString::from(format!("⟳ {}", self.label)) } else { self.label.clone() };
 
-        let mut div = gpui::div()
-            .flex().flex_row().justify_center().items_center().gap_1()
-            .h(px(h)).px(px(px_h)).rounded(px(r))
-            .bg(c.bg).text_color(c.text).text_size(px(fs));
+        let id = SharedString::from(format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed)));
+        let mut div = gpui::div().flex().flex_row().justify_center().items_center().gap_1()
+            .h(px(h)).px(px(px_h)).rounded(px(r)).bg(c.bg).text_color(c.text).text_size(px(fs));
 
         if !self.disabled { div = div.cursor_pointer(); } else { div = div.cursor_not_allowed(); }
         if !c.border.is_transparent() { div = div.border_1().border_color(c.border); }
+        if self.disabled { return div.child(label).into_any_element(); }
 
-        if self.disabled {
-            return div.child(label).into_any_element();
-        }
-
-        let btn_id = SharedString::from(format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed)));
-
-        div
-            .id(btn_id)
+        div.id(id)
             .hover(move |style| {
                 let mut s = style.bg(c.hover_bg);
                 if !c.border_hover.is_transparent() { s = s.border_color(c.border_hover); }
@@ -88,7 +65,41 @@ impl AuraButton {
             })
             .active(move |style| style.bg(c.active_bg))
             .on_click(|_, _, _| {})
-            .child(label)
-            .into_any_element()
+            .child(label).into_any_element()
+    }
+}
+
+/// View mode — reads theme from global, supports press state.
+impl gpui::Render for AuraButton {
+    fn render(&mut self, _w: &mut gpui::Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
+        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+        let c = self.colors(theme);
+        let h = self.size.height(); let px_h = self.size.padding_x();
+        let fs = match self.size { ButtonSize::Small=>theme.font_size.xs, ButtonSize::Default=>theme.font_size.md, ButtonSize::Large=>theme.font_size.lg };
+        let r = self.rounded.unwrap_or(theme.radius.md);
+        let label = if self.loading { SharedString::from(format!("⟳ {}", self.label)) } else { self.label.clone() };
+        let bg = if self.is_pressed { c.active_bg } else { c.bg };
+
+        let id = SharedString::from(format!("btn-{}", BTN_ID.fetch_add(1, Ordering::Relaxed)));
+        let mut el = gpui::div().flex().flex_row().justify_center().items_center().gap_1()
+            .h(px(h)).px(px(px_h)).rounded(px(r)).bg(bg).text_color(c.text).text_size(px(fs)).id(id);
+
+        if !self.disabled { el = el.cursor_pointer(); } else { el = el.cursor_not_allowed(); }
+        if !c.border.is_transparent() { el = el.border_1().border_color(c.border); }
+        if !self.disabled {
+            el = el
+                .hover(move |style| {
+                    let mut s = style.bg(c.hover_bg);
+                    if !c.border_hover.is_transparent() { s = s.border_color(c.border_hover); }
+                    s
+                })
+                .on_mouse_down(MouseButton::Left, cx.listener(|this: &mut Self, _: &MouseDownEvent, _: &mut gpui::Window, cx: &mut gpui::Context<Self>| {
+                    this.is_pressed = true; cx.notify();
+                }))
+                .on_mouse_up(MouseButton::Left, cx.listener(|this, _: &MouseUpEvent, _: &mut gpui::Window, cx: &mut gpui::Context<Self>| {
+                    this.is_pressed = false; cx.notify();
+                }));
+        }
+        el.child(label)
     }
 }
