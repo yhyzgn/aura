@@ -14,9 +14,11 @@ set -euo pipefail
 
 LUCIDE_REPO="https://github.com/lucide-icons/lucide.git"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SVG_DIR="$SCRIPT_DIR/../crates/aura-icons-lucide/assets/svgs"
+CRATE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$CRATE_DIR/../.." && pwd)"
+SVG_DIR="$CRATE_DIR/assets/svgs"
 HASH_FILE="$SVG_DIR/.hashes"
-CACHE_DIR="$SCRIPT_DIR/../target/lucide-cache"
+CACHE_DIR="$PROJECT_DIR/target/lucide-cache"
 CACHE_STAMP="$CACHE_DIR/.stamp"
 FULL="${1:-}"
 CACHE_TTL=$((24 * 3600))  # 24 hours
