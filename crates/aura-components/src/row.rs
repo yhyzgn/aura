@@ -1,4 +1,5 @@
 use gpui::{prelude::*, px, IntoElement, App, Component, RenderOnce, Window};
+use crate::Col;
 
 pub struct Row {
     justify: Option<RowJustify>,
@@ -18,9 +19,9 @@ impl Row {
     pub fn child(mut self, child: impl IntoElement) -> Self {
         self.children.push(child.into_any_element()); self
     }
-    /// Add multiple columns at once.
-    pub fn columns(mut self, cols: Vec<impl IntoElement>) -> Self {
-        self.children.extend(cols.into_iter().map(|c| c.into_any_element())); self
+    /// Shorthand for adding a column.
+    pub fn column(mut self, col: Col) -> Self {
+        self.children.push(col.into_any_element()); self
     }
 }
 
