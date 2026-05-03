@@ -6,7 +6,7 @@ use aura_theme::Theme;
 use aura_components::{Switch, Checkbox, RadioGroup, Input};
 use aura_icons_lucide::IconName;
 use gpui::{
-    App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, KeyBinding, div, prelude::*, px, size,
+    App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
 
 pub struct Gallery {

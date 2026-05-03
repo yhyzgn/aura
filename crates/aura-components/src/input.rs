@@ -5,8 +5,9 @@ use gpui::{
     prelude::*, px, App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
-    Pixels, Point, Render, Rgba, SharedString, ShapedLine, Size, Style, TextRun,
+    Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
     UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
+    MouseMoveEvent,
 };
 use std::ops::{Add, Range};
 
@@ -14,7 +15,10 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
-actions!(input, [Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, Up, Down]);
+actions!(input, [
+    Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, Up, Down, Copy, Paste, Cut,
+    SelectLeft, SelectRight, SelectUp, SelectDown, SelectHome, SelectEnd
+]);
 
 pub struct Input {
     value: SharedString,
@@ -27,8 +31,10 @@ pub struct Input {
     selected_range: Range<usize>,
     selection_reversed: bool,
     marked_range: Option<Range<usize>>,
-    last_layout: Option<ShapedLine>,
+    last_line_layouts: Vec<(ShapedLine, Pixels)>,
     last_bounds: Option<Bounds<Pixels>>,
+    cursor_visible: bool,
+    blink_task: Option<gpui::Task<()>>,
 }
 
 impl Input {
@@ -37,7 +43,8 @@ impl Input {
             value: value.into(), placeholder: SharedString::default(), disabled: false,
             clearable: false, icon_prefix: None, icon_suffix: None,
             focus_handle: cx.focus_handle(), selected_range: 0..0, selection_reversed: false,
-            marked_range: None, last_layout: None, last_bounds: None,
+            marked_range: None, last_line_layouts: Vec::new(), last_bounds: None,
+            cursor_visible: true, blink_task: None,
         }
     }
     pub fn placeholder(mut self, p: impl Into<SharedString>) -> Self { self.placeholder = p.into(); self }
@@ -49,12 +56,17 @@ impl Input {
     pub fn register_key_bindings(cx: &mut App) {
         cx.bind_keys([
             KeyBinding::new("backspace", Backspace, None),  KeyBinding::new("delete", Delete, None),
-            KeyBinding::new("left", Left, None),            KeyBinding::new("right", Right, None),
-            KeyBinding::new("home", Home, None),            KeyBinding::new("end", End, None),
-            KeyBinding::new("cmd-a", SelectAll, None),
+            KeyBinding::new("left", Left, None),            KeyBinding::new("shift-left", SelectLeft, None),
+            KeyBinding::new("right", Right, None),          KeyBinding::new("shift-right", SelectRight, None),
+            KeyBinding::new("home", Home, None),            KeyBinding::new("shift-home", SelectHome, None),
+            KeyBinding::new("end", End, None),              KeyBinding::new("shift-end", SelectEnd, None),
+            KeyBinding::new("cmd-a", SelectAll, None),      KeyBinding::new("ctrl-a", SelectAll, None),
+            KeyBinding::new("cmd-c", Copy, None),           KeyBinding::new("ctrl-c", Copy, None),
+            KeyBinding::new("cmd-v", Paste, None),          KeyBinding::new("ctrl-v", Paste, None),
+            KeyBinding::new("cmd-x", Cut, None),            KeyBinding::new("ctrl-x", Cut, None),
             KeyBinding::new("enter", Enter, None),
-            KeyBinding::new("up", Up, None),
-            KeyBinding::new("down", Down, None),
+            KeyBinding::new("up", Up, None),                KeyBinding::new("shift-up", SelectUp, None),
+            KeyBinding::new("down", Down, None),            KeyBinding::new("shift-down", SelectDown, None),
         ]);
     }
 
@@ -80,7 +92,8 @@ impl Input {
         n
     }
     fn move_to(&mut self, offset: usize, cx: &mut Context<Self>) {
-        self.selected_range = offset..offset; cx.notify();
+        self.selected_range = offset..offset;
+        self.reset_blink(cx);
     }
     fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
         if self.selection_reversed { self.selected_range.start = offset }
@@ -89,7 +102,7 @@ impl Input {
             self.selection_reversed = !self.selection_reversed;
             self.selected_range = self.selected_range.end..self.selected_range.start;
         }
-        cx.notify()
+        self.reset_blink(cx);
     }
 
     fn backspace(&mut self, _: &Backspace, _: &mut Window, cx: &mut Context<Self>) {
@@ -109,21 +122,50 @@ impl Input {
         self.internal_replace("", cx);
     }
     fn left(&mut self, _: &Left, _: &mut Window, cx: &mut Context<Self>) { self.move_to(self.prev_char(self.cursor_offset()), cx); }
+    fn select_left(&mut self, _: &SelectLeft, _: &mut Window, cx: &mut Context<Self>) { self.select_to(self.prev_char(self.cursor_offset()), cx); }
     fn right(&mut self, _: &Right, _: &mut Window, cx: &mut Context<Self>) { self.move_to(self.next_char(self.cursor_offset()), cx); }
+    fn select_right(&mut self, _: &SelectRight, _: &mut Window, cx: &mut Context<Self>) { self.select_to(self.next_char(self.cursor_offset()), cx); }
     fn home(&mut self, _: &Home, _: &mut Window, cx: &mut Context<Self>) { self.move_to(0, cx); }
+    fn select_home(&mut self, _: &SelectHome, _: &mut Window, cx: &mut Context<Self>) { self.select_to(0, cx); }
     fn end(&mut self, _: &End, _: &mut Window, cx: &mut Context<Self>) { self.move_to(self.value.len(), cx); }
+    fn select_end(&mut self, _: &SelectEnd, _: &mut Window, cx: &mut Context<Self>) { self.select_to(self.value.len(), cx); }
     fn select_all(&mut self, _: &SelectAll, _: &mut Window, cx: &mut Context<Self>) {
-        self.selected_range = 0..self.value.len(); cx.notify();
+        self.selected_range = 0..self.value.len();
+        self.reset_blink(cx);
+    }
+
+    fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
+        if !self.selected_range.is_empty() {
+            let selected_text = self.value[self.selected_range.clone()].to_string();
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
+        }
+    }
+
+    fn paste(&mut self, _: &Paste, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(clipboard) = cx.read_from_clipboard() {
+            if let Some(text) = clipboard.text() {
+                self.internal_replace(&text, cx);
+            }
+        }
+    }
+
+    fn cut(&mut self, _: &Cut, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.selected_range.is_empty() {
+            self.copy(&Copy, window, cx);
+            self.internal_replace("", cx);
+        }
     }
 
     fn enter(&mut self, _: &Enter, _: &mut Window, cx: &mut Context<Self>) {
         self.internal_replace("\n", cx);
     }
 
-    fn up(&mut self, _: &Up, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, cx); }
-    fn down(&mut self, _: &Down, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, cx); }
+    fn up(&mut self, _: &Up, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, false, cx); }
+    fn select_up(&mut self, _: &SelectUp, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(-1, true, cx); }
+    fn down(&mut self, _: &Down, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, false, cx); }
+    fn select_down(&mut self, _: &SelectDown, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, true, cx); }
 
-    fn move_vertical(&mut self, delta: isize, cx: &mut Context<Self>) {
+    fn move_vertical(&mut self, delta: isize, select: bool, cx: &mut Context<Self>) {
         let text = &self.value;
         let offset = self.cursor_offset();
         let current_line = text[..offset].chars().filter(|&c| c == '\n').count() as isize;
@@ -142,7 +184,37 @@ impl Input {
         }
         let target_len = lines[target_line as usize].len();
         let new_col = col.min(target_len);
-        self.move_to(target_start + new_col, cx);
+        let new_offset = target_start + new_col;
+        if select { self.select_to(new_offset, cx); } else { self.move_to(new_offset, cx); }
+    }
+
+    fn index_for_point(&self, pt: Point<Pixels>, window: &Window) -> usize {
+        if let (Some(bounds), layouts) = (self.last_bounds.as_ref(), &self.last_line_layouts) {
+            if layouts.is_empty() { return 0; }
+            let line_height = window.line_height();
+            
+            let mut best_line = 0;
+            let mut final_byte_offset = 0;
+            let mut current_byte_offset = 0;
+            
+            for (i, (layout, y_offset)) in layouts.iter().enumerate() {
+                if pt.y >= *y_offset && pt.y < *y_offset + line_height {
+                    best_line = i;
+                    final_byte_offset = current_byte_offset;
+                    break;
+                }
+                if pt.y >= *y_offset {
+                    best_line = i;
+                    final_byte_offset = current_byte_offset;
+                }
+                current_byte_offset += layout.len + 1;
+            }
+            
+            let x = pt.x - bounds.left();
+            final_byte_offset + layouts[best_line].0.index_for_x(x).unwrap_or(layouts[best_line].0.len)
+        } else {
+            self.value.len()
+        }
     }
 
     fn on_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
@@ -151,13 +223,44 @@ impl Input {
             self.move_to(0, cx);
             return;
         }
-        let idx = if let (Some(bounds), Some(line)) = (self.last_bounds.as_ref(), self.last_layout.as_ref()) {
-            let x = event.position.x - bounds.left();
-            line.index_for_x(x).unwrap_or(self.value.len())
+        let idx = self.index_for_point(event.position, window);
+
+        if event.modifiers.shift {
+            self.select_to(idx, cx);
         } else {
-            self.value.len()
-        };
-        self.move_to(idx, cx);
+            self.move_to(idx, cx);
+        }
+    }
+
+    fn on_mouse_move(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if event.pressed_button == Some(MouseButton::Left) {
+            let idx = self.index_for_point(event.position, window);
+            self.select_to(idx, cx);
+        }
+    }
+
+    fn start_blink(&mut self, cx: &mut Context<Self>) {
+        self.cursor_visible = true;
+        let executor = cx.background_executor().clone();
+        self.blink_task = Some(cx.spawn(async move |this, cx| {
+            loop {
+                executor.timer(std::time::Duration::from_millis(500)).await;
+                let res = this.update(cx, |this, cx| {
+                    this.cursor_visible = !this.cursor_visible;
+                    cx.notify();
+                });
+                if res.is_err() {
+                    break;
+                }
+            }
+        }));
+    }
+
+
+    fn reset_blink(&mut self, cx: &mut Context<Self>) {
+        self.cursor_visible = true;
+        self.start_blink(cx);
+        cx.notify();
     }
 
     fn internal_replace(&mut self, new_text: &str, cx: &mut Context<Self>) {
@@ -167,7 +270,7 @@ impl Input {
         self.value = SharedString::from(v);
         let pos = self.selected_range.start + new_text.len();
         self.selected_range = pos..pos;
-        cx.notify();
+        self.reset_blink(cx);
     }
 }
 
@@ -229,21 +332,30 @@ impl EntityInputHandler for Input {
         cx.notify();
     }
 
-    fn bounds_for_range(&mut self, range_utf16: Range<usize>, bounds: Bounds<Pixels>, _: &mut Window, _: &mut Context<Self>) -> Option<Bounds<Pixels>> {
-        let line = self.last_layout.as_ref()?;
+    fn bounds_for_range(&mut self, range_utf16: Range<usize>, bounds: Bounds<Pixels>, window: &mut Window, _: &mut Context<Self>) -> Option<Bounds<Pixels>> {
+        let layouts = &self.last_line_layouts;
+        if layouts.is_empty() { return None; }
         let start = self.offset_from_utf16(range_utf16.start);
         let end = self.offset_from_utf16(range_utf16.end);
-        Some(Bounds::from_corners(
-            point(bounds.left() + line.x_for_index(start), bounds.top()),
-            point(bounds.left() + line.x_for_index(end), bounds.bottom()),
-        ))
+        let line_height = window.line_height();
+        
+        let mut byte_offset = 0;
+        for (layout, y_offset) in layouts {
+            if start >= byte_offset && start <= byte_offset + layout.len {
+                let x_start = layout.x_for_index(start - byte_offset);
+                let x_end = layout.x_for_index(end.min(byte_offset + layout.len) - byte_offset);
+                return Some(Bounds::from_corners(
+                    point(bounds.left() + x_start, *y_offset),
+                    point(bounds.left() + x_end, *y_offset + line_height),
+                ));
+            }
+            byte_offset += layout.len + 1;
+        }
+        None
     }
 
-    fn character_index_for_point(&mut self, pt: Point<Pixels>, _: &mut Window, _: &mut Context<Self>) -> Option<usize> {
-        let line_pt = self.last_bounds?.localize(&pt)?;
-        let line = self.last_layout.as_ref()?;
-        let idx = line.index_for_x(pt.x - line_pt.x)?;
-        Some(self.offset_to_utf16(idx))
+    fn character_index_for_point(&mut self, pt: Point<Pixels>, window: &mut Window, _: &mut Context<Self>) -> Option<usize> {
+        Some(self.offset_to_utf16(self.index_for_point(pt, window)))
     }
 }
 
@@ -275,8 +387,7 @@ struct InputElement {
 struct InputPrepaint {
     lines: Vec<(ShapedLine, Pixels)>, // (line, y_offset)
     cursor: Option<gpui::PaintQuad>,
-    selection: Option<gpui::PaintQuad>,
-    total_height: Pixels,
+    selection: Vec<gpui::PaintQuad>,
 }
 
 impl IntoElement for InputElement {
@@ -315,6 +426,7 @@ impl Element for InputElement {
         let mut lines = Vec::new();
         let mut y = bounds.top();
         let mut cursor_quad = None;
+        let mut selection_quads = Vec::new();
         let mut byte_offset = 0;
 
         for (i, line_text) in text_lines.iter().enumerate() {
@@ -338,11 +450,24 @@ impl Element for InputElement {
 
             let shaped = window.text_system().shape_line(display, font_size, &runs, None);
 
+            // Selection on this line?
+            if !input.selected_range.is_empty() {
+                let range = input.selected_range.clone();
+                let line_end = byte_offset + line_text.len();
+                let start = range.start.max(byte_offset);
+                let end = range.end.min(line_end);
+                if start < end {
+                    let x_start = shaped.x_for_index(start - byte_offset);
+                    let x_end = shaped.x_for_index(end - byte_offset);
+                    selection_quads.push(fill(Bounds::new(point(bounds.left() + x_start, y), size(x_end - x_start, line_height)), theme.primary.base.opacity(0.3)));
+                }
+            }
+
             // Cursor on this line?
-            if i == cursor_line && input.selected_range.is_empty() {
+            if i == cursor_line && input.selected_range.is_empty() && input.cursor_visible {
                 let col = cursor_offset - byte_offset;
                 let x = shaped.x_for_index(col);
-                let ch = font_size.add(px(6.0)); // fixed cursor height = font size
+                let ch = font_size.add(px(6.0));
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
             }
@@ -352,23 +477,25 @@ impl Element for InputElement {
             byte_offset += line_text.len() + 1; // +1 for the newline
         }
 
-        let total_height = if lines.is_empty() { line_height } else { lines.last().unwrap().1 + line_height - bounds.top() };
-        InputPrepaint { lines, cursor: cursor_quad, selection: None, total_height }
+        InputPrepaint { lines, cursor: cursor_quad, selection: selection_quads }
     }
 
     fn paint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), prepaint: &mut InputPrepaint, window: &mut Window, cx: &mut App) {
         let focus_handle = self.input.read(cx).focus_handle.clone();
         window.handle_input(&focus_handle, ElementInputHandler::new(bounds, self.input.clone()), cx);
-        if let Some(s) = prepaint.selection.take() { window.paint_quad(s); }
+        for s in prepaint.selection.drain(..) { window.paint_quad(s); }
         for (line, y) in &prepaint.lines {
             line.paint(point(bounds.left(), *y), window.line_height(), gpui::TextAlign::Left, None, window, cx).unwrap();
         }
         if focus_handle.is_focused(window) {
             if let Some(c) = prepaint.cursor.take() { window.paint_quad(c); }
         }
-        if let Some((first_line, _)) = prepaint.lines.first() {
-            self.input.update(cx, |input, _| { input.last_layout = Some(first_line.clone()); input.last_bounds = Some(bounds); });
-        }
+        
+        let line_layouts = prepaint.lines.clone();
+        self.input.update(cx, |input, _| { 
+            input.last_line_layouts = line_layouts; 
+            input.last_bounds = Some(bounds); 
+        });
     }
 }
 
@@ -376,9 +503,19 @@ impl Element for InputElement {
 
 impl Render for Input {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-        let h = 34.0; let icon_sz = 16.0;
         let focused = self.focus_handle(cx).is_focused(_window);
+
+        // Start/stop blink task based on focus
+        if focused && self.blink_task.is_none() {
+            self.start_blink(cx);
+        } else if !focused && self.blink_task.is_some() {
+            self.blink_task = None;
+        }
+
+        let theme = &cx.global::<Config>().theme;
+        let _h = 34.0;
+        let icon_sz = 16.0;
+
         let (bg, border_c) = if self.disabled {
             (theme.neutral.hover, theme.neutral.border)
         } else if focused {
@@ -403,16 +540,26 @@ impl Render for Input {
         if !self.disabled {
             row = row
                 .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+                .on_mouse_move(cx.listener(Self::on_mouse_move))
                 .on_action(cx.listener(Self::backspace))
                 .on_action(cx.listener(Self::delete))
                 .on_action(cx.listener(Self::left))
+                .on_action(cx.listener(Self::select_left))
                 .on_action(cx.listener(Self::right))
+                .on_action(cx.listener(Self::select_right))
                 .on_action(cx.listener(Self::home))
+                .on_action(cx.listener(Self::select_home))
                 .on_action(cx.listener(Self::end))
+                .on_action(cx.listener(Self::select_end))
                 .on_action(cx.listener(Self::select_all))
+                .on_action(cx.listener(Self::copy))
+                .on_action(cx.listener(Self::paste))
+                .on_action(cx.listener(Self::cut))
                 .on_action(cx.listener(Self::enter))
                 .on_action(cx.listener(Self::up))
-                .on_action(cx.listener(Self::down));
+                .on_action(cx.listener(Self::select_up))
+                .on_action(cx.listener(Self::down))
+                .on_action(cx.listener(Self::select_down));
         }
 
         if let Some(icon) = self.icon_prefix {
@@ -441,5 +588,3 @@ impl Render for Input {
         row
     }
 }
-
-use gpui::hsla;

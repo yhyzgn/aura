@@ -1,4 +1,4 @@
-use gpui::{div, prelude::*, AnyElement, App, Component, IntoElement, RenderOnce, Window};
+use gpui::{div, prelude::*, App, Component, IntoElement, RenderOnce, Window};
 use crate::Button;
 
 pub struct ButtonGroup {
@@ -27,7 +27,6 @@ impl RenderOnce for ButtonGroup {
             .items_center()
             .children(
                 self.buttons.into_iter().enumerate().map(|(i, btn)| {
-                    let mut btn = btn;
                     // Note: In GPUI 0.2.2, we don't have an easy way to override 
                     // internal parts of Button from outside without adding more fields to Button.
                     // For now, we'll just render them side-by-side. 

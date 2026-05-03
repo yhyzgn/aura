@@ -1,38 +1,29 @@
 # Session History
 
-## Session 4 — 2026-05-04
+## Session 5 — 2026-05-04 (Late Night)
 
 ### Actions
-- 完成 P1 Basic Elements 所有 13 个组件的开发与验证
-- **Button 增强**: 
-  - 支持 `icon_start`/`icon_end` 接受任意元素 (`AnyElement`) 或直接接受 `IconName`
-  - 为 `IconName` 实现 `IntoElement` trait
-  - 添加 `Text` 变体 (Ghost 按钮)
-  - 实现 `ButtonGroup` 容器
-  - 更新 Button Demo 包含全部新特性，验证 `.icon_start(IconName::Check)` 语法
-- **Typography**:
-  - 创建 `typography_demo` 整合 Text, Title, Paragraph, Link
-  - 修复 `Link` 对新 `ButtonVariant::Text` 的处理
-- **Layout & Container**:
-  - 重构 `Space` 为容器模式，支持 `gap` 和 `vertical`
-  - 修正 `Col` 栅格宽度计算 (使用 `gpui::relative`)
-  - 更新 `layout_demo` 展示 24 栅格系统
-  - 更新 `container_demo` 包含 `Container` (Header/Aside/Main/Footer) 示例
-- **验证**:
-  - `cargo check` 0 errors (已清理大部分新增警告)
-  - 13/13 组件在 Gallery 中均有 Demo 且符合 codex 范式
+- **Input 组件深度增强**:
+  - 实现光标闪烁逻辑 (500ms 周期，仅在 Focus 时激活)
+  - 实现全选功能 (`SelectAll`, Cmd/Ctrl+A)
+  - 实现剪贴板集成 (Copy/Paste/Cut, Cmd/Ctrl+C/V/X)
+  - 实现鼠标选择逻辑 (拖拽选择、Shift+点击选择)
+  - 实现键盘选择逻辑 (Shift+方向键/Home/End)
+  - 修正多行模式下的鼠标索引计算 (通过存储 `last_line_layouts`)
+  - 修正多行模式下的选择区域渲染 (支持跨行选择背景)
+- **清理与优化**:
+  - 移除 `input.rs`, `button_group.rs` 等文件中的冗余 import 和警告
+  - 统一 `cx.spawn` 使用 `async move |this, mut cx|` 模式
 - **状态同步**:
-  - 更新 `.memory/inventory.md` 和 `.memory/state.md`
-  - 标记 P1 阶段完成，准备进入 P2
+  - 更新 `.memory/state.md` 记录 P2 进度
 
 ### Key Discoveries
-- GPUI 0.2.2 `AnyElement` 不实现 `Clone`，在 `RenderOnce` 中需注意所有权转移
-- `ButtonGroup` 这种复合组件需要子组件提供更细粒度的样式覆盖 (如 `rounded_none`) 才能实现完美连接，当前版本采用简化 Flex 布局实现
-- 栅格系统百分比宽度在 GPUI 中通过 `relative(span/24.0)` 实现最为准确
+- GPUI 0.2.x 中 `cx.spawn` 在 `Context<T>` 上使用时，闭包签名需匹配 `async move |this, mut cx|` 以正确推导 `AsyncApp` 并处理生命周期
+- 多行文本交互需要持久化所有行的 `ShapedLine` 布局信息，否则 `index_for_x` 无法跨行工作
+- `this.update(cx, ...)` 在 `AsyncApp` 环境下直接传递 `cx` 即可 (无需 `&mut cx` 若 `cx` 已经是引用)
 
 ### Decisions Made
-- 统一使用 `AnyElement` 作为组件 Icon/Child 的通用类型
-- P1 剩余组件 (Row, Col, Divider, Space) 均已按照 Element-Plus 规范进行功能补齐
+- 录入 P2 首个核心组件 `Input` 的完整交互逻辑，作为后续复杂组件的参考
 
 ## Session 2 — 2026-05-03
 

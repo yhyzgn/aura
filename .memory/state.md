@@ -25,7 +25,7 @@ None
 |-------|--------|-----------|-------|
 | P0 Foundation | ✅ Done | 10/10 | 10 |
 | P1 Basic | ✅ Done | 13/13 | 13 |
-| P2 Form | 🔄 In Progress | 0/10 | 10 |
+| P2 Form | 🔄 In Progress | 1/10 | 10 |
 | P3 Popper+Feedback | ⬜ Pending | 0/13 | 13 |
 | P4 Nav+Data | ⬜ Pending | 0/20 | 20 |
 | P5 Advanced | ⬜ Pending | 0/20 | 20 |
