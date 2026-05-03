@@ -1,5 +1,6 @@
 use aura_theme::{AuraTheme, ButtonSize, ButtonVariant, ButtonVariantColors};
 use gpui::{ElementId, Hsla, Rgba, SharedString, prelude::*, px};
+use std::panic::Location;
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba {
@@ -22,9 +23,11 @@ pub struct AuraButton {
     border: bool,
     rounded: Option<f32>,
     id: Option<ElementId>,
+    creation_site: &'static Location<'static>,
 }
 
 impl AuraButton {
+    #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
             label: label.into(),
@@ -37,6 +40,7 @@ impl AuraButton {
             border: true,
             rounded: None,
             id: None,
+            creation_site: Location::caller(),
         }
     }
     pub fn variant(mut self, v: ButtonVariant) -> Self {
@@ -124,8 +128,22 @@ impl AuraButton {
         }
     }
 
+    fn auto_id(&self) -> ElementId {
+        SharedString::from(format!(
+            "aura-button:{}:{}:{:?}:{:?}:secondary={}:background={}:border={}:rounded={:?}",
+            self.creation_site,
+            self.label,
+            self.variant,
+            self.size,
+            self.secondary,
+            self.background,
+            self.border,
+            self.rounded
+        ))
+        .into()
+    }
+
     /// Build a theme-explicit GPUI element.
-    #[track_caller]
     pub fn build(self, theme: &AuraTheme) -> impl IntoElement {
         let c = self.colors(theme);
         let h = self.size.height();
@@ -141,14 +159,7 @@ impl AuraButton {
         } else {
             self.label.clone()
         };
-        let id = self.id.unwrap_or_else(|| {
-            SharedString::from(format!(
-                "aura-button:{}:{}",
-                std::panic::Location::caller(),
-                self.label
-            ))
-            .into()
-        });
+        let id = self.id.clone().unwrap_or_else(|| self.auto_id());
 
         let mut div = gpui::div()
             .flex()
@@ -186,5 +197,32 @@ impl AuraButton {
             .active(move |style| style.bg(c.active_bg))
             .child(label)
             .into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn id_text(id: ElementId) -> String {
+        id.to_string()
+    }
+
+    #[test]
+    fn auto_id_is_generated_from_component_identity_without_manual_id() {
+        let primary = AuraButton::new("Save").primary().auto_id();
+        let danger = AuraButton::new("Save").danger().auto_id();
+        let other_label = AuraButton::new("Cancel").primary().auto_id();
+
+        assert_ne!(primary, danger);
+        assert_ne!(primary, other_label);
+        assert!(id_text(primary).contains("Save"));
+    }
+
+    #[test]
+    fn explicit_id_overrides_auto_id_when_needed() {
+        let button = AuraButton::new("Save").id("submit-button");
+
+        assert_eq!(button.id, Some(ElementId::from("submit-button")));
     }
 }

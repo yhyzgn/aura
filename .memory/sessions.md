@@ -45,3 +45,9 @@
 - `cargo test -p aura-theme` passed: 2 tests.
 - `cargo check` passed; existing aura-gallery dead_code warnings remain.
 - `timeout 5s cargo run -p aura-gallery` compiled successfully, then failed to open a window in tmux due to GPUI Linux `NoCompositor` (environment/display issue, not compile issue).
+
+### Follow-up — Button id policy
+- 明确 Button 不能依赖业务开发者手写 `.id(...)` 才获得基础 hover/active 交互。
+- `AuraButton::new(...)` 现在通过 `#[track_caller]` 捕获组件创建位置，默认 id 由创建位置 + label + variant/size/状态参数生成。
+- `.id(...)` 保留为高级覆盖项，用于同一调用点批量渲染同 label/variant 按钮等潜在冲突场景。
+- Added aura-components tests for automatic id generation and explicit id override.
