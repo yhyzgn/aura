@@ -90,7 +90,7 @@ aura/
 │                                                  │
 │ 2. Demo (必须)                                    │
 │    └── 创建 apps/aura-gallery/src/demos/<name>_demo.rs
-│    └── render(theme: &AuraTheme) -> AnyElement   │
+│    └── render() -> AnyElement   │
 │    └── 在 demos/mod.rs 注册表添加 DemoEntry      │
 │                                                  │
 │ 3. 验证 (必须)                                    │
@@ -133,15 +133,14 @@ aura/
 ### 5.1 组件 API 风格
 
 ```rust
-// ✅ 正确 — Builder Pattern, theme 显式传入
+// ✅ 正确 — Builder Pattern + GPUI RenderOnce/IntoElement，主题从 App Global 读取
 AuraButton::new("Save")
     .primary()
     .large()
     .disabled(false)
-    .build(&theme)
 
-// ❌ 错误 — 不要在组件内隐式读 Global
-// 组件的 .build() / .render() 只通过参数获取 theme
+// ❌ 错误 — 不要在业务调用处层层传递 theme
+// AuraButton::new("Save").primary().build(&theme)
 ```
 
 ### 5.2 类型和 Context
@@ -198,11 +197,19 @@ aura-gallery/Cargo.toml:
 
 ```rust
 // apps/aura-gallery/src/demos/<name>_demo.rs
-pub fn render(theme: &AuraTheme) -> gpui::AnyElement {
-    div().flex().flex_col().gap_4()
-        .child(section_header(theme, "Variants 变体"))
-        .child(demo_row(theme, vec![...]))
-        .into_any_element()  // ← 必须返回 AnyElement
+pub fn render() -> gpui::AnyElement {
+    gpui::Component::new(NameDemo).into_any_element()
+}
+
+struct NameDemo;
+
+impl gpui::RenderOnce for NameDemo {
+    fn render(self, _window: &mut gpui::Window, cx: &mut gpui::App) -> impl gpui::IntoElement {
+        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+        div().flex().flex_col().gap_4()
+            .child(section_header(theme, "Variants 变体"))
+            .child(demo_row(vec![...]))
+    }
 }
 ```
 

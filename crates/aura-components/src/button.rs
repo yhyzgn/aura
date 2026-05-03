@@ -1,5 +1,9 @@
+use aura_core::AuraConfig;
 use aura_theme::{AuraTheme, ButtonSize, ButtonVariant, ButtonVariantColors};
-use gpui::{ElementId, Hsla, Rgba, SharedString, prelude::*, px};
+use gpui::{
+    App, Component, ElementId, Hsla, IntoElement, RenderOnce, Rgba, SharedString, Window,
+    prelude::*, px,
+};
 use std::panic::Location;
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
@@ -143,8 +147,7 @@ impl AuraButton {
         .into()
     }
 
-    /// Build a theme-explicit GPUI element.
-    pub fn build(self, theme: &AuraTheme) -> impl IntoElement {
+    fn render_with_theme(self, theme: &AuraTheme) -> impl IntoElement {
         let c = self.colors(theme);
         let h = self.size.height();
         let px_h = self.size.padding_x();
@@ -200,6 +203,21 @@ impl AuraButton {
     }
 }
 
+impl RenderOnce for AuraButton {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = &cx.global::<AuraConfig>().theme;
+        self.render_with_theme(theme)
+    }
+}
+
+impl IntoElement for AuraButton {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,5 +242,12 @@ mod tests {
         let button = AuraButton::new("Save").id("submit-button");
 
         assert_eq!(button.id, Some(ElementId::from("submit-button")));
+    }
+
+    fn accepts_into_element(_: impl IntoElement) {}
+
+    #[test]
+    fn button_is_an_element_without_passing_theme_to_build() {
+        accepts_into_element(AuraButton::new("Save").primary());
     }
 }

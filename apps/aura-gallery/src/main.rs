@@ -97,7 +97,7 @@ impl Render for Gallery {
                                     .child(entry.description),
                             ),
                     )
-                    .child((entry.render)(theme)),
+                    .child((entry.render)()),
             );
         }
         body

@@ -38,7 +38,7 @@
 每个组件:
   1. 创建/修改 crates/aura-components/src/<name>.rs
   2. 在 crates/aura-components/src/lib.rs 中 pub mod + pub use
-  3. 创建 apps/aura-gallery/src/demos/<name>_demo.rs (render(theme) -> AnyElement)
+  3. 创建 apps/aura-gallery/src/demos/<name>_demo.rs (render() -> AnyElement)
   4. 在 apps/aura-gallery/src/demos/mod.rs 注册表添加 DemoEntry
   5. cargo check 通过
   6. cargo run -p aura-gallery 验证窗口效果
@@ -49,18 +49,25 @@
 ## Demo 编写规范
 
 ```rust
-use gpui::{div, prelude::*, px, AnyElement};
-use aura_theme::AuraTheme;
+use gpui::{div, prelude::*, px, AnyElement, App, Component, RenderOnce, Window};
 
-pub fn render(theme: &AuraTheme) -> AnyElement {
-    div().flex().flex_col().gap_4()
-        .child(section(theme, "Variants 变体"))
-        .child(demo_row(theme, vec![...]))
-        .child(section(theme, "Sizes 尺寸"))
-        .child(demo_row(theme, vec![...]))
-        .child(section(theme, "States 状态"))
-        .child(demo_row(theme, vec![...]))
-        .into_any_element()
+pub fn render() -> AnyElement {
+    Component::new(NameDemo).into_any_element()
+}
+
+struct NameDemo;
+
+impl RenderOnce for NameDemo {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = &cx.global::<aura_core::AuraConfig>().theme;
+        div().flex().flex_col().gap_4()
+            .child(section(theme, "Variants 变体"))
+            .child(demo_row(vec![...]))
+            .child(section(theme, "Sizes 尺寸"))
+            .child(demo_row(vec![...]))
+            .child(section(theme, "States 状态"))
+            .child(demo_row(vec![...]))
+    }
 }
 ```
 
@@ -72,7 +79,6 @@ AuraRow::new()
     .gutter(px(20.0))
     .child(AuraCol::new().span(12).child(...))
     .child(AuraCol::new().span(6).offset(6).child(...))
-    .build(theme)
 ```
 
 ## 完成标准

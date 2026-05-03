@@ -1,12 +1,11 @@
 pub mod button_demo;
 
-use aura_theme::AuraTheme;
 use gpui::AnyElement;
 
 pub struct DemoEntry {
     pub name: &'static str,
     pub description: &'static str,
-    pub render: fn(&AuraTheme) -> AnyElement,
+    pub render: fn() -> AnyElement,
 }
 
 pub fn registry() -> Vec<DemoEntry> {

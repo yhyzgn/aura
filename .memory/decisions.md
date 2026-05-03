@@ -67,3 +67,17 @@
 - `impl IntoElement` is opaque and can't be stored in function pointers
 - `AnyElement` provides uniform type for demo registry dispatch
 - Small overhead acceptable (demos are dev-only, not production)
+
+## ADR-008: Components Read Theme from GPUI Global
+
+**Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `AuraConfig.theme` from `App` during render. Business usage is `AuraButton::new("Save").primary()` without `.build(&theme)`.
+
+**Supersedes**: ADR-001's `.build(&theme)` conversion detail and ADR-006's explicit theme-parameter policy.
+
+**Rationale**:
+- Preserves the global theme model established by `init_aura(cx, AuraTheme::...)`.
+- Avoids threading `&AuraTheme` through every component call and demo registry.
+- Matches GPUI/Zed component patterns where `RenderOnce::render(..., cx: &mut App)` resolves theme and style.
+- Keeps chainable builder API while making components directly usable as `IntoElement` children.
+
+**Escape hatch**: Low-level private helpers may accept `&AuraTheme` for tests or style extraction, but public component use should not require theme parameters.

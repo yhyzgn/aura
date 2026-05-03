@@ -1,22 +1,34 @@
 use aura_components::AuraButton;
+use aura_core::AuraConfig;
 use aura_theme::AuraTheme;
-use gpui::{AnyElement, div, prelude::*, px};
+use gpui::{AnyElement, App, Component, IntoElement, RenderOnce, Window, div, prelude::*, px};
 
-pub fn render(theme: &AuraTheme) -> AnyElement {
-    let mut page = div().flex().flex_col().gap_3();
-    page = page.child(hdr(theme, "Types 按钮类型"));
-    page = page.child(row(types(theme)));
-    page = page.child(hdr(theme, "Secondary 次要按钮"));
-    page = page.child(row(secondary(theme)));
-    page = page.child(hdr(theme, "Secondary · no border"));
-    page = page.child(row(secondary_nb(theme)));
-    page = page.child(hdr(theme, "Sizes 尺寸"));
-    page = page.child(row(sizes(theme)));
-    page = page.child(hdr(theme, "States 状态"));
-    page = page.child(row(states(theme)));
-    page = page.child(hdr(theme, "Rounded 圆角"));
-    page = page.child(row(rounded(theme)));
-    page.into_any_element()
+pub fn render() -> AnyElement {
+    Component::new(ButtonDemo).into_any_element()
+}
+
+struct ButtonDemo;
+
+impl RenderOnce for ButtonDemo {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = &cx.global::<AuraConfig>().theme;
+        div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(hdr(theme, "Types 按钮类型"))
+            .child(row(types()))
+            .child(hdr(theme, "Secondary 次要按钮"))
+            .child(row(secondary()))
+            .child(hdr(theme, "Secondary · no border"))
+            .child(row(secondary_nb()))
+            .child(hdr(theme, "Sizes 尺寸"))
+            .child(row(sizes()))
+            .child(hdr(theme, "States 状态"))
+            .child(row(states()))
+            .child(hdr(theme, "Rounded 圆角"))
+            .child(row(rounded()))
+    }
 }
 
 fn hdr(theme: &AuraTheme, s: &str) -> impl IntoElement {
@@ -38,110 +50,74 @@ fn row(elements: Vec<impl IntoElement>) -> impl IntoElement {
         .children(elements)
 }
 
-fn types(theme: &AuraTheme) -> Vec<impl IntoElement> {
+fn types() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default").build(theme),
-        AuraButton::new("Tertiary").tertiary().build(theme),
-        AuraButton::new("Primary").primary().build(theme),
-        AuraButton::new("Info").info().build(theme),
-        AuraButton::new("Success").success().build(theme),
-        AuraButton::new("Warning").warning().build(theme),
-        AuraButton::new("Error").danger().build(theme),
+        AuraButton::new("Default"),
+        AuraButton::new("Tertiary").tertiary(),
+        AuraButton::new("Primary").primary(),
+        AuraButton::new("Info").info(),
+        AuraButton::new("Success").success(),
+        AuraButton::new("Warning").warning(),
+        AuraButton::new("Error").danger(),
     ]
 }
 
-fn secondary(theme: &AuraTheme) -> Vec<impl IntoElement> {
+fn secondary() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default").secondary().build(theme),
-        AuraButton::new("Tertiary")
-            .tertiary()
-            .secondary()
-            .build(theme),
+        AuraButton::new("Default").secondary(),
+        AuraButton::new("Tertiary").tertiary().secondary(),
+        AuraButton::new("Primary").primary().secondary(),
+        AuraButton::new("Info").info().secondary(),
+        AuraButton::new("Success").success().secondary(),
+        AuraButton::new("Warning").warning().secondary(),
+        AuraButton::new("Error").danger().secondary(),
+    ]
+}
+
+fn secondary_nb() -> Vec<impl IntoElement> {
+    vec![
+        AuraButton::new("Default").secondary().border(false),
         AuraButton::new("Primary")
             .primary()
             .secondary()
-            .build(theme),
-        AuraButton::new("Info").info().secondary().build(theme),
+            .border(false),
+        AuraButton::new("Info").info().secondary().border(false),
         AuraButton::new("Success")
             .success()
             .secondary()
-            .build(theme),
+            .border(false),
         AuraButton::new("Warning")
             .warning()
             .secondary()
-            .build(theme),
-        AuraButton::new("Error").danger().secondary().build(theme),
+            .border(false),
+        AuraButton::new("Error").danger().secondary().border(false),
     ]
 }
 
-fn secondary_nb(theme: &AuraTheme) -> Vec<impl IntoElement> {
+fn sizes() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Default")
-            .secondary()
-            .border(false)
-            .build(theme),
-        AuraButton::new("Primary")
-            .primary()
-            .secondary()
-            .border(false)
-            .build(theme),
-        AuraButton::new("Info")
-            .info()
-            .secondary()
-            .border(false)
-            .build(theme),
-        AuraButton::new("Success")
-            .success()
-            .secondary()
-            .border(false)
-            .build(theme),
-        AuraButton::new("Warning")
-            .warning()
-            .secondary()
-            .border(false)
-            .build(theme),
-        AuraButton::new("Error")
-            .danger()
-            .secondary()
-            .border(false)
-            .build(theme),
+        AuraButton::new("Small").primary().small(),
+        AuraButton::new("Default").primary(),
+        AuraButton::new("Large").primary().large(),
     ]
 }
 
-fn sizes(theme: &AuraTheme) -> Vec<impl IntoElement> {
+fn states() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("Small").primary().small().build(theme),
-        AuraButton::new("Default").primary().build(theme),
-        AuraButton::new("Large").primary().large().build(theme),
-    ]
-}
-
-fn states(theme: &AuraTheme) -> Vec<impl IntoElement> {
-    vec![
-        AuraButton::new("Disabled")
-            .primary()
-            .disabled(true)
-            .build(theme),
-        AuraButton::new("Loading")
-            .primary()
-            .loading(true)
-            .build(theme),
+        AuraButton::new("Disabled").primary().disabled(true),
+        AuraButton::new("Loading").primary().loading(true),
         AuraButton::new("Sec Disabled")
             .primary()
             .secondary()
-            .disabled(true)
-            .build(theme),
+            .disabled(true),
     ]
 }
 
-fn rounded(theme: &AuraTheme) -> Vec<impl IntoElement> {
+fn rounded() -> Vec<impl IntoElement> {
     vec![
-        AuraButton::new("4px").primary().rounded(4.0).build(theme),
-        AuraButton::new("12px").primary().rounded(12.0).build(theme),
-        AuraButton::new("20px").primary().rounded(20.0).build(theme),
-        AuraButton::new("Pill")
-            .primary()
-            .rounded(9999.0)
-            .build(theme),
+        AuraButton::new("4px").primary().rounded(4.0),
+        AuraButton::new("12px").primary().rounded(12.0),
+        AuraButton::new("20px").primary().rounded(20.0),
+        AuraButton::new("Pill").primary().rounded(9999.0),
     ]
 }

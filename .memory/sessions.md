@@ -51,3 +51,8 @@
 - `AuraButton::new(...)` 现在通过 `#[track_caller]` 捕获组件创建位置，默认 id 由创建位置 + label + variant/size/状态参数生成。
 - `.id(...)` 保留为高级覆盖项，用于同一调用点批量渲染同 label/variant 按钮等潜在冲突场景。
 - Added aura-components tests for automatic id generation and explicit id override.
+
+### Follow-up — Global theme API
+- Replaced public `AuraButton::build(&theme)` usage with GPUI `IntoElement + RenderOnce`; Button now reads `AuraConfig.theme` from `App` during render.
+- Gallery demo registry no longer passes theme through function pointers; button demo wraps content in a `RenderOnce` demo component and reads global theme internally.
+- Updated prompt.md, P1 prompt, and decisions to supersede explicit `.build(&theme)` policy.
