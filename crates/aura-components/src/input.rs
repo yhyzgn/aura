@@ -159,6 +159,7 @@ impl EntityInputHandler for Input {
     fn replace_text_in_range(&mut self, range_utf16: Option<Range<usize>>, new_text: &str, _: &mut Window, cx: &mut Context<Self>) {
         let range = range_utf16
             .map(|r| self.offset_from_utf16(r.start)..self.offset_from_utf16(r.end))
+            .or_else(|| self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
         let mut v = self.value.to_string();
         v.replace_range(range.clone(), new_text);
