@@ -3,25 +3,32 @@ mod demos;
 
 use aura_core::{ContextExt, init_aura};
 use aura_theme::Theme;
+use aura_components::Switch;
 use gpui::{
-    App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
+    App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
 
-pub struct Gallery;
+pub struct Gallery {
+    switch_demo_on: Entity<Switch>,
+    switch_demo_off: Entity<Switch>,
+    switch_demo_disabled: Entity<Switch>,
+}
 
 fn run_gallery() {
     gpui_platform::application().run(|cx: &mut App| {
         init_aura(cx, Theme::light());
         cx.open_window(
             WindowOptions {
-                window_bounds: Some(WindowBounds::Maximized(Bounds::centered(
-                    None, size(px(1200.0), px(800.0)), cx,
-                ))),
+                window_bounds: Some(WindowBounds::Maximized(Bounds::centered(None, size(px(1200.0), px(800.0)), cx))),
                 ..Default::default()
             },
-            |_, cx| cx.new(|_| Gallery),
-        )
-        .unwrap();
+            |_, cx| {
+                let switch_on = cx.new(|cx| Switch::new(true, cx));
+                let switch_off = cx.new(|cx| Switch::new(false, cx));
+                let switch_disabled = cx.new(|cx| Switch::new(false, cx).disabled(true));
+                cx.new(|_| Gallery { switch_demo_on: switch_on, switch_demo_off: switch_off, switch_demo_disabled: switch_disabled })
+            },
+        ).unwrap();
         cx.activate(true);
     });
 }
@@ -31,85 +38,38 @@ impl Render for Gallery {
         let theme = cx.aura();
         let registry = demos::registry();
 
-        let header = div()
-            .flex()
-            .flex_col()
-            .gap_1()
-            .mb_4()
-            .pb_4()
-            .border_b_1()
-            .border_color(theme.neutral.border)
-            .child(
-                div()
-                    .text_2xl()
-                    .text_color(theme.neutral.text_1)
-                    .font_weight(gpui::FontWeight::BOLD)
-                    .child("Aura UI"),
-            )
-            .child(
-                div()
-                    .text_size(px(theme.font_size.md))
-                    .text_color(theme.neutral.text_3)
-                    .child(format!(
-                        "Native Component Library · {} components",
-                        registry.len()
-                    )),
-            );
+        let header = div().flex().flex_col().gap_1().mb_4().pb_4().border_b_1().border_color(theme.neutral.border)
+            .child(div().text_2xl().text_color(theme.neutral.text_1).font_weight(gpui::FontWeight::BOLD).child("Aura UI"))
+            .child(div().text_size(px(theme.font_size.md)).text_color(theme.neutral.text_3).child(format!("Native Component Library · {} components", registry.len())));
 
-        let mut body = div()
-            .flex()
-            .flex_col()
-            .size_full()
-            .bg(theme.neutral.body)
-            .gap_8()
-            .p_8()
-            .id("gallery-body")
-            .overflow_y_scroll()
-            .child(header);
+        let mut body = div().flex().flex_col().size_full().bg(theme.neutral.body).gap_8().p_8()
+            .id("gallery-body").overflow_y_scroll().child(header);
+
         for entry in &registry {
             body = body.child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .p_4()
-                    .border_1()
-                    .border_color(theme.neutral.divider)
-                    .rounded(px(theme.radius.lg))
-                    .bg(theme.neutral.card)
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child(
-                                div()
-                                    .text_size(px(theme.font_size.lg))
-                                    .text_color(theme.neutral.text_1)
-                                    .font_weight(gpui::FontWeight::BOLD)
-                                    .child(entry.name),
-                            )
-                            .child(
-                                div()
-                                    .text_size(px(theme.font_size.sm))
-                                    .text_color(theme.neutral.text_3)
-                                    .child(entry.description),
-                            ),
-                    )
-                    .child((entry.render)()),
+                div().flex().flex_col().gap_4().p_4().border_1().border_color(theme.neutral.divider).rounded(px(theme.radius.lg)).bg(theme.neutral.card)
+                    .child(div().flex().flex_col().gap_1()
+                        .child(div().text_size(px(theme.font_size.lg)).text_color(theme.neutral.text_1).font_weight(gpui::FontWeight::BOLD).child(entry.name))
+                        .child(div().text_size(px(theme.font_size.sm)).text_color(theme.neutral.text_3).child(entry.description)))
+                    .child((entry.render)())
             );
         }
+
+        // Switch demo (View-based, embedded directly)
+        body = body.child(
+            div().flex().flex_col().gap_4().p_4().border_1().border_color(theme.neutral.divider).rounded(px(theme.radius.lg)).bg(theme.neutral.card)
+                .child(div().flex().flex_col().gap_1()
+                    .child(div().text_size(px(theme.font_size.lg)).text_color(theme.neutral.text_1).font_weight(gpui::FontWeight::BOLD).child("Switch 开关"))
+                    .child(div().text_size(px(theme.font_size.sm)).text_color(theme.neutral.text_3).child("ON/OFF 切换开关")))
+                .child(div().flex().flex_row().gap_4().items_center()
+                    .child(self.switch_demo_on.clone())
+                    .child(self.switch_demo_off.clone())
+                    .child(self.switch_demo_disabled.clone()))
+        );
+
         body
     }
 }
 
-#[cfg(not(target_family = "wasm"))]
-fn main() {
-    run_gallery();
-}
-#[cfg(target_family = "wasm")]
-#[wasm_bindgen::prelude::wasm_bindgen(start)]
-pub fn start() {
-    gpui_platform::web_init();
-    run_gallery();
-}
+#[cfg(not(target_family = "wasm"))] fn main() { run_gallery(); }
+#[cfg(target_family = "wasm")] #[wasm_bindgen::prelude::wasm_bindgen(start)] pub fn start() { gpui_platform::web_init(); run_gallery(); }

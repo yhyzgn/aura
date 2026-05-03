@@ -10,6 +10,7 @@ pub mod col;
 pub mod container;
 pub mod scrollbar;
 pub mod splitter;
+pub mod switch;
 
 pub use button::*;
 pub use link::*;
@@ -23,3 +24,4 @@ pub use col::*;
 pub use container::*;
 pub use scrollbar::*;
 pub use splitter::*;
+pub use switch::*;
