@@ -395,10 +395,11 @@ impl AuraTheme {
     }
 
     fn secondary_family(&self, family: &ColorFamily, show_bg: bool, show_border: bool) -> ButtonVariantColors {
+        let active = family.base.blend(gpui::black().opacity(0.15));
         ButtonVariantColors {
             bg: if show_bg { family.light_9 } else { rgba(0, 0, 0, 0.0) },
             hover_bg: family.light_8,
-            active_bg: family.light_7,
+            active_bg: active,
             text: family.base,
             border: if show_border { family.base } else { rgba(0, 0, 0, 0.0) },
             text_hover: family.hover,
@@ -407,10 +408,11 @@ impl AuraTheme {
     }
 
     fn filled_colors(&self, family: &ColorFamily) -> ButtonVariantColors {
+        let active = family.base.blend(gpui::black().opacity(0.25));
         ButtonVariantColors {
             bg: family.base,
             hover_bg: family.hover,
-            active_bg: family.active,
+            active_bg: active,
             text: rgb(255, 255, 255),
             border: family.base,
             text_hover: rgb(255, 255, 255),
