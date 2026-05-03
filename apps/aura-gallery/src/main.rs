@@ -3,7 +3,8 @@ mod demos;
 
 use aura_core::{ContextExt, init_aura};
 use aura_theme::Theme;
-use aura_components::{Switch, Checkbox, RadioGroup};
+use aura_components::{Switch, Checkbox, RadioGroup, Input};
+use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Entity, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
@@ -17,6 +18,11 @@ pub struct Gallery {
     cb_labeled: Entity<Checkbox>,
     cb_disabled: Entity<Checkbox>,
     radio_group: Entity<RadioGroup>,
+    input_plain: Entity<Input>,
+    input_placeholder: Entity<Input>,
+    input_icon: Entity<Input>,
+    input_clearable: Entity<Input>,
+    input_disabled: Entity<Input>,
 }
 
 fn run_gallery() {
@@ -36,10 +42,16 @@ fn run_gallery() {
                 let cb_labeled = cx.new(|cx| Checkbox::new(false, cx).label("Label"));
                 let cb_disabled = cx.new(|cx| Checkbox::new(true, cx).disabled(true));
                 let radio_group = cx.new(|cx| RadioGroup::new(vec!["Option A", "Option B", "Option C"], 1, cx));
+                let input_plain = cx.new(|cx| Input::new("", cx));
+                let input_placeholder = cx.new(|cx| Input::new("", cx).placeholder("Type something..."));
+                let input_icon = cx.new(|cx| Input::new("", cx).placeholder("Search").icon_prefix(IconName::Search).clearable(true));
+                let input_clearable = cx.new(|cx| Input::new("Clear me", cx).clearable(true));
+                let input_disabled = cx.new(|cx| Input::new("Disabled", cx).disabled(true));
                 cx.new(|_| Gallery {
                     switch_demo_on: switch_on, switch_demo_off: switch_off, switch_demo_disabled: switch_disabled,
                     cb_checked, cb_unchecked, cb_labeled, cb_disabled,
                     radio_group,
+                    input_plain, input_placeholder, input_icon, input_clearable, input_disabled,
                 })
             },
         ).unwrap();
@@ -102,6 +114,19 @@ impl Render for Gallery {
                     .child(div().text_size(px(theme.font_size.sm)).text_color(theme.neutral.text_3).child("单选按钮")))
                 .child(div().flex().flex_row().gap_4().items_center()
                     .child(self.radio_group.clone()))
+        );
+
+        // Input demo
+        body = body.child(
+            div().flex().flex_col().gap_4().p_4().border_1().border_color(theme.neutral.divider).rounded(px(theme.radius.lg)).bg(theme.neutral.card)
+                .child(div().flex().flex_col().gap_1()
+                    .child(div().text_size(px(theme.font_size.lg)).text_color(theme.neutral.text_1).font_weight(gpui::FontWeight::BOLD).child("Input 输入框"))
+                    .child(div().text_size(px(theme.font_size.sm)).text_color(theme.neutral.text_3).child("文本输入（展示层，编辑功能待实现）")))
+                .child(div().flex().flex_col().gap_2()
+                    .child(self.input_placeholder.clone())
+                    .child(self.input_icon.clone())
+                    .child(self.input_clearable.clone())
+                    .child(self.input_disabled.clone()))
         );
 
         body

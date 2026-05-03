@@ -14,6 +14,7 @@ pub mod switch;
 pub mod checkbox;
 pub mod radio;
 pub mod radio_group;
+pub mod input;
 
 pub use button::*;
 pub use link::*;
@@ -31,3 +32,4 @@ pub use switch::*;
 pub use checkbox::*;
 pub use radio::*;
 pub use radio_group::*;
+pub use input::*;
