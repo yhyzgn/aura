@@ -51,7 +51,10 @@ impl Render for Checkbox {
             (rgba(0,0,0,0.0), theme.neutral.border, rgba(0,0,0,0.0))
         };
 
-        let mut row = gpui::div().flex().flex_row().items_center().gap_2().cursor_pointer();
+        let mut row = gpui::div().flex().flex_row().items_center().gap_2();
+
+        if !self.disabled { row = row.cursor_pointer(); }
+        else { row = row.cursor_not_allowed(); }
 
         if !self.disabled {
             row = row.on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>| {

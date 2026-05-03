@@ -55,10 +55,14 @@ impl Render for Switch {
             theme.neutral.border
         };
 
-        gpui::div()
+        let mut el = gpui::div()
             .flex_none().w(px(w)).h(px(h)).rounded(px(h / 2.0))
-            .bg(track_color).cursor_pointer()
-            .child(
+            .bg(track_color);
+
+        if !self.disabled { el = el.cursor_pointer(); }
+        else { el = el.cursor_not_allowed(); }
+
+        el.child(
                 gpui::div()
                     .absolute().left(px(thumb_offset)).top(px((h - thumb_sz) / 2.0))
                     .w(px(thumb_sz)).h(px(thumb_sz)).rounded(px(thumb_sz / 2.0))
