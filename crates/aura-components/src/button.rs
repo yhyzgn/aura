@@ -1,5 +1,5 @@
 use gpui::{
-    prelude::*, px, SharedString, Hsla, Rgba, ElementId, MouseButton,
+    prelude::*, px, SharedString, Hsla, Rgba, ElementId,
 };
 use aura_theme::{ButtonVariant, ButtonSize, ButtonVariantColors, AuraTheme};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -127,9 +127,8 @@ impl AuraButton {
                 })
                 // Press / active: deeper background
                 .active(|style| style.bg(colors.active_bg))
-                // on_mouse_down is required for GPUI to track press → active state
-                .on_mouse_down(MouseButton::Left, |_, _, _| {})
-                .on_mouse_up(MouseButton::Left, |_, _, _| {});
+                // on_click is required for GPUI to track press → apply active style
+                .on_click(|_, _, _| {});
         }
 
         el.child(label_text).into_any_element()
