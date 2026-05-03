@@ -10,6 +10,7 @@ use std::panic::Location;
 
 pub struct AuraLink {
     label: SharedString,
+    href: Option<SharedString>,
     variant: ButtonVariant,
     disabled: bool,
     underline: bool,
@@ -22,11 +23,12 @@ impl AuraLink {
     #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
-            label: label.into(), variant: ButtonVariant::Default, disabled: false,
-            underline: true, icon_start: None, icon_end: None,
+            label: label.into(), href: None, variant: ButtonVariant::Default,
+            disabled: false, underline: true, icon_start: None, icon_end: None,
             creation_site: Location::caller(),
         }
     }
+    pub fn href(mut self, url: impl Into<SharedString>) -> Self { self.href = Some(url.into()); self }
     pub fn variant(mut self, v: ButtonVariant) -> Self { self.variant = v; self }
     pub fn primary(mut self) -> Self  { self.variant = ButtonVariant::Primary; self }
     pub fn success(mut self) -> Self  { self.variant = ButtonVariant::Success; self }
@@ -40,9 +42,15 @@ impl AuraLink {
 
     fn color_for(&self, theme: &AuraTheme) -> (Hsla, Hsla) {
         if self.disabled { return (theme.neutral.text_disabled, theme.neutral.text_disabled); }
-        match self.variant {
-            _ => (theme.primary.base, theme.primary.hover),
-        }
+        let family = match self.variant {
+            ButtonVariant::Default | ButtonVariant::Tertiary => &theme.primary,
+            ButtonVariant::Primary => &theme.primary,
+            ButtonVariant::Success => &theme.success,
+            ButtonVariant::Warning => &theme.warning,
+            ButtonVariant::Danger => &theme.danger,
+            ButtonVariant::Info => &theme.info,
+        };
+        (family.base, family.hover)
     }
 
     fn render_with_theme(self, theme: &AuraTheme) -> impl IntoElement {
@@ -52,7 +60,8 @@ impl AuraLink {
 
         let mut div = gpui::div()
             .flex().flex_row().items_center().gap_1()
-            .text_size(px(fs)).text_color(color);
+            .text_size(px(fs)).text_color(color)
+            .id("aura-link");
 
         if !self.disabled { div = div.cursor_pointer(); }
         else { div = div.cursor_not_allowed(); }
@@ -69,11 +78,24 @@ impl AuraLink {
         }
 
         if !self.disabled {
+            if let Some(ref href) = self.href {
+                let url = href.clone();
+                div = div.on_click(move |_, _, _| { open_url(&url); });
+            }
             div = div.hover(move |style| style.text_color(hover_color));
         }
 
         div.children(children.into_iter().map(|f| f()))
     }
+}
+
+fn open_url(url: &str) {
+    #[cfg(target_os = "linux")]
+    { let _ = std::process::Command::new("xdg-open").arg(url).spawn(); }
+    #[cfg(target_os = "macos")]
+    { let _ = std::process::Command::new("open").arg(url).spawn(); }
+    #[cfg(target_os = "windows")]
+    { let _ = std::process::Command::new("cmd").args(["/c", "start", "", url]).spawn(); }
 }
 
 impl RenderOnce for AuraLink {

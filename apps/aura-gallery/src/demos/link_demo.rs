@@ -16,12 +16,9 @@ impl RenderOnce for LinkDemo {
         div().flex().flex_col().gap_3()
             .child(hdr(theme, "Variants"))
             .child(row(vec![
-                AuraLink::new("Default"),
-                AuraLink::new("Primary").primary(),
-                AuraLink::new("Success").success(),
-                AuraLink::new("Warning").warning(),
-                AuraLink::new("Danger").danger(),
-                AuraLink::new("Info").info(),
+                AuraLink::new("Default").href("https://github.com"),
+                AuraLink::new("Primary").primary().href("https://github.com"),
+                AuraLink::new("Danger").danger().href("https://github.com"),
             ]))
             .child(hdr(theme, "Underline"))
             .child(row(vec![
