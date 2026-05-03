@@ -15,8 +15,8 @@ impl Scrollbar {
 
 impl RenderOnce for Scrollbar {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let mut div = gpui::div().flex().flex_col().id("scrollbar");
-        if let Some(h) = self.height { div = div.h(h); } else { div = div.flex_1(); }
+        let mut div = gpui::div().flex().flex_col().size_full().id("scrollbar");
+        if let Some(h) = self.height { div = div.h(h); }
         div.overflow_y_scroll().children(self.children)
     }
 }
