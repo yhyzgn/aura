@@ -5,11 +5,15 @@ use gpui::{
     prelude::*, px, App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
-    Pixels, Point, Render, SharedString, ShapedLine, Style, TextRun,
-    UTF16Selection, Window, actions, KeyBinding, fill, point, size,
+    Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
+    UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
     MouseMoveEvent, AnyElement,
 };
 use std::ops::{Add, Range};
+
+fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
+    Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
+}
 
 actions!(input, [
     Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, InputUp, InputDown, Copy, Paste, Cut,
@@ -220,22 +224,30 @@ impl Input {
     }
 
     fn move_vertical(&mut self, delta: isize, select: bool, cx: &mut Context<Self>) {
-        let text = &self.value;
+        let text = self.value.clone();
         let offset = self.cursor_offset();
-        let current_line = text[..offset].chars().filter(|&c| c == '\n').count() as isize;
-        let line_start = if current_line == 0 { 0 } else {
-            text.char_indices().filter(|(_, c)| *c == '\n').nth(current_line as usize - 1).map(|(i, _)| i + 1).unwrap_or(0)
-        };
-        let col = offset - line_start;
-        let target_line = (current_line + delta).max(0);
+        let current_line = text.chars().take_while(|_| false).count(); // Just to get line count logic safe
+        // Simplified line logic for safety
         let lines: Vec<&str> = text.split('\n').collect();
-        if target_line as usize >= lines.len() { return; }
-        let mut target_start = 0;
+        let mut current_line = 0;
+        let mut line_start = 0;
         for (i, line) in lines.iter().enumerate() {
-            if i == target_line as usize { break; }
-            target_start += line.len() + 1;
+            if offset >= line_start && offset <= line_start + line.len() {
+                current_line = i;
+                break;
+            }
+            line_start += line.len() + 1;
         }
-        let target_len = lines[target_line as usize].len();
+        
+        let col = offset - line_start;
+        let target_line = (current_line as isize + delta).max(0) as usize;
+        if target_line >= lines.len() { return; }
+        
+        let mut target_start = 0;
+        for i in 0..target_line {
+            target_start += lines[i].len() + 1;
+        }
+        let target_len = lines[target_line].len();
         let new_col = col.min(target_len);
         let new_offset = target_start + new_col;
         if select { self.select_to(new_offset, cx); } else { self.move_to(new_offset, cx); }
@@ -489,7 +501,8 @@ impl EntityInputHandler for Input {
 
 impl Input {
     fn offset_to_utf16(&self, offset: usize) -> usize {
-        self.value[..offset].chars().map(|c| c.len_utf16()).sum()
+        if self.value.is_empty() { return 0; }
+        self.value[..offset.min(self.value.len())].chars().map(|c| c.len_utf16()).sum()
     }
     fn offset_from_utf16(&self, target: usize) -> usize {
         let mut utf8 = 0; let mut utf16 = 0;
@@ -503,13 +516,22 @@ impl Input {
     fn text_for_display(&self) -> SharedString {
         if self.value.is_empty() { self.placeholder.clone() } 
         else if self.is_password() {
-            SharedString::from(self.mask_char.to_string().repeat(self.value.chars().count()))
+            let masked = self.value.chars().map(|c| if c == '\n' { '\n' } else { self.mask_char }).collect::<String>();
+            SharedString::from(masked)
         } else { self.value.clone() }
     }
     fn original_to_display_offset_in_line(&self, line_offset: usize, line_text: &str) -> usize {
         if !self.is_password() { return line_offset; }
-        let char_count = line_text[..line_offset].chars().count();
-        char_count * self.mask_char.len_utf8()
+        let char_count = line_text.chars().take_while(|_| false).count(); // Placeholder logic
+        // Safer char count
+        let mut count = 0;
+        let mut bytes = 0;
+        for c in line_text.chars() {
+            if bytes >= line_offset { break; }
+            bytes += c.len_utf8();
+            count += 1;
+        }
+        count * self.mask_char.len_utf8()
     }
 }
 
@@ -551,7 +573,16 @@ impl Element for InputElement {
         let text = input.text_for_display();
         let text_lines: Vec<&str> = text.split('\n').collect();
         
-        let original_cursor_line = if input.value.is_empty() { 0 } else { input.value[..cursor_offset].chars().filter(|&c| c == '\n').count() };
+        let original_cursor_line = if input.value.is_empty() { 0 } else {
+            let mut line = 0;
+            let mut start = 0;
+            for l in input.value.split('\n') {
+                if cursor_offset >= start && cursor_offset <= start + l.len() { break; }
+                start += l.len() + 1;
+                line += 1;
+            }
+            line
+        };
         
         let mut lines = Vec::new();
         let mut y = bounds.top();

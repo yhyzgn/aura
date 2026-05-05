@@ -29,10 +29,12 @@ pub struct FormDemo {
     input_plain: Entity<Input>,
     input_placeholder: Entity<Input>,
     input_password: Entity<Input>,
+    input_password_custom: Entity<Input>,
     input_maxlength: Entity<Input>,
     input_prepend: Entity<Input>,
     input_append: Entity<Input>,
     input_composite: Entity<Input>,
+    input_select_prepend: Entity<Input>,
     input_icon: Entity<Input>,
     input_clearable: Entity<Input>,
     input_disabled: Entity<Input>,
@@ -50,6 +52,8 @@ pub struct FormDemo {
 
 impl FormDemo {
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let protocol_select = cx.new(|cx| Select::new(vec!["http://", "https://", "ftp://"], Some(1), cx));
+        
         Self {
             switch_on: cx.new(|cx| Switch::new(true, cx)),
             switch_off: cx.new(|cx| Switch::new(false, cx)),
@@ -75,13 +79,26 @@ impl FormDemo {
                     .password()
                     .placeholder("Password")
             }),
+            input_password_custom: cx.new(|cx| {
+                Input::new("secret", cx)
+                    .password()
+                    .mask_char('*')
+            }),
             input_maxlength: cx.new(|cx| Input::new("", cx).placeholder("Max 5 chars").max_length(5)),
-            input_prepend: cx.new(|cx| Input::new("", cx).prepend(|_, _| div().text_color(gpui::blue()).child("http://").into_any_element())),
+            input_prepend: cx.new(|cx| Input::new("", cx).prepend(|_, _| div().child("http://").into_any_element())),
             input_append: cx.new(|cx| Input::new("", cx).append(|_, _| div().child(".com").into_any_element())),
             input_composite: cx.new(|cx| {
                 Input::new("", cx)
                     .prepend(|_, _| Icon::new(aura_icons_lucide::IconName::User).size(px(14.0)).into_any_element())
                     .append(|_, _| div().text_size(px(12.0)).child("Admin").into_any_element())
+            }),
+            input_select_prepend: cx.new(|cx| {
+                let sel = protocol_select.clone();
+                Input::new("", cx)
+                    .prepend(move |_, _| {
+                        div().w(px(80.0)).child(sel.clone()).into_any_element()
+                    })
+                    .placeholder("domain.com")
             }),
             input_icon: cx.new(|cx| {
                 Input::new("", cx)
@@ -149,9 +166,11 @@ impl Render for FormDemo {
                     .child(self.input_plain.clone())
                     .child(self.input_placeholder.clone())
                     .child(self.input_password.clone())
+                    .child(self.input_password_custom.clone())
                     .child(self.input_maxlength.clone())
                     .child(self.input_prepend.clone())
                     .child(self.input_append.clone())
+                    .child(self.input_select_prepend.clone())
                     .child(self.input_composite.clone())
                     .child(self.input_icon.clone())
                     .child(self.input_clearable.clone())
