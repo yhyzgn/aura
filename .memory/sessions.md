@@ -141,3 +141,48 @@
 ### Key Discoveries
 - 将 `ActivePopover` 和 `ActiveTooltip` 提升至 `aura-core` 全局状态极大简化了 Portal 渲染逻辑，并解决了多层叠加时的层级冲突。
 - 使用 `pivot_container` (2000px) 配合 `justify_center` / `items_center` 是在 GPUI 中实现完美居中定位且支持边界补偿的最灵活方案。
+
+## Session 10 — 2026-05-06
+
+### Actions
+- **修复 Popover / Popconfirm 气泡水平中心对齐问题**:
+  - 根因: `PopoverView` 使用 2000px `pivot_container` + flex 居中近似定位，并用固定 `400x300` reference size 估算边界；实际内容宽度变化时，气泡中心会偏离触发元素中心。
+  - 改为使用 GPUI 原生 `anchored()` 元素，以触发元素的真实中心/边缘锚点定位气泡。
+  - 对 `Top` / `Bottom` 使用 `TopCenter` / `BottomCenter` 锚点保证水平中心对齐；对 `Start` / `End` 和左右方位映射到相应角/中心锚点。
+  - 使用 `snap_to_window_with_margin(px(4.0))` 保证气泡不超出窗体边界。
+  - 给气泡内容设置 `max_w` 为视口减边距，避免超宽内容横向溢出；纵向位置交由 `anchored` 贴边处理。
+- **补充 Popper 几何回归测试**:
+  - 验证垂直居中放置时内容中心与 anchor 中心一致。
+  - 验证靠近左右边界时水平位置被 clamp 到视口内。
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-core` passed: 2 tests.
+- `cargo test -p aura-components` passed.
+- `timeout 10s cargo run -p aura-gallery` compiled and launched; command ended by timeout after run start.
+
+### Key Discoveries
+- GPUI 已提供 `anchored()` + `snap_to_window_with_margin()`，比手写大尺寸 pivot 容器更适合弹层定位；它会按子元素实际布局尺寸做窗口边界吸附。
+
+### Follow-up — Popover trigger identity collision
+- 修复 `Popover::new()` 的 `#[track_caller]` 调用点未被持久化的问题: 之前实际在 `RenderOnce::render()` 中读取 caller，多个 Popover/Popconfirm 会共享同一个渲染调用点生成的 `ElementId`，导致 TopCenter / Popconfirm 等相邻用例触发状态混淆，表现为点击后未如期弹出。
+- `Popover` 现在在 `new()` 时生成并保存稳定 `trigger_id`，`render()` 直接使用该实例 ID。
+- 新增 `Popover::id(...)` 作为高级覆盖入口。
+- `Popconfirm` 通过 `.id(format!("popconfirm-trigger-{}", caller))` 显式转发自身调用点，避免嵌套 `Popover::new(self.trigger)` 统一落到 `popconfirm.rs` 内部同一行。
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-core` passed: 2 tests.
+- `cargo test -p aura-components` passed.
+- `timeout 10s cargo run -p aura-gallery` compiled and launched; command ended by timeout after run start.
+
+### Follow-up — Popconfirm instance identity persisted at construction
+- 修复 Archive Popconfirm 仍不弹的问题: 上一次只让 `Popover` 在 `new()` 持久化 ID，但 `Popconfirm` 仍在 `render()` 中读取 caller；多个 Popconfirm 实例仍可能共享同一个 render 调用点。
+- `Popconfirm` 现在在 `new()` 时保存自身 `trigger_id`，并在 render 时传给内部 `Popover::id(...)`。
+- 新增 `Popconfirm::id(...)` 高级覆盖入口，用于同一调用点批量渲染时手动去重。
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-core` passed: 2 tests.
+- `cargo test -p aura-components` passed.
+- `cargo run -p aura-gallery` compiled, then failed at runtime with Linux `NoCompositor` in this tmux environment.

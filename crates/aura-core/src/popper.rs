@@ -243,3 +243,61 @@ impl Popper {
         (final_pos, final_placement)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{point, px, size};
+
+    fn viewport() -> Bounds<Pixels> {
+        Bounds {
+            origin: point(px(0.0), px(0.0)),
+            size: size(px(800.0), px(600.0)),
+        }
+    }
+
+    fn anchor(x: f32, width: f32) -> Bounds<Pixels> {
+        Bounds {
+            origin: point(px(x), px(200.0)),
+            size: size(px(width), px(40.0)),
+        }
+    }
+
+    #[test]
+    fn centered_vertical_placements_align_content_center_with_anchor_center() {
+        let content_size = size(px(180.0), px(80.0));
+        let anchor_bounds = anchor(300.0, 80.0);
+        let popper = Popper {
+            anchor_bounds,
+            placement: Placement::Bottom,
+            offset: px(8.0),
+        };
+
+        let (pos, placement) = popper.calculate_position_with_flip(content_size, viewport());
+
+        assert_eq!(placement, Placement::Bottom);
+        assert_eq!(pos.x + content_size.width / 2.0, anchor_bounds.left() + anchor_bounds.size.width / 2.0);
+        assert_eq!(pos.y, anchor_bounds.bottom() + px(8.0));
+    }
+
+    #[test]
+    fn centered_vertical_placements_clamp_horizontally_to_viewport() {
+        let content_size = size(px(220.0), px(80.0));
+        let near_left = Popper {
+            anchor_bounds: anchor(8.0, 40.0),
+            placement: Placement::Bottom,
+            offset: px(8.0),
+        };
+        let near_right = Popper {
+            anchor_bounds: anchor(760.0, 32.0),
+            placement: Placement::Bottom,
+            offset: px(8.0),
+        };
+
+        let (left_pos, _) = near_left.calculate_position_with_flip(content_size, viewport());
+        let (right_pos, _) = near_right.calculate_position_with_flip(content_size, viewport());
+
+        assert_eq!(left_pos.x, px(0.0));
+        assert_eq!(right_pos.x + content_size.width, viewport().right());
+    }
+}

@@ -1,0 +1,10 @@
+aura-workspace/
+├── crates/
+│   ├── aura-core/       # 核心 Trait、全局配置、宏、工具函数
+│   ├── aura-theme/      # 设计系统、Token、暗/亮色模式、色彩计算
+│   ├── aura-components/ # 具体的组件实现 (Button, Input, Dialog 等)
+│   └── aura-icons/      # 图标库封装 (可选集成 Lucide 或 Element Icons)
+├── apps/
+│   ├── aura-gallery/    # Native 画廊应用 (直接用 GPUI 跑的展示 demo)
+│   └── docs/            # Web 端文档站 (Vitepress 或 Docusaurus)
+└── Cargo.toml

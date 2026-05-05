@@ -14,10 +14,13 @@ pub struct Popconfirm {
     on_confirm: Option<Arc<dyn Fn(&mut Window, &mut App) + 'static>>,
     on_cancel: Option<Arc<dyn Fn(&mut Window, &mut App) + 'static>>,
     placement: Placement,
+    trigger_id: SharedString,
 }
 
 impl Popconfirm {
+    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
+        let caller = std::panic::Location::caller();
         Self {
             trigger: trigger.into_any_element(),
             title: SharedString::default(),
@@ -26,6 +29,7 @@ impl Popconfirm {
             on_confirm: None,
             on_cancel: None,
             placement: Placement::Top,
+            trigger_id: format!("popconfirm-trigger-{}", caller).into(),
         }
     }
 
@@ -58,6 +62,11 @@ impl Popconfirm {
         self.placement = placement;
         self
     }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.trigger_id = id.into();
+        self
+    }
 }
 
 impl RenderOnce for Popconfirm {
@@ -68,8 +77,10 @@ impl RenderOnce for Popconfirm {
         let on_confirm = self.on_confirm.clone();
         let on_cancel = self.on_cancel.clone();
         let theme = cx.global::<Config>().theme.clone();
+        let trigger_id = self.trigger_id.clone();
 
         Popover::new(self.trigger)
+            .id(trigger_id)
             .placement(self.placement)
             .content(move |_window, _cx| {
                 let on_confirm = on_confirm.clone();
