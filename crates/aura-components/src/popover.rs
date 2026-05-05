@@ -62,8 +62,8 @@ impl Render for PopoverView {
             placement,
             offset,
         };
-        // Reference size for flipping
-        let reference_size = gpui::Size { width: px(200.0), height: px(150.0) };
+        // Reference size for flipping and clamping - increased to be more conservative
+        let reference_size = gpui::Size { width: px(400.0), height: px(300.0) };
         let (_pos, final_placement) = popper.calculate_position_with_flip(reference_size, viewport);
 
         let mut pivot_container = div().absolute().flex();
@@ -81,6 +81,7 @@ impl Render for PopoverView {
 
                 pivot_container = pivot_container
                     .w(container_width)
+                    .h(px(0.0)) // Explicit zero height for horizontal alignments
                     .left(clamped_center_x - container_width / 2.0);
 
                 if final_placement == Placement::Top || final_placement == Placement::TopStart || final_placement == Placement::TopEnd {
@@ -92,7 +93,7 @@ impl Render for PopoverView {
 
                 match final_placement {
                     Placement::Top | Placement::Bottom => {
-                        pivot_container = pivot_container.justify_center().items_center();
+                        pivot_container = pivot_container.items_center();
                     }
                     Placement::TopStart | Placement::BottomStart => {
                         pivot_container = pivot_container.items_start();
@@ -117,6 +118,7 @@ impl Render for PopoverView {
 
                 pivot_container = pivot_container
                     .h(container_height)
+                    .w(px(0.0)) // Explicit zero width for vertical alignments
                     .top(clamped_center_y - container_height / 2.0);
 
                 if final_placement == Placement::Left || final_placement == Placement::LeftStart || final_placement == Placement::LeftEnd {
@@ -128,7 +130,7 @@ impl Render for PopoverView {
 
                 match final_placement {
                     Placement::Left | Placement::Right => {
-                        pivot_container = pivot_container.justify_center().items_center();
+                        pivot_container = pivot_container.items_center();
                     }
                     Placement::LeftStart | Placement::RightStart => {
                         pivot_container = pivot_container.items_start();
