@@ -5,19 +5,15 @@ use gpui::{
     prelude::*, px, App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
-    Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
-    UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
+    Pixels, Point, Render, SharedString, ShapedLine, Style, TextRun,
+    UTF16Selection, Window, actions, KeyBinding, fill, point, size,
     MouseMoveEvent, AnyElement,
 };
 use std::ops::{Add, Range};
 
-fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
-    Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
-}
-
 actions!(input, [
     Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, InputUp, InputDown, Copy, Paste, Cut,
-    SelectLeft, SelectRight, SelectUp, SelectDown, SelectHome, SelectEnd
+    SelectLeft, SelectRight, SelectUp, SelectDown, SelectHome, SelectEnd, TogglePassword
 ]);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +40,8 @@ pub struct Input {
     filter: Option<Box<dyn Fn(&str) -> bool + 'static>>,
     max_length: Option<usize>,
     input_type: InputType,
+    password_visible: bool,
+    mask_char: char,
     prepend: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
     append: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
 }
@@ -59,6 +57,8 @@ impl Input {
             filter: None,
             max_length: None,
             input_type: InputType::Text,
+            password_visible: false,
+            mask_char: '•',
             prepend: None,
             append: None,
         }
@@ -71,6 +71,7 @@ impl Input {
     pub fn filter(mut self, f: impl Fn(&str) -> bool + 'static) -> Self { self.filter = Some(Box::new(f)); self }
     pub fn max_length(mut self, max: usize) -> Self { self.max_length = Some(max); self }
     pub fn password(mut self) -> Self { self.input_type = InputType::Password; self }
+    pub fn mask_char(mut self, c: char) -> Self { self.mask_char = c; self }
     
     pub fn prepend(mut self, render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
         self.prepend = Some(Box::new(render));
@@ -183,7 +184,7 @@ impl Input {
     }
 
     fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
-        if !self.selected_range.is_empty() && self.input_type != InputType::Password {
+        if !self.selected_range.is_empty() && (self.input_type != InputType::Password || self.password_visible) {
             let selected_text = self.value[self.selected_range.clone()].to_string();
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
         }
@@ -213,6 +214,11 @@ impl Input {
     fn down(&mut self, _: &InputDown, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, false, cx); }
     fn select_down(&mut self, _: &SelectDown, _: &mut Window, cx: &mut Context<Self>) { self.move_vertical(1, true, cx); }
 
+    fn toggle_password(&mut self, _: &TogglePassword, _: &mut Window, cx: &mut Context<Self>) {
+        self.password_visible = !self.password_visible;
+        cx.notify();
+    }
+
     fn move_vertical(&mut self, delta: isize, select: bool, cx: &mut Context<Self>) {
         let text = &self.value;
         let offset = self.cursor_offset();
@@ -240,22 +246,35 @@ impl Input {
             if layouts.is_empty() { return 0; }
             let line_height = window.line_height();
             let mut best_line = 0;
-            let mut final_byte_offset = 0;
-            let mut current_byte_offset = 0;
+            let mut final_original_byte_offset = 0;
+            let mut current_original_byte_offset = 0;
             for (i, (layout, y_offset)) in layouts.iter().enumerate() {
                 if pt.y >= *y_offset && pt.y < *y_offset + line_height {
                     best_line = i;
-                    final_byte_offset = current_byte_offset;
+                    final_original_byte_offset = current_original_byte_offset;
                     break;
                 }
                 if pt.y >= *y_offset {
                     best_line = i;
-                    final_byte_offset = current_byte_offset;
+                    final_original_byte_offset = current_original_byte_offset;
                 }
-                current_byte_offset += layout.len + 1;
+                current_original_byte_offset += self.value.split('\n').nth(i).map(|l| l.len() + 1).unwrap_or(0);
             }
             let x = pt.x - bounds.left();
-            final_byte_offset + layouts[best_line].0.index_for_x(x).unwrap_or(layouts[best_line].0.len)
+            let display_index = layouts[best_line].0.index_for_x(x).unwrap_or(layouts[best_line].0.len);
+            
+            if self.is_password() {
+                let char_count = display_index / self.mask_char.len_utf8();
+                let original_line = self.value.split('\n').nth(best_line).unwrap_or("");
+                let mut byte_idx = 0;
+                for _ in 0..char_count {
+                    if byte_idx >= original_line.len() { break; }
+                    byte_idx += original_line[byte_idx..].chars().next().unwrap().len_utf8();
+                }
+                final_original_byte_offset + byte_idx
+            } else {
+                final_original_byte_offset + display_index
+            }
         } else {
             self.value.len()
         }
@@ -337,26 +356,26 @@ impl Input {
     fn internal_replace(&mut self, new_text: &str, cx: &mut Context<Self>) {
         let mut v = self.value.to_string();
         let range = self.selected_range.clone();
-        
         let potential_v = {
             let mut temp = v.clone();
             temp.replace_range(range.clone(), new_text);
             temp
         };
-
         if let Some(ref filter) = self.filter {
             if !filter(&potential_v) { return; }
         }
-
         if let Some(max) = self.max_length {
             if potential_v.chars().count() > max { return; }
         }
-
         v.replace_range(range, new_text);
         self.value = SharedString::from(v);
         let pos = self.selected_range.start + new_text.len();
         self.selected_range = pos..pos;
         self.reset_blink(cx);
+    }
+
+    fn is_password(&self) -> bool {
+        self.input_type == InputType::Password && !self.password_visible
     }
 }
 
@@ -391,21 +410,17 @@ impl EntityInputHandler for Input {
             .map(|r| self.offset_from_utf16(r.start)..self.offset_from_utf16(r.end))
             .or_else(|| self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
-        
         let potential_v = {
             let mut temp = self.value.to_string();
             temp.replace_range(range.clone(), new_text);
             temp
         };
-
         if let Some(ref filter) = self.filter {
             if !filter(&potential_v) { return; }
         }
-
         if let Some(max) = self.max_length {
             if potential_v.chars().count() > max { return; }
         }
-
         let mut v = self.value.to_string();
         v.replace_range(range.clone(), new_text);
         self.value = SharedString::from(v);
@@ -419,21 +434,17 @@ impl EntityInputHandler for Input {
             .map(|r| self.offset_from_utf16(r.start)..self.offset_from_utf16(r.end))
             .or(self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
-        
         let potential_v = {
             let mut temp = self.value.to_string();
             temp.replace_range(range.clone(), new_text);
             temp
         };
-
         if let Some(ref filter) = self.filter {
             if !filter(&potential_v) { return; }
         }
-
         if let Some(max) = self.max_length {
             if potential_v.chars().count() > max { return; }
         }
-
         let mut v = self.value.to_string();
         v.replace_range(range.clone(), new_text);
         self.value = SharedString::from(v);
@@ -454,17 +465,19 @@ impl EntityInputHandler for Input {
         let start = self.offset_from_utf16(range_utf16.start);
         let end = self.offset_from_utf16(range_utf16.end);
         let line_height = window.line_height();
-        let mut byte_offset = 0;
-        for (layout, y_offset) in layouts {
-            if start >= byte_offset && start <= byte_offset + layout.len {
-                let x_start = layout.x_for_index(start - byte_offset);
-                let x_end = layout.x_for_index(end.min(byte_offset + layout.len) - byte_offset);
+        let mut original_byte_offset = 0;
+        for (idx, (layout, y_offset)) in layouts.iter().enumerate() {
+            let line_text = self.value.split('\n').nth(idx).unwrap_or("");
+            let line_len = line_text.len();
+            if start >= original_byte_offset && start <= original_byte_offset + line_len {
+                let x_start = layout.x_for_index(self.original_to_display_offset_in_line(start - original_byte_offset, line_text));
+                let x_end = layout.x_for_index(self.original_to_display_offset_in_line(end.min(original_byte_offset + line_len) - original_byte_offset, line_text));
                 return Some(Bounds::from_corners(
                     point(bounds.left() + x_start, *y_offset),
                     point(bounds.left() + x_end, *y_offset + line_height),
                 ));
             }
-            byte_offset += layout.len + 1;
+            original_byte_offset += line_len + 1;
         }
         None
     }
@@ -489,9 +502,14 @@ impl Input {
     }
     fn text_for_display(&self) -> SharedString {
         if self.value.is_empty() { self.placeholder.clone() } 
-        else if self.input_type == InputType::Password {
-            SharedString::from("•".repeat(self.value.chars().count()))
+        else if self.is_password() {
+            SharedString::from(self.mask_char.to_string().repeat(self.value.chars().count()))
         } else { self.value.clone() }
+    }
+    fn original_to_display_offset_in_line(&self, line_offset: usize, line_text: &str) -> usize {
+        if !self.is_password() { return line_offset; }
+        let char_count = line_text[..line_offset].chars().count();
+        char_count * self.mask_char.len_utf8()
     }
 }
 
@@ -532,51 +550,56 @@ impl Element for InputElement {
         let cursor_offset = input.cursor_offset();
         let text = input.text_for_display();
         let text_lines: Vec<&str> = text.split('\n').collect();
-        let cursor_line = text[..cursor_offset].chars().filter(|&c| c == '\n').count();
+        
+        let original_cursor_line = if input.value.is_empty() { 0 } else { input.value[..cursor_offset].chars().filter(|&c| c == '\n').count() };
+        
         let mut lines = Vec::new();
         let mut y = bounds.top();
         let mut cursor_quad = None;
         let mut selection_quads = Vec::new();
-        let mut byte_offset = 0;
+        let mut original_byte_offset = 0;
 
         for (i, line_text) in text_lines.iter().enumerate() {
             let (display, color) = if input.value.is_empty() {
-                (input.placeholder.clone(), rgba(0,0,0,0.3))
+                (input.placeholder.clone(), theme.neutral.text_3)
             } else { (SharedString::from(*line_text), text_c) };
             let run = TextRun { len: display.len(), font: style.font(), color, background_color: None, underline: None, strikethrough: None };
-            let runs = if let Some(ref marked) = input.marked_range {
-                if byte_offset < marked.end && byte_offset + line_text.len() > marked.start {
-                    let ms = marked.start.saturating_sub(byte_offset);
-                    let me = (marked.end - byte_offset).min(line_text.len());
-                    vec![
-                        TextRun { len: ms, ..run.clone() },
-                        TextRun { len: me - ms, underline: Some(UnderlineStyle { color: Some(run.color), thickness: px(1.0), wavy: false }), ..run.clone() },
-                        TextRun { len: line_text.len().saturating_sub(me), ..run },
-                    ].into_iter().filter(|r| r.len > 0).collect()
-                } else { vec![run.clone()] }
-            } else { vec![run] };
-            let shaped = window.text_system().shape_line(display, font_size, &runs, None);
-            if !input.selected_range.is_empty() {
+            let shaped = window.text_system().shape_line(display, font_size, &[run], None);
+            
+            if !input.selected_range.is_empty() && !input.value.is_empty() {
                 let range = input.selected_range.clone();
-                let line_end = byte_offset + line_text.len();
-                let start = range.start.max(byte_offset);
+                let original_line = input.value.split('\n').nth(i).unwrap_or("");
+                let line_start = original_byte_offset;
+                let line_end = original_byte_offset + original_line.len();
+                let start = range.start.max(line_start);
                 let end = range.end.min(line_end);
                 if start < end {
-                    let x_start = shaped.x_for_index(start - byte_offset);
-                    let x_end = shaped.x_for_index(end - byte_offset);
+                    let d_start = input.original_to_display_offset_in_line(start - line_start, original_line);
+                    let d_end = input.original_to_display_offset_in_line(end - line_start, original_line);
+                    let x_start = shaped.x_for_index(d_start);
+                    let x_end = shaped.x_for_index(d_end);
                     selection_quads.push(fill(Bounds::new(point(bounds.left() + x_start, y), size(x_end - x_start, line_height)), theme.primary.base.opacity(0.3)));
                 }
             }
-            if i == cursor_line && input.selected_range.is_empty() && input.cursor_visible {
-                let col = cursor_offset - byte_offset;
-                let x = shaped.x_for_index(col);
+            if i == original_cursor_line && input.selected_range.is_empty() && input.cursor_visible && !input.value.is_empty() {
+                let original_line = input.value.split('\n').nth(i).unwrap_or("");
+                let line_start = original_byte_offset;
+                let col = cursor_offset - line_start;
+                let d_col = input.original_to_display_offset_in_line(col, original_line);
+                let x = shaped.x_for_index(d_col);
+                let ch = font_size.add(px(6.0));
+                let ct = y + (line_height - ch) / 2.0;
+                cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
+            } else if i == 0 && input.value.is_empty() && input.cursor_visible {
+                let x = px(0.0);
                 let ch = font_size.add(px(6.0));
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
             }
+
             lines.push((shaped, y));
             y = y + line_height;
-            byte_offset += line_text.len() + 1;
+            original_byte_offset += input.value.split('\n').nth(i).map(|l| l.len() + 1).unwrap_or(0);
         }
         InputPrepaint { lines, cursor: cursor_quad, selection: selection_quads }
     }
@@ -630,7 +653,7 @@ impl Render for Input {
         }
 
         if let Some(ref p_render) = self.prepend {
-            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().child(p_render(_window, cx)));
+            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(p_render(_window, cx)));
         }
 
         let mut inner = gpui::div().flex_1().flex().flex_row().items_center().gap_2().px(px(12.0));
@@ -646,6 +669,15 @@ impl Render for Input {
                     .on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>| { this.clear(cx); })));
         }
 
+        if self.input_type == InputType::Password && !self.disabled {
+            let visible = self.password_visible;
+            inner = inner.child(gpui::div().cursor_pointer().flex_none()
+                .child(Icon::new(if visible { IconName::EyeOff } else { IconName::Eye }).size(px(14.0)).color(theme.neutral.icon))
+                .on_mouse_down(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>| {
+                    this.toggle_password(&TogglePassword, window, cx);
+                })));
+        }
+
         if let Some(icon) = self.icon_suffix {
             inner = inner.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
         }
@@ -653,7 +685,7 @@ impl Render for Input {
         row = row.child(inner);
 
         if let Some(ref a_render) = self.append {
-            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_l_1().border_color(theme.neutral.border).flex().items_center().child(a_render(_window, cx)));
+            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_l_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(a_render(_window, cx)));
         }
 
         row
