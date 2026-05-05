@@ -28,8 +28,18 @@ impl InputNumber {
         let input = cx.new(|cx| {
             Input::new(format!("{:.*}", 0, value), cx)
                 .filter(|text| {
-                    // Only allow digits, one decimal point, and leading minus sign
-                    text.chars().all(|c| c.is_ascii_digit() || c == '.' || c == '-')
+                    if text.is_empty() { return true; }
+                    // Allow leading plus or minus
+                    let mut chars = text.chars();
+                    let first = chars.next().unwrap();
+                    if first == '+' || first == '-' {
+                        // The rest must be digits or a single dot
+                        let rest: String = chars.collect();
+                        if rest.is_empty() { return true; }
+                        rest.chars().all(|c| c.is_ascii_digit() || c == '.') && rest.matches('.').count() <= 1
+                    } else {
+                        text.chars().all(|c| c.is_ascii_digit() || c == '.') && text.matches('.').count() <= 1
+                    }
                 })
         });
 

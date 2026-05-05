@@ -1,6 +1,7 @@
 use aura_components::{Checkbox, CheckboxGroup, Form, FormItem, Input, InputNumber, Radio, RadioGroup, Rate, Select, Slider, Switch, Textarea};
+use aura_icons::Icon;
 use gpui::{
-    div, prelude::*, App, Context, Entity, IntoElement, Render, Window,
+    div, prelude::*, App, Context, Entity, IntoElement, Render, Window, px
 };
 
 pub fn render(cx: &mut App) -> Entity<FormDemo> {
@@ -27,6 +28,11 @@ pub struct FormDemo {
     radio_group_disabled: Entity<RadioGroup>,
     input_plain: Entity<Input>,
     input_placeholder: Entity<Input>,
+    input_password: Entity<Input>,
+    input_maxlength: Entity<Input>,
+    input_prepend: Entity<Input>,
+    input_append: Entity<Input>,
+    input_composite: Entity<Input>,
     input_icon: Entity<Input>,
     input_clearable: Entity<Input>,
     input_disabled: Entity<Input>,
@@ -64,6 +70,19 @@ impl FormDemo {
             radio_group_disabled: cx.new(|cx| RadioGroup::new(vec!["Disabled A", "Disabled B"], 0, cx).disabled(true)),
             input_plain: cx.new(|cx| Input::new("", cx)),
             input_placeholder: cx.new(|cx| Input::new("", cx).placeholder("Type something...")),
+            input_password: cx.new(|cx| {
+                Input::new("", cx)
+                    .password()
+                    .placeholder("Password")
+            }),
+            input_maxlength: cx.new(|cx| Input::new("", cx).placeholder("Max 5 chars").max_length(5)),
+            input_prepend: cx.new(|cx| Input::new("", cx).prepend(|_, _| div().text_color(gpui::blue()).child("http://").into_any_element())),
+            input_append: cx.new(|cx| Input::new("", cx).append(|_, _| div().child(".com").into_any_element())),
+            input_composite: cx.new(|cx| {
+                Input::new("", cx)
+                    .prepend(|_, _| Icon::new(aura_icons_lucide::IconName::User).size(px(14.0)).into_any_element())
+                    .append(|_, _| div().text_size(px(12.0)).child("Admin").into_any_element())
+            }),
             input_icon: cx.new(|cx| {
                 Input::new("", cx)
                     .placeholder("Search")
@@ -129,6 +148,11 @@ impl Render for FormDemo {
                 div().flex().flex_col().gap_2()
                     .child(self.input_plain.clone())
                     .child(self.input_placeholder.clone())
+                    .child(self.input_password.clone())
+                    .child(self.input_maxlength.clone())
+                    .child(self.input_prepend.clone())
+                    .child(self.input_append.clone())
+                    .child(self.input_composite.clone())
                     .child(self.input_icon.clone())
                     .child(self.input_clearable.clone())
                     .child(self.input_disabled.clone())

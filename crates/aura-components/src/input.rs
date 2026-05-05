@@ -7,7 +7,7 @@ use gpui::{
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
     Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
     UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
-    MouseMoveEvent,
+    MouseMoveEvent, AnyElement,
 };
 use std::ops::{Add, Range};
 
@@ -19,6 +19,12 @@ actions!(input, [
     Backspace, Delete, Left, Right, Home, End, SelectAll, Enter, InputUp, InputDown, Copy, Paste, Cut,
     SelectLeft, SelectRight, SelectUp, SelectDown, SelectHome, SelectEnd
 ]);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputType {
+    Text,
+    Password,
+}
 
 pub struct Input {
     value: SharedString,
@@ -36,6 +42,10 @@ pub struct Input {
     cursor_visible: bool,
     blink_task: Option<gpui::Task<()>>,
     filter: Option<Box<dyn Fn(&str) -> bool + 'static>>,
+    max_length: Option<usize>,
+    input_type: InputType,
+    prepend: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
+    append: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
 }
 
 impl Input {
@@ -47,6 +57,10 @@ impl Input {
             marked_range: None, last_line_layouts: Vec::new(), last_bounds: None,
             cursor_visible: true, blink_task: None,
             filter: None,
+            max_length: None,
+            input_type: InputType::Text,
+            prepend: None,
+            append: None,
         }
     }
     pub fn placeholder(mut self, p: impl Into<SharedString>) -> Self { self.placeholder = p.into(); self }
@@ -55,6 +69,17 @@ impl Input {
     pub fn icon_prefix(mut self, icon: IconName) -> Self { self.icon_prefix = Some(icon); self }
     pub fn icon_suffix(mut self, icon: IconName) -> Self { self.icon_suffix = Some(icon); self }
     pub fn filter(mut self, f: impl Fn(&str) -> bool + 'static) -> Self { self.filter = Some(Box::new(f)); self }
+    pub fn max_length(mut self, max: usize) -> Self { self.max_length = Some(max); self }
+    pub fn password(mut self) -> Self { self.input_type = InputType::Password; self }
+    
+    pub fn prepend(mut self, render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
+        self.prepend = Some(Box::new(render));
+        self
+    }
+    pub fn append(mut self, render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
+        self.append = Some(Box::new(render));
+        self
+    }
 
     pub fn set_placeholder(&mut self, p: impl Into<SharedString>, cx: &mut Context<Self>) {
         self.placeholder = p.into();
@@ -158,7 +183,7 @@ impl Input {
     }
 
     fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
-        if !self.selected_range.is_empty() {
+        if !self.selected_range.is_empty() && self.input_type != InputType::Password {
             let selected_text = self.value[self.selected_range.clone()].to_string();
             cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected_text));
         }
@@ -199,7 +224,6 @@ impl Input {
         let target_line = (current_line + delta).max(0);
         let lines: Vec<&str> = text.split('\n').collect();
         if target_line as usize >= lines.len() { return; }
-        // Find byte offset of target line start
         let mut target_start = 0;
         for (i, line) in lines.iter().enumerate() {
             if i == target_line as usize { break; }
@@ -215,11 +239,9 @@ impl Input {
         if let (Some(bounds), layouts) = (self.last_bounds.as_ref(), &self.last_line_layouts) {
             if layouts.is_empty() { return 0; }
             let line_height = window.line_height();
-            
             let mut best_line = 0;
             let mut final_byte_offset = 0;
             let mut current_byte_offset = 0;
-            
             for (i, (layout, y_offset)) in layouts.iter().enumerate() {
                 if pt.y >= *y_offset && pt.y < *y_offset + line_height {
                     best_line = i;
@@ -232,7 +254,6 @@ impl Input {
                 }
                 current_byte_offset += layout.len + 1;
             }
-            
             let x = pt.x - bounds.left();
             final_byte_offset + layouts[best_line].0.index_for_x(x).unwrap_or(layouts[best_line].0.len)
         } else {
@@ -247,15 +268,8 @@ impl Input {
             return;
         }
         let idx = self.index_for_point(event.position, window);
-
         match event.click_count {
-            1 => {
-                if event.modifiers.shift {
-                    self.select_to(idx, cx);
-                } else {
-                    self.move_to(idx, cx);
-                }
-            }
+            1 => { if event.modifiers.shift { self.select_to(idx, cx); } else { self.move_to(idx, cx); } }
             2 => {
                 let range = self.word_range_at(idx);
                 self.selected_range = range;
@@ -275,7 +289,6 @@ impl Input {
         let text = self.value.as_ref();
         if text.is_empty() { return 0..0; }
         let idx = idx.min(text.len());
-        
         let mut start = idx;
         while start > 0 {
             let prev = self.prev_char(start);
@@ -283,7 +296,6 @@ impl Input {
             if !c.is_alphanumeric() && c != '_' { break; }
             start = prev;
         }
-        
         let mut end = idx;
         while end < text.len() {
             let next = self.next_char(end);
@@ -291,7 +303,6 @@ impl Input {
             if !c.is_alphanumeric() && c != '_' { break; }
             end = next;
         }
-        
         start..end
     }
 
@@ -312,13 +323,10 @@ impl Input {
                     this.cursor_visible = !this.cursor_visible;
                     cx.notify();
                 });
-                if res.is_err() {
-                    break;
-                }
+                if res.is_err() { break; }
             }
         }));
     }
-
 
     fn reset_blink(&mut self, cx: &mut Context<Self>) {
         self.cursor_visible = true;
@@ -327,11 +335,23 @@ impl Input {
     }
 
     fn internal_replace(&mut self, new_text: &str, cx: &mut Context<Self>) {
-        if let Some(ref filter) = self.filter {
-            if !filter(new_text) { return; }
-        }
-        let range = self.selected_range.clone();
         let mut v = self.value.to_string();
+        let range = self.selected_range.clone();
+        
+        let potential_v = {
+            let mut temp = v.clone();
+            temp.replace_range(range.clone(), new_text);
+            temp
+        };
+
+        if let Some(ref filter) = self.filter {
+            if !filter(&potential_v) { return; }
+        }
+
+        if let Some(max) = self.max_length {
+            if potential_v.chars().count() > max { return; }
+        }
+
         v.replace_range(range, new_text);
         self.value = SharedString::from(v);
         let pos = self.selected_range.start + new_text.len();
@@ -367,13 +387,25 @@ impl EntityInputHandler for Input {
     fn unmark_text(&mut self, _: &mut Window, _: &mut Context<Self>) { self.marked_range = None; }
 
     fn replace_text_in_range(&mut self, range_utf16: Option<Range<usize>>, new_text: &str, _: &mut Window, cx: &mut Context<Self>) {
-        if let Some(ref filter) = self.filter {
-            if !filter(new_text) { return; }
-        }
         let range = range_utf16
             .map(|r| self.offset_from_utf16(r.start)..self.offset_from_utf16(r.end))
             .or_else(|| self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
+        
+        let potential_v = {
+            let mut temp = self.value.to_string();
+            temp.replace_range(range.clone(), new_text);
+            temp
+        };
+
+        if let Some(ref filter) = self.filter {
+            if !filter(&potential_v) { return; }
+        }
+
+        if let Some(max) = self.max_length {
+            if potential_v.chars().count() > max { return; }
+        }
+
         let mut v = self.value.to_string();
         v.replace_range(range.clone(), new_text);
         self.value = SharedString::from(v);
@@ -383,13 +415,25 @@ impl EntityInputHandler for Input {
     }
 
     fn replace_and_mark_text_in_range(&mut self, range_utf16: Option<Range<usize>>, new_text: &str, new_selected: Option<Range<usize>>, _: &mut Window, cx: &mut Context<Self>) {
-        if let Some(ref filter) = self.filter {
-            if !filter(new_text) { return; }
-        }
         let range = range_utf16
             .map(|r| self.offset_from_utf16(r.start)..self.offset_from_utf16(r.end))
             .or(self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
+        
+        let potential_v = {
+            let mut temp = self.value.to_string();
+            temp.replace_range(range.clone(), new_text);
+            temp
+        };
+
+        if let Some(ref filter) = self.filter {
+            if !filter(&potential_v) { return; }
+        }
+
+        if let Some(max) = self.max_length {
+            if potential_v.chars().count() > max { return; }
+        }
+
         let mut v = self.value.to_string();
         v.replace_range(range.clone(), new_text);
         self.value = SharedString::from(v);
@@ -410,7 +454,6 @@ impl EntityInputHandler for Input {
         let start = self.offset_from_utf16(range_utf16.start);
         let end = self.offset_from_utf16(range_utf16.end);
         let line_height = window.line_height();
-        
         let mut byte_offset = 0;
         for (layout, y_offset) in layouts {
             if start >= byte_offset && start <= byte_offset + layout.len {
@@ -445,11 +488,12 @@ impl Input {
         utf8
     }
     fn text_for_display(&self) -> SharedString {
-        if self.value.is_empty() { self.placeholder.clone() } else { self.value.clone() }
+        if self.value.is_empty() { self.placeholder.clone() } 
+        else if self.input_type == InputType::Password {
+            SharedString::from("•".repeat(self.value.chars().count()))
+        } else { self.value.clone() }
     }
 }
-
-// ── Custom Element for IME + cursor ──
 
 struct InputElement {
     input: Entity<Input>,
@@ -457,9 +501,7 @@ struct InputElement {
 }
 
 struct InputPrepaint {
-    lines: Vec<(ShapedLine, Pixels)>, // (line, y_offset)
-    cursor: Option<gpui::PaintQuad>,
-    selection: Vec<gpui::PaintQuad>,
+    lines: Vec<(ShapedLine, Pixels)>, cursor: Option<gpui::PaintQuad>, selection: Vec<gpui::PaintQuad>,
 }
 
 impl IntoElement for InputElement {
@@ -470,10 +512,8 @@ impl IntoElement for InputElement {
 impl Element for InputElement {
     type RequestLayoutState = ();
     type PrepaintState = InputPrepaint;
-
     fn id(&self) -> Option<ElementId> { None }
     fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
-
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
         let line_count = self.input.read(cx).text_for_display().split('\n').count().max(1) as f32;
         let mut style = Style::default();
@@ -490,11 +530,9 @@ impl Element for InputElement {
         let font_size = style.font_size.to_pixels(window.rem_size());
         let line_height = window.line_height();
         let cursor_offset = input.cursor_offset();
-
         let text = input.text_for_display();
         let text_lines: Vec<&str> = text.split('\n').collect();
         let cursor_line = text[..cursor_offset].chars().filter(|&c| c == '\n').count();
-
         let mut lines = Vec::new();
         let mut y = bounds.top();
         let mut cursor_quad = None;
@@ -504,9 +542,7 @@ impl Element for InputElement {
         for (i, line_text) in text_lines.iter().enumerate() {
             let (display, color) = if input.value.is_empty() {
                 (input.placeholder.clone(), rgba(0,0,0,0.3))
-            } else {
-                (SharedString::from(*line_text), text_c)
-            };
+            } else { (SharedString::from(*line_text), text_c) };
             let run = TextRun { len: display.len(), font: style.font(), color, background_color: None, underline: None, strikethrough: None };
             let runs = if let Some(ref marked) = input.marked_range {
                 if byte_offset < marked.end && byte_offset + line_text.len() > marked.start {
@@ -519,10 +555,7 @@ impl Element for InputElement {
                     ].into_iter().filter(|r| r.len > 0).collect()
                 } else { vec![run.clone()] }
             } else { vec![run] };
-
             let shaped = window.text_system().shape_line(display, font_size, &runs, None);
-
-            // Selection on this line?
             if !input.selected_range.is_empty() {
                 let range = input.selected_range.clone();
                 let line_end = byte_offset + line_text.len();
@@ -534,8 +567,6 @@ impl Element for InputElement {
                     selection_quads.push(fill(Bounds::new(point(bounds.left() + x_start, y), size(x_end - x_start, line_height)), theme.primary.base.opacity(0.3)));
                 }
             }
-
-            // Cursor on this line?
             if i == cursor_line && input.selected_range.is_empty() && input.cursor_visible {
                 let col = cursor_offset - byte_offset;
                 let x = shaped.x_for_index(col);
@@ -543,12 +574,10 @@ impl Element for InputElement {
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
             }
-
             lines.push((shaped, y));
             y = y + line_height;
-            byte_offset += line_text.len() + 1; // +1 for the newline
+            byte_offset += line_text.len() + 1;
         }
-
         InputPrepaint { lines, cursor: cursor_quad, selection: selection_quads }
     }
 
@@ -559,102 +588,72 @@ impl Element for InputElement {
         for (line, y) in &prepaint.lines {
             line.paint(point(bounds.left(), *y), window.line_height(), gpui::TextAlign::Left, None, window, cx).unwrap();
         }
-        if focus_handle.is_focused(window) {
-            if let Some(c) = prepaint.cursor.take() { window.paint_quad(c); }
-        }
-        
+        if focus_handle.is_focused(window) { if let Some(c) = prepaint.cursor.take() { window.paint_quad(c); } }
         let line_layouts = prepaint.lines.clone();
-        self.input.update(cx, |input, _| { 
-            input.last_line_layouts = line_layouts; 
-            input.last_bounds = Some(bounds); 
-        });
+        self.input.update(cx, |input, _| { input.last_line_layouts = line_layouts; input.last_bounds = Some(bounds); });
     }
 }
-
-// ── View render ──
 
 impl Render for Input {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let focused = self.focus_handle(cx).is_focused(_window);
-
-        // Start/stop blink task based on focus
-        if focused && self.blink_task.is_none() {
-            self.start_blink(cx);
-        } else if !focused && self.blink_task.is_some() {
-            self.blink_task = None;
-        }
-
-        let theme = &cx.global::<Config>().theme;
-        let _h = 34.0;
+        if focused && self.blink_task.is_none() { self.start_blink(cx); } 
+        else if !focused && self.blink_task.is_some() { self.blink_task = None; }
+        
+        let theme = cx.global::<Config>().theme.clone();
         let icon_sz = 16.0;
-
-        let (bg, border_c) = if self.disabled {
-            (theme.neutral.hover, theme.neutral.border)
-        } else if focused {
-            (theme.neutral.card, theme.primary.base)
-        } else {
-            (theme.neutral.card, theme.neutral.border)
-        };
+        let (bg, border_c) = if self.disabled { (theme.neutral.hover, theme.neutral.border) } 
+        else if focused { (theme.neutral.card, theme.primary.base) } 
+        else { (theme.neutral.card, theme.neutral.border) };
         let fh = self.focus_handle(cx);
 
-        let mut row = gpui::div()
-            .flex().flex_row().items_center().gap_2()
-            .px(px(12.0)).py(px(8.0)).rounded(px(theme.radius.md))
-            .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md));
+        let mut row = gpui::div().flex().flex_row().items_center()
+            .h(px(34.0)).rounded(px(theme.radius.md))
+            .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md)).overflow_hidden();
+
+        if !self.disabled { row = row.track_focus(&fh).cursor_text(); } 
+        else { row = row.cursor_not_allowed(); }
 
         if !self.disabled {
-            row = row.track_focus(&fh);
-            row = row.cursor_text();
-        } else {
-            row = row.cursor_not_allowed();
-        }
-
-        if !self.disabled {
-            row = row
-                .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+            row = row.on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
                 .on_mouse_move(cx.listener(Self::on_mouse_move))
-                .on_action(cx.listener(Self::backspace))
-                .on_action(cx.listener(Self::delete))
-                .on_action(cx.listener(Self::left))
-                .on_action(cx.listener(Self::select_left))
-                .on_action(cx.listener(Self::right))
-                .on_action(cx.listener(Self::select_right))
-                .on_action(cx.listener(Self::home))
-                .on_action(cx.listener(Self::select_home))
-                .on_action(cx.listener(Self::end))
-                .on_action(cx.listener(Self::select_end))
-                .on_action(cx.listener(Self::select_all))
-                .on_action(cx.listener(Self::copy))
-                .on_action(cx.listener(Self::paste))
-                .on_action(cx.listener(Self::cut))
-                .on_action(cx.listener(Self::enter))
-                .on_action(cx.listener(Self::up))
-                .on_action(cx.listener(Self::select_up))
-                .on_action(cx.listener(Self::down))
+                .on_action(cx.listener(Self::backspace)).on_action(cx.listener(Self::delete))
+                .on_action(cx.listener(Self::left)).on_action(cx.listener(Self::select_left))
+                .on_action(cx.listener(Self::right)).on_action(cx.listener(Self::select_right))
+                .on_action(cx.listener(Self::home)).on_action(cx.listener(Self::select_home))
+                .on_action(cx.listener(Self::end)).on_action(cx.listener(Self::select_end))
+                .on_action(cx.listener(Self::select_all)).on_action(cx.listener(Self::copy))
+                .on_action(cx.listener(Self::paste)).on_action(cx.listener(Self::cut))
+                .on_action(cx.listener(Self::enter)).on_action(cx.listener(Self::up))
+                .on_action(cx.listener(Self::select_up)).on_action(cx.listener(Self::down))
                 .on_action(cx.listener(Self::select_down));
         }
 
-        if let Some(icon) = self.icon_prefix {
-            row = row.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
+        if let Some(ref p_render) = self.prepend {
+            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().child(p_render(_window, cx)));
         }
 
-        row = row.child(InputElement {
-            input: cx.entity(),
-            disabled: self.disabled,
-        });
+        let mut inner = gpui::div().flex_1().flex().flex_row().items_center().gap_2().px(px(12.0));
+
+        if let Some(icon) = self.icon_prefix {
+            inner = inner.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
+        }
+
+        inner = inner.child(InputElement { input: cx.entity().clone(), disabled: self.disabled });
 
         if self.clearable && !self.value.is_empty() && !self.disabled {
-            row = row.child(
-                gpui::div().cursor_pointer().flex_none()
-                    .child(Icon::new(IconName::X).size(px(14.0)).color(theme.neutral.icon))
-                    .on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>| {
-                        this.clear(cx);
-                    }))
-            );
+            inner = inner.child(gpui::div().cursor_pointer().flex_none().child(Icon::new(IconName::X).size(px(14.0)).color(theme.neutral.icon))
+                    .on_mouse_up(MouseButton::Left, cx.listener(move |this: &mut Self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>| { this.clear(cx); })));
         }
 
         if let Some(icon) = self.icon_suffix {
-            row = row.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
+            inner = inner.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));
+        }
+
+        row = row.child(inner);
+
+        if let Some(ref a_render) = self.append {
+            row = row.child(gpui::div().flex_none().h_full().px_3().bg(theme.neutral.hover).border_l_1().border_color(theme.neutral.border).flex().items_center().child(a_render(_window, cx)));
         }
 
         row
