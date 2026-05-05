@@ -96,9 +96,13 @@ impl FormDemo {
                 let sel = protocol_select.clone();
                 Input::new("", cx)
                     .prepend(move |_, cx| {
+                        let theme = cx.global::<aura_core::Config>().theme.clone();
                         sel.update(cx, |s, cx| { 
                             s.set_borderless(true, cx);
                             s.set_radius_none(true, cx);
+                            s.set_width(px(80.0), cx);
+                            s.set_text_size(px(theme.font_size.sm), cx);
+                            s.set_text_color(theme.neutral.text_3, cx);
                         });
                         div().w(px(80.0)).child(sel.clone()).into_any_element()
                     })

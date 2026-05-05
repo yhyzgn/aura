@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle,
-    SharedString, MouseButton, ElementId, Bounds, Pixels, Entity
+    SharedString, MouseButton, ElementId, Bounds, Pixels, Entity, Hsla
 };
 
 pub struct Select {
@@ -15,6 +15,9 @@ pub struct Select {
     on_change: Option<Box<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
     border_none: bool,
     radius_none: bool,
+    width: Option<Pixels>,
+    text_size: Option<Pixels>,
+    text_color: Option<Hsla>,
 }
 
 impl Select {
@@ -28,11 +31,17 @@ impl Select {
             on_change: None,
             border_none: false,
             radius_none: false,
+            width: None,
+            text_size: None,
+            text_color: None,
         }
     }
 
     pub fn borderless(mut self) -> Self { self.border_none = true; self }
     pub fn radius_none(mut self) -> Self { self.radius_none = true; self }
+    pub fn width(mut self, w: impl Into<Pixels>) -> Self { self.width = Some(w.into()); self }
+    pub fn text_size(mut self, s: impl Into<Pixels>) -> Self { self.text_size = Some(s.into()); self }
+    pub fn text_color(mut self, c: Hsla) -> Self { self.text_color = Some(c); self }
 
     pub fn set_borderless(&mut self, b: bool, cx: &mut Context<Self>) {
         self.border_none = b;
@@ -41,6 +50,21 @@ impl Select {
 
     pub fn set_radius_none(&mut self, r: bool, cx: &mut Context<Self>) {
         self.radius_none = r;
+        cx.notify();
+    }
+
+    pub fn set_width(&mut self, w: impl Into<Pixels>, cx: &mut Context<Self>) {
+        self.width = Some(w.into());
+        cx.notify();
+    }
+
+    pub fn set_text_size(&mut self, s: impl Into<Pixels>, cx: &mut Context<Self>) {
+        self.text_size = Some(s.into());
+        cx.notify();
+    }
+
+    pub fn set_text_color(&mut self, c: Hsla, cx: &mut Context<Self>) {
+        self.text_color = Some(c);
         cx.notify();
     }
 
@@ -114,12 +138,14 @@ impl Render for Select {
             .unwrap_or_else(|| "Select...".into());
 
         let border_color = if focused || self.is_open { theme.primary.base } else { theme.neutral.border };
+        let text_size = self.text_size.unwrap_or(px(theme.font_size.md));
+        let text_color = self.text_color.unwrap_or(theme.neutral.text_1);
 
         let trigger_content = gpui::div()
             .flex().flex_row().items_center().justify_between()
             .w_full().h(px(34.0)).px(px(12.0))
-            .child(gpui::div().text_size(px(theme.font_size.md)).text_color(theme.neutral.text_1).child(display_text))
-            .child(Icon::new(if self.is_open { IconName::ChevronUp } else { IconName::ChevronDown }).size(px(16.0)).color(theme.neutral.icon));
+            .child(gpui::div().text_size(text_size).text_color(text_color).child(display_text))
+            .child(Icon::new(if self.is_open { IconName::ChevronUp } else { IconName::ChevronDown }).size(px(14.0)).color(theme.neutral.icon));
 
         if self.is_open {
             let options = self.options.clone();
@@ -174,14 +200,16 @@ impl Render for Select {
             }, cx);
         }
 
-        gpui::div()
+        let mut el = gpui::div()
             .relative()
-            .w_full()
+            .when_some(self.width, |s, w| s.w(w))
+            .when(self.width.is_none(), |s| s.w_full())
             .when(!self.radius_none, |s| s.rounded(px(theme.radius.md)))
             .bg(theme.neutral.card)
             .when(!self.border_none, |s| s.border_1().border_color(border_color))
-            .cursor_pointer()
-            .child(trigger_content)
+            .cursor_pointer();
+
+        el.child(trigger_content)
             .child(
                 gpui::div()
                     .absolute()
