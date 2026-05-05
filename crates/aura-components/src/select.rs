@@ -18,6 +18,7 @@ pub struct Select {
     width: Option<Pixels>,
     text_size: Option<Pixels>,
     text_color: Option<Hsla>,
+    padding_x: Option<Pixels>,
 }
 
 impl Select {
@@ -34,6 +35,7 @@ impl Select {
             width: None,
             text_size: None,
             text_color: None,
+            padding_x: None,
         }
     }
 
@@ -42,6 +44,7 @@ impl Select {
     pub fn width(mut self, w: impl Into<Pixels>) -> Self { self.width = Some(w.into()); self }
     pub fn text_size(mut self, s: impl Into<Pixels>) -> Self { self.text_size = Some(s.into()); self }
     pub fn text_color(mut self, c: Hsla) -> Self { self.text_color = Some(c); self }
+    pub fn padding_x(mut self, p: impl Into<Pixels>) -> Self { self.padding_x = Some(p.into()); self }
 
     pub fn set_borderless(&mut self, b: bool, cx: &mut Context<Self>) {
         self.border_none = b;
@@ -65,6 +68,11 @@ impl Select {
 
     pub fn set_text_color(&mut self, c: Hsla, cx: &mut Context<Self>) {
         self.text_color = Some(c);
+        cx.notify();
+    }
+
+    pub fn set_padding_x(&mut self, p: impl Into<Pixels>, cx: &mut Context<Self>) {
+        self.padding_x = Some(p.into());
         cx.notify();
     }
 
@@ -138,14 +146,15 @@ impl Render for Select {
             .unwrap_or_else(|| "Select...".into());
 
         let border_color = if focused || self.is_open { theme.primary.base } else { theme.neutral.border };
-        let text_size = self.text_size.unwrap_or(px(theme.font_size.md));
+        let text_size = self.text_size.unwrap_or(gpui::px(theme.font_size.md));
         let text_color = self.text_color.unwrap_or(theme.neutral.text_1);
+        let h_px = self.padding_x.unwrap_or(gpui::px(12.0));
 
         let trigger_content = gpui::div()
             .flex().flex_row().items_center().justify_between()
-            .w_full().h(px(34.0)).px(px(12.0))
+            .w_full().h(gpui::px(34.0)).px(h_px)
             .child(gpui::div().text_size(text_size).text_color(text_color).child(display_text))
-            .child(Icon::new(if self.is_open { IconName::ChevronUp } else { IconName::ChevronDown }).size(px(14.0)).color(theme.neutral.icon));
+            .child(Icon::new(if self.is_open { IconName::ChevronUp } else { IconName::ChevronDown }).size(gpui::px(14.0)).color(theme.neutral.icon));
 
         if self.is_open {
             let options = self.options.clone();
@@ -156,9 +165,9 @@ impl Render for Select {
 
             push_portal(move |_window, _cx| {
                 let (top, left, width) = if let Some(b) = trigger_bounds {
-                    (b.bottom() + px(4.0), b.left(), b.size.width)
+                    (b.bottom() + gpui::px(4.0), b.left(), b.size.width)
                 } else {
-                    (px(100.0), px(100.0), px(200.0))
+                    (gpui::px(100.0), gpui::px(100.0), gpui::px(200.0))
                 };
 
                 let entity = entity.clone();
@@ -169,13 +178,13 @@ impl Render for Select {
                     .top(top)
                     .left(left)
                     .w(width)
-                    .max_h(px(200.0))
-                    .bg(theme.neutral.card).rounded(px(theme.radius.md)).border_1().border_color(theme.neutral.border)
+                    .max_h(gpui::px(200.0))
+                    .bg(theme.neutral.card).rounded(gpui::px(theme.radius.md)).border_1().border_color(theme.neutral.border)
                     .shadow(vec![gpui::BoxShadow {
                         color: theme.neutral.border,
-                        offset: gpui::point(px(0.0), px(4.0)),
-                        blur_radius: px(12.0),
-                        spread_radius: px(0.0),
+                        offset: gpui::point(gpui::px(0.0), gpui::px(4.0)),
+                        blur_radius: gpui::px(12.0),
+                        spread_radius: gpui::px(0.0),
                     }])
                     .children(options.iter().enumerate().map(|(idx, label)| {
                         let is_selected = Some(idx) == selected_idx;
@@ -184,11 +193,11 @@ impl Render for Select {
                         let label = label.clone();
                         
                         gpui::div()
-                            .px(px(12.0)).py(px(8.0)).cursor_pointer()
+                            .px(gpui::px(12.0)).py(gpui::px(8.0)).cursor_pointer()
                             .bg(if is_selected { theme.primary.base.opacity(0.1) } else { theme.neutral.card })
                             .hover(|s| s.bg(theme.neutral.hover))
                             .child(gpui::div()
-                                .text_size(px(theme.font_size.md))
+                                .text_size(gpui::px(theme.font_size.md))
                                 .text_color(if is_selected { theme.primary.base } else { theme.neutral.text_1 })
                                 .child(label))
                             .on_mouse_down(MouseButton::Left, move |_, window, cx| {
@@ -200,11 +209,11 @@ impl Render for Select {
             }, cx);
         }
 
-        let mut el = gpui::div()
+        let el = gpui::div()
             .relative()
             .when_some(self.width, |s, w| s.w(w))
             .when(self.width.is_none(), |s| s.w_full())
-            .when(!self.radius_none, |s| s.rounded(px(theme.radius.md)))
+            .when(!self.radius_none, |s| s.rounded(gpui::px(theme.radius.md)))
             .bg(theme.neutral.card)
             .when(!self.border_none, |s| s.border_1().border_color(border_color))
             .cursor_pointer();

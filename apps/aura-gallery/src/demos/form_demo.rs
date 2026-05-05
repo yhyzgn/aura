@@ -103,6 +103,7 @@ impl FormDemo {
                             s.set_width(px(80.0), cx);
                             s.set_text_size(px(theme.font_size.sm), cx);
                             s.set_text_color(theme.neutral.text_3, cx);
+                            s.set_padding_x(px(8.0), cx);
                         });
                         div().w(px(80.0)).child(sel.clone()).into_any_element()
                     })
