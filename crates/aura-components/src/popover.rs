@@ -62,7 +62,7 @@ impl Render for PopoverView {
             placement,
             offset,
         };
-        // Reference size for flipping and clamping - increased to be more conservative
+        // Reference size for flipping and clamping
         let reference_size = gpui::Size { width: px(400.0), height: px(300.0) };
         let (_pos, final_placement) = popper.calculate_position_with_flip(reference_size, viewport);
 
@@ -70,20 +70,11 @@ impl Render for PopoverView {
 
         match final_placement {
             Placement::Top | Placement::Bottom | Placement::TopStart | Placement::BottomStart | Placement::TopEnd | Placement::BottomEnd => {
-                let container_width = px(2000.0);
+                pivot_container = pivot_container.w(px(0.0)).h(px(0.0));
+
                 let ideal_center_x = anchor_bounds.left() + anchor_bounds.size.width / 2.0;
-                
-                // Clamping for horizontal centering
                 let half_content_width = reference_size.width / 2.0;
-                let clamped_center_x = ideal_center_x
-                    .max(half_content_width)
-                    .min(viewport_size.width - half_content_width);
-
-                pivot_container = pivot_container
-                    .w(container_width)
-                    .h(px(0.0)) // Explicit zero height for horizontal alignments
-                    .left(clamped_center_x - container_width / 2.0);
-
+                
                 if final_placement == Placement::Top || final_placement == Placement::TopStart || final_placement == Placement::TopEnd {
                     let bottom_offset = viewport_size.height - anchor_bounds.top() + offset;
                     pivot_container = pivot_container.bottom(bottom_offset).flex_col_reverse();
@@ -93,33 +84,31 @@ impl Render for PopoverView {
 
                 match final_placement {
                     Placement::Top | Placement::Bottom => {
-                        pivot_container = pivot_container.items_center();
+                        let clamped_center_x = ideal_center_x
+                            .max(half_content_width)
+                            .min(viewport_size.width - half_content_width);
+                        pivot_container = pivot_container.left(clamped_center_x).items_center();
                     }
                     Placement::TopStart | Placement::BottomStart => {
-                        pivot_container = pivot_container.items_start();
-                        pivot_container = pivot_container.pl(container_width / 2.0 - (clamped_center_x - anchor_bounds.left()));
+                        let clamped_left = anchor_bounds.left()
+                            .max(px(0.0))
+                            .min(viewport_size.width - reference_size.width);
+                        pivot_container = pivot_container.left(clamped_left).items_start();
                     }
                     Placement::TopEnd | Placement::BottomEnd => {
-                        pivot_container = pivot_container.items_end();
-                        pivot_container = pivot_container.pr(container_width / 2.0 - (anchor_bounds.right() - clamped_center_x));
+                        let clamped_right = anchor_bounds.right()
+                            .min(viewport_size.width)
+                            .max(reference_size.width);
+                        pivot_container = pivot_container.left(clamped_right).items_end();
                     }
                     _ => unreachable!()
                 }
             }
             Placement::Left | Placement::Right | Placement::LeftStart | Placement::RightStart | Placement::LeftEnd | Placement::RightEnd => {
-                let container_height = px(2000.0);
+                pivot_container = pivot_container.w(px(0.0)).h(px(0.0));
+
                 let ideal_center_y = anchor_bounds.top() + anchor_bounds.size.height / 2.0;
-
-                // Clamping for vertical centering
                 let half_content_height = reference_size.height / 2.0;
-                let clamped_center_y = ideal_center_y
-                    .max(half_content_height)
-                    .min(viewport_size.height - half_content_height);
-
-                pivot_container = pivot_container
-                    .h(container_height)
-                    .w(px(0.0)) // Explicit zero width for vertical alignments
-                    .top(clamped_center_y - container_height / 2.0);
 
                 if final_placement == Placement::Left || final_placement == Placement::LeftStart || final_placement == Placement::LeftEnd {
                     let dist_from_right = viewport_size.width - anchor_bounds.left() + offset;
@@ -130,15 +119,22 @@ impl Render for PopoverView {
 
                 match final_placement {
                     Placement::Left | Placement::Right => {
-                        pivot_container = pivot_container.items_center();
+                        let clamped_center_y = ideal_center_y
+                            .max(half_content_height)
+                            .min(viewport_size.height - half_content_height);
+                        pivot_container = pivot_container.top(clamped_center_y).items_center();
                     }
                     Placement::LeftStart | Placement::RightStart => {
-                        pivot_container = pivot_container.items_start();
-                        pivot_container = pivot_container.pt(container_height / 2.0 - (clamped_center_y - anchor_bounds.top()));
+                        let clamped_top = anchor_bounds.top()
+                            .max(px(0.0))
+                            .min(viewport_size.height - reference_size.height);
+                        pivot_container = pivot_container.top(clamped_top).items_start();
                     }
                     Placement::LeftEnd | Placement::RightEnd => {
-                        pivot_container = pivot_container.items_end();
-                        pivot_container = pivot_container.pb(container_height / 2.0 - (anchor_bounds.bottom() - clamped_center_y));
+                        let clamped_bottom = anchor_bounds.bottom()
+                            .min(viewport_size.height)
+                            .max(reference_size.height);
+                        pivot_container = pivot_container.top(clamped_bottom).items_end();
                     }
                     _ => unreachable!()
                 }
