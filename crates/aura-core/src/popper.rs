@@ -1,4 +1,4 @@
-use gpui::{AnyElement, Global, Bounds, Pixels, Point, App, Window};
+use gpui::{AnyElement, Global, Bounds, Pixels, Point, App, Window, SharedString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Placement {
@@ -29,19 +29,41 @@ impl Placement {
 
 pub type PortalRender = Box<dyn FnOnce(&mut Window, &mut App) -> AnyElement>;
 
-pub struct Portal(pub Vec<PortalRender>);
+pub struct PortalEntry {
+    pub id: u64,
+    pub render: PortalRender,
+}
+
+pub struct Portal {
+    pub entries: Vec<PortalEntry>,
+    next_id: u64,
+}
+
 impl Global for Portal {}
 
-pub fn push_portal(render: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static, cx: &mut App) {
+pub fn push_portal(render: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static, cx: &mut App) -> u64 {
     if !cx.has_global::<Portal>() {
-        cx.set_global(Portal(vec![]));
+        cx.set_global(Portal { entries: vec![], next_id: 1 });
     }
-    cx.global_mut::<Portal>().0.push(Box::new(render));
+    let portal = cx.global_mut::<Portal>();
+    let id = portal.next_id;
+    portal.next_id += 1;
+    portal.entries.push(PortalEntry {
+        id,
+        render: Box::new(render),
+    });
+    id
+}
+
+pub fn remove_portal(id: u64, cx: &mut App) {
+    if cx.has_global::<Portal>() {
+        cx.global_mut::<Portal>().entries.retain(|e| e.id != id);
+    }
 }
 
 pub fn clear_portals(cx: &mut App) {
     if cx.has_global::<Portal>() {
-        cx.global_mut::<Portal>().0.clear();
+        cx.global_mut::<Portal>().entries.clear();
     }
 }
 
@@ -66,6 +88,36 @@ impl Default for ZIndexStack {
 }
 
 impl Global for ZIndexStack {}
+
+#[derive(Clone)]
+pub struct TooltipData {
+    pub content: SharedString,
+    pub anchor_bounds: Bounds<Pixels>,
+    pub placement: Placement,
+    pub offset: Pixels,
+}
+
+pub struct ActiveTooltip(pub Option<TooltipData>);
+impl Global for ActiveTooltip {}
+
+pub fn set_active_tooltip(data: TooltipData, cx: &mut App) {
+    cx.set_global(ActiveTooltip(Some(data)));
+}
+
+pub fn clear_active_tooltip(cx: &mut App) {
+    cx.set_global(ActiveTooltip(None));
+}
+
+pub struct ActivePopover(pub Option<gpui::AnyView>);
+impl Global for ActivePopover {}
+
+pub fn set_active_popover(view: gpui::AnyView, cx: &mut App) {
+    cx.set_global(ActivePopover(Some(view)));
+}
+
+pub fn clear_active_popover(cx: &mut App) {
+    cx.set_global(ActivePopover(None));
+}
 
 pub struct Popper {
     pub anchor_bounds: Bounds<Pixels>,
