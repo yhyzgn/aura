@@ -119,6 +119,28 @@ pub fn clear_active_popover(cx: &mut App) {
     cx.set_global(ActivePopover(None));
 }
 
+pub struct ActiveModal(pub Option<gpui::AnyView>);
+impl Global for ActiveModal {}
+
+pub fn set_active_modal(view: gpui::AnyView, cx: &mut App) {
+    cx.set_global(ActiveModal(Some(view)));
+}
+
+pub fn clear_active_modal(cx: &mut App) {
+    cx.set_global(ActiveModal(None));
+}
+
+pub struct ActiveDrawer(pub Option<gpui::AnyView>);
+impl Global for ActiveDrawer {}
+
+pub fn set_active_drawer(view: gpui::AnyView, cx: &mut App) {
+    cx.set_global(ActiveDrawer(Some(view)));
+}
+
+pub fn clear_active_drawer(cx: &mut App) {
+    cx.set_global(ActiveDrawer(None));
+}
+
 pub struct Popper {
     pub anchor_bounds: Bounds<Pixels>,
     pub placement: Placement,

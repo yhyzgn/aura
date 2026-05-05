@@ -21,12 +21,30 @@ pub fn init_aura(cx: &mut App, theme: Theme) {
     cx.set_global(crate::popper::ZIndexStack::default());
     cx.set_global(crate::popper::ActiveTooltip(None));
     cx.set_global(crate::popper::ActivePopover(None));
+    cx.set_global(crate::popper::ActiveModal(None));
+    cx.set_global(crate::popper::ActiveDrawer(None));
 }
 
 pub fn render_active_popover_in_window(_window: &mut gpui::Window, cx: &mut App) {
     if let Some(popover_view) = cx.global::<crate::popper::ActivePopover>().0.clone() {
         push_portal(move |_window, _cx| {
             popover_view.clone().into_any_element()
+        }, cx);
+    }
+}
+
+pub fn render_active_modal_in_window(_window: &mut gpui::Window, cx: &mut App) {
+    if let Some(modal_view) = cx.global::<crate::popper::ActiveModal>().0.clone() {
+        push_portal(move |_window, _cx| {
+            modal_view.clone().into_any_element()
+        }, cx);
+    }
+}
+
+pub fn render_active_drawer_in_window(_window: &mut gpui::Window, cx: &mut App) {
+    if let Some(drawer_view) = cx.global::<crate::popper::ActiveDrawer>().0.clone() {
+        push_portal(move |_window, _cx| {
+            drawer_view.clone().into_any_element()
         }, cx);
     }
 }

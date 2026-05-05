@@ -77,6 +77,8 @@ impl Render for Gallery {
         aura_components::notification::render_notifications(cx);
         aura_core::render_active_tooltip_in_window(_window, cx);
         aura_core::render_active_popover_in_window(_window, cx);
+        aura_core::render_active_modal_in_window(_window, cx);
+        aura_core::render_active_drawer_in_window(_window, cx);
 
         container.child(PortalLayer)
     }

@@ -1,4 +1,4 @@
-use aura_core::{Config, push_portal};
+use aura_core::{Config};
 use gpui::{
     prelude::*, px, App, Context, IntoElement, Render, Window,
     div, AnyElement, MouseButton, actions, SharedString,
@@ -12,11 +12,13 @@ actions!(dialog, [Close]);
 pub struct Dialog {
     title: SharedString,
     content: Arc<dyn Fn(&mut Window, &mut Context<DialogView>) -> AnyElement + 'static>,
+    close_on_click_outside: bool,
 }
 
 pub struct DialogView {
     title: SharedString,
     content: Arc<dyn Fn(&mut Window, &mut Context<Self>) -> AnyElement + 'static>,
+    close_on_click_outside: bool,
     on_close: Arc<dyn Fn(&mut Window, &mut App) + 'static>,
 }
 
@@ -24,11 +26,13 @@ impl DialogView {
     fn new(
         title: SharedString,
         content: Arc<dyn Fn(&mut Window, &mut Context<Self>) -> AnyElement + 'static>,
+        close_on_click_outside: bool,
         on_close: impl Fn(&mut Window, &mut App) + 'static,
     ) -> Self {
         Self {
             title,
             content,
+            close_on_click_outside,
             on_close: Arc::new(on_close),
         }
     }
@@ -40,18 +44,20 @@ impl Render for DialogView {
         let title = self.title.clone();
         let content_fn = self.content.clone();
         let on_close = self.on_close.clone();
+        let close_on_click_outside = self.close_on_click_outside;
 
         div()
             .absolute()
             .size_full()
             .bg(gpui::rgba(0x00000066))
             .flex().items_center().justify_center()
-            // Using on_mouse_down on the overlay to close
-            .on_mouse_down(MouseButton::Left, {
-                let on_close = on_close.clone();
-                move |_, window, cx| {
-                    on_close(window, cx);
-                }
+            .when(close_on_click_outside, |s| {
+                s.on_mouse_down(MouseButton::Left, {
+                    let on_close = on_close.clone();
+                    move |_, window, cx| {
+                        on_close(window, cx);
+                    }
+                })
             })
             .on_action(cx.listener({
                 let on_close = on_close.clone();
@@ -65,8 +71,7 @@ impl Render for DialogView {
                     .bg(theme.neutral.card)
                     .rounded(px(theme.radius.md))
                     .shadow_xl()
-                    // CONSUME mouse down inside the dialog content so it doesn't trigger the overlay close
-                    .on_mouse_down(MouseButton::Left, |_, _, _| {})
+                    .on_mouse_down(MouseButton::Left, |_, _, _| {}) // Consume
                     .child(
                         div().p_4().border_b_1().border_color(theme.neutral.border).flex().justify_between().items_center()
                             .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
@@ -87,11 +92,17 @@ impl Dialog {
         Self {
             title: SharedString::default(),
             content: Arc::new(|_, _| div().child("Dialog Content").into_any_element()),
+            close_on_click_outside: true,
         }
     }
 
     pub fn title(mut self, title: impl Into<SharedString>) -> Self {
         self.title = title.into();
+        self
+    }
+
+    pub fn close_on_click_outside(mut self, c: bool) -> Self {
+        self.close_on_click_outside = c;
         self
     }
 
@@ -107,15 +118,17 @@ impl Dialog {
     pub fn show(self, cx: &mut App) {
         let title = self.title;
         let content = self.content;
+        let close_on_click_outside = self.close_on_click_outside;
         
-        push_portal(move |_window, cx| {
-            cx.new(|_| DialogView::new(
-                title,
-                content,
-                |_window, _cx| {
-                    aura_core::popper::clear_portals(_cx);
-                }
-            )).into_any_element()
-        }, cx);
+        let view = cx.new(|_cx| DialogView::new(
+            title,
+            content,
+            close_on_click_outside,
+            |_window, _cx| {
+                aura_core::clear_active_modal(_cx);
+            }
+        ));
+        
+        aura_core::set_active_modal(view.into(), cx);
     }
 }

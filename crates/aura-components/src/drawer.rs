@@ -1,4 +1,4 @@
-use aura_core::{Config, push_portal};
+use aura_core::{Config};
 use gpui::{
     prelude::*, px, App, Context, IntoElement, Render, Window,
     div, AnyElement, MouseButton, SharedString, Pixels,
@@ -22,6 +22,7 @@ pub struct Drawer {
     placement: DrawerPlacement,
     width: Pixels,
     height: Pixels,
+    close_on_click_outside: bool,
 }
 
 pub struct DrawerView {
@@ -30,6 +31,7 @@ pub struct DrawerView {
     placement: DrawerPlacement,
     width: Pixels,
     height: Pixels,
+    close_on_click_outside: bool,
     on_close: Arc<dyn Fn(&mut Window, &mut App) + 'static>,
 }
 
@@ -40,6 +42,7 @@ impl DrawerView {
         placement: DrawerPlacement,
         width: Pixels,
         height: Pixels,
+        close_on_click_outside: bool,
         on_close: impl Fn(&mut Window, &mut App) + 'static,
     ) -> Self {
         Self {
@@ -48,6 +51,7 @@ impl DrawerView {
             placement,
             width,
             height,
+            close_on_click_outside,
             on_close: Arc::new(on_close),
         }
     }
@@ -62,17 +66,19 @@ impl Render for DrawerView {
         let placement = self.placement;
         let width = self.width;
         let height = self.height;
+        let close_on_click_outside = self.close_on_click_outside;
 
         let mut container = div()
             .absolute()
             .size_full()
             .bg(gpui::rgba(0x00000066))
-            // Using on_mouse_down on the overlay to close
-            .on_mouse_down(MouseButton::Left, {
-                let on_close = on_close.clone();
-                move |_, window, cx| {
-                    on_close(window, cx);
-                }
+            .when(close_on_click_outside, |s| {
+                s.on_mouse_down(MouseButton::Left, {
+                    let on_close = on_close.clone();
+                    move |_, window, cx| {
+                        on_close(window, cx);
+                    }
+                })
             });
 
         let mut panel = div()
@@ -125,6 +131,7 @@ impl Drawer {
             placement: DrawerPlacement::Right,
             width: px(300.0),
             height: px(300.0),
+            close_on_click_outside: true,
         }
     }
 
@@ -148,6 +155,11 @@ impl Drawer {
         self
     }
 
+    pub fn close_on_click_outside(mut self, c: bool) -> Self {
+        self.close_on_click_outside = c;
+        self
+    }
+
     pub fn content<F, E>(mut self, f: F) -> Self 
     where 
         F: Fn(&mut Window, &mut Context<DrawerView>) -> E + 'static,
@@ -163,18 +175,20 @@ impl Drawer {
         let placement = self.placement;
         let width = self.width;
         let height = self.height;
+        let close_on_click_outside = self.close_on_click_outside;
         
-        push_portal(move |_window, cx| {
-            cx.new(|_| DrawerView::new(
-                title,
-                content,
-                placement,
-                width,
-                height,
-                |_window, _cx| {
-                    aura_core::popper::clear_portals(_cx);
-                }
-            )).into_any_element()
-        }, cx);
+        let view = cx.new(|_cx| DrawerView::new(
+            title,
+            content,
+            placement,
+            width,
+            height,
+            close_on_click_outside,
+            |_window, _cx| {
+                aura_core::clear_active_drawer(_cx);
+            }
+        ));
+        
+        aura_core::set_active_drawer(view.into(), cx);
     }
 }
