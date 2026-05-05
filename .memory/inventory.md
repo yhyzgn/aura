@@ -46,24 +46,24 @@
 | 9 | Form / FormItem | `crates/aura-components/src/form.rs` | ✅ |
 | 10 | Rate | `crates/aura-components/src/rate.rs` | ✅ |
 
-## P3 Popper + Feedback 🔄 (0/13)
+## P3 Popper + Feedback ✅ (13/13)
 
 | # | Component | Notes | Status |
 |---|-----------|-------|--------|
 | — | Popper/Portal 基建 | `crates/aura-core/src/popper.rs` | ✅ Done |
-| 1 | Tooltip | Popper 依赖 | ⬜ |
-| 2 | Popover | Popper 依赖 |
-| 3 | Popconfirm | Popper 依赖 |
-| 4 | Dialog | FocusTrap 依赖 |
-| 5 | Drawer | — |
-| 6 | Message | 全局 toast |
-| 7 | Notification | 全局通知 |
-| 8 | Alert | — |
-| 9 | Loading | — |
-| 10 | MessageBox | — |
-| 11 | Dropdown | Popper 依赖 |
-| 12 | Card | — |
-| 13 | Collapse | — |
+| 1 | Tooltip | — | ✅ Done |
+| 2 | Popover | — | ✅ Done |
+| 3 | Popconfirm | — | ✅ Done |
+| 4 | Dialog | — | ✅ Done |
+| 5 | Drawer | — | ✅ Done |
+| 6 | Message | — | ✅ Done |
+| 7 | Notification | — | ✅ Done |
+| 8 | Alert | — | ✅ Done |
+| 9 | Loading | — | ✅ Done |
+| 10 | MessageBox | — | ✅ Done |
+| 11 | Dropdown | — | ✅ Done |
+| 12 | Card | — | ✅ Done |
+| 13 | Collapse | — | ✅ Done |
 
 ## P4 Nav + Data ⬜ (20)
 

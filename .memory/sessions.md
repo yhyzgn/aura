@@ -123,6 +123,28 @@
   - 实现 `Popper::calculate_position_with_flip`，支持视口溢出检测与自动翻转/贴边 (Clamp)。
   - 实现 `ZIndexStack` 全局状态，定义 popup/modal/notification/tooltip 标准层级。
   - 在 `init_aura` 中完成 `ZIndexStack` 初始化。
+- **完成 P3 全部组件开发 (13/13)**:
+  - **反馈类**: Tooltip, Popover, Popconfirm, Dialog, Drawer, Message, Notification, Alert, Loading, MessageBox。
+  - **容器/导航**: Card, Collapse, Dropdown。
+  - **全局管理器**: 实现 `MessageManager` 和 `NotificationManager` 单例，支持异步自动销毁。
+  - **Portal 深度集成**: 将所有弹出层组件对接至 `Popper` 引擎与 `Portal` 传送门系统。
+- **Bug 修复与增强**:
+  - 🐛 **Rate**: 修复鼠标移出后的 1s 延迟，改用 `on_hover` 实时监听状态。
+  - 🐛 **Input**: 修复多行模式下的垂直居中偏离问题（改为 `items_start`）；新增 `.text_align(TextAlign)` API 支持文本对齐。
+- **Gallery 完善**:
+  - 为 P3 所有组件添加了对应的 `Demo` 页面并注册到全局路由。
+  - 优化了 `main.rs` 的渲染循环，确保全局消息和通知层能在最顶层实时呈现。
+- **状态同步**:
+  - 更新 `.memory/state.md` 标记 P3 已 100% 完成，进入 P4 准备阶段。
+  - 更新 `.memory/inventory.md` 标记所有 P3 组件为 ✅ Done。
+
+### Key Discoveries
+- GPUI 0.2.x 的 `push_portal` 必须支持 `FnOnce` 以便捕获非 Clone 的 `AnyElement`。
+- 全局单例管理器（如 Message）通过 `Entity` 包装并存入 `Global` 是处理跨视图通信的最佳实践。
+
+### Decisions Made
+- 弹出层组件全部采用 `Arc<dyn Fn...>` 封装内容闭包，确保在 Portal 渲染循环中可安全多次调用（或在 `FnOnce` 环境下重建）。
+- Dialog 和 Drawer 采用“消费点击”策略：点击内容区域不触发背景 Overlay 的关闭逻辑。
 - **状态同步**:
   - 更新 `.memory/state.md` 标记 P2 已完成，P3 进行中。
   - 更新 `.memory/inventory.md` 标记 Popper 基建 ✅ Done。

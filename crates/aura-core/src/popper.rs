@@ -27,12 +27,12 @@ impl Placement {
     }
 }
 
-pub type PortalRender = Box<dyn Fn(&mut Window, &mut App) -> AnyElement>;
+pub type PortalRender = Box<dyn FnOnce(&mut Window, &mut App) -> AnyElement>;
 
 pub struct Portal(pub Vec<PortalRender>);
 impl Global for Portal {}
 
-pub fn push_portal(render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static, cx: &mut App) {
+pub fn push_portal(render: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static, cx: &mut App) {
     if !cx.has_global::<Portal>() {
         cx.set_global(Portal(vec![]));
     }
@@ -157,14 +157,12 @@ impl Popper {
                 || flipped_pos.y < viewport.top()
                 || flipped_pos.y + content_size.height > viewport.bottom();
 
-            // If flipped is better (stays within bounds or at least doesn't overflow as much), use it.
             if !flipped_out_of_bounds {
                 final_pos = flipped_pos;
                 final_placement = flipped_placement;
             }
         }
 
-        // Clamp to viewport as a final fallback
         final_pos.x = final_pos.x.clamp(viewport.left(), viewport.right() - content_size.width);
         final_pos.y = final_pos.y.clamp(viewport.top(), viewport.bottom() - content_size.height);
 

@@ -61,8 +61,8 @@ impl Render for Rate {
 
         if !self.disabled {
             row = row.track_focus(&self.focus_handle)
-                .on_mouse_leave(cx.listener(|this, _, _, cx| {
-                    if this.hover_value.is_some() {
+                .on_hover(cx.listener(|this, hovered, _, cx| {
+                    if !hovered && this.hover_value.is_some() {
                         this.hover_value = None;
                         cx.notify();
                     }

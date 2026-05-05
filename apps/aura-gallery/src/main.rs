@@ -70,9 +70,13 @@ impl Render for Gallery {
             );
         }
 
-        div().size_full().relative()
-            .child(body)
-            .child(PortalLayer)
+        let mut container = div().size_full().relative()
+            .child(body);
+        
+        aura_components::message::render_messages(cx);
+        aura_components::notification::render_notifications(cx);
+
+        container.child(PortalLayer)
     }
 }
 
