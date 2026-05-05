@@ -253,5 +253,9 @@ impl Render for Select {
             .on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
                 this.toggle_open(window, cx);
             }))
+            .on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                this.is_open = false;
+                cx.notify();
+            }))
     }
 }

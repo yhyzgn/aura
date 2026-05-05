@@ -5,11 +5,12 @@ use aura_core::{ContextExt, init_aura, Portal};
 use aura_theme::Theme;
 use aura_components::{Input, Checkbox, Radio, RadioGroup, Switch};
 use gpui::{
-    AnyView, App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size, Component
+    AnyView, App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size, Component, FocusHandle, MouseButton
 };
 
 pub struct Gallery {
     demos: Vec<AnyView>,
+    focus_handle: FocusHandle,
 }
 
 fn run_gallery() {
@@ -40,7 +41,7 @@ fn run_gallery() {
                     .into_iter()
                     .map(|entry| (entry.render)(cx))
                     .collect();
-                cx.new(|_| Gallery { demos })
+                cx.new(|cx| Gallery { demos, focus_handle: cx.focus_handle() })
             },
         );
     });
@@ -71,6 +72,10 @@ impl Render for Gallery {
         }
 
         div().size_full().relative()
+            .track_focus(&self.focus_handle)
+            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                window.focus(&this.focus_handle, cx);
+            }))
             .child(body)
             .child(PortalLayer)
     }
