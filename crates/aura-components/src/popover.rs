@@ -1,9 +1,12 @@
-use aura_core::{Config, Placement, Popper, push_portal};
+use aura_core::{Config, Placement, Popper, set_active_popover, clear_active_popover};
 use gpui::{
     prelude::*, px, App, Component, Context, IntoElement, Render, Window,
-    Bounds, Pixels, div, AnyElement, MouseButton,
+    Bounds, Pixels, div, AnyElement, MouseButton, RenderOnce, ElementId, LayoutId, GlobalElementId, InspectorElementId,
+    SharedString,
 };
 use std::sync::Arc;
+use std::rc::Rc;
+use std::cell::Cell;
 
 pub struct Popover {
     trigger: AnyElement,
@@ -21,7 +24,7 @@ pub struct PopoverView {
 }
 
 impl PopoverView {
-    fn new(
+    pub fn new(
         content: Arc<dyn Fn(&mut Window, &mut Context<Self>) -> AnyElement + 'static>,
         anchor_bounds: Bounds<Pixels>,
         placement: Placement,
@@ -46,54 +49,90 @@ impl Render for PopoverView {
         let offset = self.offset;
         let on_close = self.on_close.clone();
         
-        // Render the content view
         let content = (self.content)(_window, cx);
-        
+        let viewport_size = _window.viewport_size();
+        let viewport = Bounds {
+            origin: gpui::Point::default(),
+            size: viewport_size,
+        };
+
+        let popper = Popper {
+            anchor_bounds,
+            placement,
+            offset,
+        };
+
+        // reference size for popper's internal flip logic
+        let reference_size = gpui::Size {
+            width: px(200.0),
+            height: px(150.0),
+        };
+
+        let (pos, final_placement) = popper.calculate_position_with_flip(reference_size, viewport);
+
+        let mut popover_div = div()
+            .absolute()
+            .on_mouse_down(MouseButton::Left, |_, _, _| {}) // Consume click
+            .bg(theme.neutral.card)
+            .border_1().border_color(theme.neutral.border)
+            .rounded(px(theme.radius.md))
+            .shadow_lg()
+            .child(content);
+
+        // Positioning logic based on final_placement
+        match final_placement {
+            Placement::Top | Placement::TopStart | Placement::TopEnd => {
+                let dist_from_bottom = viewport_size.height - anchor_bounds.top() + offset;
+                popover_div = popover_div.bottom(dist_from_bottom);
+            }
+            Placement::Bottom | Placement::BottomStart | Placement::BottomEnd => {
+                popover_div = popover_div.top(anchor_bounds.bottom() + offset);
+            }
+            Placement::Left | Placement::LeftStart | Placement::LeftEnd => {
+                let dist_from_right = viewport_size.width - anchor_bounds.left() + offset;
+                popover_div = popover_div.right(dist_from_right);
+            }
+            Placement::Right | Placement::RightStart | Placement::RightEnd => {
+                popover_div = popover_div.left(anchor_bounds.right() + offset);
+            }
+        }
+
+        // Alignment
+        match final_placement {
+            Placement::Top | Placement::Bottom => {
+                popover_div = popover_div.left(pos.x);
+            }
+            Placement::TopStart | Placement::BottomStart => {
+                popover_div = popover_div.left(anchor_bounds.left());
+            }
+            Placement::TopEnd | Placement::BottomEnd => {
+                let dist_from_right = viewport_size.width - anchor_bounds.right();
+                popover_div = popover_div.right(dist_from_right);
+            }
+            Placement::Left | Placement::Right => {
+                popover_div = popover_div.top(pos.y);
+            }
+            Placement::LeftStart | Placement::RightStart => {
+                popover_div = popover_div.top(anchor_bounds.top());
+            }
+            Placement::LeftEnd | Placement::RightEnd => {
+                let dist_from_bottom = viewport_size.height - anchor_bounds.bottom();
+                popover_div = popover_div.bottom(dist_from_bottom);
+            }
+        }
+
         div()
             .absolute()
             .size_full()
-            .on_mouse_down_out(cx.listener(move |_, _, window, cx| {
+            .on_mouse_down(MouseButton::Left, cx.listener(move |_, _, window, cx| {
                 on_close(window, cx);
             }))
-            .child({
-                push_portal(move |window, _cx| {
-                    let viewport = Bounds {
-                        origin: gpui::Point::default(),
-                        size: window.viewport_size(),
-                    };
-
-                    let popper = Popper {
-                        anchor_bounds,
-                        placement,
-                        offset,
-                    };
-
-                    let content_size = gpui::Size {
-                        width: px(200.0),
-                        height: px(150.0),
-                    };
-
-                    let (pos, _final_placement) = popper.calculate_position_with_flip(content_size, viewport);
-
-                    div()
-                        .absolute()
-                        .top(pos.y)
-                        .left(pos.x)
-                        .w(content_size.width)
-                        .bg(theme.neutral.card)
-                        .border_1().border_color(theme.neutral.border)
-                        .rounded(px(theme.radius.md))
-                        .shadow_lg()
-                        .child(content)
-                        .into_any_element()
-                }, cx);
-                
-                div()
-            })
+            .child(popover_div)
     }
 }
 
 impl Popover {
+    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
         Self {
             trigger: trigger.into_any_element(),
@@ -124,30 +163,43 @@ impl Popover {
 }
 
 impl RenderOnce for Popover {
+    #[track_caller]
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let placement = self.placement;
         let offset = self.offset;
         let content = self.content.clone();
         
+        let bounds_cell = Rc::new(Cell::new(None));
+        let bounds_cell_clone = bounds_cell.clone();
+
+        // Generate a stable ID based on caller location
+        let caller = std::panic::Location::caller();
+        let id = ElementId::from(SharedString::from(format!("popover-trigger-{}", caller)));
+
         div()
-            .child(self.trigger)
-            .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
-                let anchor_bounds = Bounds {
-                    origin: event.position,
-                    size: gpui::Size { width: px(1.0), height: px(1.0) },
-                };
-                let content = content.clone();
-                cx.new(|_cx| {
-                    PopoverView::new(
-                        content,
-                        anchor_bounds,
-                        placement,
-                        offset,
-                        |_window, _cx| {
-                            aura_core::popper::clear_portals(_cx);
-                        }
-                    )
-                });
+            .id(id)
+            .child(
+                BoundsTracker {
+                    trigger: self.trigger,
+                    bounds: bounds_cell,
+                }
+            )
+            .on_click(move |_event, _window, cx| {
+                if let Some(anchor_bounds) = bounds_cell_clone.get() {
+                    let content = content.clone();
+                    let view = cx.new(|_cx| {
+                        PopoverView::new(
+                            content,
+                            anchor_bounds,
+                            placement,
+                            offset,
+                            |_window, _cx| {
+                                clear_active_popover(_cx);
+                            }
+                        )
+                    });
+                    set_active_popover(view.into(), cx);
+                }
             })
     }
 }
@@ -156,5 +208,36 @@ impl IntoElement for Popover {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+struct BoundsTracker {
+    trigger: AnyElement,
+    bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
+}
+
+impl IntoElement for BoundsTracker {
+    type Element = Self;
+    fn into_element(self) -> Self::Element { self }
+}
+
+impl gpui::Element for BoundsTracker {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> { None }
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
+
+    fn request_layout(&mut self, _id: Option<&GlobalElementId>, _id2: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
+        (self.trigger.request_layout(window, cx), ())
+    }
+
+    fn prepaint(&mut self, _id: Option<&GlobalElementId>, _id2: Option<&InspectorElementId>, _bounds: Bounds<Pixels>, _rl: &mut (), window: &mut Window, cx: &mut App) -> () {
+        self.trigger.prepaint(window, cx);
+    }
+
+    fn paint(&mut self, _id: Option<&GlobalElementId>, _id2: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _rl: &mut (), _ps: &mut (), window: &mut Window, cx: &mut App) {
+        self.bounds.set(Some(bounds));
+        self.trigger.paint(window, cx);
     }
 }
