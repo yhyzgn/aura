@@ -1,7 +1,7 @@
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, Entity, MouseButton, AnyElement};
+use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, Entity, MouseButton};
 use crate::Input;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,11 +29,9 @@ impl InputNumber {
             Input::new(format!("{:.*}", 0, value), cx)
                 .filter(|text| {
                     if text.is_empty() { return true; }
-                    // Allow leading plus or minus
                     let mut chars = text.chars();
                     let first = chars.next().unwrap();
                     if first == '+' || first == '-' {
-                        // The rest must be digits or a single dot
                         let rest: String = chars.collect();
                         if rest.is_empty() { return true; }
                         rest.chars().all(|c| c.is_ascii_digit() || c == '.') && rest.matches('.').count() <= 1
@@ -138,7 +136,6 @@ impl InputNumber {
             .bg(theme.neutral.card)
             .overflow_hidden();
 
-        // Decrement button
         let mut dec_btn = gpui::div()
             .flex().items_center().justify_center()
             .w(px(32.0)).h_full()
@@ -157,7 +154,6 @@ impl InputNumber {
         row = row.child(dec_btn.child(Icon::new(IconName::Minus).size(px(icon_sz)).color(if can_dec { theme.neutral.text_1 } else { theme.neutral.text_disabled })));
         row = row.child(gpui::div().flex_1().child(self.input.clone()));
 
-        // Increment button
         let mut inc_btn = gpui::div()
             .flex().items_center().justify_center()
             .w(px(32.0)).h_full()
@@ -198,7 +194,6 @@ impl InputNumber {
             .w(px(32.0)).h_full()
             .border_color(theme.neutral.border).border_l_1();
 
-        // Increment small button
         let mut inc_btn = gpui::div()
             .flex_1().flex().items_center().justify_center()
             .bg(theme.neutral.hover)
@@ -213,7 +208,6 @@ impl InputNumber {
             inc_btn = inc_btn.cursor_not_allowed().opacity(0.5);
         }
 
-        // Decrement small button
         let mut dec_btn = gpui::div()
             .flex_1().flex().items_center().justify_center()
             .bg(theme.neutral.hover);

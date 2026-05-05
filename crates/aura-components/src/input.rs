@@ -3,7 +3,7 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, InspectorElementId,
+    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
     Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
     UTF16Selection, Window, actions, KeyBinding, fill, point, size,
@@ -11,7 +11,7 @@ use gpui::{
 };
 use std::ops::{Add, Range};
 
-fn rgba(r: u8, g: u8, b: u8, a: f32) -> gpui::Hsla {
+fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
@@ -674,8 +674,8 @@ impl Element for InputElement {
 }
 
 impl Render for Input {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let focused = self.focus_handle(cx).is_focused(_window);
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let focused = self.focus_handle(cx).is_focused(window);
         if focused && self.blink_task.is_none() { self.start_blink(cx); } 
         else if !focused && self.blink_task.is_some() { self.blink_task = None; }
         
@@ -685,11 +685,12 @@ impl Render for Input {
         else if focused { (theme.neutral.card, theme.primary.base) } 
         else { (theme.neutral.card, theme.neutral.border) };
         let fh = self.focus_handle(cx);
+        let line_height = window.line_height();
 
         let mut row = gpui::div().flex().flex_row().items_center()
             .when_some(self.height, |s, h| s.h(h))
             .when(self.height.is_none(), |s| {
-                if self.min_rows > 1 { s.h_auto().min_h(px(34.0)) }
+                if self.min_rows > 1 { s.h_auto().min_h(line_height * self.min_rows as f32+ px(16.0)) }
                 else { s.min_h(px(34.0)) }
             })
             .rounded(px(theme.radius.md))
@@ -714,7 +715,7 @@ impl Render for Input {
         }
 
         if let Some(ref p_render) = self.prepend {
-            row = row.child(gpui::div().flex_none().h_full().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(p_render(_window, cx)));
+            row = row.child(gpui::div().flex_none().h_full().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(p_render(window, cx)));
         }
 
         let mut inner = gpui::div().flex_1().flex().flex_row().items_center().gap_2().px(px(12.0));
@@ -747,7 +748,7 @@ impl Render for Input {
         row = row.child(inner);
 
         if let Some(ref a_render) = self.append {
-            row = row.child(gpui::div().flex_none().h_full().bg(theme.neutral.hover).border_l_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(a_render(_window, cx)));
+            row = row.child(gpui::div().flex_none().h_full().bg(theme.neutral.hover).border_l_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(a_render(window, cx)));
         }
 
         row

@@ -125,8 +125,8 @@ impl FormDemo {
                     .controls_position(aura_components::InputNumberControlsPosition::Right)
             }),
             input_number_precision: cx.new(|cx| InputNumber::new(1.23, cx).precision(2).step(0.01)),
-            textarea: cx.new(|cx| Textarea::new("Line 1\nLine 2", cx).rows(3)),
-            textarea_limit: cx.new(|cx| Textarea::new("Limited content", cx).max_length(50).rows(2)),
+            textarea: cx.new(|cx| Textarea::new("Line 1\nLine 2", cx).rows(1)),
+            textarea_limit: cx.new(|cx| Textarea::new("Limited content", cx).max_length(50).rows(1)),
             slider_basic: cx.new(|cx| Slider::new(50.0, cx)),
             slider_step: cx.new(|cx| Slider::new(20.0, cx).step(10.0)),
             rate_basic: cx.new(|cx| Rate::new(3.0, cx)),

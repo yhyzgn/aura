@@ -12,14 +12,15 @@ pub struct Textarea {
 impl Textarea {
     pub fn new(value: impl Into<SharedString>, cx: &mut Context<Self>) -> Self {
         let value = value.into();
+        let rows = 1;
         let input = cx.new(|cx| {
             Input::new(value, cx)
-                .min_rows(2)
+                .min_rows(rows)
         });
 
         Self {
             input,
-            rows: 2,
+            rows,
             max_length: None,
             focus_handle: cx.focus_handle(),
         }
