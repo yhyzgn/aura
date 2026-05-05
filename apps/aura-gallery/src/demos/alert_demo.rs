@@ -1,6 +1,6 @@
-use aura_components::{Alert, AlertType, Space};
+use aura_components::{Alert, AlertType};
 use aura_core::{Config};
-use gpui::{prelude::*, App, Context, Render, Window, div, px, AnyView};
+use gpui::{prelude::*, App, Context, Render, Window, div, AnyView};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| AlertDemo).into()

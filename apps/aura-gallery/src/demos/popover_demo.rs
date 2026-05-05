@@ -1,4 +1,4 @@
-use aura_components::{Popover, Button, Space, Text};
+use aura_components::{Popover, Button, Space};
 use aura_core::{Placement, Config};
 use gpui::{prelude::*, App, Context, Render, Window, div, px, AnyView};
 

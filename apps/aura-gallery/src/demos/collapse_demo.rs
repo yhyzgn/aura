@@ -1,6 +1,6 @@
-use aura_components::{Collapse, Button, Space};
+use aura_components::{Collapse};
 use aura_core::{Config};
-use gpui::{prelude::*, App, Context, Render, Window, div, px, AnyView};
+use gpui::{prelude::*, App, Context, Render, Window, div, AnyView};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| CollapseDemo).into()

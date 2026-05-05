@@ -1,4 +1,5 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Category {
     Basic,
     Form,
@@ -8,6 +9,7 @@ pub enum Category {
     Others,
 }
 
+#[allow(dead_code)]
 impl Category {
     pub const ALL: &'static [Category] = &[
         Category::Basic,

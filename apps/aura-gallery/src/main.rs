@@ -23,11 +23,11 @@ fn run_gallery() {
         RadioGroup::register_key_bindings(cx);
         Switch::register_key_bindings(cx);
 
-        cx.open_window(
+        let _ = cx.open_window(
             WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(Bounds {
+                window_bounds: Some(WindowBounds::Maximized(Bounds {
                     origin: gpui::Point::default(),
-                    size: size(px(1024.0), px(768.0)),
+                    size: size(px(1920.0), px(1080.0)),
                 })),
                 titlebar: Some(gpui::TitlebarOptions {
                     title: Some("Aura UI Gallery".into()),
@@ -70,11 +70,13 @@ impl Render for Gallery {
             );
         }
 
-        let mut container = div().size_full().relative()
+        let container = div().size_full().relative()
             .child(body);
         
         aura_components::message::render_messages(cx);
         aura_components::notification::render_notifications(cx);
+        aura_core::render_active_tooltip_in_window(_window, cx);
+        aura_core::render_active_popover_in_window(_window, cx);
 
         container.child(PortalLayer)
     }
@@ -92,9 +94,9 @@ impl gpui::RenderOnce for PortalLayer {
         let mut container = div().absolute().top_0().left_0().size_full();
         
         if cx.has_global::<Portal>() {
-            let portals = std::mem::take(&mut cx.global_mut::<Portal>().0);
-            for render in portals {
-                container = container.child(render(window, cx));
+            let portals = std::mem::take(&mut cx.global_mut::<Portal>().entries);
+            for entry in portals {
+                container = container.child((entry.render)(window, cx));
             }
         }
         

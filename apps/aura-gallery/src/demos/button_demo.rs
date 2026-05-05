@@ -181,6 +181,7 @@ fn button_groups() -> impl IntoElement {
     )
 }
 
+#[allow(dead_code)]
 fn secondary_icons() -> Vec<impl IntoElement> {
     vec![
         Button::new("Default")

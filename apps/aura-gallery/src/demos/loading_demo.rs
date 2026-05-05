@@ -1,4 +1,4 @@
-use aura_components::{Loading, Button, Space};
+use aura_components::{Loading, Space};
 use aura_core::{Config};
 use gpui::{prelude::*, App, Context, Render, Window, div, px, AnyView};
 

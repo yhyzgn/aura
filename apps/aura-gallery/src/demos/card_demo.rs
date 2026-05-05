@@ -1,4 +1,4 @@
-use aura_components::{Card, Button, Space, Text};
+use aura_components::{Card, Button};
 use aura_core::{Config};
 use gpui::{prelude::*, App, Context, Render, Window, div, px, AnyView};
 

@@ -20,7 +20,7 @@ impl Render for TooltipDemo {
             )
             .child(
                 Space::new().gap(px(16.0))
-                    .child(Tooltip::new(Button::new("Top")).content("Prompt info").placement(Placement::Top))
+                    .child(Tooltip::new(Button::new("Top Top Top Top Top Top")).content("Prompt info").placement(Placement::Top))
                     .child(Tooltip::new(Button::new("Bottom")).content("Prompt info").placement(Placement::Bottom))
                     .child(Tooltip::new(Button::new("Left")).content("Prompt info").placement(Placement::Left))
                     .child(Tooltip::new(Button::new("Right")).content("Prompt info").placement(Placement::Right))
