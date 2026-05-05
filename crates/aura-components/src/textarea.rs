@@ -25,9 +25,8 @@ impl Textarea {
         }
     }
 
-    pub fn rows(mut self, rows: usize, cx: &mut Context<Self>) -> Self {
+    pub fn rows(mut self, rows: usize) -> Self {
         self.rows = rows;
-        self.input.update(cx, |input, cx| { input.set_min_rows(rows, cx); });
         self
     }
 
@@ -50,9 +49,17 @@ impl Focusable for Textarea {
 
 impl Render for Textarea {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
+        let theme = cx.global::<Config>().theme.clone();
         let value = self.input.read(cx).value();
         let len = value.chars().count();
+        let rows = self.rows;
+
+        // Sync rows to inner input if changed
+        self.input.update(cx, |input, cx| {
+            if input.min_rows != rows {
+                input.set_min_rows(rows, cx);
+            }
+        });
         
         gpui::div()
             .flex().flex_col().gap_1()

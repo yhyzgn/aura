@@ -50,7 +50,7 @@ pub struct Input {
     prepend: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
     append: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
     height: Option<Pixels>,
-    min_rows: usize,
+    pub min_rows: usize,
 }
 
 impl Input {
