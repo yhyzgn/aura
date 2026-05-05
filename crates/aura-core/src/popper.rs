@@ -1,4 +1,4 @@
-use gpui::{prelude::*, AnyElement, Global, Bounds, Pixels, Point, App, Window};
+use gpui::{AnyElement, Global, Bounds, Pixels, Point, App, Window};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Placement {

@@ -3,15 +3,15 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     prelude::*, px, App, Bounds, Context, Element, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
+    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, InspectorElementId,
     IntoElement, LayoutId,     MouseButton, MouseDownEvent, MouseUpEvent,
     Pixels, Point, Render, Rgba, SharedString, ShapedLine, Style, TextRun,
-    UTF16Selection, UnderlineStyle, Window, actions, KeyBinding, fill, point, size,
+    UTF16Selection, Window, actions, KeyBinding, fill, point, size,
     MouseMoveEvent, AnyElement,
 };
 use std::ops::{Add, Range};
 
-fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
+fn rgba(r: u8, g: u8, b: u8, a: f32) -> gpui::Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
@@ -565,10 +565,7 @@ impl Element for InputElement {
     fn id(&self) -> Option<ElementId> { None }
     fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
-        let input = self.input.read(cx);
-        let actual_line_count = input.text_for_display().split('\n').count();
-        let line_count = actual_line_count.max(input.min_rows) as f32;
-        
+        let line_count = self.input.read(cx).text_for_display().split('\n').count().max(1) as f32;
         let mut style = Style::default();
         style.size.width = gpui::relative(1.).into();
         style.size.height = (window.line_height() * line_count).into();
