@@ -125,3 +125,19 @@
   - **验证**:
   - `cargo check` 通过。
   Applied fuzzy match at line 125-130.
+
+## Session 9 — 2026-05-05 (Night)
+
+### Actions
+- **验证与提交修复**:
+  - 确认 `Popover` 的边界补偿逻辑 (Safe Pivot Clamping) 已正确实现。
+  - 确认 `#[track_caller]` 已用于生成稳定 `ElementId` 以支持 `on_click`。
+  - 运行 `cargo check` 验证全量编译。
+  - 分块提交 27 个变更文件，包括 `aura-core` 重构、`popover.rs` 修复、`tooltip.rs` 同步更新以及组件适配。
+- **清理与验证**:
+  - 运行 `aura-gallery` 确认无运行时崩溃。
+  - 确认 `state.md` 与项目实际进度一致 (P3 完美收工)。
+
+### Key Discoveries
+- 将 `ActivePopover` 和 `ActiveTooltip` 提升至 `aura-core` 全局状态极大简化了 Portal 渲染逻辑，并解决了多层叠加时的层级冲突。
+- 使用 `pivot_container` (2000px) 配合 `justify_center` / `items_center` 是在 GPUI 中实现完美居中定位且支持边界补偿的最灵活方案。
