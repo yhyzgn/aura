@@ -186,3 +186,17 @@
 - `cargo test -p aura-core` passed: 2 tests.
 - `cargo test -p aura-components` passed.
 - `cargo run -p aura-gallery` compiled, then failed at runtime with Linux `NoCompositor` in this tmux environment.
+
+## Session 11 — 2026-05-06
+
+### Actions
+- **修复点击气泡弹层自身会关闭的问题**:
+  - 根因: Popover 弹层内容节点使用 `.on_mouse_down(MouseButton::Left, |_, _, _| {})` 空闭包，未调用 `cx.stop_propagation()`，事件仍冒泡到全屏遮罩层的 close handler。
+  - 改为在弹层内容的 mouse down handler 中调用 `cx.stop_propagation()`，阻止内部点击触发外层 click-outside 关闭逻辑。
+  - 该修复覆盖所有基于 Popover 的气泡弹层，包括 Popover、Popconfirm、Dropdown。
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-core` passed: 2 tests.
+- `cargo test -p aura-components` passed.
+- `cargo run -p aura-gallery` compiled, then failed at runtime with Linux `NoCompositor` in this tmux environment.

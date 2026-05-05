@@ -77,7 +77,9 @@ impl Render for PopoverView {
                         div()
                             .flex_shrink_0() // Ensure content is not squeezed by flex layout
                             .max_w(max_w)
-                            .on_mouse_down(MouseButton::Left, |_, _, _| {}) // Consume click so it doesn't trigger the background
+                            .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation();
+                            }) // Consume click so it doesn't trigger the background
                             .bg(theme.neutral.card)
                             .border_1().border_color(theme.neutral.border)
                             .rounded(px(theme.radius.md))

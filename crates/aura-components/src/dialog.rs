@@ -71,7 +71,9 @@ impl Render for DialogView {
                     .bg(theme.neutral.card)
                     .rounded(px(theme.radius.md))
                     .shadow_xl()
-                    .on_mouse_down(MouseButton::Left, |_, _, _| {}) // Consume
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    }) // Consume click so it doesn't trigger the background
                     .child(
                         div().p_4().border_b_1().border_color(theme.neutral.border).flex().justify_between().items_center()
                             .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
