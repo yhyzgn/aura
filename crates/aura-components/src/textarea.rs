@@ -24,15 +24,22 @@ impl Textarea {
         }
     }
 
-    pub fn rows(mut self, rows: usize) -> Self { self.rows = rows; self }
+    pub fn rows(mut self, rows: usize, cx: &mut Context<Self>) -> Self {
+        self.rows = rows;
+        self.input.update(cx, |input, cx| { input.set_min_rows(rows, cx); });
+        self
+    }
+
     pub fn placeholder(self, p: impl Into<SharedString>, cx: &mut Context<Self>) -> Self {
         self.input.update(cx, |input, cx| { input.set_placeholder(p, cx); });
         self
     }
+
     pub fn disabled(self, d: bool, cx: &mut Context<Self>) -> Self {
         self.input.update(cx, |input, cx| { input.set_disabled(d, cx); });
         self
     }
+
     pub fn max_length(mut self, max: usize) -> Self { self.max_length = Some(max); self }
 }
 
@@ -44,16 +51,11 @@ impl Render for Textarea {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
         let value = self.input.read(cx).value();
-        let len = value.len();
-        let line_height = _window.line_height();
+        let len = value.chars().count();
         
         gpui::div()
             .flex().flex_col().gap_1()
-            .child(
-                gpui::div()
-                    .min_h(line_height * self.rows as f32 + px(16.0)) // 16.0 for padding (8px top/bottom)
-                    .child(self.input.clone())
-            )
+            .child(self.input.clone())
             .when_some(self.max_length, |this, max| {
                 this.child(
                     gpui::div()

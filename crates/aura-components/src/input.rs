@@ -80,6 +80,11 @@ impl Input {
     pub fn mask_char(mut self, c: char) -> Self { self.mask_char = c; self }
     pub fn min_rows(mut self, rows: usize) -> Self { self.min_rows = rows; self }
     pub fn height(mut self, h: impl Into<Pixels>) -> Self { self.height = Some(h.into()); self }
+
+    pub fn set_min_rows(&mut self, rows: usize, cx: &mut Context<Self>) {
+        self.min_rows = rows;
+        cx.notify();
+    }
     
     pub fn prepend(mut self, render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
         self.prepend = Some(Box::new(render));
@@ -556,7 +561,10 @@ impl Element for InputElement {
     fn id(&self) -> Option<ElementId> { None }
     fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
-        let line_count = self.input.read(cx).text_for_display().split('\n').count().max(1) as f32;
+        let input = self.input.read(cx);
+        let actual_line_count = input.text_for_display().split('\n').count();
+        let line_count = actual_line_count.max(input.min_rows) as f32;
+        
         let mut style = Style::default();
         style.size.width = gpui::relative(1.).into();
         style.size.height = (window.line_height() * line_count).into();
@@ -679,7 +687,10 @@ impl Render for Input {
 
         let mut row = gpui::div().flex().flex_row().items_center()
             .when_some(self.height, |s, h| s.h(h))
-            .when(self.height.is_none(), |s| s.min_h(px(34.0)))
+            .when(self.height.is_none(), |s| {
+                if self.min_rows > 1 { s.h_auto().min_h(px(34.0)) }
+                else { s.min_h(px(34.0)) }
+            })
             .rounded(px(theme.radius.md))
             .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md)).overflow_hidden();
 
