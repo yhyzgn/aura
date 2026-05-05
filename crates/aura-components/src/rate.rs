@@ -1,7 +1,7 @@
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, MouseButton, MouseMoveEvent};
+use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, MouseButton, MouseMoveEvent, Bounds, Pixels, ElementId, LayoutId, GlobalElementId, InspectorElementId, AnyElement, Entity};
 
 pub struct Rate {
     value: f32,
@@ -9,6 +9,7 @@ pub struct Rate {
     hover_value: Option<f32>,
     disabled: bool,
     focus_handle: FocusHandle,
+    last_bounds: Option<Bounds<Pixels>>,
     on_change: Option<Box<dyn Fn(f32, &mut Window, &mut App) + 'static>>,
 }
 
@@ -20,6 +21,7 @@ impl Rate {
             hover_value: None,
             disabled: false,
             focus_handle: cx.focus_handle(),
+            last_bounds: None,
             on_change: None,
         }
     }
@@ -47,20 +49,60 @@ impl Focusable for Rate {
     fn focus_handle(&self, _cx: &App) -> FocusHandle { self.focus_handle.clone() }
 }
 
+struct RateElement {
+    rate: Entity<Rate>,
+}
+
+impl IntoElement for RateElement {
+    type Element = Self;
+    fn into_element(self) -> Self::Element { self }
+}
+
+impl gpui::Element for RateElement {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> { None }
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
+
+    fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
+        let mut style = gpui::Style::default();
+        style.size.width = gpui::relative(1.0).into();
+        style.size.height = gpui::relative(1.0).into();
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), _window: &mut Window, cx: &mut App) -> () {
+        self.rate.update(cx, |this, _| {
+            this.last_bounds = Some(bounds);
+        });
+    }
+
+    fn paint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), _: &mut (), window: &mut Window, cx: &mut App) {
+        // Reset hover value if mouse is outside bounds
+        let mouse_pos = window.mouse_position();
+        if !bounds.contains(&mouse_pos) {
+            self.rate.update(cx, |this, cx| {
+                if this.hover_value.is_some() {
+                    this.hover_value = None;
+                    cx.notify();
+                }
+            });
+        }
+    }
+}
+
 impl Render for Rate {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
         let icon_sz = 20.0;
         
         let mut row = gpui::div()
+            .relative()
             .flex().flex_row().items_center().gap_1();
 
         if !self.disabled {
             row = row.track_focus(&self.focus_handle);
-            // reset hover when mouse leaves the row
-            row = row.on_mouse_move(cx.listener(|_this, _event, _window, _cx| {
-                // ...
-            }));
         }
 
         for i in 1..=self.max {
@@ -80,8 +122,10 @@ impl Render for Rate {
             if !self.disabled {
                 star = star.cursor_pointer()
                     .on_mouse_move(cx.listener(move |this, _, _, cx| {
-                        this.hover_value = Some(i as f32);
-                        cx.notify();
+                        if this.hover_value != Some(i as f32) {
+                            this.hover_value = Some(i as f32);
+                            cx.notify();
+                        }
                     }))
                     .on_mouse_down(MouseButton::Left, cx.listener(move |this, _, window, cx| {
                         this.set_value(i as f32, window, cx);
@@ -93,6 +137,11 @@ impl Render for Rate {
             row = row.child(star);
         }
 
-        row
+        row.child(
+            gpui::div()
+                .absolute()
+                .top_0().left_0().size_full()
+                .child(RateElement { rate: cx.entity().clone() })
+        )
     }
 }
