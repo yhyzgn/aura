@@ -15,6 +15,7 @@ pub mod drawer_demo;
 pub mod message_demo;
 pub mod notification_demo;
 pub mod alert_demo;
+pub mod menu_demo;
 pub mod loading_demo;
 pub mod card_demo;
 pub mod collapse_demo;
@@ -41,6 +42,7 @@ pub fn registry() -> Vec<DemoEntry> {
         DemoEntry { name: "Message 全局提示", description: "常用于操作后的反馈提示", render: |cx| message_demo::render(cx).into() },
         DemoEntry { name: "Notification 通知", description: "悬浮在页面角落的通知", render: |cx| notification_demo::render(cx).into() },
         DemoEntry { name: "Alert 警告", description: "页面展示的重要提示信息", render: |cx| alert_demo::render(cx).into() },
+        DemoEntry { name: "Menu 导航菜单", description: "为网站提供导航轮廓", render: |cx| menu_demo::render(cx).into() },
         DemoEntry { name: "Loading 加载", description: "加载数据时显示", render: |cx| loading_demo::render(cx).into() },
         DemoEntry { name: "MessageBox 弹窗消息", description: "简单的消息对话框", render: |cx| message_box_demo::render(cx).into() },
         DemoEntry { name: "Card 卡片", description: "内容聚合容器", render: |cx| card_demo::render(cx).into() },

@@ -65,9 +65,12 @@
 | 12 | Card | — | ✅ Done |
 | 13 | Collapse | — | ✅ Done |
 
-## P4 Nav + Data ⬜ (20)
+## P4 Nav + Data 🔄 (1/20)
 
-— See architecture-design.md for full list
+| # | Component | File | Demo | Status |
+|---|-----------|------|------|--------|
+| 1 | Menu | `crates/aura-components/src/menu.rs` | ✅ | ✅ Horizontal/Vertical/Collapse |
+| — | Tabs | — | — | ⬜ Pending |
 
 ## P5 Advanced ⬜ (20)
 

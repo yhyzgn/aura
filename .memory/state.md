@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-**P4 - Navigation + Data** (导航与数据层 · 待开始)
+**P4 - Navigation + Data** (导航与数据层 · 进行中 🏃)
 
 ## Completed in P3
 
@@ -20,7 +20,7 @@
 | P1 Basic | ✅ Done | 13/13 | 13 |
 | P2 Form | ✅ Done | 10/10 | 10 |
 | P3 Popper+Feedback | ✅ Done | 13/13 | 13 |
-| P4 Nav+Data | ⬜ Pending | 0/20 | 20 |
+| P4 Nav+Data | 🔄 Active | 0/20 | 20 |
 | P5 Advanced | ⬜ Pending | 0/20 | 20 |
 | P6 Engineering | ⬜ Pending | 0/1 | 1 |
 

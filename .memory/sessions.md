@@ -1,36 +1,29 @@
 # Session History
 
-## Session 5 — 2026-05-04 (Late Night)
+## Session 15 — 2026-05-06 (Night)
 
 ### Actions
-- **Input 组件深度增强**:
-  - 实现光标闪烁逻辑 (500ms 周期，仅在 Focus 时激活)
-  - 实现全选功能 (`SelectAll`, Cmd/Ctrl+A)
-  - 实现剪贴板集成 (Copy/Paste/Cut, Cmd/Ctrl+C/V/X)
-  - 实现鼠标选择逻辑 (双击选单词、三击全选、拖拽选择、Shift+点击选择)
-  - 实现键盘选择逻辑 (Shift+方向键/Home/End)
-  - 修正多行模式下的鼠标索引计算 (通过存储 `last_line_layouts`)
-  - 修正多行模式下的选择区域渲染 (支持跨行选择背景)
-- **表单组件通用增强**:
-  - `Checkbox`, `Radio`, `Switch` 支持键盘操作 (Space/Enter 触发)
-  - `Checkbox`, `Radio`, `Switch` 增加 Focus 视觉反馈 (Ring/Border 变色)
-  - `RadioGroup` 支持方向键切换选项
-  - 统一注册各组件键盘绑定到 Gallery
-- **清理与优化**:
-  - 修复 `checkbox` 与 `switch` 之间 `Toggle` 动作冲突 (重命名为专用名称)
-  - 修复 `input` 与 `radio_group` 之间 `Up`/`Down` 动作冲突
-  - 移除各文件中的冗余 import (`px`, `MouseUpEvent` 等)
-  - 统一 `cx.spawn` 使用 `async move |this, mut cx|` 模式
-- **状态同步**:
-  - 更新 `.memory/state.md` 记录 P2 进度
+- **修复 Alert 控件图标与标题文本垂直对齐问题**:
+  - 在 `Alert` 组件的主容器 `div` 上添加 `.items_center()`，确保单行模式下图标与文字完美居中。
+  - 为标题文本容器添加 `.flex().items_center().min_h(px(20.0))`，使其与 20px 的图标高度对齐。
+- **实现 Menu 导航菜单组件**:
+  - **核心能力**: 支持 `Vertical` (垂直) 和 `Horizontal` (水平) 模式。
+  - **递归渲染**: 实现 `MenuItem`, `SubMenu`, `MenuItemGroup` 的递归渲染引擎。
+  - **折叠状态**: 垂直模式支持 `collapse`，折叠后子菜单通过 `Popover` 弹出。
+  - **弹层集成**: 水平模式及折叠垂直模式下，子菜单使用 `Popover` (基于 P3 引擎) 展示。
+  - **交互与状态**: 内部管理 `active_index` 和 `opened_submenus`，支持 `on_select` 回调。
+- **Gallery Demo 增强**:
+  - 新增 `menu_demo.rs`，展示水平、垂直、折叠、分组、嵌套等全量用例。
+- **Git 提交与推送**:
+  - 提交代码并推送到 `main` 分支。
+
+### Verification
+- `cargo check` passed.
+- `git push origin main` 成功。
 
 ### Key Discoveries
-- GPUI 0.2.x 中 `cx.spawn` 在 `Context<T>` 上使用时，闭包签名需匹配 `async move |this, mut cx|` 以正确推导 `AsyncApp` 并处理生命周期
-- 多行文本交互需要持久化所有行的 `ShapedLine` 布局信息，否则 `index_for_x` 无法跨行工作
-- `this.update(cx, ...)` 在 `AsyncApp` 环境下直接传递 `cx` 即可 (无需 `&mut cx` 若 `cx` 已经是引用)
-
-### Decisions Made
-- 录入 P2 首个核心组件 `Input` 的完整交互逻辑，作为后续复杂组件的参考
+- GPUI 中 `cx.entity()` 是在 `Render` 过程中获取自身 View 句柄的正确方式，用于在异步或独立 Context (如 Popover) 中回调更新原始 View。
+- 复杂的 View 组件在 Demo 中需通过 `cx.new(|_| Component::new())` 实例化以满足 `IntoElement` 约束。
 
 ## Session 2 — 2026-05-03
 
