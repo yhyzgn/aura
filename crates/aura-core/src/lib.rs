@@ -18,6 +18,7 @@ pub fn init_aura(cx: &mut App, theme: Theme) {
         theme,
         z_index_base: 1000,
     });
+    cx.set_global(crate::popper::ZIndexStack::default());
 }
 
 pub fn aura_theme<'a, V>(cx: &'a Context<'a, V>) -> &'a Theme {

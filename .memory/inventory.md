@@ -46,12 +46,12 @@
 | 9 | Form / FormItem | `crates/aura-components/src/form.rs` | ✅ |
 | 10 | Rate | `crates/aura-components/src/rate.rs` | ✅ |
 
-## P3 Popper + Feedback ⬜ (13)
+## P3 Popper + Feedback 🔄 (0/13)
 
-| # | Component | Notes |
-|---|-----------|-------|
-| — | Popper/Portal 基建 | `crates/aura-core/src/popper.rs` |
-| 1 | Tooltip | Popper 依赖 |
+| # | Component | Notes | Status |
+|---|-----------|-------|--------|
+| — | Popper/Portal 基建 | `crates/aura-core/src/popper.rs` | ✅ Done |
+| 1 | Tooltip | Popper 依赖 | ⬜ |
 | 2 | Popover | Popper 依赖 |
 | 3 | Popconfirm | Popper 依赖 |
 | 4 | Dialog | FocusTrap 依赖 |

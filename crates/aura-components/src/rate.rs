@@ -1,7 +1,7 @@
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, MouseButton, MouseMoveEvent, Bounds, Pixels, ElementId, LayoutId, GlobalElementId, InspectorElementId, AnyElement, Entity};
+use gpui::{prelude::*, px, App, Render, Window, Context, Focusable, FocusHandle, MouseButton, Bounds, Pixels, Entity};
 
 pub struct Rate {
     value: f32,
@@ -49,60 +49,24 @@ impl Focusable for Rate {
     fn focus_handle(&self, _cx: &App) -> FocusHandle { self.focus_handle.clone() }
 }
 
-struct RateElement {
-    rate: Entity<Rate>,
-}
-
-impl IntoElement for RateElement {
-    type Element = Self;
-    fn into_element(self) -> Self::Element { self }
-}
-
-impl gpui::Element for RateElement {
-    type RequestLayoutState = ();
-    type PrepaintState = ();
-
-    fn id(&self) -> Option<ElementId> { None }
-    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
-
-    fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
-        let mut style = gpui::Style::default();
-        style.size.width = gpui::relative(1.0).into();
-        style.size.height = gpui::relative(1.0).into();
-        (window.request_layout(style, [], cx), ())
-    }
-
-    fn prepaint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), _window: &mut Window, cx: &mut App) -> () {
-        self.rate.update(cx, |this, _| {
-            this.last_bounds = Some(bounds);
-        });
-    }
-
-    fn paint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), _: &mut (), window: &mut Window, cx: &mut App) {
-        // Reset hover value if mouse is outside bounds
-        let mouse_pos = window.mouse_position();
-        if !bounds.contains(&mouse_pos) {
-            self.rate.update(cx, |this, cx| {
-                if this.hover_value.is_some() {
-                    this.hover_value = None;
-                    cx.notify();
-                }
-            });
-        }
-    }
-}
-
 impl Render for Rate {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
         let icon_sz = 20.0;
         
         let mut row = gpui::div()
+            .id("rate-container")
             .relative()
             .flex().flex_row().items_center().gap_1();
 
         if !self.disabled {
-            row = row.track_focus(&self.focus_handle);
+            row = row.track_focus(&self.focus_handle)
+                .on_mouse_leave(cx.listener(|this, _, _, cx| {
+                    if this.hover_value.is_some() {
+                        this.hover_value = None;
+                        cx.notify();
+                    }
+                }));
         }
 
         for i in 1..=self.max {
@@ -137,11 +101,6 @@ impl Render for Rate {
             row = row.child(star);
         }
 
-        row.child(
-            gpui::div()
-                .absolute()
-                .top_0().left_0().size_full()
-                .child(RateElement { rate: cx.entity().clone() })
-        )
+        row
     }
 }

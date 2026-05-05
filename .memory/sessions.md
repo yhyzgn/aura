@@ -111,3 +111,27 @@
 - Removing explicit icon color caused Button icons to disappear because `style.text.color` on `svg()` was `None`.
 - Correct fix: keep normal icon `.color(c.text)` and add `AuraIcon::group_hover_color(group, c.text_hover)`; Button assigns a hover group to the button container so child icons switch color via GPUI `group_hover`.
 - Verified `cargo check`, `cargo test -p aura-icons`, and `cargo test -p aura-components`.
+
+## Session 6 — 2026-05-05
+
+### Actions
+- **初始化项目上下文**: 加载 `prompt.md`, `.memory/state.md`, `.prompt/P3-popper-feedback.md`。
+- **验证编译基线**: 运行 `cargo check` 确认无 Error。
+- **完成 Popper 基础架构 (Popper Foundation)**:
+  - 扩展 `Placement` 枚举，支持全部 12 种方位（Top/Bottom/Left/Right × Start/End/Center）。
+  - 实现 `Placement::flip()` 翻转逻辑。
+  - 实现 `Popper::calculate_position_with_flip`，支持视口溢出检测与自动翻转/贴边 (Clamp)。
+  - 实现 `ZIndexStack` 全局状态，定义 popup/modal/notification/tooltip 标准层级。
+  - 在 `init_aura` 中完成 `ZIndexStack` 初始化。
+- **状态同步**:
+  - 更新 `.memory/state.md` 标记 P2 已完成，P3 进行中。
+  - 更新 `.memory/inventory.md` 标记 Popper 基建 ✅ Done。
+  - 更新 `.memory/decisions.md` (ADR-010) 记录弹出层设计决策。
+
+### Key Discoveries
+- `PortalLayer` 已在 `aura-gallery` 的 `main.rs` 中实现，通过 `std::mem::take` 消费全局 `Portal` 栈，支持每帧重新推送实现即时渲染。
+- GPUI 0.2.2 的 Z-Index 逻辑可以通过 `Config` 全局配置统一管理。
+
+### Decisions Made
+- 采用 "Flip then Clamp" 策略处理 Popper 视口溢出：优先尝试翻转（如 Top -> Bottom），若翻转后依然溢出，则强制贴边渲染。
+- 沿用当前 Gallery 中的 `Portal` 全局单例模式，作为 P3 所有弹出组件的通信隧道。

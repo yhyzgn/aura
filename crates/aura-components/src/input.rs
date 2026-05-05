@@ -51,6 +51,7 @@ pub struct Input {
     append: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
     height: Option<Pixels>,
     pub min_rows: usize,
+    text_align: gpui::TextAlign,
 }
 
 impl Input {
@@ -71,6 +72,7 @@ impl Input {
             append: None,
             height: None,
             min_rows: 1,
+            text_align: gpui::TextAlign::Left,
         }
     }
     pub fn placeholder(mut self, p: impl Into<SharedString>) -> Self { self.placeholder = p.into(); self }
@@ -84,6 +86,7 @@ impl Input {
     pub fn mask_char(mut self, c: char) -> Self { self.mask_char = c; self }
     pub fn min_rows(mut self, rows: usize) -> Self { self.min_rows = rows; self }
     pub fn height(mut self, h: impl Into<Pixels>) -> Self { self.height = Some(h.into()); self }
+    pub fn text_align(mut self, align: gpui::TextAlign) -> Self { self.text_align = align; self }
 
     pub fn set_placeholder(&mut self, p: impl Into<SharedString>, cx: &mut Context<Self>) {
         self.placeholder = p.into();
@@ -552,6 +555,7 @@ struct InputElement {
 struct InputPrepaint {
     lines: Vec<(ShapedLine, Pixels)>, cursor: Option<gpui::PaintQuad>, selection: Vec<gpui::PaintQuad>,
     is_masked: bool,
+    text_align: gpui::TextAlign,
 }
 
 impl IntoElement for InputElement {
@@ -565,7 +569,8 @@ impl Element for InputElement {
     fn id(&self) -> Option<ElementId> { None }
     fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
     fn request_layout(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, window: &mut Window, cx: &mut App) -> (LayoutId, ()) {
-        let line_count = self.input.read(cx).text_for_display().split('\n').count().max(1) as f32;
+        let input = self.input.read(cx);
+        let line_count = input.text_for_display().split('\n').count().max(input.min_rows) as f32;
         let mut style = Style::default();
         style.size.width = gpui::relative(1.).into();
         style.size.height = (window.line_height() * line_count).into();
@@ -582,6 +587,7 @@ impl Element for InputElement {
         let cursor_offset = input.cursor_offset();
         let text = input.text_for_display();
         let is_masked = input.is_password();
+        let text_align = input.text_align;
         let text_lines: Vec<&str> = text.split('\n').collect();
         
         let original_cursor_line = if input.value.is_empty() { 0 } else {
@@ -608,6 +614,12 @@ impl Element for InputElement {
             let run = TextRun { len: display.len(), font: style.font(), color, background_color: None, underline: None, strikethrough: None };
             let shaped = window.text_system().shape_line(display, font_size, &[run], None);
             
+            let x_offset = match text_align {
+                gpui::TextAlign::Left => px(0.0),
+                gpui::TextAlign::Center => (bounds.size.width - shaped.width) / 2.0,
+                gpui::TextAlign::Right => bounds.size.width - shaped.width,
+            };
+
             if !input.selected_range.is_empty() && !input.value.is_empty() {
                 let range = input.selected_range.clone();
                 let original_line = input.value.split('\n').nth(i).unwrap_or("");
@@ -620,14 +632,13 @@ impl Element for InputElement {
                     let d_end = input.safe_display_offset_in_line(end - line_start, original_line);
                     let x_start = shaped.x_for_index(d_start);
                     let x_end = shaped.x_for_index(d_end);
-                    selection_quads.push(fill(Bounds::new(point(bounds.left() + x_start, y), size(x_end - x_start, line_height)), theme.primary.base.opacity(0.3)));
+                    selection_quads.push(fill(Bounds::new(point(bounds.left() + x_offset + x_start, y), size(x_end - x_start, line_height)), theme.primary.base.opacity(0.3)));
                 }
             }
             if i == original_cursor_line && input.selected_range.is_empty() && input.cursor_visible && !input.value.is_empty() {
                 let original_line = input.value.split('\n').nth(i).unwrap_or("");
                 let line_start = original_byte_offset;
                 let col = cursor_offset - line_start;
-                // Use is_masked directly since this frame's shaped matches it
                 let d_col = if is_masked {
                     let mut count = 0; let mut bytes = 0;
                     for c in original_line.chars() {
@@ -640,9 +651,13 @@ impl Element for InputElement {
                 let x = shaped.x_for_index(d_col);
                 let ch = font_size.add(px(6.0));
                 let ct = y + (line_height - ch) / 2.0;
-                cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
+                cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x_offset + x, ct), size(px(2.), ch)), theme.primary.base));
             } else if i == 0 && input.value.is_empty() && input.cursor_visible {
-                let x = px(0.0);
+                let x = match text_align {
+                    gpui::TextAlign::Left => px(0.0),
+                    gpui::TextAlign::Center => (bounds.size.width - shaped.width) / 2.0,
+                    gpui::TextAlign::Right => bounds.size.width - shaped.width,
+                };
                 let ch = font_size.add(px(6.0));
                 let ct = y + (line_height - ch) / 2.0;
                 cursor_quad = Some(fill(Bounds::new(point(bounds.left() + x, ct), size(px(2.), ch)), theme.primary.base));
@@ -652,15 +667,16 @@ impl Element for InputElement {
             y = y + line_height;
             original_byte_offset += input.value.split('\n').nth(i).map(|l| l.len() + 1).unwrap_or(0);
         }
-        InputPrepaint { lines, cursor: cursor_quad, selection: selection_quads, is_masked }
+        InputPrepaint { lines, cursor: cursor_quad, selection: selection_quads, is_masked, text_align }
     }
 
     fn paint(&mut self, _: Option<&GlobalElementId>, _: Option<&InspectorElementId>, bounds: Bounds<Pixels>, _: &mut (), prepaint: &mut InputPrepaint, window: &mut Window, cx: &mut App) {
         let focus_handle = self.input.read(cx).focus_handle.clone();
         window.handle_input(&focus_handle, ElementInputHandler::new(bounds, self.input.clone()), cx);
         for s in prepaint.selection.drain(..) { window.paint_quad(s); }
+        let text_align = prepaint.text_align;
         for (line, y) in &prepaint.lines {
-            line.paint(point(bounds.left(), *y), window.line_height(), gpui::TextAlign::Left, None, window, cx).unwrap();
+            line.paint(point(bounds.left(), *y), window.line_height(), text_align, None, window, cx).unwrap();
         }
         if focus_handle.is_focused(window) { if let Some(c) = prepaint.cursor.take() { window.paint_quad(c); } }
         let line_layouts = prepaint.lines.clone();
@@ -687,7 +703,7 @@ impl Render for Input {
         let fh = self.focus_handle(cx);
         let line_height = window.line_height();
 
-        let mut row = gpui::div().flex().flex_row().items_center()
+        let mut row = gpui::div().flex().flex_row()
             .when_some(self.height, |s, h| s.h(h))
             .when(self.height.is_none(), |s| {
                 if self.min_rows > 1 { s.h_auto().min_h(line_height * self.min_rows as f32+ px(16.0)) }
@@ -695,6 +711,12 @@ impl Render for Input {
             })
             .rounded(px(theme.radius.md))
             .bg(bg).border_1().border_color(border_c).text_size(px(theme.font_size.md)).overflow_hidden();
+
+        if self.min_rows > 1 {
+            row = row.items_start();
+        } else {
+            row = row.items_center();
+        }
 
         if !self.disabled { row = row.track_focus(&fh).cursor_text(); } 
         else { row = row.cursor_not_allowed(); }
@@ -718,8 +740,12 @@ impl Render for Input {
             row = row.child(gpui::div().flex_none().h_full().bg(theme.neutral.hover).border_r_1().border_color(theme.neutral.border).flex().items_center().text_color(theme.neutral.text_3).child(p_render(window, cx)));
         }
 
-        let mut inner = gpui::div().flex_1().flex().flex_row().items_center().gap_2().px(px(12.0));
-        if self.min_rows > 1 { inner = inner.items_start().py_2(); }
+        let mut inner = gpui::div().flex_1().flex().flex_row().gap_2().px(px(12.0));
+        if self.min_rows > 1 { 
+            inner = inner.items_start().py_2(); 
+        } else {
+            inner = inner.items_center();
+        }
 
         if let Some(icon) = self.icon_prefix {
             inner = inner.child(Icon::new(icon).size(px(icon_sz)).color(theme.neutral.icon));

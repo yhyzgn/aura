@@ -88,6 +88,20 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 - `AnyElement` provides uniform type for demo registry dispatch
 - Small overhead acceptable (demos are dev-only, not production)
 
+## ADR-010: Popper Foundation — Placement, Flip, and Portal
+
+**Decision**: 
+- Implement 12 standard placements (Top/Bottom/Left/Right + Start/End/Center).
+- Implement `calculate_position_with_flip` which prioritizes flipped position if original overflows viewport.
+- Clamping is used as a final fallback to keep elements within viewport.
+- Portals are rendered via a global `Portal` stack and a top-level `PortalLayer` in the main view.
+
+**Rationale**:
+- 12 placements match standard UI libraries (Popper.js, Element Plus).
+- Flipping is the most intuitive overflow behavior for tooltips and menus.
+- Global Portal stack allows components to "teleport" content to the top layer regardless of parent nesting or overflow constraints.
+- `PortalLayer` at the end of root render ensures portals are always on top without complex Z-index management for simple cases.
+
 ## ADR-008: Components Read Theme from GPUI Global
 
 **Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `Config.theme` from `App` during render. Business usage is `Button::new("Save").primary()` without `.build(&theme)`.
