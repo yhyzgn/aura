@@ -17,8 +17,12 @@
   - **灵活位置**: 支持 `Top`, `Bottom`, `Left`, `Right` 四种布局位置。
   - **可编辑模式**: 实现动态新增标签 (`on_tab_add`) 和关闭标签 (`on_tab_remove`) 功能。
   - **延迟渲染**: 采用按需渲染策略，仅渲染当前激活的面板内容。
+- **实现 Breadcrumb 面包屑组件**:
+  - **灵活配置**: 支持自定义字符串分隔符及图标分隔符。
+  - **样式增强**: 最后一级自动加粗且不可点击，前置节点支持 Hover 高亮及点击回调。
+  - **图标支持**: 节点支持配合 Icon 展示。
 - **Gallery Demo 增强**:
-  - 新增 `menu_demo.rs` 和 `tabs_demo.rs`，展示全量配置与交互用例。
+  - 新增 `menu_demo.rs`, `tabs_demo.rs`, `breadcrumb_demo.rs`，展示全量配置与交互用例。
 - **Git 提交与推送**:
   - 提交代码并推送到 `main` 分支。
 
@@ -30,6 +34,7 @@
 - GPUI 中 `cx.entity()` 是在 `Render` 过程中获取自身 View 句柄的正确方式，用于在异步或独立 Context (如 Popover) 中回调更新原始 View。
 - 复杂的 View 组件在 Demo 中需通过 `cx.new(|_| Component::new())` 实例化以满足 `IntoElement` 约束。
 - 由于 GPUI `Div` 等元素未实现 `Clone`，在需要多次引用同一子树 (如 Header) 时，应使用闭包或局部渲染函数。
+- `RenderOnce` 组件中处理循环渲染时，需注意 `items` 的所有权转移，适时使用 `into_iter()`。
 
 ## Session 2 — 2026-05-03
 
