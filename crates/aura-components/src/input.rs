@@ -53,6 +53,26 @@ impl Input {
     pub fn icon_prefix(mut self, icon: IconName) -> Self { self.icon_prefix = Some(icon); self }
     pub fn icon_suffix(mut self, icon: IconName) -> Self { self.icon_suffix = Some(icon); self }
 
+    pub fn set_placeholder(&mut self, p: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.placeholder = p.into();
+        cx.notify();
+    }
+
+    pub fn set_disabled(&mut self, d: bool, cx: &mut Context<Self>) {
+        self.disabled = d;
+        cx.notify();
+    }
+
+    pub fn set_value(&mut self, value: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.value = value.into();
+        self.selected_range = self.value.len()..self.value.len();
+        cx.notify();
+    }
+
+    pub fn value(&self) -> SharedString {
+        self.value.clone()
+    }
+
     pub fn register_key_bindings(cx: &mut App) {
         cx.bind_keys([
             KeyBinding::new("backspace", Backspace, None),  KeyBinding::new("delete", Delete, None),

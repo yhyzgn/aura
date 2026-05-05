@@ -31,20 +31,20 @@
 | 13 | Splitter | `crates/aura-components/src/splitter.rs` | ✅ | ✅ |
 | 14 | ButtonGroup | `crates/aura-components/src/button_group.rs` | ✅ | ✅ |
 
-## P2 Form Controls ⬜ (10)
+## P2 Form Controls 🔄 (8/10)
 
-| # | Component | File |
-|---|-----------|------|
-| 1 | Input | `crates/aura-components/src/input.rs` |
-| 2 | InputNumber | `crates/aura-components/src/input_number.rs` |
-| 3 | Textarea | `crates/aura-components/src/textarea.rs` |
-| 4 | Checkbox / CheckboxGroup | `crates/aura-components/src/checkbox.rs` |
-| 5 | Radio / RadioGroup | `crates/aura-components/src/radio.rs` |
-| 6 | Switch | `crates/aura-components/src/switch.rs` |
-| 7 | Select | `crates/aura-components/src/select.rs` |
-| 8 | Slider | `crates/aura-components/src/slider.rs` |
-| 9 | Form / FormItem | `crates/aura-components/src/form.rs` |
-| 10 | Rate | `crates/aura-components/src/rate.rs` |
+| # | Component | File | Status |
+|---|-----------|------|--------|
+| 1 | Input | `crates/aura-components/src/input.rs` | ✅ |
+| 2 | InputNumber | `crates/aura-components/src/input_number.rs` | ✅ |
+| 3 | Textarea | `crates/aura-components/src/textarea.rs` | ✅ |
+| 4 | Checkbox / CheckboxGroup | `crates/aura-components/src/checkbox.rs`, `checkbox_group.rs` | ✅ |
+| 5 | Radio / RadioGroup | `crates/aura-components/src/radio.rs` | ✅ |
+| 6 | Switch | `crates/aura-components/src/switch.rs` | ✅ |
+| 7 | Select | `crates/aura-components/src/select.rs` | ✅ |
+| 8 | Slider | `crates/aura-components/src/slider.rs` | ✅ |
+| 9 | Form / FormItem | `crates/aura-components/src/form.rs` | ✅ |
+| 10 | Rate | `crates/aura-components/src/rate.rs` | ✅ |
 
 ## P3 Popper + Feedback ⬜ (13)
 

@@ -1,5 +1,9 @@
 use gpui::{App, Context, Global, Hsla, prelude::*};
 
+pub mod popper;
+
+pub use popper::*;
+
 pub use aura_theme::Theme;
 
 pub struct Config {

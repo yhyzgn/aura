@@ -44,6 +44,7 @@ fn darken(base: Hsla, factor: f32) -> Hsla {
 // Semantic Color Family
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct ColorFamily {
     pub base: Hsla,
     pub hover: Hsla,
@@ -75,6 +76,7 @@ impl ColorFamily {
 // Neutral Tokens
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct NeutralTokens {
     pub body: Hsla,
     pub card: Hsla,
@@ -105,6 +107,7 @@ pub struct NeutralTokens {
 // Spacing / Radius / Font (unchanged structure, refined values)
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct Spacing {
     pub xs: f32,
     pub sm: f32,
@@ -113,6 +116,7 @@ pub struct Spacing {
     pub xl: f32,
 }
 
+#[derive(Clone)]
 pub struct Radius {
     pub sm: f32,
     pub md: f32,
@@ -120,6 +124,7 @@ pub struct Radius {
     pub full: f32,
 }
 
+#[derive(Clone)]
 pub struct FontSize {
     pub xs: f32,
     pub sm: f32,
@@ -132,12 +137,14 @@ pub struct FontSize {
 // Theme
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct SecondaryColors {
     pub bg: Hsla,
     pub hover: Hsla,
     pub pressed: Hsla,
 }
 
+#[derive(Clone)]
 pub struct Theme {
     pub name: String,
     pub spacing: Spacing,

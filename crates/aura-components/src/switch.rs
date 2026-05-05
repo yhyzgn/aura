@@ -65,15 +65,40 @@ impl Render for Switch {
             theme.neutral.border
         };
 
-        let mut el = gpui::div()
+        // Focus ring color
+        let focus_color = if self.checked {
+            theme.primary.base.opacity(0.5)
+        } else {
+            theme.neutral.border.opacity(0.5)
+        };
+
+        let mut track = gpui::div()
+            .relative()
             .flex_none().w(px(w)).h(px(h)).rounded(px(h / 2.0))
             .bg(track_color)
-            .on_action(cx.listener(Self::toggle));
+            .child(
+                gpui::div()
+                    .absolute()
+                    .top(px((h - thumb_sz) / 2.0))
+                    .left(px(thumb_offset))
+                    .w(px(thumb_sz)).h(px(thumb_sz)).rounded(px(thumb_sz / 2.0))
+                    .bg(thumb_color)
+            );
+
+        if !self.disabled { 
+            track = track.on_mouse_up(MouseButton::Left, cx.listener(|this, _, window, cx| {
+                this.toggle(&SwitchToggle, window, cx);
+            }));
+        }
+
+        let mut el = gpui::div()
+            .p(px(2.0))
+            .child(track);
 
         if focused && !self.disabled {
-            el = el.border_2().border_color(theme.primary.base.opacity(0.5));
+            el = el.rounded(px((h + 4.0) / 2.0)).border_2().border_color(focus_color);
         } else {
-            el = el.border_0();
+            el = el.border_2().border_color(rgba(0,0,0,0.0));
         }
 
         if !self.disabled { 
@@ -81,18 +106,10 @@ impl Render for Switch {
             el = el.on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| {
                 window.focus(&this.focus_handle, cx);
             }));
-            el = el.on_mouse_up(MouseButton::Left, cx.listener(|this, _, window, cx| {
-                this.toggle(&SwitchToggle, window, cx);
-            }));
         } else { 
             el = el.cursor_not_allowed(); 
         }
 
-        el.child(
-                gpui::div()
-                    .absolute().left(px(thumb_offset)).top(px((h - thumb_sz) / 2.0))
-                    .w(px(thumb_sz)).h(px(thumb_sz)).rounded(px(thumb_sz / 2.0))
-                    .bg(thumb_color)
-            )
+        el.on_action(cx.listener(Self::toggle))
     }
 }

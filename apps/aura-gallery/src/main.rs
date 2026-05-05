@@ -1,9 +1,9 @@
 mod category;
 mod demos;
 
-use aura_core::{ContextExt, init_aura};
+use aura_core::{ContextExt, init_aura, Portal};
 use aura_theme::Theme;
-use aura_components::{Input, Checkbox, Radio, RadioGroup, Switch};
+use aura_components::{Input, Checkbox, Radio, RadioGroup, Switch, CheckboxGroup};
 use gpui::{
     AnyView, App, Bounds, Context, Render, Window, WindowBounds, WindowOptions, div, prelude::*, px, size,
 };
@@ -18,6 +18,7 @@ fn run_gallery() {
         // Register all key bindings
         Input::register_key_bindings(cx);
         Checkbox::register_key_bindings(cx);
+        CheckboxGroup::register_key_bindings(cx);
         Radio::register_key_bindings(cx);
         RadioGroup::register_key_bindings(cx);
         Switch::register_key_bindings(cx);
@@ -42,6 +43,7 @@ fn run_gallery() {
 
 impl Render for Gallery {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        aura_core::clear_portals(cx);
         let registry = demos::registry();
 
         let header = {
@@ -64,7 +66,16 @@ impl Render for Gallery {
             );
         }
 
-        body
+        let mut root = div().size_full().relative().child(body);
+
+        if cx.has_global::<Portal>() {
+            let portals = std::mem::take(&mut cx.global_mut::<Portal>().0);
+            for p in portals {
+                root = root.child(div().absolute().top_0().left_0().size_full().child(p));
+            }
+        }
+
+        root
     }
 }
 

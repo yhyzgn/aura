@@ -1,6 +1,6 @@
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, Focusable, FocusHandle, SharedString, KeyBinding};
+use gpui::{prelude::*, px, App, Hsla, Rgba, Render, Window, Context, MouseButton, Focusable, FocusHandle, SharedString, KeyBinding, EventEmitter};
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
@@ -16,6 +16,11 @@ pub struct Checkbox {
     on_change: Option<Box<dyn Fn(bool, &mut Window, &mut App) + 'static>>,
 }
 
+#[derive(Clone, Copy)]
+pub struct CheckboxChanged(pub bool);
+
+impl EventEmitter<CheckboxChanged> for Checkbox {}
+
 impl Checkbox {
     pub fn new(checked: bool, cx: &mut Context<Self>) -> Self {
         Self { checked, disabled: false, label: None, focus_handle: cx.focus_handle(), on_change: None }
@@ -25,6 +30,11 @@ impl Checkbox {
     pub fn label(mut self, text: impl Into<SharedString>) -> Self { self.label = Some(text.into()); self }
     pub fn on_change(mut self, cb: impl Fn(bool, &mut Window, &mut App) + 'static) -> Self {
         self.on_change = Some(Box::new(cb)); self
+    }
+
+    pub fn set_disabled(&mut self, d: bool, cx: &mut Context<Self>) {
+        self.disabled = d;
+        cx.notify();
     }
 
     pub fn register_key_bindings(cx: &mut App) {
@@ -37,6 +47,7 @@ impl Checkbox {
     fn toggle(&mut self, _: &CheckboxToggle, window: &mut Window, cx: &mut Context<Self>) {
         if !self.disabled {
             self.checked = !self.checked;
+            cx.emit(CheckboxChanged(self.checked));
             cx.notify();
             if let Some(ref cb) = self.on_change { cb(self.checked, window, cx); }
         }

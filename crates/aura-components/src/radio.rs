@@ -4,7 +4,7 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a }.into()
 }
 
-gpui::actions!(radio, [Select]);
+gpui::actions!(radio, [RadioSelect]);
 
 pub struct Radio {
     checked: bool,
@@ -27,12 +27,12 @@ impl Radio {
 
     pub fn register_key_bindings(cx: &mut App) {
         cx.bind_keys([
-            KeyBinding::new("space", Select, None),
-            KeyBinding::new("enter", Select, None),
+            KeyBinding::new("space", RadioSelect, None),
+            KeyBinding::new("enter", RadioSelect, None),
         ]);
     }
 
-    fn select(&mut self, _: &Select, window: &mut Window, cx: &mut Context<Self>) {
+    fn select(&mut self, _: &RadioSelect, window: &mut Window, cx: &mut Context<Self>) {
         if !self.disabled && !self.checked {
             self.checked = true;
             cx.notify();
@@ -70,7 +70,7 @@ impl Render for Radio {
                 window.focus(&this.focus_handle, cx);
             }));
             row = row.on_mouse_up(MouseButton::Left, cx.listener(|this, _, window, cx| {
-                this.select(&Select, window, cx);
+                this.select(&RadioSelect, window, cx);
             }));
         } else { 
             row = row.cursor_not_allowed(); 
