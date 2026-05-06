@@ -85,7 +85,8 @@
 | 14 | Timeline | `crates/aura-components/src/timeline.rs` | ✅ | ✅ Node variants / Reverse |
 | 15 | Tree | `crates/aura-components/src/tree.rs` | ✅ | ✅ Expand / Collapse |
 | 16 | Pagination | `crates/aura-components/src/pagination.rs` | ✅ | ✅ Layout / Pager |
-| — | Statistic | — | — | ⬜ Pending |
+| 17 | Statistic | `crates/aura-components/src/statistic.rs` | ✅ | ✅ Prefix / Suffix |
+| 18 | Segmented | `crates/aura-components/src/segmented.rs` | ✅ | ✅ Block / Disabled |
 
 ## P5 Advanced ⬜ (20)
 
