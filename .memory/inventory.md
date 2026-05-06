@@ -78,7 +78,8 @@
 | 7 | Backtop | `crates/aura-components/src/backtop.rs` | ✅ | ✅ Visibility Height |
 | 8 | Anchor | `crates/aura-components/src/anchor.rs` | ✅ | ✅ Scroll Sync / Jump |
 | 9 | Progress | `crates/aura-components/src/progress.rs` | ✅ | ✅ Line Style / Status |
-| — | Skeleton | — | — | ⬜ Pending |
+| 10 | Skeleton | `crates/aura-components/src/skeleton.rs` | ✅ | ✅ Variants / Rows |
+| — | Empty | — | — | ⬜ Pending |
 
 ## P5 Advanced ⬜ (20)
 
