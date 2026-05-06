@@ -40,8 +40,12 @@
     - **位置追踪**: 利用 `AnchorTarget` 包装容器并在 `paint` 阶段上报位置信息，实现滚动自动高亮链接。
     - **多级嵌套**: 链接支持树形结构展示。
     - **快速跳转**: 点击链接通过 `ScrollHandle` 自动定位到目标区域。
+  - **实现 Progress 进度条组件**:
+    - **多种展示**: 实现 `Line` 线形进度条，支持自定义 `stroke_width`。
+    - **状态反馈**: 集成 `Success`, `Warning`, `Exception` 三种业务状态，对应不同的颜色和图标。
+    - **灵活定制**: 支持自定义进度条颜色及文本显示控制。
   - **Gallery Demo 增强**:
-    - 新增 `menu_demo.rs`, `tabs_demo.rs`, `breadcrumb_demo.rs`, `steps_demo.rs`, `page_header_demo.rs`, `affix_demo.rs`, `backtop_demo.rs`, `anchor_demo.rs`。
+    - 新增 `menu_demo.rs`, `tabs_demo.rs`, `breadcrumb_demo.rs`, `steps_demo.rs`, `page_header_demo.rs`, `affix_demo.rs`, `backtop_demo.rs`, `anchor_demo.rs`, `progress_demo.rs`。
   - **Git 提交与推送**:
     - 提交代码并推送到 `main` 分支。
 
@@ -57,7 +61,7 @@
   - 在 `'static` 闭包中访问全局状态 (如 Theme) 时，应在闭包执行时从传入的 `App` (cx) 中获取，而非从外部作用域捕获非静态引用。
   - 实现 `Affix` / `Anchor` 等依赖布局结果的组件，可以通过在 `paint` 阶段检测 `Bounds` 并反向 `notify` View 的方式实现。
   - `ScrollHandle` 的 `offset()` 结合 `View` 的 re-render 机制可以非常方便地实现基于滚动进度的 UI 交互。
-
+  - 进度条的百分比宽度可以通过 `gpui::relative(percentage / 100.0)` 轻松实现响应式布局。
 ## Session 2 — 2026-05-03
 
 ### Actions

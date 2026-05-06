@@ -15,6 +15,7 @@ pub mod drawer_demo;
 pub mod message_demo;
 pub mod notification_demo;
 pub mod page_header_demo;
+pub mod progress_demo;
 pub mod alert_demo;
 pub mod affix_demo;
 pub mod backtop_demo;
@@ -49,6 +50,7 @@ pub fn registry() -> Vec<DemoEntry> {
         DemoEntry { name: "Message 全局提示", description: "常用于操作后的反馈提示", render: |cx| message_demo::render(cx).into() },
         DemoEntry { name: "Notification 通知", description: "悬浮在页面角落的通知", render: |cx| notification_demo::render(cx).into() },
         DemoEntry { name: "PageHeader 页头", description: "标识页面内容并提供操作", render: |cx| page_header_demo::render(cx).into() },
+        DemoEntry { name: "Progress 进度条", description: "展示操作进度", render: |cx| progress_demo::render(cx).into() },
         DemoEntry { name: "Alert 警告", description: "页面展示的重要提示信息", render: |cx| alert_demo::render(cx).into() },
         DemoEntry { name: "Affix 固钉", description: "将内容固定在特定可视区域", render: |cx| affix_demo::render(cx).into() },
         DemoEntry { name: "Backtop 回到顶部", description: "返回页面顶部的快捷按钮", render: |cx| backtop_demo::render(cx).into() },
