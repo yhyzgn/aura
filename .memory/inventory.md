@@ -80,7 +80,8 @@
 | 9 | Progress | `crates/aura-components/src/progress.rs` | ✅ | ✅ Line Style / Status |
 | 10 | Skeleton | `crates/aura-components/src/skeleton.rs` | ✅ | ✅ Variants / Rows |
 | 11 | Empty | `crates/aura-components/src/empty.rs` | ✅ | ✅ Default / Custom / Action |
-| — | Result | — | — | ⬜ Pending |
+| 12 | Result | `crates/aura-components/src/result.rs` | ✅ | ✅ Success/Warning/Error/Info |
+| — | Descriptions | — | — | ⬜ Pending |
 
 ## P5 Advanced ⬜ (20)
 
