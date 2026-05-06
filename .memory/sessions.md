@@ -30,8 +30,12 @@
     - **标准布局**: 包含返回按钮、主标题、副标题及其分隔逻辑。
     - **扩展插槽**: 支持通过闭包注入 `extra` (操作区), `content` (主体内容) 及 `footer` (页脚)。
     - **交互回调**: 提供 `on_back` 点击事件支持。
+  - **实现 Affix 固钉组件**:
+    - **核心原理**: 通过自定义 `BoundsTracker` 在 `paint` 阶段监听元素的窗口坐标，动态切换固定状态。
+    - **布局兼容**: 提供 Placeholder 占位机制，确保固定切换时文档流布局平滑不跳变。
+    - **灵活配置**: 支持 `Top` 和 `Bottom` 两种固定模式，以及自定义偏移量 `offset`。
   - **Gallery Demo 增强**:
-    - 新增 `menu_demo.rs`, `tabs_demo.rs`, `breadcrumb_demo.rs`, `steps_demo.rs`, `page_header_demo.rs`。
+    - 新增 `menu_demo.rs`, `tabs_demo.rs`, `breadcrumb_demo.rs`, `steps_demo.rs`, `page_header_demo.rs`, `affix_demo.rs`。
   - **Git 提交与推送**:
     - 提交代码并推送到 `main` 分支。
 
@@ -45,7 +49,7 @@
   - `RenderOnce` 组件中处理循环渲染时，需注意 `items` 的所有权转移，适时使用 `into_iter()`。
   - 连接线在 `flex` 布局中可以通过 `flex_1` 配合 `h(px(1.0))` 或 `w(px(1.0))` 轻松实现自适应伸缩。
   - 在 `'static` 闭包中访问全局状态 (如 Theme) 时，应在闭包执行时从传入的 `App` (cx) 中获取，而非从外部作用域捕获非静态引用。
-
+  - 实现 `Affix` 等依赖布局结果的组件，可以通过在 `paint` 阶段检测 `Bounds` 并反向 `notify` View 的方式实现。
 
 ## Session 2 — 2026-05-03
 
