@@ -20,6 +20,7 @@ pub mod skeleton_demo;
 pub mod result_demo;
 pub mod timeline_demo;
 pub mod tree_demo;
+pub mod pagination_demo;
 pub mod descriptions_demo;
 pub mod empty_demo;
 pub mod alert_demo;
@@ -71,6 +72,7 @@ pub fn registry() -> Vec<DemoEntry> {
         DemoEntry { name: "Steps 步骤条", description: "引导用户完成任务", render: |cx| steps_demo::render(cx).into() },
         DemoEntry { name: "Menu 导航菜单", description: "为网站提供导航轮廓", render: |cx| menu_demo::render(cx).into() },
         DemoEntry { name: "Tabs 标签页", description: "在同一区域展示多个面板", render: |cx| tabs_demo::render(cx).into() },
+        DemoEntry { name: "Pagination 分页", description: "分页控制", render: |cx| pagination_demo::render(cx).into() },
         DemoEntry { name: "Loading 加载", description: "加载数据时显示", render: |cx| loading_demo::render(cx).into() },
         DemoEntry { name: "MessageBox 弹窗消息", description: "简单的消息对话框", render: |cx| message_box_demo::render(cx).into() },
         DemoEntry { name: "Card 卡片", description: "内容聚合容器", render: |cx| card_demo::render(cx).into() },
