@@ -76,7 +76,8 @@
 | 5 | PageHeader | `crates/aura-components/src/page_header.rs` | ✅ | ✅ Title/SubTitle/Slots |
 | 6 | Affix | `crates/aura-components/src/affix.rs` | ✅ | ✅ Top/Bottom Sticky |
 | 7 | Backtop | `crates/aura-components/src/backtop.rs` | ✅ | ✅ Visibility Height |
-| — | Anchor | — | — | ⬜ Pending |
+| 8 | Anchor | `crates/aura-components/src/anchor.rs` | ✅ | ✅ Scroll Sync / Jump |
+| — | Progress | — | — | ⬜ Pending |
 
 ## P5 Advanced ⬜ (20)
 
