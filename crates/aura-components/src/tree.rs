@@ -17,6 +17,7 @@ pub struct Tree {
     data: Vec<TreeNode>,
     expanded_keys: HashSet<SharedString>,
     selected_keys: HashSet<SharedString>,
+    multiple: bool,
     indent: Pixels,
     show_checkbox: bool,
     on_node_click: Option<Box<dyn Fn(SharedString, &mut Window, &mut App) + 'static>>,
@@ -43,6 +44,7 @@ impl Tree {
             data,
             expanded_keys: HashSet::new(),
             selected_keys: HashSet::new(),
+            multiple: false,
             indent: px(18.0),
             show_checkbox: false,
             on_node_click: None,
@@ -56,6 +58,11 @@ impl Tree {
 
     pub fn show_checkbox(mut self, show: bool) -> Self {
         self.show_checkbox = show;
+        self
+    }
+
+    pub fn multiple(mut self, multiple: bool) -> Self {
+        self.multiple = multiple;
         self
     }
 
@@ -77,11 +84,17 @@ impl Tree {
     }
 
     fn select_node(&mut self, id: SharedString, window: &mut Window, cx: &mut Context<Self>) {
-        if self.selected_keys.contains(&id) {
-            self.selected_keys.remove(&id);
+        if self.multiple {
+            if self.selected_keys.contains(&id) {
+                self.selected_keys.remove(&id);
+            } else {
+                self.selected_keys.insert(id.clone());
+            }
         } else {
+            self.selected_keys.clear();
             self.selected_keys.insert(id.clone());
         }
+
         if let Some(ref on_click) = self.on_node_click {
             (on_click)(id, window, cx);
         }

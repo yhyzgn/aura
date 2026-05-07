@@ -329,3 +329,18 @@
 
 ### Key Discoveries
 - 在 render 中临时 `cx.new` 交互控件会让状态生命周期不稳定；demo 中需要把有状态组件保存在父 view 字段里。
+
+## Session 29 — 2026-05-07 (Tree Single Selection)
+
+### Actions
+- **修正 Tree 默认选择语义**:
+  - Tree 默认改为单选：点击新节点会清空旧选中项并选中新节点。
+  - 新增 `Tree::multiple(bool)`，需要多选时可显式开启原有 toggle 多选行为。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 原实现使用 `HashSet` 直接 toggle 选中状态，导致普通 Tree 在没有复选框/多选配置时也表现为多选；默认交互应为单选。
