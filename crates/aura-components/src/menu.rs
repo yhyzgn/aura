@@ -305,7 +305,17 @@ impl Menu {
                 move |_window, _cx| {
                     let menu_handle = menu_handle.clone();
                     div()
+                        .id(format!(
+                            "menu-sub-popover-content-{}",
+                            menu_handle.entity_id()
+                        ))
                         .cursor_default()
+                        .on_hover(|_, _, cx| {
+                            cx.stop_propagation();
+                        })
+                        .on_mouse_move(|_, _, cx| {
+                            cx.stop_propagation();
+                        })
                         .flex()
                         .flex_col()
                         .p_1()
@@ -555,7 +565,17 @@ impl Menu {
             move |_window, _cx| {
                 let menu_handle = menu_handle.clone();
                 div()
+                    .id(format!(
+                        "menu-horiz-popover-content-{}",
+                        menu_handle.entity_id()
+                    ))
                     .cursor_default()
+                    .on_hover(|_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_move(|_, _, cx| {
+                        cx.stop_propagation();
+                    })
                     .flex()
                     .flex_col()
                     .p_1()

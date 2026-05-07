@@ -424,3 +424,19 @@
 
 ### Key Discoveries
 - 通用 Popover 面板默认 cursor 只能覆盖外层浮层；组件自定义 popover 内容根节点也需要声明默认 cursor，才能覆盖内容 padding/空白区域。
+
+## Session 35 — 2026-05-07 (Popover Hit-Test Shield)
+
+### Actions
+- **加强 Menu/Popover 防穿透命中层**:
+  - Popover 全屏背板明确设置 `top_0()` / `left_0()` / 透明背景，并添加 `on_hover` 阻断，避免仅靠 `on_mouse_move` 无法阻断 hover/cursor 状态。
+  - Popover 内容容器增加稳定 ID 和 `on_hover` 阻断。
+  - Menu submenu popover 内容根节点增加稳定 ID、`on_hover` 和 `on_mouse_move` 阻断，覆盖菜单气泡 padding/空白区域。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Menu 气泡的问题不是单纯 cursor 样式，而是 hover 命中层没有完整接管；需要可命中的 stateful element + hover 阻断。

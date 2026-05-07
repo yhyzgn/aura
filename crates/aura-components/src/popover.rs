@@ -67,10 +67,16 @@ impl Render for PopoverView {
         let max_w = (viewport_size.width - viewport_margin * 2.0).max(px(0.0));
 
         div()
-            .id(id)
+            .id(id.clone())
             .absolute()
+            .top_0()
+            .left_0()
             .size_full()
             .cursor_default()
+            .bg(gpui::transparent_black())
+            .on_hover(|_, _, cx| {
+                cx.stop_propagation();
+            })
             .on_mouse_move(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -89,9 +95,13 @@ impl Render for PopoverView {
                     .snap_to_window_with_margin(viewport_margin)
                     .child(
                         div()
+                            .id(format!("{}-content", id))
                             .flex_shrink_0() // Ensure content is not squeezed by flex layout
                             .cursor_default()
                             .max_w(max_w)
+                            .on_hover(|_, _, cx| {
+                                cx.stop_propagation();
+                            })
                             .on_mouse_move(|_, _, cx| {
                                 cx.stop_propagation();
                             })
