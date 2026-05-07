@@ -88,6 +88,23 @@ impl Tree {
         cx.notify();
     }
 
+    fn click_node(
+        &mut self,
+        id: SharedString,
+        has_children: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if has_children {
+            if self.expanded_keys.contains(&id) {
+                self.expanded_keys.remove(&id);
+            } else {
+                self.expanded_keys.insert(id.clone());
+            }
+        }
+        self.select_node(id, window, cx);
+    }
+
     fn render_node(
         &self,
         node: &TreeNode,
@@ -139,6 +156,7 @@ impl Tree {
                                     let id = id.clone();
                                     move |this, _, _, cx| {
                                         this.toggle_expand(id.clone(), cx);
+                                        cx.stop_propagation();
                                     }
                                 }))
                                 .child(
@@ -152,16 +170,16 @@ impl Tree {
                                 )
                             }),
                     )
+                    .on_click(cx.listener({
+                        let id = id.clone();
+                        move |this, _, window, cx| {
+                            this.click_node(id.clone(), has_children, window, cx);
+                        }
+                    }))
                     .child(
                         div()
                             .flex_1()
                             .id(format!("content-{}", id.clone()))
-                            .on_click(cx.listener({
-                                let id = id.clone();
-                                move |this, _, window, cx| {
-                                    this.select_node(id.clone(), window, cx);
-                                }
-                            }))
                             .child(div().text_sm().child(node.label.clone())),
                     ),
             )

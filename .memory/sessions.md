@@ -312,3 +312,20 @@
 
 ### Key Discoveries
 - 文本内显的“是否显示”和“如何对齐”应保持为独立配置；整条进度条居中需要根据文字所在背景动态选择颜色。
+
+## Session 28 — 2026-05-07 (Tree Expand Click)
+
+### Actions
+- **修复 Tree 点击展开无反应**:
+  - 将节点行点击统一接入 `click_node`，有子节点时点击整行即可切换展开/折叠，同时保留选中逻辑。
+  - 展开箭头点击后调用 `stop_propagation()`，避免箭头点击同时触发行点击导致双重 toggle。
+- **修复 Tree Demo 状态生命周期**:
+  - 将 demo 中的 `Tree` entity 从 render 阶段创建改为 `TreeDemo` 初始化时创建并持有，避免每次父视图重渲染都重建 Tree 状态。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 在 render 中临时 `cx.new` 交互控件会让状态生命周期不稳定；demo 中需要把有状态组件保存在父 view 字段里。
