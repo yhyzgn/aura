@@ -1,12 +1,39 @@
 use aura_components::{Card, Pagination};
 use aura_core::Config;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*};
+use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*};
 
 pub fn render(cx: &mut App) -> AnyView {
-    cx.new(|_| PaginationDemo).into()
+    cx.new(|cx| PaginationDemo {
+        basic: cx.new(|_| {
+            Pagination::new(50)
+                .id("pagination-demo-basic")
+                .on_change(|page, _, _| println!("Page changed to: {}", page))
+        }),
+        background: cx.new(|_| {
+            Pagination::new(100)
+                .id("pagination-demo-background")
+                .background(true)
+                .on_change(|page, _, _| println!("Page changed to: {}", page))
+        }),
+        page_sizes: cx.new(|_| {
+            Pagination::new(400)
+                .id("pagination-demo-page-sizes")
+                .page_size(20)
+                .page_sizes(vec![10, 20, 50, 100])
+                .background(true)
+                .layout("total, sizes, prev, pager, next, jumper")
+                .on_change(|page, _, _| println!("Page changed to: {}", page))
+                .on_page_size_change(|size, _, _| println!("Page size changed to: {}", size))
+        }),
+    })
+    .into()
 }
 
-struct PaginationDemo;
+struct PaginationDemo {
+    basic: Entity<Pagination>,
+    background: Entity<Pagination>,
+    page_sizes: Entity<Pagination>,
+}
 
 impl Render for PaginationDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -43,10 +70,7 @@ impl Render for PaginationDemo {
                     .flex_col()
                     .gap_4()
                     .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(Card::new(cx.new(|_| {
-                        Pagination::new(50)
-                            .on_change(|page, _, _| println!("Page changed to: {}", page))
-                    }))),
+                    .child(Card::new(self.basic.clone())),
             )
             .child(
                 div()
@@ -58,11 +82,7 @@ impl Render for PaginationDemo {
                             .font_weight(gpui::FontWeight::BOLD)
                             .child("带有背景色的分页"),
                     )
-                    .child(Card::new(cx.new(|_| {
-                        Pagination::new(100)
-                            .background(true)
-                            .on_change(|page, _, _| println!("Page changed to: {}", page))
-                    }))),
+                    .child(Card::new(self.background.clone())),
             )
             .child(
                 div()
@@ -72,15 +92,9 @@ impl Render for PaginationDemo {
                     .child(
                         div()
                             .font_weight(gpui::FontWeight::BOLD)
-                            .child("附加功能 (Total, Jumper)"),
+                            .child("附加功能 (Total, Sizes, Jumper)"),
                     )
-                    .child(Card::new(cx.new(|_| {
-                        Pagination::new(400)
-                            .page_size(20)
-                            .background(true)
-                            .layout("total, prev, pager, next, jumper")
-                            .on_change(|page, _, _| println!("Page changed to: {}", page))
-                    }))),
+                    .child(Card::new(self.page_sizes.clone())),
             )
     }
 }

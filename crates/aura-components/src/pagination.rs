@@ -4,24 +4,37 @@ use aura_icons_lucide::IconName;
 use gpui::{App, Context, IntoElement, Render, SharedString, Window, div, prelude::*, px};
 
 pub struct Pagination {
+    id: SharedString,
     total: usize,
     page_size: usize,
     current_page: usize,
     background: bool,
     layout: SharedString,
+    page_sizes: Vec<usize>,
     on_change: Option<Box<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
+    on_page_size_change: Option<Box<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
 }
 
 impl Pagination {
+    #[track_caller]
     pub fn new(total: usize) -> Self {
+        let caller = std::panic::Location::caller();
         Self {
+            id: format!("pagination-{}", caller).into(),
             total,
             page_size: 10,
             current_page: 1,
             background: false,
             layout: "prev, pager, next".into(),
+            page_sizes: vec![],
             on_change: None,
+            on_page_size_change: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn page_size(mut self, size: usize) -> Self {
@@ -44,8 +57,23 @@ impl Pagination {
         self
     }
 
+    pub fn page_sizes(mut self, sizes: impl Into<Vec<usize>>) -> Self {
+        self.page_sizes = sizes.into().into_iter().map(|s| s.max(1)).collect();
+        self.page_sizes.sort_unstable();
+        self.page_sizes.dedup();
+        self
+    }
+
     pub fn on_change(mut self, f: impl Fn(usize, &mut Window, &mut App) + 'static) -> Self {
         self.on_change = Some(Box::new(f));
+        self
+    }
+
+    pub fn on_page_size_change(
+        mut self,
+        f: impl Fn(usize, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_page_size_change = Some(Box::new(f));
         self
     }
 
@@ -59,6 +87,29 @@ impl Pagination {
             }
             cx.notify();
         }
+    }
+
+    fn change_page_size(&mut self, size: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let size = size.max(1);
+        if self.page_size == size {
+            return;
+        }
+
+        self.page_size = size;
+        if let Some(ref on_page_size_change) = self.on_page_size_change {
+            (on_page_size_change)(size, window, cx);
+        }
+
+        let max_page = self.page_count().max(1);
+        let clamped = self.current_page.clamp(1, max_page);
+        if clamped != self.current_page {
+            self.current_page = clamped;
+            if let Some(ref on_change) = self.on_change {
+                (on_change)(clamped, window, cx);
+            }
+        }
+
+        cx.notify();
     }
 
     fn page_count(&self) -> usize {
@@ -78,6 +129,7 @@ impl Render for Pagination {
         let page_count = self.page_count();
         let current_page = self.current_page;
         let background = self.background;
+        let page_sizes = self.page_sizes.clone();
 
         let render_btn = |text: Option<SharedString>,
                           icon: Option<IconName>,
@@ -140,6 +192,38 @@ impl Render for Pagination {
                 .into_any_element()
         };
 
+        let render_size_btn = |size: usize, active: bool, cx: &mut Context<Self>| {
+            let bg_color = if active {
+                theme.primary.base
+            } else {
+                gpui::transparent_black()
+            };
+            let text_color = if active {
+                gpui::white()
+            } else {
+                theme.neutral.text_2
+            };
+
+            div()
+                .id(format!("{}-size-{}", self.id, size))
+                .cursor_pointer()
+                .flex()
+                .items_center()
+                .justify_center()
+                .min_w(px(36.0))
+                .h(px(28.0))
+                .px_2()
+                .bg(bg_color)
+                .rounded(px(theme.radius.sm))
+                .text_color(text_color)
+                .when(!active, |s| s.hover(|s| s.text_color(theme.primary.base)))
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.change_page_size(size, window, cx);
+                }))
+                .child(div().text_sm().child(size.to_string()))
+                .into_any_element()
+        };
+
         // Calculate pagers
         let mut pagers = vec![];
         if page_count <= 7 {
@@ -188,7 +272,7 @@ impl Render for Pagination {
                     let disabled = current_page <= 1;
                     container = container.child(
                         div()
-                            .id("prev-btn")
+                            .id(format!("{}-prev-btn", self.id))
                             .child(render_btn(
                                 None,
                                 Some(IconName::ChevronLeft),
@@ -214,7 +298,7 @@ impl Render for Pagination {
                                 let active = p == current_page;
                                 container = container.child(
                                     div()
-                                        .id(format!("pager-{}", p))
+                                        .id(format!("{}-pager-{}", self.id, p))
                                         .child(render_btn(
                                             Some(p.to_string().into()),
                                             None,
@@ -232,7 +316,7 @@ impl Render for Pagination {
                             PagerItem::PrevMore => {
                                 container = container.child(
                                     div()
-                                        .id("prev-more")
+                                        .id(format!("{}-prev-more", self.id))
                                         .child(render_btn(
                                             None,
                                             Some(IconName::Ellipsis),
@@ -249,7 +333,7 @@ impl Render for Pagination {
                             PagerItem::NextMore => {
                                 container = container.child(
                                     div()
-                                        .id("next-more")
+                                        .id(format!("{}-next-more", self.id))
                                         .child(render_btn(
                                             None,
                                             Some(IconName::Ellipsis),
@@ -270,7 +354,7 @@ impl Render for Pagination {
                     let disabled = current_page >= page_count;
                     container = container.child(
                         div()
-                            .id("next-btn")
+                            .id(format!("{}-next-btn", self.id))
                             .child(render_btn(
                                 None,
                                 Some(IconName::ChevronRight),
@@ -287,6 +371,30 @@ impl Render for Pagination {
                                 }))
                             }),
                     );
+                }
+                "sizes" => {
+                    if !page_sizes.is_empty() {
+                        container = container.child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .child(
+                                    div()
+                                        .text_sm()
+                                        .text_color(theme.neutral.text_3)
+                                        .child("每页"),
+                                )
+                                .children(
+                                    page_sizes.iter().copied().map(|size| {
+                                        render_size_btn(size, size == self.page_size, cx)
+                                    }),
+                                )
+                                .child(
+                                    div().text_sm().text_color(theme.neutral.text_3).child("条"),
+                                ),
+                        );
+                    }
                 }
                 "jumper" => {
                     container = container.child(
@@ -308,6 +416,7 @@ impl Render for Pagination {
                                     .justify_center()
                                     .w(px(50.0))
                                     .h(px(32.0))
+                                    .cursor_default()
                                     .border_1()
                                     .border_color(theme.neutral.border)
                                     .rounded(px(theme.radius.sm))

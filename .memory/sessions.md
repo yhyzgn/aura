@@ -521,3 +521,22 @@
 
 ### Key Discoveries
 - Menu 组件已经提供 `on_select` 回调；Demo 只需要持有可更新的内容实体，就能展示真实导航页面切换效果。
+
+## Session 41 — 2026-05-07 (Pagination Click, Hooks, Page Sizes)
+
+### Actions
+- **修复 Pagination demo 点击无反应**:
+  - 将 Pagination Demo 改为在初始化时持有多个 `Entity<Pagination>`，避免 render-time `cx.new` 导致分页状态被重置。
+  - 为 Pagination 添加稳定实例 ID，并给 prev/page/next/ellipsis/size 按钮加实例前缀，避免同页多个 Pagination 互相抢交互 ID。
+- **补齐分页回调与每页条数配置**:
+  - Pagination 增加 `on_page_size_change` 钩子。
+  - 增加 `page_sizes(vec![...])` 配置，并通过 `sizes` layout 段渲染可点击的每页条数按钮。
+  - 切换页码时仍触发 `on_change`，切换 page size 时触发 page size hook，必要时自动修正当前页。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Pagination 也存在与 Tabs/Menu 相同的两类问题：render-time entity creation 会重置状态，且多实例共享简单按钮 ID 会导致交互冲突。
