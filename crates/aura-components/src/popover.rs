@@ -73,6 +73,7 @@ impl Render for PopoverView {
             .left_0()
             .size_full()
             .cursor_default()
+            .occlude()
             .bg(gpui::transparent_black())
             .on_hover(|_, _, cx| {
                 cx.stop_propagation();
@@ -98,6 +99,7 @@ impl Render for PopoverView {
                             .id(format!("{}-content", id))
                             .flex_shrink_0() // Ensure content is not squeezed by flex layout
                             .cursor_default()
+                            .occlude()
                             .max_w(max_w)
                             .on_hover(|_, _, cx| {
                                 cx.stop_propagation();

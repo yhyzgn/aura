@@ -308,6 +308,7 @@ impl Menu {
                             menu_handle.entity_id()
                         ))
                         .cursor_default()
+                        .occlude()
                         .on_hover(|_, _, cx| {
                             cx.stop_propagation();
                         })
@@ -561,6 +562,7 @@ impl Menu {
                         menu_handle.entity_id()
                     ))
                     .cursor_default()
+                    .occlude()
                     .on_hover(|_, _, cx| {
                         cx.stop_propagation();
                     })

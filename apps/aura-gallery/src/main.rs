@@ -253,6 +253,7 @@ impl gpui::RenderOnce for PortalLayer {
             .left_0()
             .size_full()
             .cursor_default()
+            .occlude()
             .bg(gpui::transparent_black())
             .on_hover(|_, _, cx| {
                 cx.stop_propagation();

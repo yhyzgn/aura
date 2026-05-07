@@ -457,3 +457,18 @@
 
 ### Key Discoveries
 - 仅在 Popover 内部阻断事件仍可能不足；portal 根层本身也需要成为可命中的透明 hover shield，才能阻止底层菜单项接收 hover 状态。
+
+## Session 37 — 2026-05-07 (Menu Popover Occlusion)
+
+### Actions
+- **重新检查 Menu/Popover/Portal 全链路 hover 隔离**:
+  - 确认 GPUI 的 `stop_propagation()` 不会自动阻断后层 hover 命中。
+  - 为 PortalLayer、Popover 全屏根层、Popover 内容面板、Menu 自定义 popover 内容根节点添加 `occlude()`，使弹层 hitbox 明确屏蔽背后元素 hover/cursor。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- GPUI 防穿透需要使用 `occlude()` / `HitboxBehavior::BlockMouse`；透明背景 + hover/mouse move stop propagation 只能处理事件冒泡，不能阻止底层元素进入 hover。
