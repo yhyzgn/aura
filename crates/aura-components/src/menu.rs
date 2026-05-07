@@ -315,6 +315,8 @@ impl Menu {
                             let icon = item.icon;
                             let theme = theme.clone();
                             let menu_handle = menu_handle.clone();
+                            let is_active =
+                                menu_handle.read(_cx).active_index.as_ref() == Some(&id);
                             div()
                                 .id(format!("menu-sub-item-{}-{}", menu_handle.entity_id(), id))
                                 .cursor_pointer()
@@ -325,6 +327,16 @@ impl Menu {
                                 .px_3()
                                 .py_2()
                                 .rounded(px(theme.radius.sm))
+                                .text_color(if is_active {
+                                    theme.primary.base
+                                } else {
+                                    theme.neutral.text_1
+                                })
+                                .bg(if is_active {
+                                    theme.primary.base.opacity(0.1)
+                                } else {
+                                    gpui::transparent_black()
+                                })
                                 .hover(|s| s.bg(theme.neutral.hover))
                                 .on_click(move |_, window, cx| {
                                     let _ = menu_handle.update(cx, |this, cx| {
@@ -333,7 +345,11 @@ impl Menu {
                                     });
                                 })
                                 .when_some(icon, |s, i| {
-                                    s.child(Icon::new(i).size(px(16.0)).color(theme.neutral.icon))
+                                    s.child(Icon::new(i).size(px(16.0)).color(if is_active {
+                                        theme.primary.base
+                                    } else {
+                                        theme.neutral.icon
+                                    }))
                                 })
                                 .child(div().text_sm().child(label))
                         }))
@@ -548,6 +564,7 @@ impl Menu {
                         let icon = item.icon;
                         let theme = theme.clone();
                         let menu_handle = menu_handle.clone();
+                        let is_active = menu_handle.read(_cx).active_index.as_ref() == Some(&id);
                         div()
                             .id(format!(
                                 "menu-horiz-sub-item-{}-{}",
@@ -562,6 +579,16 @@ impl Menu {
                             .px_3()
                             .py_2()
                             .rounded(px(theme.radius.sm))
+                            .text_color(if is_active {
+                                theme.primary.base
+                            } else {
+                                theme.neutral.text_1
+                            })
+                            .bg(if is_active {
+                                theme.primary.base.opacity(0.1)
+                            } else {
+                                gpui::transparent_black()
+                            })
                             .hover(|s| s.bg(theme.neutral.hover))
                             .on_click(move |_, window, cx| {
                                 let _ = menu_handle.update(cx, |this, cx| {
@@ -570,7 +597,11 @@ impl Menu {
                                 });
                             })
                             .when_some(icon, |s, i| {
-                                s.child(Icon::new(i).size(px(16.0)).color(theme.neutral.icon))
+                                s.child(Icon::new(i).size(px(16.0)).color(if is_active {
+                                    theme.primary.base
+                                } else {
+                                    theme.neutral.icon
+                                }))
                             })
                             .child(div().text_sm().child(label))
                     }))

@@ -376,3 +376,18 @@
 ### Key Discoveries
 - Menu 的状态逻辑有效，但 demo 中 render 内 `cx.new` 会让 active/opened 状态生命周期不稳定。
 - 同一 Gallery 页面存在多个 Menu 实例且 item id 重复，组件内部必须用实例 ID 前缀隔离 GPUI Element ID。
+
+## Session 32 — 2026-05-07 (Menu Popover Active State)
+
+### Actions
+- **修复 Menu 弹出气泡子菜单选中态**:
+  - Collapsed vertical submenu popover 和 horizontal submenu popover 渲染时读取所属 Menu 的 `active_index`。
+  - Popover 内子菜单 item 根据 active 状态应用主色文字、浅色背景和主色 icon，和普通菜单项选中态保持一致。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Popover 内容在独立 view/context 中渲染，不能依赖外层 render 时的局部状态快照；需要通过 Menu entity handle 读取最新 active state。
