@@ -32,6 +32,7 @@ pub struct TabPane {
 }
 
 pub struct Tabs {
+    id: SharedString,
     active_name: SharedString,
     position: TabPosition,
     tab_type: TabType,
@@ -43,9 +44,12 @@ pub struct Tabs {
 }
 
 impl Tabs {
+    #[track_caller]
     pub fn new(active_name: impl Into<SharedString>) -> Self {
+        let caller = std::panic::Location::caller();
         let name = active_name.into();
         Self {
+            id: format!("tabs-{}", caller).into(),
             active_name: name,
             position: TabPosition::Top,
             tab_type: TabType::Standard,
@@ -55,6 +59,11 @@ impl Tabs {
             on_tab_remove: None,
             on_tab_add: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn position(mut self, pos: TabPosition) -> Self {
@@ -181,7 +190,7 @@ impl Render for Tabs {
                     let closable = pane.closable;
 
                     div()
-                        .id(name.clone())
+                        .id(format!("{}-tab-{}", this.id, name))
                         .cursor_pointer()
                         .flex()
                         .items_center()
@@ -269,7 +278,7 @@ impl Render for Tabs {
                                 .when(closable && this.editable, |s| {
                                     s.child(
                                         div()
-                                            .id(format!("close-{}", name))
+                                            .id(format!("{}-close-{}", this.id, name))
                                             .flex()
                                             .items_center()
                                             .justify_center()
@@ -295,7 +304,7 @@ impl Render for Tabs {
                 .when(this.editable, |s| {
                     s.child(
                         div()
-                            .id("add-tab")
+                            .id(format!("{}-add-tab", this.id))
                             .cursor_pointer()
                             .flex()
                             .items_center()

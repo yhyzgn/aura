@@ -472,3 +472,18 @@
 
 ### Key Discoveries
 - GPUI 防穿透需要使用 `occlude()` / `HitboxBehavior::BlockMouse`；透明背景 + hover/mouse move stop propagation 只能处理事件冒泡，不能阻止底层元素进入 hover。
+
+## Session 38 — 2026-05-07 (Tabs Demo Interaction)
+
+### Actions
+- **修复 Tabs Demo 点击无反应**:
+  - 将 Tabs Demo 中各个 Tabs 从 render 阶段临时 `cx.new` 改为 `TabsDemo` 初始化时创建并持有，确保 active tab 状态在父视图重渲染后保留。
+  - 为 `Tabs` 增加稳定实例 ID，并在 tab / close / add 交互元素 ID 前加实例前缀，避免多个 Tabs 示例共用 `first` / `second` / `add-tab` 等 ID 时互相冲突。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Tabs 与 Menu/Tree/Collapse 一样，demo 中 render-time entity creation 会重置组件状态；多个 Tabs 示例复用同名 pane 还会造成 GPUI element ID 冲突。
