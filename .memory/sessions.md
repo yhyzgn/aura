@@ -408,3 +408,19 @@
 
 ### Key Discoveries
 - 事件 propagation 阻断不等于 cursor 命中隔离；GPUI hover/cursor 样式需要当前顶层命中元素显式设置默认 cursor，否则可能保留/穿透底层 pointer 光标。
+
+## Session 34 — 2026-05-07 (Menu Popover Cursor Isolation)
+
+### Actions
+- **补齐 Menu 弹出气泡 cursor 隔离**:
+  - 为 collapsed vertical submenu popover 内容根容器设置 `cursor_default()`。
+  - 为 horizontal submenu popover 内容根容器设置 `cursor_default()`。
+  - 保留具体菜单项自身的 `cursor_pointer()`，仅防止 popover 空白区域透出底层按钮 pointer。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 通用 Popover 面板默认 cursor 只能覆盖外层浮层；组件自定义 popover 内容根节点也需要声明默认 cursor，才能覆盖内容 padding/空白区域。

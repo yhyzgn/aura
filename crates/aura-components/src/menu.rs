@@ -305,6 +305,7 @@ impl Menu {
                 move |_window, _cx| {
                     let menu_handle = menu_handle.clone();
                     div()
+                        .cursor_default()
                         .flex()
                         .flex_col()
                         .p_1()
@@ -554,6 +555,7 @@ impl Menu {
             move |_window, _cx| {
                 let menu_handle = menu_handle.clone();
                 div()
+                    .cursor_default()
                     .flex()
                     .flex_col()
                     .p_1()
