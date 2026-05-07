@@ -230,7 +230,12 @@ impl IntoElement for PortalLayer {
 
 impl gpui::RenderOnce for PortalLayer {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let mut container = div().absolute().top_0().left_0().size_full();
+        let mut container = div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .size_full()
+            .cursor_default();
 
         if cx.has_global::<Portal>() {
             let portals = std::mem::take(&mut cx.global_mut::<Portal>().entries);

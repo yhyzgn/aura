@@ -391,3 +391,20 @@
 
 ### Key Discoveries
 - Popover 内容在独立 view/context 中渲染，不能依赖外层 render 时的局部状态快照；需要通过 Menu entity handle 读取最新 active state。
+
+## Session 33 — 2026-05-07 (Overlay Cursor Isolation)
+
+### Actions
+- **修复浮层 hover/cursor 穿透**:
+  - 为 PortalLayer 全屏容器设置 `cursor_default()`，确保浮层层级存在时光标不继承底层按钮/链接的 pointer 状态。
+  - 为 Popover 全屏交互背板和 popover 内容容器设置默认 cursor。
+  - 为 Dialog / Drawer 遮罩和面板设置默认 cursor。
+  - 为 Tooltip 浮层设置默认 cursor。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 事件 propagation 阻断不等于 cursor 命中隔离；GPUI hover/cursor 样式需要当前顶层命中元素显式设置默认 cursor，否则可能保留/穿透底层 pointer 光标。

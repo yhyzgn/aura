@@ -84,6 +84,7 @@ impl Render for DrawerView {
             .id(id.clone())
             .absolute()
             .size_full()
+            .cursor_default()
             .bg(gpui::rgba(0x00000066))
             .on_mouse_move(|_, _, cx| {
                 cx.stop_propagation();
@@ -107,6 +108,7 @@ impl Render for DrawerView {
 
         let mut panel = div()
             .bg(theme.neutral.card)
+            .cursor_default()
             .shadow_xl()
             // CONSUME mouse down inside the panel so it doesn't trigger the overlay close
             .on_mouse_move(|_, _, cx| {

@@ -60,6 +60,7 @@ impl Render for DialogView {
             .id(id.clone())
             .absolute()
             .size_full()
+            .cursor_default()
             .bg(gpui::rgba(0x00000066))
             .flex()
             .items_center()
@@ -87,6 +88,7 @@ impl Render for DialogView {
                 div()
                     .w(px(400.0))
                     .bg(theme.neutral.card)
+                    .cursor_default()
                     .rounded(px(theme.radius.md))
                     .shadow_xl()
                     .on_mouse_move(|_, _, cx| {

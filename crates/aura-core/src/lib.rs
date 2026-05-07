@@ -104,6 +104,7 @@ pub fn render_active_tooltip_in_window(window: &mut gpui::Window, cx: &mut App) 
 
                 gpui::div()
                     .absolute()
+                    .cursor_default()
                     .top(pos.y)
                     .left(pos.x)
                     .w(content_size.width)

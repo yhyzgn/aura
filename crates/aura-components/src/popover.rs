@@ -70,6 +70,7 @@ impl Render for PopoverView {
             .id(id)
             .absolute()
             .size_full()
+            .cursor_default()
             .on_mouse_move(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -89,6 +90,7 @@ impl Render for PopoverView {
                     .child(
                         div()
                             .flex_shrink_0() // Ensure content is not squeezed by flex layout
+                            .cursor_default()
                             .max_w(max_w)
                             .on_mouse_move(|_, _, cx| {
                                 cx.stop_propagation();
