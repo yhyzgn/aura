@@ -527,7 +527,7 @@ fn render_range_trigger_text(
         .items_center()
         .gap_2()
         .w_full()
-        .child(range_value_pill(start, true, theme))
+        .child(range_value_text(start, true, theme))
         .child(
             div()
                 .flex_shrink_0()
@@ -539,11 +539,11 @@ fn render_range_trigger_text(
                 .text_color(theme.neutral.text_3)
                 .child(separator),
         )
-        .child(range_value_pill(end, false, theme))
+        .child(range_value_text(end, false, theme))
         .into_any_element()
 }
 
-fn range_value_pill(
+fn range_value_text(
     text: impl Into<SharedString>,
     filled: bool,
     theme: &aura_theme::Theme,
@@ -551,14 +551,7 @@ fn range_value_pill(
     div()
         .flex_1()
         .min_w(px(0.0))
-        .px_2()
-        .py_1()
-        .rounded(px(theme.radius.sm))
-        .bg(if filled {
-            theme.primary.light_9
-        } else {
-            theme.neutral.hover
-        })
+        .px_1()
         .text_size(px(theme.font_size.sm))
         .text_color(if filled {
             theme.neutral.text_1

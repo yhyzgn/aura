@@ -897,3 +897,17 @@
 
 ### Key Discoveries
 - Range display should not be a single concatenated string once custom formats are supported; separate layout nodes keep separator spacing predictable across date, month, and year ranges.
+
+## Session 61 — 2026-05-08 (DatePicker Range Trigger Simplification)
+
+### Actions
+- **Simplified DatePicker range trigger styling**:
+  - Removed background fills from the left and right range value areas.
+  - Kept the separator (`至` by default) as the only chip with a muted background.
+  - Preserved spacing and text hierarchy so range values remain readable without visual clutter.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- When the separator already has a chip background, adding backgrounds to both date values makes the range trigger visually heavy and less balanced.
