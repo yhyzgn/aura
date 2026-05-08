@@ -639,3 +639,19 @@
 
 ### Key Discoveries
 - 仅使用 flex center 仍可能受大号文字 line box 与小尺寸 SVG box 的差异影响；显式统一 line-height/wrapper height 更稳定。
+
+## Session 48 — 2026-05-08 (Segmented Interaction)
+
+### Actions
+- **修复 Segmented Demo 点击无反应**:
+  - 将 Segmented Demo 中基础、禁用、Block 三个分段控件从 render 阶段临时 `cx.new` 改为初始化时创建并持有，避免点击后状态被父视图重渲染重置。
+  - 为 `Segmented` 增加稳定实例 ID，并为每个 option 的交互 ID 增加实例前缀，避免多个示例共用 `0/1/2` ID 发生冲突。
+  - 非激活可点击 option 增加更明确的 hover 背景和 pointer cursor。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Segmented 与 Tabs/Menu/Pagination 同类：demo render-time entity creation 会丢失内部选中状态，多实例复用简单数字 ID 也会造成 GPUI 交互冲突。

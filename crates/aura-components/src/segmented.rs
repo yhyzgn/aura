@@ -23,6 +23,7 @@ impl SegmentedOption {
 }
 
 pub struct Segmented {
+    id: SharedString,
     options: Vec<SegmentedOption>,
     value: Option<SharedString>,
     block: bool,
@@ -30,14 +31,22 @@ pub struct Segmented {
 }
 
 impl Segmented {
+    #[track_caller]
     pub fn new(options: Vec<SegmentedOption>) -> Self {
+        let caller = std::panic::Location::caller();
         let first_value = options.first().map(|o| o.value.clone());
         Self {
+            id: format!("segmented-{}", caller).into(),
             options,
             value: first_value,
             block: false,
             on_change: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn value(mut self, val: impl Into<SharedString>) -> Self {
@@ -85,7 +94,7 @@ impl Render for Segmented {
                 let disabled = opt.disabled;
 
                 div()
-                    .id(i)
+                    .id(format!("{}-option-{}", self.id, i))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -100,8 +109,11 @@ impl Render for Segmented {
                             .font_weight(gpui::FontWeight::BOLD)
                     })
                     .when(!is_active && !disabled, |s| {
-                        s.text_color(theme.neutral.text_2)
-                            .hover(|s| s.text_color(theme.neutral.text_1))
+                        s.text_color(theme.neutral.text_2).hover(|s| {
+                            s.cursor_pointer()
+                                .bg(theme.neutral.card.opacity(0.6))
+                                .text_color(theme.neutral.text_1)
+                        })
                     })
                     .when(disabled, |s| {
                         s.text_color(theme.neutral.text_3)

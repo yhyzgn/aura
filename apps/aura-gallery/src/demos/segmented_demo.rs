@@ -1,12 +1,49 @@
 use aura_components::{Segmented, SegmentedOption};
 use aura_core::Config;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*};
+use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*};
 
 pub fn render(cx: &mut App) -> AnyView {
-    cx.new(|_| SegmentedDemo).into()
+    cx.new(|cx| SegmentedDemo {
+        basic: cx.new(|_| {
+            Segmented::new(vec![
+                SegmentedOption::new("Daily", "daily"),
+                SegmentedOption::new("Weekly", "weekly"),
+                SegmentedOption::new("Monthly", "monthly"),
+                SegmentedOption::new("Quarterly", "quarterly"),
+                SegmentedOption::new("Yearly", "yearly"),
+            ])
+            .id("segmented-demo-basic")
+            .on_change(|val, _, _| println!("Selected: {}", val))
+        }),
+        disabled: cx.new(|_| {
+            Segmented::new(vec![
+                SegmentedOption::new("Map", "Map"),
+                SegmentedOption::new("Transit", "Transit"),
+                SegmentedOption::new("Satellite", "Satellite").disabled(true),
+            ])
+            .id("segmented-demo-disabled")
+            .value("Map")
+            .on_change(|val, _, _| println!("Selected: {}", val))
+        }),
+        block: cx.new(|_| {
+            Segmented::new(vec![
+                SegmentedOption::new("123", "123"),
+                SegmentedOption::new("456", "456"),
+                SegmentedOption::new("long-text-option", "long"),
+            ])
+            .id("segmented-demo-block")
+            .block(true)
+            .on_change(|val, _, _| println!("Selected: {}", val))
+        }),
+    })
+    .into()
 }
 
-struct SegmentedDemo;
+struct SegmentedDemo {
+    basic: Entity<Segmented>,
+    disabled: Entity<Segmented>,
+    block: Entity<Segmented>,
+}
 
 impl Render for SegmentedDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -41,16 +78,7 @@ impl Render for SegmentedDemo {
                     .flex_col()
                     .gap_4()
                     .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(cx.new(|_| {
-                        Segmented::new(vec![
-                            SegmentedOption::new("Daily", "daily"),
-                            SegmentedOption::new("Weekly", "weekly"),
-                            SegmentedOption::new("Monthly", "monthly"),
-                            SegmentedOption::new("Quarterly", "quarterly"),
-                            SegmentedOption::new("Yearly", "yearly"),
-                        ])
-                        .on_change(|val, _, _| println!("Selected: {}", val))
-                    })),
+                    .child(self.basic.clone()),
             )
             .child(
                 div()
@@ -62,15 +90,7 @@ impl Render for SegmentedDemo {
                             .font_weight(gpui::FontWeight::BOLD)
                             .child("不可用状态"),
                     )
-                    .child(cx.new(|_| {
-                        Segmented::new(vec![
-                            SegmentedOption::new("Map", "Map"),
-                            SegmentedOption::new("Transit", "Transit"),
-                            SegmentedOption::new("Satellite", "Satellite").disabled(true),
-                        ])
-                        .value("Map")
-                        .on_change(|val, _, _| println!("Selected: {}", val))
-                    })),
+                    .child(self.disabled.clone()),
             )
             .child(
                 div()
@@ -82,15 +102,7 @@ impl Render for SegmentedDemo {
                             .font_weight(gpui::FontWeight::BOLD)
                             .child("Block 模式 (撑满宽度)"),
                     )
-                    .child(cx.new(|_| {
-                        Segmented::new(vec![
-                            SegmentedOption::new("123", "123"),
-                            SegmentedOption::new("456", "456"),
-                            SegmentedOption::new("long-text-option", "long"),
-                        ])
-                        .block(true)
-                        .on_change(|val, _, _| println!("Selected: {}", val))
-                    })),
+                    .child(self.block.clone()),
             )
     }
 }
