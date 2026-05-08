@@ -2,7 +2,7 @@ use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    App, Bounds, Context, Element, ElementId, Entity, GlobalElementId, InspectorElementId,
+    App, Bounds, Context, Element, ElementId, Entity, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
 };
 
@@ -145,6 +145,11 @@ impl DatePicker {
         self.view_month = month_index.rem_euclid(12) as u32 + 1;
         cx.notify();
     }
+
+    fn shift_year(&mut self, delta: i32, cx: &mut Context<Self>) {
+        self.view_year += delta;
+        cx.notify();
+    }
 }
 
 impl Render for DatePicker {
@@ -173,13 +178,25 @@ impl Render for DatePicker {
                     } else {
                         (px(100.0), px(100.0), px(240.0))
                     };
+                    let close_entity = entity.clone();
 
                     div()
                         .absolute()
-                        .top(top)
-                        .left(left)
-                        .w(width.max(px(280.0)))
-                        .child(render_calendar_panel(picker_id, entity, _cx))
+                        .top_0()
+                        .left_0()
+                        .size_full()
+                        .bg(gpui::transparent_black())
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            close_entity.update(cx, |picker, cx| picker.close(cx));
+                        })
+                        .child(
+                            div()
+                                .absolute()
+                                .top(top)
+                                .left(left)
+                                .w(width.max(px(280.0)))
+                                .child(render_calendar_panel(picker_id, entity, _cx)),
+                        )
                         .into_any_element()
                 },
                 cx,
@@ -235,9 +252,6 @@ impl Render for DatePicker {
                     this.toggle_open(cx);
                 }),
             )
-            .on_mouse_down_out(cx.listener(|this, _, _, cx| {
-                this.close(cx);
-            }))
     }
 }
 
@@ -251,14 +265,19 @@ fn render_calendar_panel(
         (picker.view_year, picker.view_month, picker.value)
     });
     let days = calendar_cells(view_year, view_month);
-    let picker_prev = picker.clone();
-    let picker_next = picker.clone();
+    let picker_prev_year = picker.clone();
+    let picker_prev_month = picker.clone();
+    let picker_next_month = picker.clone();
+    let picker_next_year = picker.clone();
     let weekdays = ["一", "二", "三", "四", "五", "六", "日"];
 
     div()
         .id(format!("{}-panel", id))
         .cursor_default()
         .occlude()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
         .flex()
         .flex_col()
         .p_3()
@@ -275,19 +294,23 @@ fn render_calendar_panel(
                 .justify_between()
                 .child(
                     div()
-                        .id(format!("{}-prev", id))
-                        .cursor_pointer()
-                        .p_1()
-                        .rounded(px(theme.radius.sm))
-                        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            picker_prev.update(cx, |picker, cx| picker.shift_month(-1, cx));
-                        })
-                        .child(
-                            Icon::new(IconName::ChevronLeft)
-                                .size(px(18.0))
-                                .color(theme.neutral.icon),
-                        ),
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .child(nav_button(
+                            format!("{}-prev-year", id),
+                            IconName::ChevronsLeft,
+                            theme.neutral.icon,
+                            picker_prev_year,
+                            |picker, cx| picker.shift_year(-1, cx),
+                        ))
+                        .child(nav_button(
+                            format!("{}-prev-month", id),
+                            IconName::ChevronLeft,
+                            theme.neutral.icon,
+                            picker_prev_month,
+                            |picker, cx| picker.shift_month(-1, cx),
+                        )),
                 )
                 .child(
                     div()
@@ -298,19 +321,23 @@ fn render_calendar_panel(
                 )
                 .child(
                     div()
-                        .id(format!("{}-next", id))
-                        .cursor_pointer()
-                        .p_1()
-                        .rounded(px(theme.radius.sm))
-                        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                            picker_next.update(cx, |picker, cx| picker.shift_month(1, cx));
-                        })
-                        .child(
-                            Icon::new(IconName::ChevronRight)
-                                .size(px(18.0))
-                                .color(theme.neutral.icon),
-                        ),
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .child(nav_button(
+                            format!("{}-next-month", id),
+                            IconName::ChevronRight,
+                            theme.neutral.icon,
+                            picker_next_month,
+                            |picker, cx| picker.shift_month(1, cx),
+                        ))
+                        .child(nav_button(
+                            format!("{}-next-year", id),
+                            IconName::ChevronsRight,
+                            theme.neutral.icon,
+                            picker_next_year,
+                            |picker, cx| picker.shift_year(1, cx),
+                        )),
                 ),
         )
         .child(
@@ -382,6 +409,25 @@ fn render_calendar_panel(
                 })),
         )
         .into_any_element()
+}
+
+fn nav_button(
+    id: impl Into<SharedString>,
+    icon: IconName,
+    icon_color: Hsla,
+    picker: Entity<DatePicker>,
+    action: impl Fn(&mut DatePicker, &mut Context<DatePicker>) + 'static,
+) -> impl IntoElement {
+    div()
+        .id(id.into())
+        .cursor_pointer()
+        .p_1()
+        .rounded(px(4.0))
+        .hover(|s| s.cursor_pointer().bg(gpui::black().opacity(0.04)))
+        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+            picker.update(cx, |picker, cx| action(picker, cx));
+        })
+        .child(Icon::new(icon).size(px(18.0)).color(icon_color))
 }
 
 struct DatePickerBoundsCapturer {

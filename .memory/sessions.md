@@ -838,3 +838,21 @@
 
 ### Key Discoveries
 - GPUI `AnyElement` instances cannot be reconstructed independently across custom Element lifecycle methods; `request_layout` must establish the drawable state used by `prepaint`. Rebuilding a fresh child in `prepaint_at` triggers `must call request_layout before prepaint`.
+
+## Session 58 — 2026-05-08 (DatePicker Header Navigation Fix)
+
+### Actions
+- **Improved DatePicker calendar header controls**:
+  - Added four explicit navigation controls: previous year, previous month, next month, next year.
+  - Added `shift_year` while preserving existing month rollover logic.
+- **Fixed popup closing when clicking panel controls**:
+  - Removed trigger-level `on_mouse_down_out` close behavior that treated portal clicks as outside-trigger clicks.
+  - Added a full-screen portal backdrop that closes the picker only when the user clicks outside the panel.
+  - Added `stop_propagation` on the calendar panel so header controls and day cells keep the popup open unless a date is selected.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Portal-rendered content is outside the trigger subtree, so `on_mouse_down_out` on the trigger will close the DatePicker before panel controls can be used. Popup components need backdrop-level outside-click handling instead.
