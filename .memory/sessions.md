@@ -1019,3 +1019,20 @@
 
 ### Key Discoveries
 - GPUI does not provide a browser-style file input in this component layer, so `Upload` exposes `on_select` for the host app to bridge a native file picker while the component owns presentation and list interactions.
+
+## Session 68 — 2026-05-08 (Time Candidate Panel Polish)
+
+### Actions
+- **Polished TimePicker time candidate panel**:
+  - Added a clearer header, helper text, and selected-time preview pill.
+  - Restyled hour/minute/second columns as bordered cards with labeled headers, stronger spacing, and selected-state contrast.
+- **Polished DateTimePicker embedded time panel**:
+  - Matched the same candidate-column treatment inside the combined date-time popup.
+  - Added an embedded panel surface and preview pill so the time area no longer looks like raw lists.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery; process ended by timeout with no startup crash.
+
+### Key Discoveries
+- Dense time candidate lists read better when each column has an explicit label, a quiet surface, and a high-contrast selected pill instead of flat text rows.

@@ -276,18 +276,23 @@ fn render_time_panel(
     cx: &mut App,
 ) -> gpui::AnyElement {
     let theme = cx.global::<Config>().theme.clone();
-    let (selected, minute_step, second_step, show_seconds) = picker.update(cx, |picker, _| {
-        (
-            picker.value,
-            picker.minute_step,
-            picker.second_step,
-            picker.show_seconds,
-        )
-    });
+    let (selected, minute_step, second_step, show_seconds, display_format) =
+        picker.update(cx, |picker, _| {
+            (
+                picker.value,
+                picker.minute_step,
+                picker.second_step,
+                picker.show_seconds,
+                picker.display_format.clone(),
+            )
+        });
 
     let hours: Vec<u32> = (0..24).collect();
     let minutes: Vec<u32> = stepped_values(minute_step);
     let seconds: Vec<u32> = stepped_values(second_step);
+    let preview = selected
+        .map(|value| format_time_value(value, display_format.as_ref()))
+        .unwrap_or_else(|| "请选择时间".to_string());
 
     div()
         .id(format!("{}-panel", id))
@@ -303,12 +308,51 @@ fn render_time_panel(
         .bg(theme.neutral.card)
         .border_1()
         .border_color(theme.neutral.border)
-        .rounded(px(theme.radius.md))
+        .rounded(px(theme.radius.lg))
         .shadow_lg()
         .child(
             div()
                 .flex()
-                .gap_2()
+                .items_center()
+                .justify_between()
+                .pb_2()
+                .border_b_1()
+                .border_color(theme.neutral.border)
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .child(
+                            div()
+                                .text_sm()
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .text_color(theme.neutral.text_1)
+                                .child("选择时间"),
+                        )
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(theme.neutral.text_3)
+                                .child("滚动或点击候选项快速设定"),
+                        ),
+                )
+                .child(
+                    div()
+                        .px_3()
+                        .py_1()
+                        .rounded(px(999.0))
+                        .bg(theme.primary.light_9)
+                        .text_sm()
+                        .font_weight(gpui::FontWeight::BOLD)
+                        .text_color(theme.primary.base)
+                        .child(preview),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .gap_3()
                 .child(time_column(
                     format!("{}-hour", id),
                     "时",
@@ -366,23 +410,36 @@ fn time_column(
     let id = id.into();
     div()
         .flex_1()
-        .min_w(px(68.0))
+        .min_w(px(72.0))
         .flex()
         .flex_col()
-        .gap_1()
+        .gap_2()
         .child(
             div()
+                .h(px(24.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(theme.radius.sm))
+                .bg(theme.neutral.hover)
                 .text_xs()
-                .text_color(theme.neutral.text_3)
+                .font_weight(gpui::FontWeight::BOLD)
+                .text_color(theme.neutral.text_2)
                 .child(title),
         )
         .child(
             div()
                 .id(format!("{}-scroll", id))
-                .max_h(px(220.0))
+                .max_h(px(232.0))
                 .overflow_y_scroll()
                 .flex()
                 .flex_col()
+                .gap_1()
+                .p_1()
+                .rounded(px(theme.radius.md))
+                .border_1()
+                .border_color(theme.neutral.border)
+                .bg(theme.neutral.body)
                 .children(values.into_iter().map(move |value| {
                     let is_selected = selected == Some(value);
                     let picker = picker.clone();
@@ -409,30 +466,45 @@ fn time_option(
 ) -> impl IntoElement {
     div()
         .id(id.into())
-        .h(px(30.0))
+        .h(px(32.0))
         .flex()
         .items_center()
         .justify_center()
         .rounded(px(theme.radius.sm))
         .cursor_pointer()
         .bg(if is_selected {
-            theme.primary.light_9
+            theme.primary.base
         } else {
-            theme.neutral.card
+            theme.neutral.body
         })
         .text_color(if is_selected {
-            theme.primary.base
+            theme.neutral.card
         } else {
             theme.neutral.text_1
         })
-        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
+        .hover(|s| {
+            if is_selected {
+                s.cursor_pointer().bg(theme.primary.hover)
+            } else {
+                s.cursor_pointer().bg(theme.neutral.card)
+            }
+        })
         .on_mouse_down(MouseButton::Left, move |_, window, cx| {
             picker.update(cx, |picker, cx| {
                 let next = build_value(picker.value, value);
                 picker.select_time(next, window, cx);
             });
         })
-        .child(div().text_sm().child(format!("{:02}", value)))
+        .child(
+            div()
+                .text_sm()
+                .font_weight(if is_selected {
+                    gpui::FontWeight::BOLD
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
+                .child(format!("{:02}", value)),
+        )
 }
 
 fn stepped_values(step: u32) -> Vec<u32> {
