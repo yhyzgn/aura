@@ -824,3 +824,17 @@
 
 ### Key Discoveries
 - DatePicker avoids adding a date/time dependency for the initial P5 slice by using small local calendar helpers for leap years, month length, and weekday alignment.
+
+## Session 57 — 2026-05-08 (DatePicker Click Crash Fix)
+
+### Actions
+- **Fixed DatePicker popup crash on click/open**:
+  - Removed the custom `CalendarPanel` `Element` wrapper that rebuilt a fresh `AnyElement` during `request_layout`, `prepaint`, and `paint`.
+  - Replaced it with a direct `render_calendar_panel(...) -> AnyElement` used inside the portal render closure so GPUI owns the element lifecycle normally.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI `AnyElement` instances cannot be reconstructed independently across custom Element lifecycle methods; `request_layout` must establish the drawable state used by `prepaint`. Rebuilding a fresh child in `prepaint_at` triggers `must call request_layout before prepaint`.

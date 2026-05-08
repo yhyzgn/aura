@@ -179,10 +179,7 @@ impl Render for DatePicker {
                         .top(top)
                         .left(left)
                         .w(width.max(px(280.0)))
-                        .child(CalendarPanel {
-                            id: picker_id,
-                            picker: entity,
-                        })
+                        .child(render_calendar_panel(picker_id, entity, _cx))
                         .into_any_element()
                 },
                 cx,
@@ -244,206 +241,147 @@ impl Render for DatePicker {
     }
 }
 
-struct CalendarPanel {
+fn render_calendar_panel(
     id: SharedString,
     picker: Entity<DatePicker>,
-}
+    cx: &mut App,
+) -> gpui::AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+    let (view_year, view_month, selected) = picker.update(cx, |picker, _| {
+        (picker.view_year, picker.view_month, picker.value)
+    });
+    let days = calendar_cells(view_year, view_month);
+    let picker_prev = picker.clone();
+    let picker_next = picker.clone();
+    let weekdays = ["一", "二", "三", "四", "五", "六", "日"];
 
-impl IntoElement for CalendarPanel {
-    type Element = Self;
-    fn into_element(self) -> Self::Element {
-        self
-    }
-}
-
-impl Element for CalendarPanel {
-    type RequestLayoutState = ();
-    type PrepaintState = ();
-
-    fn id(&self) -> Option<ElementId> {
-        None
-    }
-
-    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
-        None
-    }
-
-    fn request_layout(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _id2: Option<&InspectorElementId>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> (LayoutId, Self::RequestLayoutState) {
-        let mut panel = self.render_panel(window, cx);
-        (panel.request_layout(window, cx), ())
-    }
-
-    fn prepaint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _id2: Option<&InspectorElementId>,
-        bounds: Bounds<Pixels>,
-        _rl: &mut Self::RequestLayoutState,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> Self::PrepaintState {
-        let mut panel = self.render_panel(window, cx);
-        panel.prepaint_at(bounds.origin, window, cx);
-    }
-
-    fn paint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _id2: Option<&InspectorElementId>,
-        _bounds: Bounds<Pixels>,
-        _rl: &mut Self::RequestLayoutState,
-        _ps: &mut Self::PrepaintState,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        let mut panel = self.render_panel(window, cx);
-        panel.paint(window, cx);
-    }
-}
-
-impl CalendarPanel {
-    fn render_panel(&self, _window: &mut Window, cx: &mut App) -> gpui::AnyElement {
-        let theme = cx.global::<Config>().theme.clone();
-        let (view_year, view_month, selected) = self.picker.update(cx, |picker, _| {
-            (picker.view_year, picker.view_month, picker.value)
-        });
-        let days = calendar_cells(view_year, view_month);
-        let picker_prev = self.picker.clone();
-        let picker_next = self.picker.clone();
-        let weekdays = ["一", "二", "三", "四", "五", "六", "日"];
-
-        div()
-            .id(format!("{}-panel", self.id))
-            .cursor_default()
-            .occlude()
-            .flex()
-            .flex_col()
-            .p_3()
-            .gap_3()
-            .bg(theme.neutral.card)
-            .border_1()
-            .border_color(theme.neutral.border)
-            .rounded(px(theme.radius.md))
-            .shadow_lg()
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                        div()
-                            .id(format!("{}-prev", self.id))
-                            .cursor_pointer()
-                            .p_1()
-                            .rounded(px(theme.radius.sm))
-                            .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                picker_prev.update(cx, |picker, cx| picker.shift_month(-1, cx));
-                            })
-                            .child(
-                                Icon::new(IconName::ChevronLeft)
-                                    .size(px(18.0))
-                                    .color(theme.neutral.icon),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .text_color(theme.neutral.text_1)
-                            .child(format!("{} 年 {:02} 月", view_year, view_month)),
-                    )
-                    .child(
-                        div()
-                            .id(format!("{}-next", self.id))
-                            .cursor_pointer()
-                            .p_1()
-                            .rounded(px(theme.radius.sm))
-                            .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                picker_next.update(cx, |picker, cx| picker.shift_month(1, cx));
-                            })
-                            .child(
-                                Icon::new(IconName::ChevronRight)
-                                    .size(px(18.0))
-                                    .color(theme.neutral.icon),
-                            ),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .children(weekdays.into_iter().map(|day| {
-                        div()
-                            .flex_1()
-                            .h(px(28.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .text_xs()
-                            .text_color(theme.neutral.text_3)
-                            .child(day)
-                    })),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .children(days.chunks(7).enumerate().map(|(week_idx, week)| {
-                        div()
-                            .flex()
-                            .flex_row()
-                            .children(week.iter().enumerate().map(|(day_idx, cell)| {
-                                let is_current_month = cell.month == view_month;
-                                let is_selected = selected == Some(*cell);
-                                let picker = self.picker.clone();
-                                let date = *cell;
-                                div()
-                                    .id(format!("{}-day-{}-{}", self.id, week_idx, day_idx))
-                                    .flex_1()
-                                    .h(px(34.0))
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .cursor_pointer()
-                                    .rounded(px(theme.radius.sm))
-                                    .bg(if is_selected {
-                                        theme.primary.base
+    div()
+        .id(format!("{}-panel", id))
+        .cursor_default()
+        .occlude()
+        .flex()
+        .flex_col()
+        .p_3()
+        .gap_3()
+        .bg(theme.neutral.card)
+        .border_1()
+        .border_color(theme.neutral.border)
+        .rounded(px(theme.radius.md))
+        .shadow_lg()
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(
+                    div()
+                        .id(format!("{}-prev", id))
+                        .cursor_pointer()
+                        .p_1()
+                        .rounded(px(theme.radius.sm))
+                        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            picker_prev.update(cx, |picker, cx| picker.shift_month(-1, cx));
+                        })
+                        .child(
+                            Icon::new(IconName::ChevronLeft)
+                                .size(px(18.0))
+                                .color(theme.neutral.icon),
+                        ),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .font_weight(gpui::FontWeight::BOLD)
+                        .text_color(theme.neutral.text_1)
+                        .child(format!("{} 年 {:02} 月", view_year, view_month)),
+                )
+                .child(
+                    div()
+                        .id(format!("{}-next", id))
+                        .cursor_pointer()
+                        .p_1()
+                        .rounded(px(theme.radius.sm))
+                        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            picker_next.update(cx, |picker, cx| picker.shift_month(1, cx));
+                        })
+                        .child(
+                            Icon::new(IconName::ChevronRight)
+                                .size(px(18.0))
+                                .color(theme.neutral.icon),
+                        ),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_row()
+                .children(weekdays.into_iter().map(|day| {
+                    div()
+                        .flex_1()
+                        .h(px(28.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_xs()
+                        .text_color(theme.neutral.text_3)
+                        .child(day)
+                })),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .children(days.chunks(7).enumerate().map(|(week_idx, week)| {
+                    let id = id.clone();
+                    let week_picker = picker.clone();
+                    div()
+                        .flex()
+                        .flex_row()
+                        .children(week.iter().enumerate().map(move |(day_idx, cell)| {
+                            let is_current_month = cell.month == view_month;
+                            let is_selected = selected == Some(*cell);
+                            let picker = week_picker.clone();
+                            let date = *cell;
+                            div()
+                                .id(format!("{}-day-{}-{}", id, week_idx, day_idx))
+                                .flex_1()
+                                .h(px(34.0))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .cursor_pointer()
+                                .rounded(px(theme.radius.sm))
+                                .bg(if is_selected {
+                                    theme.primary.base
+                                } else {
+                                    theme.neutral.card
+                                })
+                                .text_color(if is_selected {
+                                    theme.neutral.card
+                                } else if is_current_month {
+                                    theme.neutral.text_1
+                                } else {
+                                    theme.neutral.text_3.opacity(0.55)
+                                })
+                                .hover(|s| {
+                                    if is_selected {
+                                        s.cursor_pointer()
                                     } else {
-                                        theme.neutral.card
-                                    })
-                                    .text_color(if is_selected {
-                                        theme.neutral.card
-                                    } else if is_current_month {
-                                        theme.neutral.text_1
-                                    } else {
-                                        theme.neutral.text_3.opacity(0.55)
-                                    })
-                                    .hover(|s| {
-                                        if is_selected {
-                                            s.cursor_pointer()
-                                        } else {
-                                            s.cursor_pointer().bg(theme.neutral.hover)
-                                        }
-                                    })
-                                    .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                                        picker.update(cx, |picker, cx| {
-                                            picker.select_date(date, window, cx);
-                                        });
-                                    })
-                                    .child(div().text_sm().child(cell.day.to_string()))
-                            }))
-                    })),
-            )
-            .into_any_element()
-    }
+                                        s.cursor_pointer().bg(theme.neutral.hover)
+                                    }
+                                })
+                                .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                                    picker.update(cx, |picker, cx| {
+                                        picker.select_date(date, window, cx);
+                                    });
+                                })
+                                .child(div().text_sm().child(cell.day.to_string()))
+                        }))
+                })),
+        )
+        .into_any_element()
 }
 
 struct DatePickerBoundsCapturer {
