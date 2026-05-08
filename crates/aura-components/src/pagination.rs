@@ -216,9 +216,11 @@ impl Render for Pagination {
             } else {
                 theme.neutral.text_2
             };
+            let hover_group = SharedString::from(format!("{}-hover", id));
 
             div()
                 .id(id)
+                .group(hover_group.clone())
                 .flex()
                 .items_center()
                 .justify_center()
@@ -228,14 +230,14 @@ impl Render for Pagination {
                 .bg(bg_color)
                 .rounded(px(theme.radius.sm))
                 .text_color(text_color)
-                .when(action.is_some() && !disabled && !active, |s| {
-                    s.hover(|s| {
+                .when(action.is_some() && !disabled, |s| {
+                    s.cursor_pointer().hover(|s| {
                         s.cursor_pointer()
-                            .bg(theme.neutral.hover)
+                            .bg(theme.primary.base.opacity(0.1))
                             .text_color(theme.primary.base)
                     })
                 })
-                .when_some(action.filter(|_| !disabled && !active), |s, action| {
+                .when_some(action.filter(|_| !disabled), |s, action| {
                     s.on_click(cx.listener(move |this, _, window, cx| match action {
                         PagerAction::Page(page) => this.change_page(page, window, cx),
                         PagerAction::Prev => {
@@ -269,7 +271,12 @@ impl Render for Pagination {
                     )
                 })
                 .when_some(icon, |s, i| {
-                    s.child(Icon::new(i).size(px(14.0)).color(text_color))
+                    s.child(
+                        Icon::new(i)
+                            .size(px(14.0))
+                            .color(text_color)
+                            .group_hover_color(hover_group, theme.primary.base),
+                    )
                 })
                 .into_any_element()
         };

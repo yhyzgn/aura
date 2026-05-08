@@ -352,7 +352,7 @@ impl Render for Select {
                                 } else {
                                     theme.neutral.card
                                 })
-                                .hover(|s| s.bg(theme.neutral.hover))
+                                .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
                                 .child(
                                     gpui::div()
                                         .text_size(gpui::px(theme.font_size.md))
@@ -383,6 +383,7 @@ impl Render for Select {
             .when(!self.border_none, |s| {
                 s.border_1().border_color(border_color)
             })
+            .cursor_pointer()
             .hover(|s| {
                 let s = s.cursor_pointer();
                 if self.border_none {

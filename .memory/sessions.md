@@ -592,3 +592,19 @@
 
 ### Key Discoveries
 - 本项目 GPUI 用法里 cursor 最稳妥的写法是放入 hover refinement；只在常规链路上写 cursor 可能不能满足用户期望的“hover 时变小手”。
+
+## Session 45 — 2026-05-08 (Pagination Cursor Root Cause Follow-up)
+
+### Actions
+- **重新检查 Pagination hover/cursor 不明显的问题**:
+  - 确认分页图标按钮的颜色不会继承父级 hover `text_color`，需要使用 Icon 的 `group_hover_color` 同步图标 hover 主色。
+  - 将所有非 disabled 分页项（包括当前页）都纳入 hover/cursor 样式，hover 背景改为更明显的主色浅底。
+  - Select 触发器和下拉选项均在 hover 状态中显式设置 `cursor_pointer()`。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- Pagination 上一页/下一页主要是 Icon，父级文字 hover 不会改变显式 Icon 颜色；需要 group hover。当前页之前也被 hover 条件排除，导致部分分页按钮看起来完全没有 hover/cursor 反馈。
