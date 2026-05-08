@@ -924,3 +924,17 @@
 
 ### Key Discoveries
 - Even when mutable `cx` use is visually before theme reads, holding an owned theme clone is safer in GPUI demo render functions that update child entities and then render themed content.
+
+## Session 63 — 2026-05-08 (DatePicker Demo Borrow Fix Follow-up)
+
+### Actions
+- **Removed the problematic render-time child update from `date_picker_demo.rs`**:
+  - Deleted the `self.basic.update(cx, ...)` callback rebinding block from `DatePickerDemo::render`.
+  - The selected date text now derives from `self.basic.read(cx).value_ref()` instead of mutating the child picker during parent render.
+  - Removed the extra `selected_text` field from the demo state.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- Rebinding child callbacks inside a parent `Render::render` is fragile and can create `Context` borrow overlap diagnostics in downstream editors/toolchains. Demo render paths should prefer read-only child inspection unless mutation is unavoidable.

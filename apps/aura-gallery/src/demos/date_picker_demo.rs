@@ -15,7 +15,6 @@ struct DatePickerDemo {
     year: Entity<DatePicker>,
     year_range: Entity<DatePicker>,
     disabled: Entity<DatePicker>,
-    selected_text: String,
 }
 
 impl DatePickerDemo {
@@ -69,28 +68,18 @@ impl DatePickerDemo {
                     .width(px(320.0))
             }),
             disabled: cx.new(|_| DatePicker::new().disabled(true).width(px(260.0))),
-            selected_text: "尚未选择".to_string(),
         }
     }
 }
 
 impl Render for DatePickerDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let view = cx.entity().clone();
-        self.basic.update(cx, |picker, cx| {
-            let view = view.clone();
-            picker.set_on_change(
-                move |value, _, cx| {
-                    view.update(cx, |this, cx| {
-                        this.selected_text = value
-                            .map(|value| value.format())
-                            .unwrap_or_else(|| "尚未选择".to_string());
-                        cx.notify();
-                    });
-                },
-                cx,
-            );
-        });
+        let selected_text = self
+            .basic
+            .read(cx)
+            .value_ref()
+            .map(|value| value.format())
+            .unwrap_or_else(|| "尚未选择".to_string());
         let theme = cx.global::<Config>().theme.clone();
 
         div()
@@ -121,7 +110,7 @@ impl Render for DatePickerDemo {
                     .gap_3()
                     .child(self.basic.clone())
                     .child(
-                        Text::new(format!("当前选择：{}", self.selected_text))
+                        Text::new(format!("当前选择：{}", selected_text))
                             .size(px(theme.font_size.sm)),
                     ),
             ))
