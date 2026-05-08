@@ -911,3 +911,16 @@
 
 ### Key Discoveries
 - When the separator already has a chip background, adding backgrounds to both date values makes the range trigger visually heavy and less balanced.
+
+## Session 62 — 2026-05-08 (DatePicker Demo Borrow Fix)
+
+### Actions
+- **Hardened DatePicker demo against `Context` borrow conflicts**:
+  - Changed the demo theme binding from a borrowed `&cx.global::<Config>().theme` reference to an owned cloned `Theme` value.
+  - This prevents immutable `cx` borrows from being inferred across later mutable `cx` use in the render function.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- Even when mutable `cx` use is visually before theme reads, holding an owned theme clone is safer in GPUI demo render functions that update child entities and then render themed content.

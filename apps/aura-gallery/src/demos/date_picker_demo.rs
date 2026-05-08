@@ -91,7 +91,7 @@ impl Render for DatePickerDemo {
                 cx,
             );
         });
-        let theme = &cx.global::<Config>().theme;
+        let theme = cx.global::<Config>().theme.clone();
 
         div()
             .flex()
