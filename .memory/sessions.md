@@ -687,3 +687,21 @@
 
 ### Key Discoveries
 - 多个 Dropdown 都通过同一个 `menu(...)` helper 构造时，`Dropdown::new` 的默认 caller-based ID 相同；Popover trigger ID 冲突后表现为只有一个实例能正常弹出。
+
+## Session 51 — 2026-05-08 (Affix Backtop Anchor Repair)
+
+### Actions
+- **修复 Affix / Backtop / Anchor demo 无效果问题**:
+  - Affix demo 改为持有稳定 `Entity<Affix>`，滚动区域触发 notify；Affix 记录 placeholder bounds，并在 fixed 状态下按窗口坐标偏移渲染固定副本。
+  - Backtop 增加稳定实例 ID，demo 改为持有两个 `Entity<Backtop>`，避免 render-time 重建和按钮 ID 冲突。
+  - Anchor demo 改为持有稳定 `Entity<Anchor>`，避免每次 render 重建导致 target bounds/active link 丢失。
+  - Anchor 点击跳转和 active 检测改为基于 scroll viewport top + offset 计算，不再把 target 的窗口坐标误当作滚动容器局部坐标。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 这三个控件有实际价值，尤其在长页面、文档和组件库 demo 场景中。
+- 当前无效果的主要原因仍是交互/滚动状态在 demo render 阶段重建，以及滚动坐标系计算没有考虑 scroll viewport 的窗口位置。

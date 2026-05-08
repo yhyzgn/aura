@@ -7,6 +7,7 @@ use gpui::{
 };
 
 pub struct Backtop {
+    id: gpui::SharedString,
     scroll_handle: ScrollHandle,
     visibility_height: Pixels,
     right: Pixels,
@@ -15,14 +16,22 @@ pub struct Backtop {
 }
 
 impl Backtop {
+    #[track_caller]
     pub fn new(scroll_handle: ScrollHandle) -> Self {
+        let caller = std::panic::Location::caller();
         Self {
+            id: format!("backtop-{}", caller).into(),
             scroll_handle,
             visibility_height: px(200.0),
             right: px(40.0),
             bottom: px(40.0),
             content: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<gpui::SharedString>) -> Self {
+        self.id = id.into();
+        self
     }
 
     pub fn visibility_height(mut self, h: impl Into<Pixels>) -> Self {
@@ -60,7 +69,7 @@ impl Render for Backtop {
         div().when(is_visible, |s| {
             s.child(
                 div()
-                    .id("backtop-btn")
+                    .id(format!("{}-btn", self.id))
                     .absolute()
                     .bottom(self.bottom)
                     .right(self.right)
@@ -75,7 +84,7 @@ impl Render for Backtop {
                     .border_1()
                     .border_color(theme.neutral.border)
                     .shadow_lg()
-                    .hover(|s| s.bg(theme.neutral.hover))
+                    .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
                     .on_click(move |_, _, _| {
                         scroll_handle.set_offset(point(px(0.0), px(0.0)));
                     })

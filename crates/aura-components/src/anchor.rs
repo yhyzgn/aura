@@ -68,12 +68,14 @@ impl Anchor {
     }
 
     fn detect_active_link(&mut self, cx: &mut Context<Self>) {
+        let viewport_top = self.scroll_handle.bounds().top();
+        let threshold = viewport_top + self.offset + px(10.0);
         let mut best_link = None;
         let mut min_dist = f32::MAX;
 
         for (id, bounds) in &self.targets_bounds {
-            let dist = (f32::from(bounds.top()) - f32::from(self.offset)).abs();
-            if dist < min_dist && bounds.top() <= self.offset + px(10.0) {
+            let dist = (f32::from(bounds.top()) - f32::from(viewport_top + self.offset)).abs();
+            if dist < min_dist && bounds.top() <= threshold {
                 min_dist = dist;
                 best_link = Some(id.clone());
             }
@@ -96,6 +98,7 @@ impl Anchor {
         let href = link.href.clone();
         let scroll_handle = self.scroll_handle.clone();
         let targets_bounds = self.targets_bounds.clone();
+        let offset = self.offset;
 
         div()
             .flex()
@@ -116,10 +119,9 @@ impl Anchor {
                     .hover(|s| s.text_color(theme.primary.base))
                     .on_click(move |_, _, _| {
                         if let Some(bounds) = targets_bounds.get(&href) {
-                            // Calculate jump. This is complex because we need current scroll position.
-                            // For now we assume targets report window bounds.
                             let current_offset = scroll_handle.offset();
-                            let jump = current_offset.y - (bounds.top() - px(0.0)); // Simplified
+                            let viewport_top = scroll_handle.bounds().top();
+                            let jump = current_offset.y + viewport_top + offset - bounds.top();
                             scroll_handle.set_offset(point(px(0.0), jump));
                         }
                     })

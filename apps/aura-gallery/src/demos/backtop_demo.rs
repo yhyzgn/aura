@@ -2,20 +2,54 @@ use aura_components::Backtop;
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{AnyView, App, Context, Render, ScrollHandle, Window, div, prelude::*, px};
+use gpui::{AnyView, App, Context, Entity, Render, ScrollHandle, Window, div, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
-    cx.new(|_| BacktopDemo::new()).into()
+    cx.new(|cx| BacktopDemo::new(cx)).into()
 }
 
 struct BacktopDemo {
     scroll_handle: ScrollHandle,
+    primary: Entity<Backtop>,
+    custom: Entity<Backtop>,
 }
 
 impl BacktopDemo {
-    fn new() -> Self {
+    fn new(cx: &mut Context<Self>) -> Self {
+        let scroll_handle = ScrollHandle::new();
         Self {
-            scroll_handle: ScrollHandle::new(),
+            primary: cx.new({
+                let scroll_handle = scroll_handle.clone();
+                |_| {
+                    Backtop::new(scroll_handle)
+                        .id("backtop-demo-primary")
+                        .visibility_height(px(100.0))
+                }
+            }),
+            custom: cx.new({
+                let scroll_handle = scroll_handle.clone();
+                |_| {
+                    Backtop::new(scroll_handle)
+                        .id("backtop-demo-custom")
+                        .visibility_height(px(200.0))
+                        .right(px(100.0))
+                        .content(|_, _| {
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .size_full()
+                                .bg(gpui::blue())
+                                .child(
+                                    Icon::new(IconName::ArrowUp)
+                                        .size(px(20.0))
+                                        .color(gpui::white()),
+                                )
+                                .into_any_element()
+                        })
+                }
+            }),
+            scroll_handle,
         }
     }
 }
@@ -70,25 +104,7 @@ impl Render for BacktopDemo {
                             .child(format!("Scroll Item {}", i))
                     }))),
             )
-            .child(cx.new(|_| Backtop::new(scroll_handle.clone()).visibility_height(px(100.0))))
-            .child(cx.new(|_| {
-                Backtop::new(scroll_handle.clone())
-                    .visibility_height(px(200.0))
-                    .right(px(100.0))
-                    .content(|_, _| {
-                        div()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .size_full()
-                            .bg(gpui::blue())
-                            .child(
-                                Icon::new(IconName::ArrowUp)
-                                    .size(px(20.0))
-                                    .color(gpui::white()),
-                            )
-                            .into_any_element()
-                    })
-            }))
+            .child(self.primary.clone())
+            .child(self.custom.clone())
     }
 }

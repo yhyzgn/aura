@@ -1,12 +1,34 @@
 use aura_components::{Affix, AffixPosition, Button, ButtonVariant};
 use aura_core::Config;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*, px};
+use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
-    cx.new(|_| AffixDemo).into()
+    cx.new(|cx| AffixDemo {
+        top_affix: cx.new(|_| {
+            Affix::new().offset(px(80.0)).content(|_, _| {
+                Button::new("固钉在距离顶部 80px 的位置")
+                    .variant(ButtonVariant::Primary)
+                    .into_any_element()
+            })
+        }),
+        bottom_affix: cx.new(|_| {
+            Affix::new()
+                .position(AffixPosition::Bottom)
+                .offset(px(20.0))
+                .content(|_, _| {
+                    Button::new("固钉在距离底部 20px 的位置")
+                        .variant(ButtonVariant::Success)
+                        .into_any_element()
+                })
+        }),
+    })
+    .into()
 }
 
-struct AffixDemo;
+struct AffixDemo {
+    top_affix: Entity<Affix>,
+    bottom_affix: Entity<Affix>,
+}
 
 impl Render for AffixDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -41,6 +63,9 @@ impl Render for AffixDemo {
                     .flex_1()
                     .id("affix-scroll-view")
                     .overflow_y_scroll()
+                    .on_scroll_wheel(cx.listener(|_, _, _, cx| {
+                        cx.notify();
+                    }))
                     .bg(theme.neutral.hover)
                     .p_4()
                     .child(
@@ -56,13 +81,7 @@ impl Render for AffixDemo {
                                     .child("向下滚动查看固钉效果"),
                             ),
                     )
-                    .child(cx.new(|_| {
-                        Affix::new().offset(px(80.0)).content(|_, _| {
-                            Button::new("固钉在距离顶部 80px 的位置")
-                                .variant(ButtonVariant::Primary)
-                                .into_any_element()
-                        })
-                    }))
+                    .child(self.top_affix.clone())
                     .child(
                         div()
                             .h(px(800.0))
@@ -75,16 +94,7 @@ impl Render for AffixDemo {
                             .justify_center()
                             .child(div().child("长内容占位")),
                     )
-                    .child(cx.new(|_| {
-                        Affix::new()
-                            .position(AffixPosition::Bottom)
-                            .offset(px(20.0))
-                            .content(|_, _| {
-                                Button::new("固钉在距离底部 20px 的位置")
-                                    .variant(ButtonVariant::Success)
-                                    .into_any_element()
-                            })
-                    }))
+                    .child(self.bottom_affix.clone())
                     .child(div().h(px(400.0))),
             )
     }

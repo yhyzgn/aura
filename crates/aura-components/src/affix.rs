@@ -14,6 +14,7 @@ pub struct Affix {
     offset: Pixels,
     position: AffixPosition,
     is_fixed: bool,
+    last_bounds: Option<Bounds<Pixels>>,
     on_change: Option<Box<dyn Fn(bool, &mut Window, &mut App) + 'static>>,
     content: Arc<dyn Fn(&mut Window, &mut Context<Affix>) -> AnyElement + 'static>,
 }
@@ -26,6 +27,7 @@ impl Affix {
             offset: px(0.0),
             position: AffixPosition::Top,
             is_fixed: false,
+            last_bounds: None,
             on_change: None,
             content: Arc::new(|_, _| div().into_any_element()),
         }
@@ -77,6 +79,10 @@ impl Render for Affix {
                         }
                     };
 
+                    affix_handle.update(cx, |this, _| {
+                        this.last_bounds = Some(bounds);
+                    });
+
                     if should_be_fixed != current_fixed {
                         affix_handle.update(cx, |this, cx| {
                             this.is_fixed = should_be_fixed;
@@ -88,17 +94,23 @@ impl Render for Affix {
                     }
                 }),
             }))
+            .child(content_fn(_window, cx))
             .when(is_fixed, |s| {
+                let fixed_top = self.last_bounds.map(|bounds| match self.position {
+                    AffixPosition::Top => self.offset - bounds.top(),
+                    AffixPosition::Bottom => {
+                        _window.viewport_size().height - self.offset - bounds.top() - px(40.0)
+                    }
+                });
                 s.child(
                     div()
                         .absolute()
-                        .top(offset)
+                        .top(fixed_top.unwrap_or(offset))
                         .left_0()
                         .w_full()
                         .child(content_fn(_window, cx)),
                 )
             })
-            .when(!is_fixed, |s| s.child(content_fn(_window, cx)))
     }
 }
 

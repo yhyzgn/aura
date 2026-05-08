@@ -1,19 +1,35 @@
 use aura_components::{Anchor, AnchorLink, AnchorTarget};
 use aura_core::Config;
-use gpui::{AnyView, App, Context, Render, ScrollHandle, Window, div, prelude::*, px};
+use gpui::{AnyView, App, Context, Entity, Render, ScrollHandle, Window, div, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
-    cx.new(|_| AnchorDemo::new()).into()
+    cx.new(|cx| AnchorDemo::new(cx)).into()
 }
 
 struct AnchorDemo {
     scroll_handle: ScrollHandle,
+    anchor: Entity<Anchor>,
 }
 
 impl AnchorDemo {
-    fn new() -> Self {
+    fn new(cx: &mut Context<Self>) -> Self {
+        let scroll_handle = ScrollHandle::new();
+        let anchor = cx.new({
+            let scroll_handle = scroll_handle.clone();
+            |_| {
+                Anchor::new(scroll_handle)
+                    .offset(px(20.0))
+                    .link(AnchorLink::new("基础用法", "basic"))
+                    .link(
+                        AnchorLink::new("API", "api")
+                            .child(AnchorLink::new("Attributes", "attributes"))
+                            .child(AnchorLink::new("Events", "events")),
+                    )
+            }
+        });
         Self {
-            scroll_handle: ScrollHandle::new(),
+            scroll_handle,
+            anchor,
         }
     }
 }
@@ -22,17 +38,7 @@ impl Render for AnchorDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let scroll_handle = self.scroll_handle.clone();
-
-        let anchor = cx.new(|_| {
-            Anchor::new(scroll_handle.clone())
-                .offset(px(20.0))
-                .link(AnchorLink::new("基础用法", "basic"))
-                .link(
-                    AnchorLink::new("API", "api")
-                        .child(AnchorLink::new("Attributes", "attributes"))
-                        .child(AnchorLink::new("Events", "events")),
-                )
-        });
+        let anchor = self.anchor.clone();
 
         div()
             .flex()
