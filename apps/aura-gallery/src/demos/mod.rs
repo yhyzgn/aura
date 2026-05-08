@@ -39,6 +39,7 @@ pub mod steps_demo;
 pub mod table_demo;
 pub mod tabs_demo;
 pub mod tag_demo;
+pub mod time_picker_demo;
 pub mod timeline_demo;
 pub mod tooltip_demo;
 pub mod tree_demo;
@@ -149,6 +150,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "DatePicker 日期选择器",
             description: "选择单个日期",
             render: |cx| date_picker_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "TimePicker 时间选择器",
+            description: "选择固定步进时间",
+            render: |cx| time_picker_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Timeline 时间线",

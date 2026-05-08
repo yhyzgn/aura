@@ -938,3 +938,27 @@
 
 ### Key Discoveries
 - Rebinding child callbacks inside a parent `Render::render` is fragile and can create `Context` borrow overlap diagnostics in downstream editors/toolchains. Demo render paths should prefer read-only child inspection unless mutation is unavoidable.
+
+
+## Session 64 — 2026-05-08 (P5 TimePicker)
+
+### Actions
+- **Added TimePicker component**:
+  - Implemented `TimePicker` and `TimeValue` in `crates/aura-components/src/time_picker.rs`.
+  - Supports fixed-list time selection, custom display formats, minute/second step controls, optional hidden seconds, disabled state, width/placeholder/id builder options, and `on_change` / `set_on_change` callbacks.
+  - Uses the existing portal layer for the dropdown panel and trigger bounds capture for placement.
+  - Added public exports in `crates/aura-components/src/lib.rs`.
+- **Added Gallery demo**:
+  - Created `apps/aura-gallery/src/demos/time_picker_demo.rs`.
+  - Registered `TimePicker 时间选择器` in the Gallery demo registry.
+  - Demo covers basic selection, custom format, stepped options, hidden seconds, and disabled state.
+- **Updated memory**:
+  - Marked P5 progress as 3/20 in `.memory/state.md`.
+  - Added TimePicker status to `.memory/inventory.md`.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- The TimePicker panel can reuse the DatePicker portal/backdrop pattern safely when the panel itself is a normal element tree rather than a custom wrapper element.
