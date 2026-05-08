@@ -383,8 +383,8 @@ impl Render for Select {
             .when(!self.border_none, |s| {
                 s.border_1().border_color(border_color)
             })
-            .cursor_pointer()
             .hover(|s| {
+                let s = s.cursor_pointer();
                 if self.border_none {
                     s
                 } else {

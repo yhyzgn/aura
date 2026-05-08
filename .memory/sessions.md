@@ -577,3 +577,18 @@
 
 ### Key Discoveries
 - GPUI 中 hover/cursor 应放在带 ID 与点击监听的实际 hitbox 元素上；子元素单独设置 hover 不一定会体现到用户鼠标所在的命中节点。
+
+## Session 44 — 2026-05-08 (Pagination Hover Cursor Pointer)
+
+### Actions
+- **补齐 hover 小手 cursor**:
+  - Pagination 可点击分页项在 hover 状态内显式设置 `cursor_pointer()`，确保鼠标移入时显示小手。
+  - Select 触发器在 hover 状态内显式设置 `cursor_pointer()`，分页条数下拉同样显示小手。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 本项目 GPUI 用法里 cursor 最稳妥的写法是放入 hover refinement；只在常规链路上写 cursor 可能不能满足用户期望的“hover 时变小手”。

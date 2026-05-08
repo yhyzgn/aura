@@ -229,8 +229,11 @@ impl Render for Pagination {
                 .rounded(px(theme.radius.sm))
                 .text_color(text_color)
                 .when(action.is_some() && !disabled && !active, |s| {
-                    s.cursor_pointer()
-                        .hover(|s| s.bg(theme.neutral.hover).text_color(theme.primary.base))
+                    s.hover(|s| {
+                        s.cursor_pointer()
+                            .bg(theme.neutral.hover)
+                            .text_color(theme.primary.base)
+                    })
                 })
                 .when_some(action.filter(|_| !disabled && !active), |s, action| {
                     s.on_click(cx.listener(move |this, _, window, cx| match action {
