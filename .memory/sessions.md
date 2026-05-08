@@ -881,3 +881,19 @@
 
 ### Key Discoveries
 - Since date/month/year values share the same `DateValue` storage, modes normalize granularity: month values use day `1`, and year values use month/day `1/1`.
+
+## Session 60 — 2026-05-08 (DatePicker Range Trigger Polish)
+
+### Actions
+- **Polished DatePicker range trigger display**:
+  - Replaced the compact plain-text `start 至 end` range string in the trigger with a structured layout.
+  - Start and end values now render as separate soft pill blocks with spacing.
+  - The range separator renders as its own muted chip, preventing the “至” text from visually colliding with either date.
+  - In-progress ranges show the selected start plus a muted “请选择结束” end placeholder.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Range display should not be a single concatenated string once custom formats are supported; separate layout nodes keep separator spacing predictable across date, month, and year ranges.

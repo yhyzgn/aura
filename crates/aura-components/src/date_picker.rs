@@ -394,6 +394,10 @@ impl Render for DatePicker {
         let theme = cx.global::<Config>().theme.clone();
         let entity = cx.entity().clone();
         let display = self.display_text();
+        let range_start_text = self.range_start.map(|value| self.format_value(value));
+        let range_end_text = self.range_end.map(|value| self.format_value(value));
+        let range_separator = self.range_separator.clone();
+        let is_range = self.picker_type.is_range();
         let has_value = self.has_display_value();
         let border_color = if self.is_open {
             theme.primary.base
@@ -445,7 +449,7 @@ impl Render for DatePicker {
             .id(format!("{}-trigger", self.id))
             .flex()
             .items_center()
-            .justify_between()
+            .gap_2()
             .px_3()
             .bg(if self.disabled {
                 theme.neutral.hover
@@ -457,7 +461,16 @@ impl Render for DatePicker {
             .rounded(px(theme.radius.md))
             .cursor_pointer()
             .hover(|s| s.cursor_pointer().border_color(theme.primary.base))
-            .child(
+            .child(div().flex_1().min_w(px(0.0)).child(if is_range {
+                render_range_trigger_text(
+                    range_start_text,
+                    range_end_text,
+                    range_separator,
+                    self.placeholder.clone(),
+                    has_value,
+                    &theme,
+                )
+            } else {
                 div()
                     .text_size(px(theme.font_size.md))
                     .text_color(if has_value {
@@ -465,8 +478,9 @@ impl Render for DatePicker {
                     } else {
                         theme.neutral.placeholder
                     })
-                    .child(display),
-            )
+                    .child(display)
+                    .into_any_element()
+            }))
             .child(
                 Icon::new(IconName::CalendarDays)
                     .size(px(16.0))
@@ -487,6 +501,71 @@ impl Render for DatePicker {
                 }),
             )
     }
+}
+
+fn render_range_trigger_text(
+    start: Option<String>,
+    end: Option<String>,
+    separator: SharedString,
+    placeholder: SharedString,
+    has_value: bool,
+    theme: &aura_theme::Theme,
+) -> gpui::AnyElement {
+    if !has_value {
+        return div()
+            .text_size(px(theme.font_size.md))
+            .text_color(theme.neutral.placeholder)
+            .child(placeholder)
+            .into_any_element();
+    }
+
+    let start = start.unwrap_or_default();
+    let end = end.unwrap_or_else(|| "请选择结束".to_string());
+
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .w_full()
+        .child(range_value_pill(start, true, theme))
+        .child(
+            div()
+                .flex_shrink_0()
+                .px_2()
+                .py_1()
+                .rounded(px(theme.radius.sm))
+                .bg(theme.neutral.hover)
+                .text_xs()
+                .text_color(theme.neutral.text_3)
+                .child(separator),
+        )
+        .child(range_value_pill(end, false, theme))
+        .into_any_element()
+}
+
+fn range_value_pill(
+    text: impl Into<SharedString>,
+    filled: bool,
+    theme: &aura_theme::Theme,
+) -> impl IntoElement {
+    div()
+        .flex_1()
+        .min_w(px(0.0))
+        .px_2()
+        .py_1()
+        .rounded(px(theme.radius.sm))
+        .bg(if filled {
+            theme.primary.light_9
+        } else {
+            theme.neutral.hover
+        })
+        .text_size(px(theme.font_size.sm))
+        .text_color(if filled {
+            theme.neutral.text_1
+        } else {
+            theme.neutral.text_3
+        })
+        .child(text.into())
 }
 
 fn render_picker_panel(
