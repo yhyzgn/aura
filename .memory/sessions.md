@@ -975,3 +975,25 @@
 
 ### Key Discoveries
 - Range endpoint values should match the normal DatePicker input text size; only secondary separators need reduced visual weight.
+
+## Session 66 — 2026-05-08 (P5 DateTimePicker)
+
+### Actions
+- **Added DateTimePicker component**:
+  - Implemented `DateTimePicker`, `DateTimeValue`, `DateTimePickerType`, and `DateTimePickerSelection`.
+  - Supports single date-time selection, date-time ranges, custom display formats, range separator text, minute/second steps, optional hidden seconds, disabled state, and change callbacks.
+  - Uses the portal/dropdown pattern with a normal element tree, calendar navigation, time columns, range endpoint chips, and explicit confirm/cancel actions.
+  - Added public exports in `crates/aura-components/src/lib.rs`.
+- **Added Gallery demo**:
+  - Created `apps/aura-gallery/src/demos/date_time_picker_demo.rs`.
+  - Registered `DateTimePicker 日期时间选择器` in the Gallery demo registry.
+  - Demo covers basic selection, custom format, stepped time, hidden seconds, range selection, and disabled state.
+- **Updated memory**:
+  - Marked P5 progress as 4/20 in `.memory/state.md`.
+  - Added DateTimePicker status to `.memory/inventory.md`.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- DateTime selection benefits from explicit confirm/cancel because users may need to adjust both a calendar date and multiple time columns before committing the value.

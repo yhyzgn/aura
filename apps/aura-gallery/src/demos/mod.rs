@@ -10,6 +10,7 @@ pub mod card_demo;
 pub mod collapse_demo;
 pub mod container_demo;
 pub mod date_picker_demo;
+pub mod date_time_picker_demo;
 pub mod descriptions_demo;
 pub mod dialog_demo;
 pub mod drawer_demo;
@@ -155,6 +156,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "TimePicker 时间选择器",
             description: "选择固定步进时间",
             render: |cx| time_picker_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "DateTimePicker 日期时间选择器",
+            description: "选择日期时间和日期时间范围",
+            render: |cx| date_time_picker_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Timeline 时间线",
