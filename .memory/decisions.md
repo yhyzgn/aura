@@ -102,7 +102,33 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 - Global Portal stack allows components to "teleport" content to the top layer regardless of parent nesting or overflow constraints.
 - `PortalLayer` at the end of root render ensures portals are always on top without complex Z-index management for simple cases.
 
-## ADR-008: Components Read Theme from GPUI Global
+## ADR-011: Built-in Unique ID for Every Control
+
+**Decision**: Every Aura component MUST generate a default globally-unique Element ID at construction time. Users MAY override via `.id(...)` but MUST NOT be required to set one for correct behavior. The unique ID is generated from a global atomic counter (`AtomicU64`).
+
+**Rationale**:
+- GPUI `InteractiveElement` requires unique `.id()` for hit-testing, event dispatch, and state management.
+- Multiple instances of the same component type with identical IDs (e.g. from a loop or helper function) cause event conflicts, silent failures, and lost hover/cursor feedback.
+- Sessions 24-51 repeatedly encountered ID-conflict bugs (Rate hover, Menu/Tabs/Pagination/Segmented/Dropdown multi-instance).
+- The library should guarantee correctness by default — not push the burden onto the consumer.
+
+**Implementation**:
+- `aura-core` provides `next_unique_id() -> u64` backed by a static `AtomicU64`.
+- Components call `unique_id("component-type")` → returns `SharedString` like `"button-42"`.
+- Internal interactive sub-elements use `"{component-id}-{role}"` (e.g. `"button-42-icon-start"`).
+- Users can override: `Button::new("X").id("my-custom-id")`.
+
+## ADR-012: Gallery Demo Must Be Self-Contained (No Raw GPUI Primitives in Demos)
+
+**Decision**: Gallery demo files (`apps/aura-gallery/src/demos/*_demo.rs`) and gallery framework files (`main.rs`, `category.rs`) must use only Aura library controls for layout and styling. Direct use of GPUI primitives (`div()`, `px()`, `rgb()`, etc.) in demo code is forbidden. If a needed layout/style pattern has no corresponding Aura control, the control should be added to the library.
+
+**Rationale**:
+- Demos serve as the canonical usage reference — they should demonstrate Aura's API, not GPUI's.
+- Eating our own dog food surfaces missing controls and API pain points.
+- Consistent visual appearance across all demos.
+- Lowers the barrier for new users: copy-paste from demos and it works.
+
+## ADR-008: Components Read Theme from GPUI Global (duplicate — kept for reference)
 
 **Decision**: Aura components implement GPUI `IntoElement` + `RenderOnce` and read `Config.theme` from `App` during render. Business usage is `Button::new("Save").primary()` without `.build(&theme)`.
 

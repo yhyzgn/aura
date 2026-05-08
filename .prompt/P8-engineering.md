@@ -1,6 +1,6 @@
 # P6 Engineering — 工程化交付
 
-> 上游: `.prompt/P5-advanced.md`
+> 上游: `.prompt/P7-demo-self-contained.md`
 
 ## 目标
 

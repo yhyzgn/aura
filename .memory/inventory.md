@@ -94,3 +94,15 @@
 ## P5 Advanced ⬜ (20)
 
 — See architecture-design.md for full list
+
+## P6 Built-in Unique ID ⬜
+
+— See `.prompt/P6-builtin-id.md` for task list
+
+## P7 Demo Self-Contained ⬜
+
+— See `.prompt/P7-demo-self-contained.md` for task list
+
+## P8 Engineering ⬜
+
+— See `.prompt/P8-engineering.md` for task list

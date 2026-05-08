@@ -61,7 +61,9 @@ aura/
 │   ├── P3-popper-feedback.md
 │   ├── P4-nav-data.md
 │   ├── P5-advanced.md
-│   └── P6-engineering.md
+│   ├── P6-builtin-id.md
+│   ├── P7-demo-self-contained.md
+│   └── P8-engineering.md
 ├── prompt.md                         # 📌 本文件 (AI 入口)
 ├── architecture-design.md
 └── structure.txt
@@ -322,13 +324,15 @@ Closes #P1-button-icons
 
 ```
 当前阶段 → 读取 .memory/state.md 获取
-├── P0 Foundation        ✅ → .prompt/P0-foundation.md
-├── P1 Basic Elements    ⬜ → .prompt/P1-basic-elements.md
-├── P2 Form Controls     ⬜ → .prompt/P2-form-controls.md
-├── P3 Popper + Feedback ⬜ → .prompt/P3-popper-feedback.md
-├── P4 Nav + Data        ⬜ → .prompt/P4-nav-data.md
-├── P5 Advanced          ⬜ → .prompt/P5-advanced.md
-└── P6 Engineering       ⬜ → .prompt/P6-engineering.md
+├── P0 Foundation          ✅ → .prompt/P0-foundation.md
+├── P1 Basic Elements      ⬜ → .prompt/P1-basic-elements.md
+├── P2 Form Controls       ⬜ → .prompt/P2-form-controls.md
+├── P3 Popper + Feedback   ⬜ → .prompt/P3-popper-feedback.md
+├── P4 Nav + Data          ⬜ → .prompt/P4-nav-data.md
+├── P5 Advanced            ⬜ → .prompt/P5-advanced.md
+├── P6 Built-in Unique ID  ⬜ → .prompt/P6-builtin-id.md
+├── P7 Demo Self-Contained ⬜ → .prompt/P7-demo-self-contained.md
+└── P8 Engineering         ⬜ → .prompt/P8-engineering.md
 ```
 
 ---

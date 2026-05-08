@@ -1,5 +1,28 @@
 # Session History
 
+## Session 52 — 2026-05-08 (Phase Reorganization)
+
+### Actions
+- **新增两个阶段 (P6, P7)，原 P6 Engineering 改为 P8**:
+  - P6 Built-in Unique ID: 确保全库每个控件有默认内置全局唯一 ID，事件冲突防护由组件库自身保证
+  - P7 Demo Self-Contained: Gallery Demo 完全使用 Aura 组件库自身控件构建，禁止在 Demo 中直接使用 GPUI 原生组件
+- **创建 `.prompt/P6-builtin-id.md`**: 详细定义内置唯一 ID 规范、实现策略、全局计数器基础设施
+- **创建 `.prompt/P7-demo-self-contained.md`**: 定义 Demo 自举要求、缺失控件新增流程、改造范围
+- **重命名 `.prompt/P6-engineering.md` → `.prompt/P8-engineering.md`** 并更新上游引用
+- **同步更新所有相关文件**:
+  - `prompt.md`: 阶段导航 (9)、工程结构 (3) 
+  - `.memory/state.md`: 阶段进度表
+  - `.memory/inventory.md`: 组件清单
+  - `.memory/decisions.md`: 新增 ADR-011 (Built-in Unique ID)、ADR-012 (Demo Self-Contained)
+  - `.memory/sessions.md`: 本记录
+
+### Key Discoveries
+- P0-P5 阶段反复出现的 ID 冲突问题 (Rate/Menu/Tabs/Pagination/Segmented/Dropdown) 说明默认唯一 ID 应该是组件库基础设施而非可选项
+- Demo 中大量 GPUI 原语导致 Gallery 无法作为组件用法参考，需要系统性解决
+
+### Verification
+- File structure verified: `.prompt/P6-builtin-id.md`, `.prompt/P7-demo-self-contained.md`, `.prompt/P8-engineering.md` all present
+
 ## Session 15 — 2026-05-06 (Night)
 
 ### Actions
