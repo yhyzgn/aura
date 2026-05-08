@@ -45,7 +45,6 @@ impl Render for AnchorDemo {
             .flex_col()
             .gap_8()
             .p_4()
-            .h_full()
             .child(
                 div()
                     .flex()
@@ -69,8 +68,12 @@ impl Render for AnchorDemo {
                     .flex()
                     .flex_row()
                     .gap_4()
-                    .flex_1()
+                    .h(px(620.0))
                     .overflow_hidden()
+                    .border_1()
+                    .border_color(theme.neutral.border)
+                    .rounded(px(theme.radius.md))
+                    .p_4()
                     .child(
                         div()
                             .flex()

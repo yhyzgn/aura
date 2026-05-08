@@ -49,6 +49,13 @@ pub struct Portal {
 
 impl Global for Portal {}
 
+pub struct PassivePortal {
+    pub entries: Vec<PortalEntry>,
+    next_id: u64,
+}
+
+impl Global for PassivePortal {}
+
 pub fn push_portal(
     render: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static,
     cx: &mut App,
@@ -60,6 +67,26 @@ pub fn push_portal(
         });
     }
     let portal = cx.global_mut::<Portal>();
+    let id = portal.next_id;
+    portal.next_id += 1;
+    portal.entries.push(PortalEntry {
+        id,
+        render: Box::new(render),
+    });
+    id
+}
+
+pub fn push_passive_portal(
+    render: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static,
+    cx: &mut App,
+) -> u64 {
+    if !cx.has_global::<PassivePortal>() {
+        cx.set_global(PassivePortal {
+            entries: vec![],
+            next_id: 1,
+        });
+    }
+    let portal = cx.global_mut::<PassivePortal>();
     let id = portal.next_id;
     portal.next_id += 1;
     portal.entries.push(PortalEntry {

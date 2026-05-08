@@ -92,13 +92,14 @@ impl Anchor {
         link: &AnchorLink,
         depth: u32,
         theme: &aura_theme::Theme,
+        anchor_entity: Entity<Anchor>,
         cx: &Context<Self>,
     ) -> AnyElement {
         let is_active = self.active_link.as_ref() == Some(&link.href);
         let href = link.href.clone();
         let scroll_handle = self.scroll_handle.clone();
-        let targets_bounds = self.targets_bounds.clone();
         let offset = self.offset;
+        let click_anchor_entity = anchor_entity.clone();
 
         div()
             .flex()
@@ -117,8 +118,10 @@ impl Anchor {
                         theme.neutral.text_2
                     })
                     .hover(|s| s.text_color(theme.primary.base))
-                    .on_click(move |_, _, _| {
-                        if let Some(bounds) = targets_bounds.get(&href) {
+                    .on_click(move |_, _, cx| {
+                        let target_bounds = click_anchor_entity
+                            .update(cx, |this, _| this.targets_bounds.get(&href).copied());
+                        if let Some(bounds) = target_bounds {
                             let current_offset = scroll_handle.offset();
                             let viewport_top = scroll_handle.bounds().top();
                             let jump = current_offset.y + viewport_top + offset - bounds.top();
@@ -128,9 +131,9 @@ impl Anchor {
                     .child(div().text_sm().child(link.title.clone())),
             )
             .children(
-                link.children
-                    .iter()
-                    .map(|child| self.render_link(child, depth + 1, theme, cx)),
+                link.children.iter().map(|child| {
+                    self.render_link(child, depth + 1, theme, anchor_entity.clone(), cx)
+                }),
             )
             .into_any_element()
     }
@@ -139,6 +142,7 @@ impl Anchor {
 impl Render for Anchor {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
+        let anchor_entity = cx.entity().clone();
 
         div()
             .flex()
@@ -163,7 +167,7 @@ impl Render for Anchor {
             .children(
                 self.links
                     .iter()
-                    .map(|link| self.render_link(link, 0, &theme, cx)),
+                    .map(|link| self.render_link(link, 0, &theme, anchor_entity.clone(), cx)),
             )
     }
 }
@@ -220,12 +224,12 @@ impl gpui::Element for AnchorTarget {
         &mut self,
         _id: Option<&GlobalElementId>,
         _id2: Option<&InspectorElementId>,
-        _bounds: Bounds<Pixels>,
+        bounds: Bounds<Pixels>,
         _rl: &mut (),
         window: &mut Window,
         cx: &mut App,
     ) -> () {
-        self.child.prepaint(window, cx);
+        self.child.prepaint_at(bounds.origin, window, cx);
     }
 
     fn paint(

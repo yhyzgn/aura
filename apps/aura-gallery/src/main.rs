@@ -2,7 +2,7 @@ mod category;
 mod demos;
 
 use aura_components::{Checkbox, Dialog, Drawer, Input, Radio, RadioGroup, Switch};
-use aura_core::{ContextExt, Portal, init_aura};
+use aura_core::{ContextExt, PassivePortal, Portal, init_aura};
 use aura_theme::Theme;
 use gpui::{
     AnyView, App, Bounds, Component, Context, MouseButton, Render, Window, WindowBounds,
@@ -230,13 +230,18 @@ impl IntoElement for PortalLayer {
 
 impl gpui::RenderOnce for PortalLayer {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let passive_portals = if cx.has_global::<PassivePortal>() {
+            std::mem::take(&mut cx.global_mut::<PassivePortal>().entries)
+        } else {
+            Vec::new()
+        };
         let portals = if cx.has_global::<Portal>() {
             std::mem::take(&mut cx.global_mut::<Portal>().entries)
         } else {
             Vec::new()
         };
 
-        if portals.is_empty() {
+        if passive_portals.is_empty() && portals.is_empty() {
             return div()
                 .absolute()
                 .top_0()
@@ -245,24 +250,46 @@ impl gpui::RenderOnce for PortalLayer {
                 .into_any_element();
         }
 
-        let mut container = div()
-            .id("portal-layer")
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full()
-            .cursor_default()
-            .occlude()
-            .bg(gpui::transparent_black())
-            .on_hover(|_, _, cx| {
-                cx.stop_propagation();
-            })
-            .on_mouse_move(|_, _, cx| {
-                cx.stop_propagation();
-            });
+        let mut container = div().absolute().top_0().left_0().size_full();
 
-        for entry in portals {
-            container = container.child((entry.render)(window, cx));
+        if !passive_portals.is_empty() {
+            let mut passive_container = div()
+                .id("passive-portal-layer")
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .bg(gpui::transparent_black());
+
+            for entry in passive_portals {
+                passive_container = passive_container.child((entry.render)(window, cx));
+            }
+
+            container = container.child(passive_container);
+        }
+
+        if !portals.is_empty() {
+            let mut active_container = div()
+                .id("portal-layer")
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .cursor_default()
+                .occlude()
+                .bg(gpui::transparent_black())
+                .on_hover(|_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_move(|_, _, cx| {
+                    cx.stop_propagation();
+                });
+
+            for entry in portals {
+                active_container = active_container.child((entry.render)(window, cx));
+            }
+
+            container = container.child(active_container);
         }
 
         container.into_any_element()

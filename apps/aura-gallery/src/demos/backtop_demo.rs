@@ -64,8 +64,6 @@ impl Render for BacktopDemo {
             .flex_col()
             .gap_8()
             .p_4()
-            .h_full()
-            .relative()
             .child(
                 div()
                     .flex()
@@ -86,25 +84,36 @@ impl Render for BacktopDemo {
             )
             .child(
                 div()
-                    .flex_1()
-                    .id("backtop-scroll-view")
-                    .overflow_y_scroll()
-                    .track_scroll(&scroll_handle)
-                    .on_scroll_wheel(cx.listener(|_, _, _, cx| {
-                        cx.notify();
-                    }))
-                    .child(div().flex().flex_col().gap_4().children((0..50).map(|i| {
+                    .relative()
+                    .h(px(560.0))
+                    .overflow_hidden()
+                    .border_1()
+                    .border_color(theme.neutral.border)
+                    .rounded(px(theme.radius.md))
+                    .child(
                         div()
-                            .h(px(40.0))
-                            .flex()
-                            .items_center()
-                            .px_4()
-                            .bg(theme.neutral.hover)
-                            .rounded(px(theme.radius.sm))
-                            .child(format!("Scroll Item {}", i))
-                    }))),
+                            .size_full()
+                            .id("backtop-scroll-view")
+                            .overflow_y_scroll()
+                            .track_scroll(&scroll_handle)
+                            .on_scroll_wheel(cx.listener(|_, _, _, cx| {
+                                cx.notify();
+                            }))
+                            .child(div().flex().flex_col().gap_4().p_4().children((0..50).map(
+                                |i| {
+                                    div()
+                                        .h(px(40.0))
+                                        .flex()
+                                        .items_center()
+                                        .px_4()
+                                        .bg(theme.neutral.hover)
+                                        .rounded(px(theme.radius.sm))
+                                        .child(format!("Scroll Item {}", i))
+                                },
+                            ))),
+                    )
+                    .child(self.primary.clone())
+                    .child(self.custom.clone()),
             )
-            .child(self.primary.clone())
-            .child(self.custom.clone())
     }
 }

@@ -39,7 +39,6 @@ impl Render for AffixDemo {
             .flex_col()
             .gap_8()
             .p_4()
-            .h_full()
             .child(
                 div()
                     .flex()
@@ -60,42 +59,51 @@ impl Render for AffixDemo {
             )
             .child(
                 div()
-                    .flex_1()
-                    .id("affix-scroll-view")
-                    .overflow_y_scroll()
-                    .on_scroll_wheel(cx.listener(|_, _, _, cx| {
-                        cx.notify();
-                    }))
+                    .relative()
+                    .h(px(560.0))
+                    .overflow_hidden()
+                    .border_1()
+                    .border_color(theme.neutral.border)
+                    .rounded(px(theme.radius.md))
                     .bg(theme.neutral.hover)
-                    .p_4()
                     .child(
                         div()
-                            .h(px(200.0))
-                            .flex()
-                            .items_center()
-                            .justify_center()
+                            .size_full()
+                            .id("affix-scroll-view")
+                            .overflow_y_scroll()
+                            .on_scroll_wheel(cx.listener(|_, _, _, cx| {
+                                cx.notify();
+                            }))
+                            .p_4()
                             .child(
                                 div()
-                                    .text_sm()
-                                    .text_color(theme.neutral.text_3)
-                                    .child("向下滚动查看固钉效果"),
-                            ),
-                    )
-                    .child(self.top_affix.clone())
-                    .child(
-                        div()
-                            .h(px(800.0))
-                            .bg(theme.neutral.card)
-                            .my_4()
-                            .border_1()
-                            .border_color(theme.neutral.border)
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .child(div().child("长内容占位")),
-                    )
-                    .child(self.bottom_affix.clone())
-                    .child(div().h(px(400.0))),
+                                    .h(px(200.0))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .text_color(theme.neutral.text_3)
+                                            .child("向下滚动查看固钉效果"),
+                                    ),
+                            )
+                            .child(self.top_affix.clone())
+                            .child(
+                                div()
+                                    .h(px(800.0))
+                                    .bg(theme.neutral.card)
+                                    .my_4()
+                                    .border_1()
+                                    .border_color(theme.neutral.border)
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(div().child("长内容占位")),
+                            )
+                            .child(self.bottom_affix.clone())
+                            .child(div().h(px(400.0))),
+                    ),
             )
     }
 }

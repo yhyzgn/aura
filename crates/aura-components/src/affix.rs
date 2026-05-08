@@ -1,3 +1,4 @@
+use aura_core::push_passive_portal;
 use gpui::{
     AnyElement, App, Bounds, Context, ElementId, GlobalElementId, InspectorElementId, IntoElement,
     LayoutId, Pixels, Render, Window, div, prelude::*, px,
@@ -63,58 +64,81 @@ impl Render for Affix {
         let offset = self.offset;
         let content_fn = self.content.clone();
         let affix_handle = cx.entity().clone();
+        let last_bounds = self.last_bounds;
 
-        div()
-            .relative()
-            .child(div().id("affix-placeholder").child(BoundsTracker {
-                on_bounds_change: Box::new(move |bounds, window, cx| {
-                    let (offset, position, current_fixed) = affix_handle
-                        .update(cx, |this, _| (this.offset, this.position, this.is_fixed));
-
-                    let should_be_fixed = match position {
-                        AffixPosition::Top => bounds.top() <= offset,
-                        AffixPosition::Bottom => {
-                            let viewport_h = window.viewport_size().height;
-                            bounds.bottom() >= viewport_h - offset
-                        }
-                    };
-
-                    affix_handle.update(cx, |this, _| {
-                        this.last_bounds = Some(bounds);
-                    });
-
-                    if should_be_fixed != current_fixed {
-                        affix_handle.update(cx, |this, cx| {
-                            this.is_fixed = should_be_fixed;
-                            if let Some(ref on_change) = this.on_change {
-                                (on_change)(should_be_fixed, window, cx);
-                            }
-                            cx.notify();
-                        });
-                    }
-                }),
-            }))
-            .child(content_fn(_window, cx))
-            .when(is_fixed, |s| {
-                let fixed_top = self.last_bounds.map(|bounds| match self.position {
-                    AffixPosition::Top => self.offset - bounds.top(),
+        if is_fixed {
+            if let Some(bounds) = last_bounds {
+                let fixed_top = match self.position {
+                    AffixPosition::Top => offset,
                     AffixPosition::Bottom => {
-                        _window.viewport_size().height - self.offset - bounds.top() - px(40.0)
+                        _window.viewport_size().height - offset - bounds.size.height
                     }
+                };
+                let fixed_left = bounds.left();
+                let fixed_width = bounds.size.width;
+                let fixed_content = content_fn(_window, cx);
+
+                push_passive_portal(
+                    move |_, _| {
+                        div()
+                            .absolute()
+                            .top(fixed_top)
+                            .left(fixed_left)
+                            .w(fixed_width)
+                            .child(fixed_content)
+                            .into_any_element()
+                    },
+                    cx,
+                );
+            }
+        }
+
+        let flow_content = if is_fixed {
+            match last_bounds {
+                Some(bounds) => div()
+                    .w(bounds.size.width)
+                    .h(bounds.size.height)
+                    .into_any_element(),
+                None => div().h(px(40.0)).into_any_element(),
+            }
+        } else {
+            content_fn(_window, cx)
+        };
+
+        div().relative().child(BoundsTracker {
+            child: flow_content,
+            on_bounds_change: Box::new(move |bounds, window, cx| {
+                let (offset, position, current_fixed) =
+                    affix_handle.update(cx, |this, _| (this.offset, this.position, this.is_fixed));
+
+                let should_be_fixed = match position {
+                    AffixPosition::Top => bounds.top() <= offset,
+                    AffixPosition::Bottom => {
+                        let viewport_h = window.viewport_size().height;
+                        bounds.bottom() >= viewport_h - offset
+                    }
+                };
+
+                affix_handle.update(cx, |this, _| {
+                    this.last_bounds = Some(bounds);
                 });
-                s.child(
-                    div()
-                        .absolute()
-                        .top(fixed_top.unwrap_or(offset))
-                        .left_0()
-                        .w_full()
-                        .child(content_fn(_window, cx)),
-                )
-            })
+
+                if should_be_fixed != current_fixed {
+                    affix_handle.update(cx, |this, cx| {
+                        this.is_fixed = should_be_fixed;
+                        if let Some(ref on_change) = this.on_change {
+                            (on_change)(should_be_fixed, window, cx);
+                        }
+                        cx.notify();
+                    });
+                }
+            }),
+        })
     }
 }
 
 struct BoundsTracker {
+    child: AnyElement,
     on_bounds_change: Box<dyn Fn(Bounds<Pixels>, &mut Window, &mut App)>,
 }
 
@@ -143,18 +167,19 @@ impl gpui::Element for BoundsTracker {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, ()) {
-        (window.request_layout(gpui::Style::default(), [], cx), ())
+        (self.child.request_layout(window, cx), ())
     }
 
     fn prepaint(
         &mut self,
         _id: Option<&GlobalElementId>,
         _id2: Option<&InspectorElementId>,
-        _bounds: Bounds<Pixels>,
+        bounds: Bounds<Pixels>,
         _rl: &mut (),
-        _window: &mut Window,
-        _cx: &mut App,
+        window: &mut Window,
+        cx: &mut App,
     ) -> () {
+        self.child.prepaint_at(bounds.origin, window, cx);
     }
 
     fn paint(
@@ -168,5 +193,6 @@ impl gpui::Element for BoundsTracker {
         cx: &mut App,
     ) {
         (self.on_bounds_change)(bounds, window, cx);
+        self.child.paint(window, cx);
     }
 }

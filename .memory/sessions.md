@@ -728,3 +728,31 @@
 ### Key Discoveries
 - 这三个控件有实际价值，尤其在长页面、文档和组件库 demo 场景中。
 - 当前无效果的主要原因仍是交互/滚动状态在 demo render 阶段重建，以及滚动坐标系计算没有考虑 scroll viewport 的窗口位置。
+
+## Session 53 — 2026-05-08 (Affix / Backtop / Anchor Demo Fixes)
+
+### Actions
+- **修复 Affix 展示机制**:
+  - 将 `BoundsTracker` 改为真正包裹并绘制子元素，而不是只绘制一个 0 尺寸占位元素。
+  - 固定态内容通过非阻塞 passive portal 渲染到顶层，避免被滚动容器裁剪，同时保留原位置占位尺寸防止布局跳动。
+  - 调整 Affix demo 为明确高度的滚动展示区，避免嵌套在 Gallery 滚动内容中因高度不确定导致“无效果”。
+- **修复 Backtop 可见性与定位**:
+  - 增加 `BacktopVisibilityTracker` 在 paint 阶段读取 `ScrollHandle` 偏移并触发组件重绘。
+  - 将 Backtop 根元素设为绝对定位全尺寸层，使右下角按钮相对 demo 容器正确展示。
+  - 调整 Backtop demo 为带边框的固定高度滚动区域，并把 Backtop 放在该相对定位容器内。
+- **修复 Anchor 跳转与目标展示**:
+  - Anchor 点击时从组件实时读取 `targets_bounds`，避免闭包捕获初始化时的空 bounds 快照导致点击无效。
+  - AnchorTarget 使用 `prepaint_at(bounds.origin, ...)` 正确预绘制子元素。
+  - 调整 Anchor demo 为固定高度可视区，确保滚动区域和右侧锚点导航可见。
+- **新增 passive portal 通道**:
+  - `aura_core::PassivePortal` / `push_passive_portal` 用于 Affix 这类不应 occlude / stop propagation 的顶层渲染。
+  - Gallery 的 `PortalLayer` 分离 passive portal 与原有 active portal，保留弹层类组件的事件阻断行为。
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Affix 不适合复用原有 `Portal`，因为原 active portal layer 会 `.occlude()` 并停止事件传播，固定内容应走非阻塞 passive portal。
+- 依赖 `ScrollHandle` 的可见性状态不能只在 render 中读取；需要 paint/scroll 触发状态同步，否则滚动后组件可能不会重绘。
+- 自定义 `gpui::Element` 包裹 `AnyElement` 时，prepaint 阶段应使用 `prepaint_at(bounds.origin, ...)`，否则子元素可能无法按目标 bounds 展示。

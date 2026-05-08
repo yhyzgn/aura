@@ -2,8 +2,8 @@ use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, Context, IntoElement, Pixels, Render, ScrollHandle, Window, div, point, prelude::*,
-    px,
+    AnyElement, App, Bounds, Context, ElementId, Entity, GlobalElementId, InspectorElementId,
+    IntoElement, LayoutId, Pixels, Render, ScrollHandle, Window, div, point, prelude::*, px,
 };
 
 pub struct Backtop {
@@ -12,6 +12,7 @@ pub struct Backtop {
     visibility_height: Pixels,
     right: Pixels,
     bottom: Pixels,
+    is_visible: bool,
     content: Option<Box<dyn Fn(&mut Window, &mut Context<Backtop>) -> AnyElement + 'static>>,
 }
 
@@ -25,6 +26,7 @@ impl Backtop {
             visibility_height: px(200.0),
             right: px(40.0),
             bottom: px(40.0),
+            is_visible: false,
             content: None,
         }
     }
@@ -61,41 +63,119 @@ impl Backtop {
 impl Render for Backtop {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
-        let scroll_offset = self.scroll_handle.offset();
-        let is_visible = -scroll_offset.y >= self.visibility_height;
+        let is_visible = self.is_visible;
 
         let scroll_handle = self.scroll_handle.clone();
 
-        div().when(is_visible, |s| {
-            s.child(
-                div()
-                    .id(format!("{}-btn", self.id))
-                    .absolute()
-                    .bottom(self.bottom)
-                    .right(self.right)
-                    .cursor_pointer()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .w(px(40.0))
-                    .h(px(40.0))
-                    .rounded_full()
-                    .bg(theme.neutral.card)
-                    .border_1()
-                    .border_color(theme.neutral.border)
-                    .shadow_lg()
-                    .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                    .on_click(move |_, _, _| {
-                        scroll_handle.set_offset(point(px(0.0), px(0.0)));
-                    })
-                    .child(match &self.content {
-                        Some(content_fn) => (content_fn)(_window, cx),
-                        None => Icon::new(IconName::ChevronUp)
-                            .size(px(20.0))
-                            .color(theme.primary.base)
-                            .into_any_element(),
-                    }),
-            )
-        })
+        div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .size_full()
+            .child(BacktopVisibilityTracker {
+                backtop: cx.entity().clone(),
+                scroll_handle: self.scroll_handle.clone(),
+                visibility_height: self.visibility_height,
+            })
+            .when(is_visible, |s| {
+                s.child(
+                    div()
+                        .id(format!("{}-btn", self.id))
+                        .absolute()
+                        .bottom(self.bottom)
+                        .right(self.right)
+                        .cursor_pointer()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .w(px(40.0))
+                        .h(px(40.0))
+                        .rounded_full()
+                        .bg(theme.neutral.card)
+                        .border_1()
+                        .border_color(theme.neutral.border)
+                        .shadow_lg()
+                        .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
+                        .on_click(move |_, _, _| {
+                            scroll_handle.set_offset(point(px(0.0), px(0.0)));
+                        })
+                        .child(match &self.content {
+                            Some(content_fn) => (content_fn)(_window, cx),
+                            None => Icon::new(IconName::ChevronUp)
+                                .size(px(20.0))
+                                .color(theme.primary.base)
+                                .into_any_element(),
+                        }),
+                )
+            })
+    }
+}
+
+struct BacktopVisibilityTracker {
+    backtop: Entity<Backtop>,
+    scroll_handle: ScrollHandle,
+    visibility_height: Pixels,
+}
+
+impl IntoElement for BacktopVisibilityTracker {
+    type Element = Self;
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl gpui::Element for BacktopVisibilityTracker {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _id2: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        let mut style = gpui::Style::default();
+        style.size.width = px(0.0).into();
+        style.size.height = px(0.0).into();
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _id2: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _window: &mut Window,
+        _cx: &mut App,
+    ) -> Self::PrepaintState {
+    }
+
+    fn paint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _id2: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut Self::RequestLayoutState,
+        _prepaint: &mut Self::PrepaintState,
+        _window: &mut Window,
+        cx: &mut App,
+    ) {
+        let visible = -self.scroll_handle.offset().y >= self.visibility_height;
+        self.backtop.update(cx, |this, cx| {
+            if this.is_visible != visible {
+                this.is_visible = visible;
+                cx.notify();
+            }
+        });
     }
 }
