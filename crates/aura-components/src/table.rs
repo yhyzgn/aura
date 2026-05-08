@@ -2,9 +2,10 @@ use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, App, Component, IntoElement, Pixels, RenderOnce, SharedString, Window, div,
-    prelude::*, px,
+    AnyElement, App, Component, IntoElement, MouseButton, Pixels, RenderOnce, SharedString, Window,
+    div, prelude::*, px,
 };
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TableAlign {
@@ -14,13 +15,26 @@ pub enum TableAlign {
     Right,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TableSortOrder {
+    Ascending,
+    Descending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableSortState {
+    pub key: SharedString,
+    pub order: Option<TableSortOrder>,
+}
+
 pub struct TableColumn {
     pub key: SharedString,
     pub label: SharedString,
+    pub header: Option<AnyElement>,
     pub width: Option<Pixels>,
     pub min_width: Pixels,
     pub align: TableAlign,
+    pub sortable: bool,
 }
 
 pub struct TableCell {
@@ -42,6 +56,9 @@ pub struct Table {
     fixed_header: bool,
     height: Option<Pixels>,
     empty_text: SharedString,
+    sort_key: Option<SharedString>,
+    sort_order: Option<TableSortOrder>,
+    on_sort_change: Option<Arc<dyn Fn(TableSortState, &mut Window, &mut App) + 'static>>,
 }
 
 impl TableColumn {
@@ -49,10 +66,17 @@ impl TableColumn {
         Self {
             key: key.into(),
             label: label.into(),
+            header: None,
             width: None,
             min_width: px(120.0),
             align: TableAlign::Left,
+            sortable: false,
         }
+    }
+
+    pub fn header(mut self, header: impl IntoElement) -> Self {
+        self.header = Some(header.into_any_element());
+        self
     }
 
     pub fn width(mut self, width: impl Into<Pixels>) -> Self {
@@ -67,6 +91,11 @@ impl TableColumn {
 
     pub fn align(mut self, align: TableAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    pub fn sortable(mut self) -> Self {
+        self.sortable = true;
         self
     }
 }
@@ -106,6 +135,9 @@ impl Table {
             fixed_header: false,
             height: None,
             empty_text: "暂无数据".into(),
+            sort_key: None,
+            sort_order: None,
+            on_sort_change: None,
         }
     }
 
@@ -153,18 +185,35 @@ impl Table {
         self.empty_text = text.into();
         self
     }
+
+    pub fn sort(mut self, key: impl Into<SharedString>, order: Option<TableSortOrder>) -> Self {
+        self.sort_key = Some(key.into());
+        self.sort_order = order;
+        self
+    }
+
+    pub fn on_sort_change(
+        mut self,
+        f: impl Fn(TableSortState, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_sort_change = Some(Arc::new(f));
+        self
+    }
 }
 
 impl RenderOnce for Table {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
-        let columns = self.columns;
+        let mut columns = self.columns;
         let has_rows = !self.rows.is_empty();
         let border = self.border;
         let stripe = self.stripe;
         let fixed_header = self.fixed_header || self.height.is_some();
         let height = self.height;
         let body_id = format!("{}-body", self.id);
+        let sort_key = self.sort_key;
+        let sort_order = self.sort_order;
+        let on_sort_change = self.on_sort_change;
 
         let header = div()
             .flex()
@@ -173,13 +222,20 @@ impl RenderOnce for Table {
             .bg(theme.neutral.hover)
             .border_b_1()
             .border_color(theme.neutral.border)
-            .children(columns.iter().enumerate().map(|(index, column)| {
-                table_cell_shell(column, border, index).py_3().child(
-                    div()
-                        .text_size(px(theme.font_size.sm))
-                        .font_weight(gpui::FontWeight::BOLD)
-                        .text_color(theme.neutral.text_2)
-                        .child(column.label.clone()),
+            .children(columns.iter_mut().enumerate().map(|(index, column)| {
+                let active_order = if sort_key.as_ref() == Some(&column.key) {
+                    sort_order
+                } else {
+                    None
+                };
+                table_header_cell(
+                    column,
+                    border,
+                    index,
+                    &theme,
+                    active_order,
+                    on_sort_change.clone(),
+                    &self.id,
                 )
             }));
 
@@ -329,4 +385,76 @@ fn table_cell_shell(column: &TableColumn, border: bool, index: usize) -> gpui::D
         TableAlign::Center => cell.justify_center(),
         TableAlign::Right => cell.justify_end(),
     }
+}
+
+fn table_header_cell(
+    column: &mut TableColumn,
+    border: bool,
+    index: usize,
+    theme: &aura_theme::Theme,
+    active_order: Option<TableSortOrder>,
+    on_sort_change: Option<Arc<dyn Fn(TableSortState, &mut Window, &mut App) + 'static>>,
+    table_id: &SharedString,
+) -> AnyElement {
+    let header_content = column.header.take().unwrap_or_else(|| {
+        div()
+            .text_size(px(theme.font_size.sm))
+            .font_weight(gpui::FontWeight::BOLD)
+            .text_color(theme.neutral.text_2)
+            .child(column.label.clone())
+            .into_any_element()
+    });
+
+    let icon = match active_order {
+        Some(TableSortOrder::Ascending) => IconName::ArrowUp,
+        Some(TableSortOrder::Descending) => IconName::ArrowDown,
+        None => IconName::ArrowUpDown,
+    };
+    let icon_color = if active_order.is_some() {
+        theme.primary.base
+    } else {
+        theme.neutral.text_3
+    };
+
+    let content = div()
+        .flex()
+        .items_center()
+        .gap_1()
+        .child(header_content)
+        .when(column.sortable, |s| {
+            s.child(Icon::new(icon).size(px(14.0)).color(icon_color))
+        });
+
+    let cell = table_cell_shell(column, border, index)
+        .py_3()
+        .child(content);
+
+    if !column.sortable {
+        return cell.into_any_element();
+    }
+
+    let column_key = column.key.clone();
+    let next_order = match active_order {
+        None => Some(TableSortOrder::Ascending),
+        Some(TableSortOrder::Ascending) => Some(TableSortOrder::Descending),
+        Some(TableSortOrder::Descending) => None,
+    };
+    let callback = on_sort_change.clone();
+
+    cell.id(format!("{}-sort-{}", table_id, column.key))
+        .cursor_pointer()
+        .hover(|s| s.bg(theme.neutral.pressed))
+        .on_mouse_up(MouseButton::Left, move |_, window, cx| {
+            if let Some(callback) = &callback {
+                callback(
+                    TableSortState {
+                        key: column_key.clone(),
+                        order: next_order,
+                    },
+                    window,
+                    cx,
+                );
+            }
+        })
+        .into_any_element()
 }

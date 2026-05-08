@@ -777,3 +777,26 @@
 
 ### Key Discoveries
 - `overflow_y_scroll()` requires a stateful element in this GPUI version, so Table body uses a generated `.id(...)` before enabling fixed-header scrolling.
+
+
+## Session 55 — 2026-05-08 (Table Header Customization + Sort)
+
+### Actions
+- **Enhanced Table header API**:
+  - Table headers remain bold by default when using `TableColumn::new(key, label)`.
+  - Added `TableColumn::header(...)` so developers can provide any Aura/GPUI element, including `Text`, as custom header content.
+- **Added opt-in sortable columns**:
+  - Added `TableColumn::sortable()` to explicitly enable sorting behavior per column.
+  - Added `TableSortOrder` and `TableSortState`.
+  - Added controlled sorting API: `Table::sort(key, order)` + `Table::on_sort_change(...)`.
+  - Header click cycles `none -> ascending -> descending -> none`; sorting remains developer-enabled and developer-controlled so application data ordering stays explicit.
+- **Updated Table demo**:
+  - Added a custom-header + sortable-columns example.
+  - Demo uses `Text::new("客户")` as a custom header and sorts sample rows when sortable headers are clicked.
+
+### Verification
+- `cargo check` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Because table cells hold `AnyElement`, automatic internal sorting cannot safely infer comparable values. A controlled sort callback keeps Table generic while letting developers sort their source data explicitly.

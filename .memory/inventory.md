@@ -95,7 +95,7 @@
 
 | # | Component | File | Demo | Status |
 |---|-----------|------|------|--------|
-| 1 | Table | `crates/aura-components/src/table.rs` | ✅ | ✅ P0 basic / fixed header / empty / loading / border / stripe |
+| 1 | Table | `crates/aura-components/src/table.rs` | ✅ | ✅ P0 basic / custom header / opt-in sort / fixed header / empty / loading / border / stripe |
 | 2 | DatePicker | — | — | ⬜ |
 | 3 | TimePicker | — | — | ⬜ |
 | 4 | DateTimePicker | — | — | ⬜ |
