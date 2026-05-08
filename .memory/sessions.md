@@ -608,3 +608,18 @@
 
 ### Key Discoveries
 - Pagination 上一页/下一页主要是 Icon，父级文字 hover 不会改变显式 Icon 颜色；需要 group hover。当前页之前也被 hover 条件排除，导致部分分页按钮看起来完全没有 hover/cursor 反馈。
+
+## Session 46 — 2026-05-08 (PortalLayer Cursor Mask)
+
+### Actions
+- **修复小手 cursor 被空 PortalLayer 覆盖**:
+  - Gallery 的 `PortalLayer` 在没有任何 portal entry 时不再设置 `cursor_default()`。
+  - 保留有弹层时的全屏 `cursor_default()` + `occlude()`，确保弹层存在时仍能隔离背景 hover/cursor。
+
+### Verification
+- `cargo check` passed.
+- `cargo test` passed.
+- `timeout 8s cargo run -p aura-gallery` compiled and launched the gallery successfully; process was intentionally stopped by timeout after startup.
+
+### Key Discoveries
+- 空 PortalLayer 虽然没有弹层内容，但全屏 `cursor_default()` 仍会向 GPUI 注册 cursor 样式请求，覆盖底层分页按钮的 `cursor_pointer()`。

@@ -242,7 +242,6 @@ impl gpui::RenderOnce for PortalLayer {
                 .top_0()
                 .left_0()
                 .size_full()
-                .cursor_default()
                 .into_any_element();
         }
 
