@@ -552,7 +552,7 @@ fn range_value_text(
         .flex_1()
         .min_w(px(0.0))
         .px_1()
-        .text_size(px(theme.font_size.sm))
+        .text_size(px(theme.font_size.md))
         .text_color(if filled {
             theme.neutral.text_1
         } else {

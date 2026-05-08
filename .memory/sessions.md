@@ -962,3 +962,16 @@
 
 ### Key Discoveries
 - The TimePicker panel can reuse the DatePicker portal/backdrop pattern safely when the panel itself is a normal element tree rather than a custom wrapper element.
+
+## Session 65 — 2026-05-08 (DatePicker Range Value Font Size)
+
+### Actions
+- **Adjusted DatePicker range trigger typography**:
+  - Restored the left/right range value text to the normal input font size.
+  - Kept only the separator chip (`至` by default) visually smaller/muted.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- Range endpoint values should match the normal DatePicker input text size; only secondary separators need reduced visual weight.
