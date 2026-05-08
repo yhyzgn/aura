@@ -61,6 +61,7 @@ pub mod timeline;
 pub mod title;
 pub mod tooltip;
 pub mod tree;
+pub mod upload;
 
 pub use affix::*;
 pub use alert::*;
@@ -126,3 +127,4 @@ pub use timeline::*;
 pub use title::*;
 pub use tooltip::*;
 pub use tree::*;
+pub use upload::*;

@@ -997,3 +997,25 @@
 
 ### Key Discoveries
 - DateTime selection benefits from explicit confirm/cancel because users may need to adjust both a calendar date and multiple time columns before committing the value.
+
+## Session 67 — 2026-05-08 (P5 Upload)
+
+### Actions
+- **Added Upload component**:
+  - Implemented `Upload`, `UploadFile`, `UploadStatus`, and `UploadListType`.
+  - Supports button and drag-style upload triggers, text file lists, picture-card lists, progress bars, success/error/uploading/ready states, file size metadata, disabled state, multiple/accept/limit options, and select/remove callbacks.
+  - Exposes mutation helpers for host-driven file list updates and internal remove actions.
+  - Added public exports in `crates/aura-components/src/lib.rs`.
+- **Added Gallery demo**:
+  - Created `apps/aura-gallery/src/demos/upload_demo.rs`.
+  - Registered `Upload 上传` in the Gallery demo registry.
+  - Demo covers basic list, drag style, picture card list, upload limit, and disabled state.
+- **Updated memory**:
+  - Marked P5 progress as 5/20 in `.memory/state.md`.
+  - Added Upload status to `.memory/inventory.md`.
+
+### Verification
+- `cargo check` passed.
+
+### Key Discoveries
+- GPUI does not provide a browser-style file input in this component layer, so `Upload` exposes `on_select` for the host app to bridge a native file picker while the component owns presentation and list interactions.

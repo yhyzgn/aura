@@ -45,6 +45,7 @@ pub mod timeline_demo;
 pub mod tooltip_demo;
 pub mod tree_demo;
 pub mod typography_demo;
+pub mod upload_demo;
 
 use gpui::{AnyView, App};
 
@@ -161,6 +162,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "DateTimePicker 日期时间选择器",
             description: "选择日期时间和日期时间范围",
             render: |cx| date_time_picker_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "Upload 上传",
+            description: "上传入口与文件列表",
+            render: |cx| upload_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Timeline 时间线",
