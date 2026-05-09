@@ -1125,3 +1125,28 @@
 
 ### Key Discoveries
 - Trigger-level outside-click handlers do not distinguish portal descendants from true outside clicks; dropdown-style portal components should own their backdrop/inside-click propagation policy.
+
+
+## Session 73 — 2026-05-09 (Cascader Lazy Loading)
+
+### Actions
+- **Added Cascader lazy loading**:
+  - Added `Cascader::lazy(true)` and `Cascader::on_lazy_load(...)` / `set_on_lazy_load(...)` APIs.
+  - Added `CascaderOption::leaf(true)` so lazy mode can distinguish final selectable leaves from unloaded empty branches.
+  - Added host update helpers `set_children_at_path(...)` and `set_loading_at_path(...)`, backed by pure option-tree helpers.
+  - Updated selection behavior so lazy empty branches trigger `on_lazy_load`, show loading state, keep the popup open, and only select when a leaf is chosen.
+- **Added Gallery usage**:
+  - Extended `apps/aura-gallery/src/demos/cascader_demo.rs` with a `懒加载` section showing `lazy(true)`, `set_on_lazy_load`, and `set_children_at_path`.
+- **Added tests**:
+  - Covered lazy option selectability and installing children into a lazy path.
+- **Updated memory**:
+  - Updated Cascader inventory status to include lazy loading.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test cascader` passed with 5 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Lazy Cascader needs an explicit `leaf(true)` marker because an empty child list can mean either a final selectable node or a not-yet-loaded branch.

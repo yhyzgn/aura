@@ -14,6 +14,7 @@ pub struct CascaderOption {
     pub children: Vec<CascaderOption>,
     pub disabled: bool,
     pub loading: bool,
+    pub leaf: bool,
 }
 
 pub struct Cascader {
@@ -31,7 +32,9 @@ pub struct Cascader {
     width: Option<Pixels>,
     focus_handle: FocusHandle,
     last_bounds: Option<Bounds<Pixels>>,
+    lazy: bool,
     on_change: Option<Arc<dyn Fn(Vec<SharedString>, &mut Window, &mut App) + 'static>>,
+    on_lazy_load: Option<Arc<dyn Fn(Vec<SharedString>, &mut Window, &mut App) + 'static>>,
 }
 
 impl CascaderOption {
@@ -42,6 +45,7 @@ impl CascaderOption {
             children: vec![],
             disabled: false,
             loading: false,
+            leaf: false,
         }
     }
 
@@ -62,6 +66,11 @@ impl CascaderOption {
 
     pub fn loading(mut self, loading: bool) -> Self {
         self.loading = loading;
+        self
+    }
+
+    pub fn leaf(mut self, leaf: bool) -> Self {
+        self.leaf = leaf;
         self
     }
 
@@ -89,7 +98,9 @@ impl Cascader {
             width: None,
             focus_handle: cx.focus_handle(),
             last_bounds: None,
+            lazy: false,
             on_change: None,
+            on_lazy_load: None,
         }
     }
 
@@ -152,12 +163,34 @@ impl Cascader {
         self
     }
 
+    pub fn lazy(mut self, lazy: bool) -> Self {
+        self.lazy = lazy;
+        self
+    }
+
     pub fn on_change(
         mut self,
         f: impl Fn(Vec<SharedString>, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_change = Some(Arc::new(f));
         self
+    }
+
+    pub fn on_lazy_load(
+        mut self,
+        f: impl Fn(Vec<SharedString>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_lazy_load = Some(Arc::new(f));
+        self
+    }
+
+    pub fn set_on_lazy_load(
+        &mut self,
+        f: impl Fn(Vec<SharedString>, &mut Window, &mut App) + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.on_lazy_load = Some(Arc::new(f));
+        cx.notify();
     }
 
     pub fn set_options(&mut self, options: Vec<CascaderOption>, cx: &mut Context<Self>) {
@@ -167,6 +200,33 @@ impl Cascader {
             self.active_path.clear();
         }
         cx.notify();
+    }
+
+    pub fn set_children_at_path(
+        &mut self,
+        path: &[SharedString],
+        children: Vec<CascaderOption>,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let changed = Self::set_children_in_options(&mut self.options, path, children);
+        if changed {
+            Self::set_loading_in_options(&mut self.options, path, false);
+            cx.notify();
+        }
+        changed
+    }
+
+    pub fn set_loading_at_path(
+        &mut self,
+        path: &[SharedString],
+        loading: bool,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let changed = Self::set_loading_in_options(&mut self.options, path, loading);
+        if changed {
+            cx.notify();
+        }
+        changed
     }
 
     pub fn set_selected_path(
@@ -203,7 +263,42 @@ impl Cascader {
         let Some(option) = Self::option_for_path(options, path) else {
             return false;
         };
-        !option.disabled && !option.loading && option.children.is_empty()
+        Self::is_selectable_option(option, false)
+    }
+
+    pub fn is_selectable_option(option: &CascaderOption, lazy: bool) -> bool {
+        !option.disabled
+            && !option.loading
+            && (option.leaf || (!lazy && option.children.is_empty()))
+    }
+
+    pub fn should_lazy_load_option(option: &CascaderOption, lazy: bool) -> bool {
+        lazy && !option.disabled && !option.loading && !option.leaf && option.children.is_empty()
+    }
+
+    pub fn set_children_in_options(
+        options: &mut [CascaderOption],
+        path: &[SharedString],
+        children: Vec<CascaderOption>,
+    ) -> bool {
+        let Some(option) = Self::option_for_path_mut(options, path) else {
+            return false;
+        };
+        option.children = children;
+        option.loading = false;
+        true
+    }
+
+    pub fn set_loading_in_options(
+        options: &mut [CascaderOption],
+        path: &[SharedString],
+        loading: bool,
+    ) -> bool {
+        let Some(option) = Self::option_for_path_mut(options, path) else {
+            return false;
+        };
+        option.loading = loading;
+        true
     }
 
     fn option_for_path<'a>(
@@ -218,6 +313,29 @@ impl Cascader {
         }
 
         Some(option)
+    }
+
+    fn option_for_path_mut<'a>(
+        options: &'a mut [CascaderOption],
+        path: &[SharedString],
+    ) -> Option<&'a mut CascaderOption> {
+        let (first, rest) = path.split_first()?;
+        let option = options.iter_mut().find(|option| &option.value == first)?;
+        Self::option_for_path_mut_from_option(option, rest)
+    }
+
+    fn option_for_path_mut_from_option<'a>(
+        option: &'a mut CascaderOption,
+        path: &[SharedString],
+    ) -> Option<&'a mut CascaderOption> {
+        let Some((first, rest)) = path.split_first() else {
+            return Some(option);
+        };
+        let child = option
+            .children
+            .iter_mut()
+            .find(|child| &child.value == first)?;
+        Self::option_for_path_mut_from_option(child, rest)
     }
 
     fn columns_for_active_path(&self) -> Vec<Vec<CascaderOption>> {
@@ -286,7 +404,21 @@ impl Cascader {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !Self::is_selectable_path(&self.options, &path) {
+        let Some(option) = Self::option_for_path(&self.options, &path) else {
+            return;
+        };
+
+        if Self::should_lazy_load_option(option, self.lazy) {
+            self.active_path = path.clone();
+            Self::set_loading_in_options(&mut self.options, &path, true);
+            if let Some(on_lazy_load) = &self.on_lazy_load {
+                on_lazy_load(path, window, cx);
+            }
+            cx.notify();
+            return;
+        }
+
+        if !Self::is_selectable_option(option, self.lazy) {
             self.active_path = path;
             cx.notify();
             return;

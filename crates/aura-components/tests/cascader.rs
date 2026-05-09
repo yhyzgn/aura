@@ -43,3 +43,29 @@ fn derives_stable_interactive_ids_from_value_paths() {
 
     assert_eq!(id.as_ref(), "region-item-zhejiang-hangzhou");
 }
+
+#[test]
+fn installs_children_at_a_lazy_path() {
+    let mut options = vec![CascaderOption::new("remote", "Remote")];
+
+    assert!(Cascader::set_children_in_options(
+        &mut options,
+        &["remote".into()],
+        vec![CascaderOption::new("leaf", "Loaded leaf").leaf(true)],
+    ));
+
+    assert_eq!(
+        Cascader::labels_for_path(&options, &["remote".into(), "leaf".into()]),
+        vec!["Remote", "Loaded leaf"]
+    );
+}
+
+#[test]
+fn lazy_empty_branch_is_not_selectable_until_marked_leaf() {
+    let branch = CascaderOption::new("remote", "Remote");
+    let leaf = CascaderOption::new("done", "Done").leaf(true);
+
+    assert!(Cascader::should_lazy_load_option(&branch, true));
+    assert!(!Cascader::is_selectable_option(&branch, true));
+    assert!(Cascader::is_selectable_option(&leaf, true));
+}

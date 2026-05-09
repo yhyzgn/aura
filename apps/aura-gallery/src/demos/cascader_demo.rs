@@ -11,6 +11,7 @@ struct CascaderDemo {
     selected: Entity<Cascader>,
     disabled: Entity<Cascader>,
     searchable: Entity<Cascader>,
+    lazy: Entity<Cascader>,
 }
 
 impl CascaderDemo {
@@ -41,6 +42,28 @@ impl CascaderDemo {
                     .placeholder("搜索 hang")
                     .width(px(360.0))
             }),
+            lazy: {
+                let lazy = cx.new(|cx| {
+                    Cascader::new(lazy_options(), cx)
+                        .lazy(true)
+                        .placeholder("请选择远程节点")
+                        .width(px(360.0))
+                });
+                let lazy_handle = lazy.clone();
+                lazy.update(cx, |cascader, cx| {
+                    cascader.set_on_lazy_load(
+                        move |path, _, cx| {
+                            let children = lazy_children_for(&path);
+                            let lazy_handle = lazy_handle.clone();
+                            lazy_handle.update(cx, |cascader, cx| {
+                                cascader.set_children_at_path(&path, children, cx);
+                            });
+                        },
+                        cx,
+                    );
+                });
+                lazy
+            },
         }
     }
 }
@@ -66,7 +89,7 @@ impl Render for CascaderDemo {
                             .child("Cascader 级联选择器"),
                     )
                     .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "从一组相关联的数据集合中逐级选择，支持默认选中、禁用、清空和搜索结果面板。",
+                        "从一组相关联的数据集合中逐级选择，支持默认选中、禁用、清空、搜索结果面板和懒加载。",
                     )),
             )
             .child(section(
@@ -87,7 +110,22 @@ impl Render for CascaderDemo {
                     .flex_col()
                     .gap_3()
                     .child(self.searchable.clone())
-                    .child(Text::new("示例预置 search_query=\"hang\" 展示叶子路径匹配结果。").size(px(theme.font_size.sm))),
+                    .child(
+                        Text::new("示例预置 search_query=\"hang\" 展示叶子路径匹配结果。")
+                            .size(px(theme.font_size.sm)),
+                    ),
+            ))
+            .child(section(
+                "懒加载",
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_3()
+                    .child(self.lazy.clone())
+                    .child(
+                        Text::new("点击空子级的分支会触发 on_lazy_load，宿主通过 set_children_at_path 写回远程子节点；点击最终 leaf(true) 节点才会选择并关闭。")
+                            .size(px(theme.font_size.sm)),
+                    ),
             ))
     }
 }
@@ -148,4 +186,38 @@ fn product_options() -> Vec<CascaderOption> {
                 .child(CascaderOption::new("redis", "Redis")),
         ),
     ]
+}
+
+fn lazy_options() -> Vec<CascaderOption> {
+    vec![
+        CascaderOption::new("remote-a", "远程分组 A"),
+        CascaderOption::new("remote-b", "远程分组 B"),
+        CascaderOption::new("ready", "本地叶子").leaf(true),
+    ]
+}
+
+fn lazy_children_for(path: &[gpui::SharedString]) -> Vec<CascaderOption> {
+    let key = path
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("/");
+
+    match key.as_str() {
+        "remote-a" => vec![
+            CascaderOption::new("team", "团队")
+                .child(CascaderOption::new("design", "设计组").leaf(true)),
+            CascaderOption::new("project", "项目")
+                .child(CascaderOption::new("aura", "Aura UI").leaf(true)),
+        ],
+        "remote-b" => vec![
+            CascaderOption::new("north", "华北").leaf(true),
+            CascaderOption::new("south", "华南").leaf(true),
+        ],
+        "remote-a/team" => vec![
+            CascaderOption::new("frontend", "前端组").leaf(true),
+            CascaderOption::new("native", "Native 组").leaf(true),
+        ],
+        _ => vec![CascaderOption::new("loaded", "加载结果").leaf(true)],
+    }
 }
