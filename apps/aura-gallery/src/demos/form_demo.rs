@@ -29,10 +29,12 @@ pub struct FormDemo {
     radio_group_buttons_large: Entity<RadioGroup>,
     radio_group_buttons_default: Entity<RadioGroup>,
     radio_group_buttons_small: Entity<RadioGroup>,
+    radio_group_buttons_stretch: Entity<RadioGroup>,
     radio_group_disabled: Entity<RadioGroup>,
     cb_group_buttons_large: Entity<CheckboxGroup>,
     cb_group_buttons_default: Entity<CheckboxGroup>,
     cb_group_buttons_small: Entity<CheckboxGroup>,
+    cb_group_buttons_stretch: Entity<CheckboxGroup>,
     input_plain: Entity<Input>,
     input_placeholder: Entity<Input>,
     input_password: Entity<Input>,
@@ -108,6 +110,15 @@ impl FormDemo {
                 .button()
                 .small()
             }),
+            radio_group_buttons_stretch: cx.new(|cx| {
+                RadioGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    1,
+                    cx,
+                )
+                .button()
+                .stretch(true)
+            }),
             radio_group_disabled: cx
                 .new(|cx| RadioGroup::new(vec!["Disabled A", "Disabled B"], 0, cx).disabled(true)),
             cb_group_buttons_large: cx.new(|cx| {
@@ -135,6 +146,15 @@ impl FormDemo {
                 )
                 .button()
                 .small()
+            }),
+            cb_group_buttons_stretch: cx.new(|cx| {
+                CheckboxGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    vec![1],
+                    cx,
+                )
+                .button()
+                .stretch(true)
             }),
             input_plain: cx.new(|cx| Input::new("", cx)),
             input_placeholder: cx.new(|cx| Input::new("", cx).placeholder("Type something...")),
@@ -259,7 +279,8 @@ impl Render for FormDemo {
                         .child(self.cb_group.clone())
                         .child(self.cb_group_buttons_large.clone())
                         .child(self.cb_group_buttons_default.clone())
-                        .child(self.cb_group_buttons_small.clone()),
+                        .child(self.cb_group_buttons_small.clone())
+                        .child(self.cb_group_buttons_stretch.clone()),
                 ),
             )
             .child(
@@ -286,6 +307,7 @@ impl Render for FormDemo {
                         .child(self.radio_group_buttons_large.clone())
                         .child(self.radio_group_buttons_default.clone())
                         .child(self.radio_group_buttons_small.clone())
+                        .child(self.radio_group_buttons_stretch.clone())
                         .child(self.radio_group_disabled.clone()),
                 ),
             )

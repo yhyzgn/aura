@@ -64,6 +64,7 @@ pub struct RadioGroup {
     options: Vec<SharedString>,
     layout: RadioGroupLayout,
     size: RadioGroupSize,
+    stretch: bool,
     focus_handle: FocusHandle,
     on_change: Option<Box<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
 }
@@ -80,6 +81,7 @@ impl RadioGroup {
             options: options.into_iter().map(|o| o.into()).collect(),
             layout: RadioGroupLayout::Vertical,
             size: RadioGroupSize::Default,
+            stretch: false,
             focus_handle: cx.focus_handle(),
             on_change: None,
         }
@@ -123,6 +125,19 @@ impl RadioGroup {
     pub fn small(mut self) -> Self {
         self.size = RadioGroupSize::Small;
         self
+    }
+
+    pub fn stretch(mut self, stretch: bool) -> Self {
+        self.stretch = stretch;
+        self
+    }
+
+    pub fn block(self, block: bool) -> Self {
+        self.stretch(block)
+    }
+
+    pub fn is_stretched(&self) -> bool {
+        self.stretch
     }
 
     pub fn layout_kind(&self) -> RadioGroupLayout {
@@ -183,6 +198,7 @@ impl RadioGroup {
             .border_1()
             .border_color(theme.neutral.border)
             .overflow_hidden()
+            .when(self.stretch, |s| s.w_full())
             .on_action(cx.listener(Self::up))
             .on_action(cx.listener(Self::down));
 
@@ -212,6 +228,7 @@ impl RadioGroup {
                 .flex()
                 .items_center()
                 .justify_center()
+                .when(self.stretch, |s| s.flex_1())
                 .bg(bg)
                 .text_size(text_size)
                 .text_color(text_color)

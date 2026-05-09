@@ -1811,3 +1811,20 @@
 ### Key Discoveries
 - The reference maps best to an opt-in segmented button layout, not a replacement of the existing radio-circle / checkbox-row defaults.
 - Existing GPUI styling helpers in this project do not include `inline_flex` / `w_fit`, so the segmented container uses the available flex/border/radius/overflow primitives.
+
+## Session 110 — 2026-05-10 (Group Button Stretch Mode)
+
+### Actions
+- Added opt-in `stretch(true)` APIs for `RadioGroup` and `CheckboxGroup` button mode.
+- Added `block(true)` aliases for compatibility with Segmented-style naming while preserving Tabs-like `stretch` terminology.
+- Kept button groups wrap-content by default; stretch mode applies `w_full()` to the group and `flex_1()` to each option.
+- Added stretched RadioGroup and CheckboxGroup examples to the Form demo.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- This behavior matches the existing Tabs `stretch(true)` pattern and Segmented `block(true)` width semantics: default content width, opt-in full parent width with equal option widths.
