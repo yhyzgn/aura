@@ -1486,3 +1486,21 @@
 
 ### Key Discoveries
 - GPUI `img(PathBuf)` resolves filesystem paths literally; a workspace-relative string can fail when the gallery binary runs with a different cwd, so demo assets should use the gallery crate manifest directory.
+
+
+## Session 91 — 2026-05-10 (Image Local Decode and P7 Prompt Sync)
+
+### Actions
+- Synced the user's `.prompt/P7-demo-self-contained.md` update into session memory: P7 now explicitly requires demo registry/components to be ordered by component name dictionary ASC.
+- Changed local Image rendering to decode filesystem files into a GPUI `RenderImage` directly, avoiding the async path-resource load path that was not showing the local demo image.
+- Kept remote URLs on GPUI's async image loader and local files on the direct filesystem decode path.
+- Added a test that the copied demo local asset exists.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 6 tests.
+- `git diff --check` passed after trimming trailing whitespace in the user-updated P7 prompt.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Absolute local paths were correct, but relying on GPUI's path-resource async image branch still did not render in the demo. Directly decoding local files to `RenderImage` makes local image display deterministic for Aura Image.

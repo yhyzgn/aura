@@ -2,10 +2,13 @@ use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, App, Component, IntoElement, ObjectFit, Pixels, RenderOnce, SharedString, Window,
-    div, img, prelude::*, px,
+    AnyElement, App, Component, IntoElement, ObjectFit, Pixels, RenderImage, RenderOnce,
+    SharedString, Window, div, img, prelude::*, px,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageFit {
@@ -279,9 +282,9 @@ impl RenderOnce for Image {
         }
 
         if let Some(src) = self.src {
-            let image = match src {
-                ImageSource::Url(src) => img(src),
-                ImageSource::File(path) => img(path),
+            let local_image = match &src {
+                ImageSource::File(path) => load_local_render_image(path),
+                ImageSource::Url(_) => None,
             };
             let loading = self.placeholder.unwrap_or_else({
                 let theme = theme.clone();
@@ -291,14 +294,25 @@ impl RenderOnce for Image {
                 let theme = theme.clone();
                 || Arc::new(move || default_fallback(&theme, alt.clone()))
             });
-            frame = frame.child(
-                image
-                    .size_full()
-                    .object_fit(self.fit.as_object_fit())
-                    .grayscale(self.grayscale)
-                    .with_loading(move || loading())
-                    .with_fallback(move || fallback()),
-            );
+            if let Some(local_image) = local_image {
+                frame = frame.child(
+                    img(local_image)
+                        .size_full()
+                        .object_fit(self.fit.as_object_fit())
+                        .grayscale(self.grayscale),
+                );
+            } else if let ImageSource::Url(src) = src {
+                frame = frame.child(
+                    img(src)
+                        .size_full()
+                        .object_fit(self.fit.as_object_fit())
+                        .grayscale(self.grayscale)
+                        .with_loading(move || loading())
+                        .with_fallback(move || fallback()),
+                );
+            } else {
+                frame = frame.child(fallback());
+            }
         } else {
             frame = frame.child(
                 self.fallback
@@ -335,6 +349,18 @@ impl IntoElement for Image {
     fn into_element(self) -> Self::Element {
         Component::new(self)
     }
+}
+
+fn load_local_render_image(path: &Path) -> Option<Arc<RenderImage>> {
+    let bytes = std::fs::read(path).ok()?;
+    let format = image::guess_format(&bytes).ok()?;
+    let mut data = image::load_from_memory_with_format(&bytes, format)
+        .ok()?
+        .into_rgba8();
+    for pixel in data.chunks_exact_mut(4) {
+        pixel.swap(0, 2);
+    }
+    Some(Arc::new(RenderImage::new([image::Frame::new(data)])))
 }
 
 fn default_loading(theme: &aura_theme::Theme) -> AnyElement {

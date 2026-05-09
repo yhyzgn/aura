@@ -143,6 +143,10 @@ fn section_header(title: &str) -> Div {
 | `DemoBlock` | 代码演示用的卡片容器（title + description + preview） | 高 |
 | `ColorSwatch` | 主题色板展示 | 低 |
 
+### 6. The Order Of Components in demo
+
+Must be Ordered by Component's name with dictionary, ASC
+
 ## 验证标准
 
 1. `cargo check` 0 errors, 0 warnings

@@ -37,3 +37,12 @@ fn image_supports_remote_url_sources() {
     let image = Image::new("https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg");
     assert!(image.source().is_some_and(|source| source.is_url()));
 }
+
+#[test]
+fn local_demo_asset_exists() {
+    assert!(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../apps/aura-gallery/assets/local.jpeg")
+            .exists()
+    );
+}
