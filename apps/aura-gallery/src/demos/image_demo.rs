@@ -14,7 +14,7 @@ impl Render for ImageDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let remote = "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
-        let local = format!("{}/assets/local.jpeg", env!("CARGO_MANIFEST_DIR"));
+        let local = format!("file://{}/assets/local.jpeg", env!("CARGO_MANIFEST_DIR"));
 
         div()
             .flex()
@@ -50,11 +50,7 @@ impl Render for ImageDemo {
                             .cover()
                             .preview(true),
                     )
-                    .child(
-                        Image::local(local.clone())
-                            .size(px(180.0), px(120.0))
-                            .cover(),
-                    )
+                    .child(Image::new(local.clone()).size(px(180.0), px(120.0)).cover())
                     .child(Image::new(remote).size(px(180.0), px(120.0)).contain()),
             ))
             .child(section(
@@ -93,7 +89,7 @@ impl Render for ImageDemo {
                     .flex_wrap()
                     .child(Image::new(remote).square(px(96.0)).cover().round())
                     .child(
-                        Image::local(local.clone())
+                        Image::new(local.clone())
                             .size(px(150.0), px(96.0))
                             .cover()
                             .radius(ImageRadius::Large)

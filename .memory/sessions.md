@@ -1521,3 +1521,20 @@
 
 ### Key Discoveries
 - Local file decoding and asset-path existence were both verified, so the remaining blank local display path is the local RenderImage handoff through `gpui::img`; direct `paint_image` is the narrower rendering path.
+
+## Session 93 — 2026-05-10 (Image File Protocol and Local Fill Layout)
+
+### Actions
+- Added `file://` protocol recognition to `Image::new(...)`, mapping file URLs to local file rendering instead of remote URL loading.
+- Updated the Image demo local sample to use `file://{CARGO_MANIFEST_DIR}/assets/local.jpeg` so the displayed source is explicitly a local-file protocol.
+- Wrapped the custom local image painter in an absolute full-size layer so local images fill the component frame instead of depending on flex child sizing.
+- Added file protocol source classification test coverage.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 7 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- The file existed and decoded, so the remaining risks were source classification ambiguity and the custom local painter not filling the visual frame. The demo now exercises the same file-protocol API users should call.

@@ -46,3 +46,9 @@ fn local_demo_asset_exists() {
             .exists()
     );
 }
+
+#[test]
+fn image_supports_file_protocol_sources() {
+    let image = Image::new("file:///tmp/local.jpeg");
+    assert!(image.source().is_some_and(|source| source.is_file()));
+}

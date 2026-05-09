@@ -50,6 +50,15 @@ pub enum ImageSource {
 }
 
 impl ImageSource {
+    pub fn from_input(input: impl Into<SharedString>) -> Self {
+        let input = input.into();
+        if let Some(path) = parse_file_protocol(input.as_ref()) {
+            ImageSource::File(path)
+        } else {
+            ImageSource::Url(input)
+        }
+    }
+
     pub fn is_file(&self) -> bool {
         matches!(self, ImageSource::File(_))
     }
@@ -77,7 +86,7 @@ pub struct Image {
 impl Image {
     pub fn new(src: impl Into<SharedString>) -> Self {
         Self {
-            src: Some(ImageSource::Url(src.into())),
+            src: Some(ImageSource::from_input(src)),
             alt: None,
             width: None,
             height: None,
@@ -110,7 +119,7 @@ impl Image {
     }
 
     pub fn src(mut self, src: impl Into<SharedString>) -> Self {
-        self.src = Some(ImageSource::Url(src.into()));
+        self.src = Some(ImageSource::from_input(src));
         self
     }
 
@@ -296,11 +305,13 @@ impl RenderOnce for Image {
                 || Arc::new(move || default_fallback(&theme, alt.clone()))
             });
             if let Some(local_image) = local_image {
-                frame = frame.child(LocalImageElement {
-                    image: local_image,
-                    fit: self.fit.as_object_fit(),
-                    grayscale: self.grayscale,
-                });
+                frame = frame.child(div().absolute().top_0().left_0().size_full().child(
+                    LocalImageElement {
+                        image: local_image,
+                        fit: self.fit.as_object_fit(),
+                        grayscale: self.grayscale,
+                    },
+                ));
             } else if let ImageSource::Url(src) = src {
                 frame = frame.child(
                     img(src)
@@ -349,6 +360,23 @@ impl IntoElement for Image {
     fn into_element(self) -> Self::Element {
         Component::new(self)
     }
+}
+
+fn parse_file_protocol(input: &str) -> Option<PathBuf> {
+    let path = input.strip_prefix("file://")?;
+    if path.is_empty() {
+        return None;
+    }
+    Some(expand_tilde_path(path))
+}
+
+fn expand_tilde_path(path: &str) -> PathBuf {
+    if let Some(rest) = path.strip_prefix("~/")
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home).join(rest);
+    }
+    PathBuf::from(path)
 }
 
 struct LocalImageElement {
