@@ -9,6 +9,7 @@ pub mod button_demo;
 pub mod card_demo;
 pub mod cascader_demo;
 pub mod collapse_demo;
+pub mod color_picker_demo;
 pub mod container_demo;
 pub mod date_picker_demo;
 pub mod date_time_picker_demo;
@@ -179,6 +180,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Transfer 穿梭框",
             description: "在两个列表之间移动条目",
             render: |cx| transfer_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "ColorPicker 颜色选择器",
+            description: "从预设色板中选择颜色",
+            render: |cx| color_picker_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Timeline 时间线",

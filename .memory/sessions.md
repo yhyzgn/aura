@@ -1261,3 +1261,30 @@
 
 ### Key Discoveries
 - GPUI 0.2.2 exposes `prompt_for_paths` for file picking but its `PathPromptOptions` does not include native accept/type filters, so Aura validates accepted type and size after selection.
+
+
+## Session 79 — 2026-05-10 (P5 ColorPicker)
+
+### Actions
+- **Added ColorPicker component**:
+  - Implemented `ColorPicker` in `crates/aura-components/src/color_picker.rs`.
+  - Supports HEX normalization, RGB conversion helper, preset swatches, custom presets, disabled state, optional label display, sizing, and `on_change` callbacks.
+  - Added public exports in `crates/aura-components/src/lib.rs`.
+- **Added test coverage**:
+  - Created `crates/aura-components/tests/color_picker.rs` for HEX normalization, invalid color rejection, and RGB conversion.
+- **Added Gallery demo**:
+  - Created `apps/aura-gallery/src/demos/color_picker_demo.rs`.
+  - Registered `ColorPicker 颜色选择器` in the Gallery demo registry.
+  - Demo covers basic use, custom presets, hidden label, and disabled state.
+- **Updated memory**:
+  - Marked P5 progress as 8/20 in `.memory/state.md`.
+  - Added ColorPicker status to `.memory/inventory.md`.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test color_picker` passed with 3 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- A preset-swatch ColorPicker can keep color parsing testable by exposing pure HEX normalization/RGB helpers while leaving richer custom color input for a future enhancement.
