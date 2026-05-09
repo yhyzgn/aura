@@ -1589,3 +1589,18 @@
 
 ### Key Discoveries
 - Remote loading should signal the window directly when complete; relying only on animation-frame polling can make the ready image appear late. The circle demo was using a remote source, so remote latency made it look like circle rendering was broken.
+
+
+## Session 97 — 2026-05-10 (Image Circle Radius Clamp)
+
+### Actions
+- Matched GPUI's built-in image painting behavior by clamping custom raster image corner radii and made `ImageRadius::Round` compute its radius from the visible container short side, so cover-cropped images paint as circles instead of rounded rectangles.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed: 7 tests.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- The circle image path uses the custom raster painter, not GPUI's `img` element. GPUI's `img` clamps corner radii before painting; the custom painter was passing the sentinel round radius directly. After clamping, cover-cropped images could still look rounded because the painted image bounds can be wider than the visible square, so round radius must be based on the visible container bounds.

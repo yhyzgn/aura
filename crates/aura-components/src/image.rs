@@ -305,6 +305,7 @@ pub fn render_image_preview(window: &mut Window, cx: &mut App) {
                             fit: ObjectFit::Contain,
                             grayscale: false,
                             radius: px(theme.radius.lg),
+                            round: false,
                         }),
                 )
                 .into_any_element()
@@ -378,6 +379,7 @@ impl RenderOnce for Image {
                         fit: self.fit.as_object_fit(),
                         grayscale: self.grayscale,
                         radius,
+                        round: self.radius == ImageRadius::Round,
                     },
                 ));
             } else if let ImageSource::Url(src) = src {
@@ -454,6 +456,7 @@ struct RasterImageElement {
     fit: ObjectFit,
     grayscale: bool,
     radius: Pixels,
+    round: bool,
 }
 
 impl IntoElement for RasterImageElement {
@@ -514,9 +517,15 @@ impl Element for RasterImageElement {
             return;
         }
         let image_bounds = self.fit.get_bounds(bounds, self.image.size(0));
+        let radius = if self.round {
+            bounds.size.width.min(bounds.size.height) / 2.0
+        } else {
+            self.radius
+        };
+        let corner_radii = Corners::all(radius).clamp_radii_for_quad_size(bounds.size);
         let _ = window.paint_image(
             image_bounds,
-            Corners::all(self.radius),
+            corner_radii,
             self.image.clone(),
             0,
             self.grayscale,
