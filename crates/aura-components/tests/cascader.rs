@@ -36,3 +36,10 @@ fn rejects_unknown_or_disabled_value_paths() {
         &["disabled".into()]
     ));
 }
+
+#[test]
+fn derives_stable_interactive_ids_from_value_paths() {
+    let id = Cascader::popup_item_id("region", &["zhejiang".into(), "hangzhou".into()]);
+
+    assert_eq!(id.as_ref(), "region-item-zhejiang-hangzhou");
+}

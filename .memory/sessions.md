@@ -1089,3 +1089,21 @@
 
 ### Key Discoveries
 - Cascader can reuse the Select portal/bounds pattern while keeping hierarchical option traversal as pure helpers, making the path behavior testable without GPUI rendering.
+
+
+## Session 71 — 2026-05-09 (Cascader Popup Interaction Fix)
+
+### Actions
+- **Fixed Cascader popup item interaction**:
+  - Added a default caller-derived component id and stable path-derived popup item ids so option rows inside scrollable portal columns become stateful interactive elements.
+  - Added panel occlusion and mousedown propagation stop to keep inside-panel clicks from being treated as outside clicks.
+  - Added regression coverage for stable popup item id generation.
+
+### Verification
+- `cargo test -p aura-components --test cascader` passed with 3 tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Portal popup rows inside scrollable columns need stable element ids for reliable hover/click hit testing, matching the DatePicker/TimePicker item pattern.

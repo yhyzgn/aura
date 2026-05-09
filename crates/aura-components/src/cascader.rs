@@ -17,6 +17,7 @@ pub struct CascaderOption {
 }
 
 pub struct Cascader {
+    id: SharedString,
     options: Vec<CascaderOption>,
     selected_path: Vec<SharedString>,
     active_path: Vec<SharedString>,
@@ -70,8 +71,11 @@ impl CascaderOption {
 }
 
 impl Cascader {
+    #[track_caller]
     pub fn new(options: Vec<CascaderOption>, cx: &mut Context<Self>) -> Self {
+        let caller = std::panic::Location::caller();
         Self {
+            id: format!("cascader-{caller}").into(),
             options,
             selected_path: vec![],
             active_path: vec![],
@@ -87,6 +91,21 @@ impl Cascader {
             last_bounds: None,
             on_change: None,
         }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
+    }
+
+    pub fn popup_item_id(prefix: impl AsRef<str>, path: &[SharedString]) -> SharedString {
+        let mut id = prefix.as_ref().to_string();
+        id.push_str("-item");
+        for value in path {
+            id.push('-');
+            id.push_str(&sanitize_id_segment(value.as_ref()));
+        }
+        id.into()
     }
 
     pub fn selected_path(
@@ -322,6 +341,7 @@ impl Render for Cascader {
             let entity = cx.entity().clone();
             let theme_portal = theme.clone();
             let trigger_bounds = self.last_bounds;
+            let cascader_id = self.id.clone();
             let columns = self.columns_for_active_path();
             let active_path = self.active_path.clone();
             let selected_path = self.selected_path.clone();
@@ -341,6 +361,7 @@ impl Render for Cascader {
                     let entity = entity.clone();
 
                     div()
+                        .id(format!("{}-panel", cascader_id))
                         .absolute()
                         .top(top)
                         .left(left)
@@ -357,8 +378,13 @@ impl Render for Cascader {
                             blur_radius: px(14.0),
                             spread_radius: px(0.0),
                         }])
+                        .occlude()
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
                         .when(filterable && !matches.is_empty(), |panel| {
                             panel.child(render_match_list(
+                                cascader_id.clone(),
                                 matches.clone(),
                                 entity.clone(),
                                 theme.clone(),
@@ -366,6 +392,7 @@ impl Render for Cascader {
                         })
                         .when(!filterable || matches.is_empty(), |panel| {
                             panel.child(render_columns(
+                                cascader_id.clone(),
                                 columns.clone(),
                                 active_path.clone(),
                                 selected_path.clone(),
@@ -407,7 +434,7 @@ impl Render for Cascader {
             .when(self.clearable && has_value && !self.disabled, |s| {
                 s.child(
                     div()
-                        .id("cascader-clear")
+                        .id(format!("{}-clear", self.id))
                         .flex()
                         .items_center()
                         .justify_center()
@@ -460,6 +487,7 @@ impl Render for Cascader {
 }
 
 fn render_columns(
+    cascader_id: SharedString,
     columns: Vec<Vec<CascaderOption>>,
     active_path: Vec<SharedString>,
     selected_path: Vec<SharedString>,
@@ -473,8 +501,10 @@ fn render_columns(
             let active_value = active_path.get(depth).cloned();
             let selected_value = selected_path.get(depth).cloned();
             let path_prefix = active_path.iter().take(depth).cloned().collect::<Vec<_>>();
+            let column_id = format!("{}-column-{depth}", cascader_id);
+            let item_id_prefix = cascader_id.clone();
             div()
-                .id(format!("cascader-column-{depth}"))
+                .id(column_id)
                 .w(px(180.0))
                 .max_h(px(280.0))
                 .overflow_y_scroll()
@@ -483,6 +513,7 @@ fn render_columns(
                 .children(column.into_iter().map({
                     let entity = entity.clone();
                     let theme = theme.clone();
+                    let item_id_prefix = item_id_prefix.clone();
                     move |option| {
                         let mut path = path_prefix.clone();
                         path.push(option.value.clone());
@@ -493,7 +524,10 @@ fn render_columns(
                         let entity = entity.clone();
                         let theme = theme.clone();
 
+                        let item_id = Cascader::popup_item_id(item_id_prefix.as_ref(), &path);
+
                         div()
+                            .id(item_id)
                             .h(px(34.0))
                             .px_3()
                             .flex()
@@ -546,6 +580,7 @@ fn render_columns(
 }
 
 fn render_match_list(
+    cascader_id: SharedString,
     matches: Vec<(Vec<SharedString>, Vec<SharedString>)>,
     entity: Entity<Cascader>,
     theme: aura_theme::Theme,
@@ -564,7 +599,10 @@ fn render_match_list(
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(" / ");
+            let item_id = Cascader::popup_item_id(cascader_id.as_ref(), &path);
+
             div()
+                .id(item_id)
                 .h(px(34.0))
                 .px_3()
                 .flex()
@@ -579,6 +617,19 @@ fn render_match_list(
                 })
         }))
         .into_any_element()
+}
+
+fn sanitize_id_segment(segment: &str) -> String {
+    segment
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn collect_leaf_matches(
