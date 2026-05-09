@@ -604,7 +604,8 @@ impl Element for RasterImageElement {
         if self.image.frame_count() == 0 {
             return;
         }
-        let (image, image_bounds, corner_radii) = if self.round {
+        let (image, image_bounds, corner_radii) = if self.round && self.round_options.crop_to_square
+        {
             let side = bounds.size.width.min(bounds.size.height);
             let square_bounds = Bounds {
                 origin: gpui::point(
@@ -614,21 +615,19 @@ impl Element for RasterImageElement {
                 size: gpui::size(side, side),
             };
             (
-                if self.round_options.crop_to_square {
-                    square_cropped_render_image(&self.image)
-                } else {
-                    self.image.clone()
-                },
+                square_cropped_render_image(&self.image),
                 square_bounds,
                 Corners::all(side / 2.0),
             )
         } else {
             let image_bounds = self.fit.get_bounds(bounds, self.image.size(0));
-            (
-                self.image.clone(),
-                image_bounds,
-                Corners::all(self.radius).clamp_radii_for_quad_size(image_bounds.size),
-            )
+            let corner_radii = if self.round {
+                Corners::all(bounds.size.width.min(bounds.size.height) / 2.0)
+                    .clamp_radii_for_quad_size(bounds.size)
+            } else {
+                Corners::all(self.radius).clamp_radii_for_quad_size(image_bounds.size)
+            };
+            (self.image.clone(), image_bounds, corner_radii)
         };
         let _ = window.paint_image(image_bounds, corner_radii, image, 0, self.grayscale);
     }

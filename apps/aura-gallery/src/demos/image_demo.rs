@@ -94,7 +94,7 @@ impl Render for ImageDemo {
                     ))
                     .child(labeled_image(
                         Image::new(local.clone())
-                            .square(px(96.0))
+                            .size(px(140.0), px(96.0))
                             .cover()
                             .round_options(ImageRoundOptions::without_square_crop()),
                         "Round bounds",

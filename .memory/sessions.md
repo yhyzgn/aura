@@ -1638,3 +1638,19 @@
 
 ### Key Discoveries
 - The ring sleeve should be a transparent-background paint overlay with only border pixels, so the image remains visible through the center of the circular sleeve.
+
+
+## Session 100 — 2026-05-10 (Image Round Bounds Semantics)
+
+### Actions
+- Fixed `ImageRoundOptions::without_square_crop()` so it uses the component/container bounds instead of forcing a square paint target.
+- Changed the Image demo `Round bounds` example to a rectangle so it visibly differs from the `Circle` example.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed: 9 tests.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- `Round bounds` looked like `Circle` because the custom raster painter forced all round rendering through square bounds. The no-square-crop option needs to preserve the container bounds and only apply half-short-side radii.
