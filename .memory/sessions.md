@@ -1706,3 +1706,21 @@
 
 ### Key Discoveries
 - Clear was using mouse-up without propagation control; in composed input wrappers that also listen to mouse-down, the interaction could focus/open instead of clearing reliably.
+
+
+## Session 104 — 2026-05-10 (Autocomplete Input Clear Hit Testing)
+
+### Actions
+- Kept Autocomplete using the shared `Input` clear icon instead of a separate Autocomplete clear overlay.
+- Fixed Autocomplete hit testing by placing the bounds-capture overlay behind the Input child, so Input's clear icon receives hover/click events inside Autocomplete.
+- Reverted the shared Input clear behavior back to its Input-owned implementation; the fix is scoped to Autocomplete composition.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test autocomplete` passed: 4 tests.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- Autocomplete's absolute bounds-capture child was rendered above the Input child, blocking Input's own clear icon interactions. Reordering the capture child behind Input preserves composition and lets Input own clear behavior.

@@ -363,7 +363,6 @@ impl Render for Autocomplete {
             .relative()
             .when_some(self.width, |s, width| s.w(width))
             .when(self.width.is_none(), |s| s.w_full())
-            .child(self.input.clone())
             .child(
                 gpui::div()
                     .absolute()
@@ -374,6 +373,7 @@ impl Render for Autocomplete {
                         autocomplete: cx.entity().clone(),
                     }),
             )
+            .child(self.input.clone())
             .on_mouse_down_out(cx.listener(|this, _, _, cx| this.close(cx)));
 
         if self.trigger_on_focus && !disabled {
