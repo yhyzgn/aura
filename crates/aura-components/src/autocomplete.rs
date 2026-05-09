@@ -256,9 +256,9 @@ impl Render for Autocomplete {
         self.input.update(cx, |input, _| {
             input.set_on_change({
                 let entity = entity.clone();
-                move |_, cx| {
+                move |value, cx| {
                     entity.update(cx, |this, cx| {
-                        this.is_open = true;
+                        this.is_open = !value.is_empty();
                         cx.notify();
                     });
                 }
@@ -293,7 +293,16 @@ impl Render for Autocomplete {
                         .rounded(px(theme.radius.md))
                         .border_1()
                         .border_color(theme.neutral.border)
-                        .shadow_lg();
+                        .shadow_lg()
+                        .on_mouse_down_out({
+                            let entity = entity.clone();
+                            move |_, _, cx| {
+                                entity.update(cx, |this, cx| {
+                                    this.is_open = false;
+                                    cx.notify();
+                                });
+                            }
+                        });
 
                     if matches.is_empty() {
                         panel = panel.child(

@@ -1759,3 +1759,21 @@
 
 ### Key Discoveries
 - Even outside-click listeners add a wrapper hitbox/listener to the same composed region. For Autocomplete, the input wrapper must not register mouse handlers over the Input if Input child controls (clear) need hover/click priority.
+
+
+## Session 107 — 2026-05-10 (Autocomplete Clear and Outside Dismiss)
+
+### Actions
+- Made Input clear handle mouse-down with pointer hover and propagation stop so it can win before Autocomplete/popup outside handlers react.
+- Reintroduced outside-click dismissal on the popup panel itself via `on_mouse_down_out`, not on the Autocomplete input wrapper.
+- Autocomplete now closes suggestions when the clear action empties the input.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test autocomplete` passed: 4 tests.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- The safe event split is: Input owns clear on mouse-down; popup panel owns outside dismissal. The Autocomplete input wrapper should remain non-interactive over the Input region.
