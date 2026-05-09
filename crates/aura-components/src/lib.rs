@@ -1,6 +1,7 @@
 pub mod affix;
 pub mod alert;
 pub mod anchor;
+pub mod autocomplete;
 pub mod avatar;
 pub mod backtop;
 pub mod badge;
@@ -71,6 +72,7 @@ pub use affix::*;
 pub use alert::*;
 pub use anchor::*;
 pub use aura_theme::{ButtonSize, ButtonVariant};
+pub use autocomplete::*;
 pub use avatar::*;
 pub use backtop::*;
 pub use badge::*;

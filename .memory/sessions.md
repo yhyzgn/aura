@@ -1654,3 +1654,21 @@
 
 ### Key Discoveries
 - `Round bounds` looked like `Circle` because the custom raster painter forced all round rendering through square bounds. The no-square-crop option needs to preserve the container bounds and only apply half-short-side radii.
+
+
+## Session 101 — 2026-05-10 (Autocomplete and P5 Deferrals)
+
+### Actions
+- Added Autocomplete as the final requested P5 component before skipping the remaining advanced components.
+- Added static suggestion items, case-insensitive filtering, click-to-select, clear action, disabled state, configurable width/max suggestions, and gallery demo.
+- Added `Input::on_change` / `set_on_change` support so composed components can react to typing.
+- Marked Calendar, TreeSelect, InputTag, Mention, Watermark, Tour, and VirtualizedTable/VirtualizedTree as deferred/identified for later per user request.
+
+### Verification
+- `cargo test -p aura-components` passed.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- Autocomplete can reuse the existing `Input` entity safely when text-change observation is exposed by `Input`, avoiding a second text-editing implementation.

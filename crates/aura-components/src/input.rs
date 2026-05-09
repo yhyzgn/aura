@@ -69,6 +69,7 @@ pub struct Input {
     pub min_rows: usize,
     text_align: gpui::TextAlign,
     on_enter: Option<Box<dyn Fn(&mut Self, &str, &mut Window, &mut Context<Self>) + 'static>>,
+    on_change: Option<Box<dyn Fn(&str, &mut Context<Self>) + 'static>>,
 }
 
 impl Input {
@@ -100,6 +101,7 @@ impl Input {
             min_rows: 1,
             text_align: gpui::TextAlign::Left,
             on_enter: None,
+            on_change: None,
         }
     }
     pub fn placeholder(mut self, p: impl Into<SharedString>) -> Self {
@@ -167,18 +169,50 @@ impl Input {
         cx.notify();
     }
 
+    pub fn on_change(mut self, f: impl Fn(&str, &mut Context<Self>) + 'static) -> Self {
+        self.on_change = Some(Box::new(f));
+        self
+    }
+
+    pub fn set_on_change(&mut self, f: impl Fn(&str, &mut Context<Self>) + 'static) {
+        self.on_change = Some(Box::new(f));
+    }
+
+    pub fn clear_on_change(&mut self) {
+        self.on_change = None;
+    }
+
+    fn emit_change(&mut self, cx: &mut Context<Self>) {
+        if let Some(on_change) = self.on_change.take() {
+            let value = self.value.to_string();
+            on_change(&value, cx);
+            self.on_change = Some(on_change);
+        }
+    }
+
     pub fn set_placeholder(&mut self, p: impl Into<SharedString>, cx: &mut Context<Self>) {
-        self.placeholder = p.into();
+        let p = p.into();
+        if self.placeholder == p {
+            return;
+        }
+        self.placeholder = p;
         cx.notify();
     }
 
     pub fn set_disabled(&mut self, d: bool, cx: &mut Context<Self>) {
+        if self.disabled == d {
+            return;
+        }
         self.disabled = d;
         cx.notify();
     }
 
     pub fn set_value(&mut self, value: impl Into<SharedString>, cx: &mut Context<Self>) {
-        self.value = value.into();
+        let value = value.into();
+        if self.value == value {
+            return;
+        }
+        self.value = value;
         self.selected_range = self.value.len()..self.value.len();
         cx.notify();
     }
@@ -220,9 +254,10 @@ impl Input {
         ]);
     }
 
-    fn clear(&mut self, cx: &mut Context<Self>) {
+    pub fn clear(&mut self, cx: &mut Context<Self>) {
         self.value = SharedString::default();
         self.selected_range = 0..0;
+        self.emit_change(cx);
         cx.notify();
     }
 
@@ -576,6 +611,7 @@ impl Input {
         self.value = SharedString::from(v);
         let pos = self.selected_range.start + new_text.len();
         self.selected_range = pos..pos;
+        self.emit_change(cx);
         self.reset_blink(cx);
     }
 
@@ -676,6 +712,7 @@ impl EntityInputHandler for Input {
         self.value = SharedString::from(v);
         self.selected_range = range.start + new_text.len()..range.start + new_text.len();
         self.marked_range = None;
+        self.emit_change(cx);
         cx.notify();
     }
 
@@ -719,6 +756,7 @@ impl EntityInputHandler for Input {
         } else {
             self.selected_range = range.start + new_text.len()..range.start + new_text.len();
         }
+        self.emit_change(cx);
         cx.notify();
     }
 

@@ -1,6 +1,7 @@
 pub mod affix_demo;
 pub mod alert_demo;
 pub mod anchor_demo;
+pub mod autocomplete_demo;
 pub mod avatar_demo;
 pub mod backtop_demo;
 pub mod badge_demo;
@@ -71,6 +72,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Tag 标签",
             description: "用于标记和选择",
             render: |cx| tag_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "Autocomplete 自动补全",
+            description: "输入建议与快捷选择",
+            render: |cx| autocomplete_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Avatar 头像",

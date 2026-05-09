@@ -91,7 +91,7 @@
 | 20 | Avatar | `crates/aura-components/src/avatar.rs` | ✅ | ✅ Image / Icon / Shapes |
 | 21 | Badge | `crates/aura-components/src/badge.rs` | ✅ | ✅ Value / Dot / Max |
 
-## P5 Advanced 🏃 (9/20)
+## P5 Advanced 🏁 (11/20 complete, remaining deferred by user request)
 
 | # | Component | File | Demo | Status |
 |---|-----------|------|------|--------|
@@ -104,17 +104,17 @@
 | 7 | Transfer | `crates/aura-components/src/transfer.rs` | ✅ | ✅ Source/target panels / checked move / disabled items / filter display / callbacks |
 | 8 | ColorPicker | `crates/aura-components/src/color_picker.rs` | ✅ | ✅ Cube trigger / popup HSV panel / hue bar / alpha bar / rgba display / presets / disabled / callback |
 | 9 | Carousel | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 10 | Image | `crates/aura-components/src/image.rs` | ✅ | ✅ Remote URL / local file / fit modes / rounded frame / loading + fallback / empty / preview badge |
-| 11 | Calendar | — | — | ⬜ |
-| 12 | TreeSelect | — | — | ⬜ |
-| 13 | Autocomplete | — | — | ⬜ |
-| 14 | InputTag | — | — | ⬜ |
-| 15 | Mention | — | — | ⬜ |
-| 16 | Watermark | — | — | ⬜ |
-| 17 | Tour | — | — | ⬜ |
+| 10 | Image | `crates/aura-components/src/image.rs` | ✅ | ✅ Remote URL / local file / fit modes / circle + round options / transparent ring sleeve / loading + fallback / empty / preview |
+| 11 | Calendar | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 12 | TreeSelect | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 13 | Autocomplete | `crates/aura-components/src/autocomplete.rs` | ✅ | ✅ Static suggestions / filtering / click select / clearable / disabled / demo |
+| 14 | InputTag | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 15 | Mention | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 16 | Watermark | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 17 | Tour | — | — | ↩️ Deferred / identified for later (skip by user request) |
 | 18 | Scrollbar | `crates/aura-components/src/scrollbar.rs` | ✅ | ✅ Already completed in P1 |
 | 19 | Splitter | `crates/aura-components/src/splitter.rs` | ✅ | ✅ Already completed in P1 |
-| 20 | VirtualizedTable/VirtualizedTree | — | — | ⬜ Deferred |
+| 20 | VirtualizedTable/VirtualizedTree | — | — | ↩️ Deferred / identified for later (skip by user request) |
 
 ## P6 Built-in Unique ID ⬜
 
