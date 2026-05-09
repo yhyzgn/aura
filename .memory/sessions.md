@@ -1235,3 +1235,29 @@
 
 ### Key Discoveries
 - Upload demo previously exposed an empty select callback path, so clicking appeared broken. Same-component mutation callbacks should pass the active component/context directly to avoid GPUI double-lease risks.
+
+
+## Session 78 — 2026-05-10 (Upload Real File Picker)
+
+### Actions
+- **Upgraded Upload to use the platform file selector**:
+  - `Upload` now opens GPUI's `prompt_for_paths` dialog when the trigger is clicked.
+  - Added support for single/multiple selection through the existing `multiple` flag.
+  - Added `max_size(bytes)` and post-selection validation for accepted file extensions / MIME groups (`.png`, `.pdf`, `image/*`, etc.).
+  - Selected files are converted into `UploadFile` entries with path, name, size, and ready status.
+  - Invalid selections are ignored and surfaced through an inline error message.
+  - `on_select` now runs after accepted files are added and receives `&mut Upload` plus `Context<Upload>` for safe same-component mutation.
+- **Updated Gallery demo**:
+  - Replaced simulated selection with real file picker usage.
+  - Added accept/max-size examples for basic, drag, picture-card, and limited uploads.
+- **Added tests**:
+  - Expanded `crates/aura-components/tests/upload.rs` to cover accept matching and max-size rejection.
+
+### Verification
+- `cargo test -p aura-components --test upload` passed with 4 tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI 0.2.2 exposes `prompt_for_paths` for file picking but its `PathPromptOptions` does not include native accept/type filters, so Aura validates accepted type and size after selection.

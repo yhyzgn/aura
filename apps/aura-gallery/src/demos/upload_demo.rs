@@ -14,24 +14,16 @@ struct UploadDemo {
     disabled: Entity<Upload>,
 }
 
-fn next_demo_file(upload: &Upload, prefix: &str) -> UploadFile {
-    let index = upload.file_count() + 1;
-    UploadFile::new(format!("{prefix}-{index}"), format!("模拟文件-{index}.txt"))
-        .size(32_000 + index as u64 * 8_192)
-        .status(UploadStatus::Ready)
-}
-
 impl UploadDemo {
     fn new(cx: &mut Context<Self>) -> Self {
         Self {
             basic: cx.new(|_| {
                 Upload::new()
                     .button_text("选择文件")
-                    .tip("点击选择文件会通过 on_select 添加一个模拟文件；垃圾桶可移除列表项。")
+                    .accept(".pdf,.fig,.txt")
+                    .max_size(5 * 1024 * 1024)
+                    .tip("点击选择文件会打开系统文件选择器；仅接受 pdf/fig/txt，单文件 ≤ 5MB。")
                     .width(px(420.0))
-                    .on_select(|upload, _, cx| {
-                        upload.push_file(next_demo_file(upload, "basic"), cx);
-                    })
                     .add_file(
                         UploadFile::new("spec", "产品需求说明.pdf")
                             .size(428_000)
@@ -48,13 +40,11 @@ impl UploadDemo {
                 Upload::new()
                     .drag(true)
                     .multiple(true)
-                    .accept(".png, .jpg, .pdf")
+                    .accept(".png,.jpg,.jpeg,.pdf")
+                    .max_size(2 * 1024 * 1024)
                     .button_text("拖拽文件到这里上传")
-                    .tip("拖拽区域点击后会添加一个模拟文件；真实拖拽/文件选择由宿主接入。")
+                    .tip("点击拖拽区域会打开系统文件选择器；真实拖放接入可由宿主扩展。")
                     .width(px(420.0))
-                    .on_select(|upload, _, cx| {
-                        upload.push_file(next_demo_file(upload, "drag"), cx);
-                    })
                     .add_file(
                         UploadFile::new("error", "合同扫描件.jpg")
                             .size(820_000)
@@ -66,15 +56,10 @@ impl UploadDemo {
                 Upload::new()
                     .picture_card()
                     .button_text("上传图片")
+                    .multiple(true)
+                    .accept("image/*")
+                    .max_size(2 * 1024 * 1024)
                     .width(px(420.0))
-                    .on_select(|upload, _, cx| {
-                        upload.push_file(
-                            next_demo_file(upload, "picture")
-                                .status(UploadStatus::Uploading)
-                                .progress(24),
-                            cx,
-                        );
-                    })
                     .files([
                         UploadFile::new("cover", "cover.png")
                             .size(512_000)
@@ -88,12 +73,11 @@ impl UploadDemo {
             limited: cx.new(|_| {
                 Upload::new()
                     .limit(1)
+                    .accept(".zip,.txt")
+                    .max_size(10 * 1024 * 1024)
                     .button_text("达到数量限制")
-                    .tip("limit=1 时已有文件，入口自动禁用；移除后可再次点击添加模拟文件。")
+                    .tip("limit=1 时已有文件，入口自动禁用；移除后可再次点击打开文件选择器。")
                     .width(px(420.0))
-                    .on_select(|upload, _, cx| {
-                        upload.push_file(next_demo_file(upload, "limited"), cx);
-                    })
                     .add_file(
                         UploadFile::new("only", "唯一附件.zip")
                             .size(5_120_000)
@@ -132,7 +116,7 @@ impl Render for UploadDemo {
                             .child("Upload 上传"),
                     )
                     .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "用于呈现上传入口和文件列表，支持点击选择回调、拖拽样式、图片卡片列表、进度、状态、数量限制和移除回调。",
+                        "用于呈现上传入口和文件列表，支持系统文件选择器、类型/大小/数量限制、拖拽样式、图片卡片列表、进度、状态和移除回调。",
                     )),
             )
             .child(section(
@@ -142,7 +126,7 @@ impl Render for UploadDemo {
                     .flex_col()
                     .gap_3()
                     .child(self.basic.clone())
-                    .child(Text::new("点击“选择文件”会添加模拟文件；点击垃圾桶图标可从组件内部移除文件。").size(px(theme.font_size.sm))),
+                    .child(Text::new("点击“选择文件”会打开系统文件选择器；点击垃圾桶图标可从组件内部移除文件。").size(px(theme.font_size.sm))),
             ))
             .child(section("拖拽上传样式", self.drag.clone()))
             .child(section("图片卡片列表", self.picture.clone()))
