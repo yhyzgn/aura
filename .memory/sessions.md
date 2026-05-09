@@ -1672,3 +1672,21 @@
 
 ### Key Discoveries
 - Autocomplete can reuse the existing `Input` entity safely when text-change observation is exposed by `Input`, avoiding a second text-editing implementation.
+
+
+## Session 102 — 2026-05-10 (Autocomplete Clear and Suffix Icons)
+
+### Actions
+- Replaced Autocomplete's absolute-positioned clear icon with the existing Input clear affordance, so it is vertically centered and only appears when content is non-empty.
+- Added Autocomplete suffix icon configuration: default Search icon, `suffix_icon(...)` for custom icons, and `no_suffix_icon()` to remove it.
+- Added gallery demo coverage for custom suffix icon and no suffix icon.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test autocomplete` passed: 4 tests.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- Input already has a centered clear icon that is hidden while empty, so Autocomplete should configure/reuse it instead of painting a second absolute clear icon.

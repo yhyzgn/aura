@@ -1,5 +1,6 @@
 use aura_components::{Autocomplete, AutocompleteItem, Card};
 use aura_core::Config;
+use aura_icons_lucide::IconName;
 use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -9,6 +10,7 @@ pub fn render(cx: &mut App) -> AnyView {
 struct AutocompleteDemo {
     basic: Entity<Autocomplete>,
     custom: Entity<Autocomplete>,
+    no_suffix: Entity<Autocomplete>,
     disabled: Entity<Autocomplete>,
 }
 
@@ -39,6 +41,15 @@ impl AutocompleteDemo {
                         .placeholder("Jump to route")
                         .width(px(320.0))
                         .max_suggestions(4)
+                        .suffix_icon(IconName::Command)
+                }
+            }),
+            no_suffix: cx.new({
+                let suggestions = suggestions.clone();
+                move |cx| {
+                    Autocomplete::new(suggestions, cx)
+                        .placeholder("No suffix icon")
+                        .no_suffix_icon()
                 }
             }),
             disabled: cx.new({
@@ -105,6 +116,17 @@ impl Render for AutocompleteDemo {
                         )),
                 )
                 .no_shadow(),
+            ))
+            .child(section(
+                "无右侧图标",
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_3()
+                    .child(self.no_suffix.clone())
+                    .child(div().text_sm().text_color(theme.neutral.text_3).child(
+                        "Suffix icon can be disabled; clear icon still appears only after typing.",
+                    )),
             ))
             .child(section("禁用状态", self.disabled.clone()))
     }

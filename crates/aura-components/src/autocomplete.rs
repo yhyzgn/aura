@@ -1,6 +1,5 @@
 use crate::Input;
 use aura_core::{Config, push_portal};
-use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, FocusHandle, Focusable, GlobalElementId,
@@ -37,6 +36,7 @@ pub struct Autocomplete {
     is_open: bool,
     disabled: bool,
     clearable: bool,
+    suffix_icon: Option<IconName>,
     placeholder: SharedString,
     width: Option<Pixels>,
     max_suggestions: usize,
@@ -49,11 +49,16 @@ pub struct Autocomplete {
 impl Autocomplete {
     pub fn new(items: Vec<AutocompleteItem>, cx: &mut Context<Self>) -> Self {
         Self {
-            input: cx.new(|cx| Input::new("", cx).icon_suffix(IconName::Search)),
+            input: cx.new(|cx| {
+                Input::new("", cx)
+                    .clearable(true)
+                    .icon_suffix(IconName::Search)
+            }),
             items,
             is_open: false,
             disabled: false,
             clearable: true,
+            suffix_icon: Some(IconName::Search),
             placeholder: "Type to search".into(),
             width: Some(px(280.0)),
             max_suggestions: 8,
@@ -81,6 +86,20 @@ impl Autocomplete {
     pub fn clearable(mut self, clearable: bool) -> Self {
         self.clearable = clearable;
         self
+    }
+
+    pub fn suffix_icon(mut self, icon: IconName) -> Self {
+        self.suffix_icon = Some(icon);
+        self
+    }
+
+    pub fn no_suffix_icon(mut self) -> Self {
+        self.suffix_icon = None;
+        self
+    }
+
+    pub fn suffix_icon_value(&self) -> Option<IconName> {
+        self.suffix_icon
     }
 
     pub fn width(mut self, width: impl Into<Pixels>) -> Self {
@@ -246,6 +265,7 @@ impl Render for Autocomplete {
         let disabled = self.disabled;
         let placeholder = self.placeholder.clone();
         let clearable = self.clearable;
+        let suffix_icon = self.suffix_icon;
 
         self.input.update(cx, |input, _| {
             input.set_on_change({
@@ -261,6 +281,8 @@ impl Render for Autocomplete {
         self.input.update(cx, |input, cx| {
             input.set_placeholder(placeholder, cx);
             input.set_disabled(disabled, cx);
+            input.set_clearable(clearable && !disabled, cx);
+            input.set_icon_suffix(suffix_icon, cx);
         });
 
         let matches = self.matching_items(cx);
@@ -360,29 +382,6 @@ impl Render for Autocomplete {
                 cx.listener(|this, _, _window, cx| {
                     this.open(cx);
                 }),
-            );
-        }
-
-        if clearable {
-            frame = frame.child(
-                gpui::div()
-                    .absolute()
-                    .top(px(6.0))
-                    .right(px(30.0))
-                    .text_color(theme.neutral.text_3)
-                    .hover(|s| s.cursor_pointer().text_color(theme.neutral.text_1))
-                    .child(
-                        Icon::new(IconName::X)
-                            .size(px(14.0))
-                            .color(theme.neutral.icon),
-                    )
-                    .on_mouse_down(MouseButton::Left, {
-                        let input = self.input.clone();
-                        move |_, _, cx| {
-                            input.update(cx, |input, cx| input.clear(cx));
-                            cx.stop_propagation();
-                        }
-                    }),
             );
         }
 

@@ -124,6 +124,20 @@ impl Input {
         self.icon_suffix = Some(icon);
         self
     }
+    pub fn set_icon_suffix(&mut self, icon: Option<IconName>, cx: &mut Context<Self>) {
+        if self.icon_suffix == icon {
+            return;
+        }
+        self.icon_suffix = icon;
+        cx.notify();
+    }
+    pub fn set_clearable(&mut self, clearable: bool, cx: &mut Context<Self>) {
+        if self.clearable == clearable {
+            return;
+        }
+        self.clearable = clearable;
+        cx.notify();
+    }
     pub fn filter(mut self, f: impl Fn(&str) -> bool + 'static) -> Self {
         self.filter = Some(Box::new(f));
         self
