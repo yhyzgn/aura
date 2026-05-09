@@ -11,7 +11,6 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::{Arc, Mutex, OnceLock},
-    thread,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -419,20 +418,7 @@ impl RenderOnce for Image {
                         cx.refresh_windows();
                     }
                     cx.stop_propagation();
-                })
-                .child(
-                    div()
-                        .absolute()
-                        .right(px(6.0))
-                        .bottom(px(6.0))
-                        .px_2()
-                        .py_1()
-                        .rounded(px(theme.radius.sm))
-                        .bg(theme.neutral.card.opacity(0.86))
-                        .text_xs()
-                        .text_color(theme.neutral.text_1)
-                        .child("Preview"),
-                );
+                });
         }
 
         frame
@@ -571,15 +557,23 @@ fn load_remote_render_image(
     }
 
     let url = url.to_string();
-    thread::spawn(move || {
-        let image = fetch_remote_render_image(&url);
-        let state = image
-            .map(RemoteImageState::Ready)
-            .unwrap_or(RemoteImageState::Failed);
-        if let Ok(mut cache) = remote_image_cache().lock() {
-            cache.insert(url, state);
-        }
-    });
+    let async_cx = _cx.to_async();
+    let executor = _cx.background_executor().clone();
+    _cx.foreground_executor()
+        .spawn(async move {
+            let fetch_url = url.clone();
+            let image = executor
+                .spawn(async move { fetch_remote_render_image(&fetch_url) })
+                .await;
+            let state = image
+                .map(RemoteImageState::Ready)
+                .unwrap_or(RemoteImageState::Failed);
+            if let Ok(mut cache) = remote_image_cache().lock() {
+                cache.insert(url, state);
+            }
+            async_cx.update(|cx| cx.refresh_windows());
+        })
+        .detach();
     window.request_animation_frame();
 
     None

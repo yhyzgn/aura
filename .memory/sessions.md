@@ -1572,3 +1572,20 @@
 
 ### Key Discoveries
 - Direct synchronous URL decoding fixed remote display but made selecting the Image demo stall; remote decoding must not happen on the render path.
+
+
+## Session 96 — 2026-05-10 (Image Remote Refresh and Preview Cleanup)
+
+### Actions
+- Changed remote image loading completion to actively refresh the gallery window when the background fetch/decode finishes, reducing visible delay after selecting the Image demo.
+- Removed the visible "Preview" badge/button from preview images; cursor/hover affordance remains.
+- Changed the circle image demo to use the local image source so circle clipping can be seen immediately without depending on remote image load timing.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed: 7 tests.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- Remote loading should signal the window directly when complete; relying only on animation-frame polling can make the ready image appear late. The circle demo was using a remote source, so remote latency made it look like circle rendering was broken.

@@ -87,7 +87,7 @@ impl Render for ImageDemo {
                     .flex()
                     .gap_4()
                     .flex_wrap()
-                    .child(Image::new(remote).square(px(96.0)).cover().round())
+                    .child(Image::new(local.clone()).square(px(96.0)).cover().round())
                     .child(
                         Image::new(local.clone())
                             .size(px(150.0), px(96.0))
