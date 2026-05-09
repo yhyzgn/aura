@@ -1555,3 +1555,20 @@
 
 ### Key Discoveries
 - The provided screenshot shows the local asset rendering in the middle Image slots; the real remaining failure is GPUI's async remote URL branch falling back for the Element CDN URL.
+
+
+## Session 95 — 2026-05-10 (Image Async Remote, Preview, and Radius)
+
+### Actions
+- Removed blocking remote URL fetch from Image render path; remote images now load on a background thread and request animation frames while pending.
+- Added a persistent preview popup for Image preview mode using the loaded raster, Aura portal layer, and gallery-level preview renderer.
+- Passed component radius into raster image painting so round/circle images clip through `Window::paint_image` instead of only rounding the outer frame.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 7 tests.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Direct synchronous URL decoding fixed remote display but made selecting the Image demo stall; remote decoding must not happen on the render path.

@@ -210,6 +210,7 @@ impl Render for Gallery {
 
         aura_components::message::render_messages(cx);
         aura_components::notification::render_notifications(cx);
+        aura_components::image::render_image_preview(_window, cx);
         aura_core::render_active_tooltip_in_window(_window, cx);
         aura_core::render_active_popover_in_window(_window, cx);
         aura_core::render_active_modal_in_window(_window, cx);

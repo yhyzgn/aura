@@ -1,8 +1,8 @@
-use aura_core::Config;
+use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, App, Bounds, Component, Corners, Element, ElementId, GlobalElementId,
+    AnyElement, App, Bounds, Component, Corners, Element, ElementId, Global, GlobalElementId,
     InspectorElementId, IntoElement, LayoutId, ObjectFit, Pixels, RenderImage, RenderOnce,
     SharedString, Style, Window, div, img, prelude::*, px, relative,
 };
@@ -11,6 +11,7 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::{Arc, Mutex, OnceLock},
+    thread,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -256,8 +257,71 @@ impl Image {
     }
 }
 
+pub struct ActiveImagePreview {
+    image: Option<Arc<RenderImage>>,
+}
+
+impl Global for ActiveImagePreview {}
+
+pub fn render_image_preview(window: &mut Window, cx: &mut App) {
+    let Some(image) = cx
+        .try_global::<ActiveImagePreview>()
+        .and_then(|preview| preview.image.clone())
+    else {
+        return;
+    };
+
+    let theme = cx.global::<Config>().theme.clone();
+    push_portal(
+        move |window, _cx| {
+            let viewport = window.viewport_size();
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(gpui::black().opacity(0.55))
+                .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                    if cx.has_global::<ActiveImagePreview>() {
+                        cx.global_mut::<ActiveImagePreview>().image = None;
+                    }
+                    cx.refresh_windows();
+                    cx.stop_propagation();
+                })
+                .child(
+                    div()
+                        .w(viewport.width * 0.72)
+                        .h(viewport.height * 0.72)
+                        .rounded(px(theme.radius.lg))
+                        .overflow_hidden()
+                        .shadow_xl()
+                        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
+                        .child(RasterImageElement {
+                            image,
+                            fit: ObjectFit::Contain,
+                            grayscale: false,
+                            radius: px(theme.radius.lg),
+                        }),
+                )
+                .into_any_element()
+        },
+        cx,
+    );
+
+    let _ = window;
+}
+
+fn src_for_preview(src: &Option<ImageSource>) -> Option<ImageSource> {
+    src.clone()
+}
+
 impl RenderOnce for Image {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let radius = match self.radius {
             ImageRadius::None => px(0.0),
@@ -293,10 +357,12 @@ impl RenderOnce for Image {
             frame = frame.shadow_md();
         }
 
+        let preview_src = self.src.clone();
+
         if let Some(src) = self.src {
             let raster_image = match &src {
                 ImageSource::File(path) => load_local_render_image(path),
-                ImageSource::Url(url) => load_remote_render_image(url.as_ref()),
+                ImageSource::Url(url) => load_remote_render_image(url.as_ref(), window, cx),
             };
             let loading = self.placeholder.unwrap_or_else({
                 let theme = theme.clone();
@@ -312,6 +378,7 @@ impl RenderOnce for Image {
                         image: raster_image,
                         fit: self.fit.as_object_fit(),
                         grayscale: self.grayscale,
+                        radius,
                     },
                 ));
             } else if let ImageSource::Url(src) = src {
@@ -335,9 +402,24 @@ impl RenderOnce for Image {
         }
 
         if self.preview {
+            let preview_image = match &src_for_preview(&preview_src) {
+                Some(ImageSource::File(path)) => load_local_render_image(path),
+                Some(ImageSource::Url(url)) => load_remote_render_image(url.as_ref(), window, cx),
+                None => None,
+            };
             frame = frame
                 .cursor_pointer()
                 .hover(|s| s.border_color(theme.primary.base).shadow_lg())
+                .on_mouse_down(gpui::MouseButton::Left, move |_, _, cx| {
+                    if let Some(image) = preview_image.clone() {
+                        if !cx.has_global::<ActiveImagePreview>() {
+                            cx.set_global(ActiveImagePreview { image: None });
+                        }
+                        cx.global_mut::<ActiveImagePreview>().image = Some(image);
+                        cx.refresh_windows();
+                    }
+                    cx.stop_propagation();
+                })
                 .child(
                     div()
                         .absolute()
@@ -385,6 +467,7 @@ struct RasterImageElement {
     image: Arc<RenderImage>,
     fit: ObjectFit,
     grayscale: bool,
+    radius: Pixels,
 }
 
 impl IntoElement for RasterImageElement {
@@ -447,7 +530,7 @@ impl Element for RasterImageElement {
         let image_bounds = self.fit.get_bounds(bounds, self.image.size(0));
         let _ = window.paint_image(
             image_bounds,
-            Corners::all(px(0.0)),
+            Corners::all(self.radius),
             self.image.clone(),
             0,
             self.grayscale,
@@ -455,26 +538,59 @@ impl Element for RasterImageElement {
     }
 }
 
-fn remote_image_cache() -> &'static Mutex<HashMap<String, Option<Arc<RenderImage>>>> {
-    static CACHE: OnceLock<Mutex<HashMap<String, Option<Arc<RenderImage>>>>> = OnceLock::new();
+#[derive(Clone)]
+enum RemoteImageState {
+    Loading,
+    Ready(Arc<RenderImage>),
+    Failed,
+}
+
+fn remote_image_cache() -> &'static Mutex<HashMap<String, RemoteImageState>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, RemoteImageState>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn load_remote_render_image(url: &str) -> Option<Arc<RenderImage>> {
+fn load_remote_render_image(
+    url: &str,
+    window: &mut Window,
+    _cx: &mut App,
+) -> Option<Arc<RenderImage>> {
     if let Some(cached) = remote_image_cache().lock().ok()?.get(url).cloned() {
-        return cached;
+        return match cached {
+            RemoteImageState::Ready(image) => Some(image),
+            RemoteImageState::Loading => {
+                window.request_animation_frame();
+                None
+            }
+            RemoteImageState::Failed => None,
+        };
     }
 
-    let image = ureq::get(url).call().ok().and_then(|response| {
+    if let Ok(mut cache) = remote_image_cache().lock() {
+        cache.insert(url.to_string(), RemoteImageState::Loading);
+    }
+
+    let url = url.to_string();
+    thread::spawn(move || {
+        let image = fetch_remote_render_image(&url);
+        let state = image
+            .map(RemoteImageState::Ready)
+            .unwrap_or(RemoteImageState::Failed);
+        if let Ok(mut cache) = remote_image_cache().lock() {
+            cache.insert(url, state);
+        }
+    });
+    window.request_animation_frame();
+
+    None
+}
+
+fn fetch_remote_render_image(url: &str) -> Option<Arc<RenderImage>> {
+    ureq::get(url).call().ok().and_then(|response| {
         let mut bytes = Vec::new();
         response.into_reader().read_to_end(&mut bytes).ok()?;
         render_image_from_bytes(&bytes)
-    });
-
-    if let Ok(mut cache) = remote_image_cache().lock() {
-        cache.insert(url.to_string(), image.clone());
-    }
-    image
+    })
 }
 
 fn load_local_render_image(path: &Path) -> Option<Arc<RenderImage>> {
