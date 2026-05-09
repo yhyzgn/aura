@@ -49,7 +49,7 @@ impl Render for ColorPickerDemo {
                             .child("ColorPicker 颜色选择器"),
                     )
                     .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "点击颜色方块弹出彩虹面板和预设色板，支持 HEX 规范化、禁用状态和紧凑展示。",
+                        "点击颜色方块弹出类似取色器的面板，支持自由选择色相、明度/饱和度和 alpha 透明度。",
                     )),
             )
             .child(section(
@@ -61,7 +61,7 @@ impl Render for ColorPickerDemo {
                     .child(self.basic.clone())
                     .child(
                         Text::new(
-                            "点击颜色方块打开 popup；在彩虹面板或预设色块中选择颜色后会更新当前颜色值。支持 #RGB 和 #RRGGBB 输入规范化。",
+                            "点击颜色方块打开 popup；在大色板中选择颜色，右侧切换 hue，下方选择 alpha。支持 #RGB、#RRGGBB 和 rgba 展示。",
                         )
                         .size(px(theme.font_size.sm)),
                     ),

@@ -30,3 +30,17 @@ fn provides_a_rainbow_panel_palette() {
     assert!(palette.contains(&"#FF0000".into()));
     assert!(palette.contains(&"#0000FF".into()));
 }
+
+#[test]
+fn formats_rgba_display_with_alpha() {
+    assert_eq!(
+        ColorPicker::rgba_display("#FFFF00", 0.68),
+        Some("rgba(255, 255, 0, 0.68)".into())
+    );
+}
+
+#[test]
+fn builds_color_from_hsv_and_alpha() {
+    assert_eq!(ColorPicker::hex_from_hsv(60.0, 1.0, 1.0), "#FFFF00");
+    assert_eq!(ColorPicker::hex_from_hsv(0.0, 1.0, 1.0), "#FF0000");
+}

@@ -1312,3 +1312,27 @@
 
 ### Key Discoveries
 - GPUI does not expose a CSS-style gradient background helper in this version, so the ColorPicker popup uses a dense rainbow swatch matrix to approximate a colorful gradient panel while preserving reliable hit testing.
+
+
+## Session 81 — 2026-05-10 (ColorPicker HSV + Alpha Panel)
+
+### Actions
+- **Reworked ColorPicker popup to match screenshot target**:
+  - Replaced the simple rainbow swatch popup with a picker-style panel.
+  - Added a large clickable saturation/value color area generated from the active hue.
+  - Added a right-side hue selector bar.
+  - Added an alpha selector bar and rgba display text.
+  - Added HSV-to-HEX and rgba formatting helpers.
+- **Updated tests and demo**:
+  - Added tests for rgba display and HSV color generation.
+  - Updated Gallery copy to describe free color/hue/alpha selection.
+- **Updated memory**:
+  - Updated ColorPicker inventory status to include HSV panel, hue bar, alpha bar, and rgba display.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test color_picker` passed with 6 tests.
+- `git diff --check` passed.
+
+### Key Discoveries
+- Without a native gradient background API, a dense HSV grid provides free-ish color selection and predictable click targets while visually matching a gradient picker much more closely than static presets.

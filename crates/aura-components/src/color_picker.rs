@@ -10,6 +10,8 @@ use std::sync::Arc;
 pub struct ColorPicker {
     id: SharedString,
     value: SharedString,
+    alpha: f32,
+    hue: f32,
     presets: Vec<SharedString>,
     disabled: bool,
     show_label: bool,
@@ -27,6 +29,8 @@ impl ColorPicker {
         Self {
             id: format!("color-picker-{caller}").into(),
             value: Self::normalize_hex(value.as_ref()).unwrap_or_else(|| "#409EFF".into()),
+            alpha: 1.0,
+            hue: 210.0,
             presets: default_presets(),
             disabled: false,
             show_label: true,
@@ -46,6 +50,16 @@ impl ColorPicker {
         if let Some(value) = Self::normalize_hex(value.as_ref()) {
             self.value = value;
         }
+        self
+    }
+
+    pub fn alpha(mut self, alpha: f32) -> Self {
+        self.alpha = alpha.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn hue(mut self, hue: f32) -> Self {
+        self.hue = normalize_hue(hue);
         self
     }
 
@@ -106,6 +120,16 @@ impl ColorPicker {
         .collect()
     }
 
+    pub fn rgba_display(input: &str, alpha: f32) -> Option<SharedString> {
+        let (r, g, b) = Self::hex_rgb(input)?;
+        Some(format!("rgba({}, {}, {}, {:.2})", r, g, b, alpha.clamp(0.0, 1.0)).into())
+    }
+
+    pub fn hex_from_hsv(hue: f32, saturation: f32, value: f32) -> SharedString {
+        let (r, g, b) = hsv_to_rgb(hue, saturation, value);
+        format!("#{:02X}{:02X}{:02X}", r, g, b).into()
+    }
+
     pub fn hex_rgb(input: &str) -> Option<(u8, u8, u8)> {
         let normalized = Self::normalize_hex(input)?;
         let raw = normalized.as_ref().trim_start_matches('#');
@@ -121,10 +145,36 @@ impl ColorPicker {
             return;
         }
         self.value = color.clone();
-        self.is_open = false;
         if let Some(on_change) = &self.on_change {
             on_change(color, window, cx);
         }
+        cx.notify();
+    }
+
+    fn select_color_and_close(
+        &mut self,
+        color: SharedString,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.select_color(color, window, cx);
+        self.is_open = false;
+        cx.notify();
+    }
+
+    fn select_alpha(&mut self, alpha: f32, cx: &mut Context<Self>) {
+        if self.disabled {
+            return;
+        }
+        self.alpha = alpha.clamp(0.0, 1.0);
+        cx.notify();
+    }
+
+    fn select_hue(&mut self, hue: f32, cx: &mut Context<Self>) {
+        if self.disabled {
+            return;
+        }
+        self.hue = normalize_hue(hue);
         cx.notify();
     }
 }
@@ -144,6 +194,8 @@ impl Render for ColorPicker {
             let theme_portal = theme.clone();
             let selected_for_panel = selected.clone();
             let presets = self.presets.clone();
+            let self_alpha = self.alpha;
+            let self_hue = self.hue;
             let entity_for_portal = entity.clone();
 
             push_portal(
@@ -157,6 +209,8 @@ impl Render for ColorPicker {
                     let panel = render_color_panel(
                         panel_id.clone(),
                         selected_for_panel.clone(),
+                        self_alpha,
+                        self_hue,
                         presets.clone(),
                         theme_portal.clone(),
                         entity_for_portal.clone(),
@@ -255,7 +309,9 @@ impl Render for ColorPicker {
                         } else {
                             theme.neutral.text_1
                         })
-                        .child(selected),
+                        .child(
+                            ColorPicker::rgba_display(&selected, self.alpha).unwrap_or(selected),
+                        ),
                 )
             })
     }
@@ -264,6 +320,8 @@ impl Render for ColorPicker {
 fn render_color_panel(
     id: SharedString,
     selected: SharedString,
+    alpha: f32,
+    hue: f32,
     presets: Vec<SharedString>,
     theme: aura_theme::Theme,
     picker: gpui::Entity<ColorPicker>,
@@ -272,7 +330,7 @@ fn render_color_panel(
         .id(format!("{}-panel", id))
         .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .w(px(252.0))
+        .w(px(326.0))
         .p_3()
         .flex()
         .flex_col()
@@ -284,92 +342,189 @@ fn render_color_panel(
         .shadow_lg()
         .child(
             div()
-                .text_sm()
-                .font_weight(gpui::FontWeight::BOLD)
-                .text_color(theme.neutral.text_1)
-                .child("Rainbow"),
+                .flex()
+                .gap_2()
+                .child(sv_panel(
+                    format!("{}-sv", id),
+                    hue,
+                    theme.clone(),
+                    picker.clone(),
+                ))
+                .child(hue_bar(
+                    format!("{}-hue", id),
+                    hue,
+                    theme.clone(),
+                    picker.clone(),
+                )),
         )
-        .child(color_grid(
-            format!("{}-rainbow", id),
-            ColorPicker::rainbow_palette(),
+        .child(alpha_bar(
+            format!("{}-alpha", id),
             selected.clone(),
+            alpha,
             theme.clone(),
             picker.clone(),
-            6,
-            px(28.0),
         ))
         .child(
             div()
-                .text_sm()
-                .font_weight(gpui::FontWeight::BOLD)
-                .text_color(theme.neutral.text_1)
-                .child("Presets"),
+                .flex()
+                .flex_wrap()
+                .gap_2()
+                .children(presets.into_iter().enumerate().map({
+                    let picker = picker.clone();
+                    let theme = theme.clone();
+                    move |(index, color)| {
+                        let hsla = hex_to_hsla(&color)
+                            .unwrap_or(theme.primary.base)
+                            .opacity(alpha);
+                        div()
+                            .id(format!("{}-preset-{}", id, index))
+                            .w(px(20.0))
+                            .h(px(20.0))
+                            .rounded(px(4.0))
+                            .border_1()
+                            .border_color(theme.neutral.border)
+                            .bg(hsla)
+                            .cursor_pointer()
+                            .hover(|s| s.cursor_pointer().border_color(theme.primary.base))
+                            .on_mouse_down(MouseButton::Left, {
+                                let picker = picker.clone();
+                                move |_, window, cx| {
+                                    picker.update(cx, |picker, cx| {
+                                        picker.select_color_and_close(color.clone(), window, cx);
+                                    });
+                                    cx.stop_propagation();
+                                }
+                            })
+                    }
+                })),
         )
-        .child(color_grid(
-            format!("{}-preset", id),
-            presets,
-            selected,
-            theme,
-            picker,
-            6,
-            px(28.0),
-        ))
+        .child(
+            div()
+                .px_2()
+                .py_1()
+                .rounded(px(theme.radius.sm))
+                .border_1()
+                .border_color(theme.neutral.border)
+                .text_xs()
+                .font_family("monospace")
+                .text_color(theme.neutral.text_1)
+                .child(ColorPicker::rgba_display(&selected, alpha).unwrap_or(selected)),
+        )
 }
 
-fn color_grid(
+fn sv_panel(
     id: String,
-    colors: Vec<SharedString>,
-    selected: SharedString,
+    hue: f32,
     theme: aura_theme::Theme,
     picker: gpui::Entity<ColorPicker>,
-    columns: usize,
-    size: Pixels,
 ) -> impl IntoElement {
     div()
+        .w(px(280.0))
+        .h(px(180.0))
         .flex()
-        .flex_wrap()
-        .gap_2()
-        .max_w(px(columns as f32 * (f32::from(size) + 8.0)))
-        .children(colors.into_iter().enumerate().map(move |(index, color)| {
-            let hsla = hex_to_hsla(&color).unwrap_or(theme.primary.base);
-            let active = color == selected;
+        .flex_col()
+        .children((0..12).map(move |row| {
+            let picker = picker.clone();
+            let theme = theme.clone();
+            let row_id = id.clone();
+            div().flex().children((0..20).map(move |col| {
+                let saturation = col as f32 / 19.0;
+                let value = 1.0 - row as f32 / 11.0;
+                let color = ColorPicker::hex_from_hsv(hue, saturation, value);
+                let hsla = hex_to_hsla(&color).unwrap_or(theme.primary.base);
+                let picker = picker.clone();
+                div()
+                    .id(format!("{}-{}-{}", row_id, row, col))
+                    .w(px(14.0))
+                    .h(px(15.0))
+                    .bg(hsla)
+                    .cursor_pointer()
+                    .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                        picker.update(cx, |picker, cx| {
+                            picker.select_color(color.clone(), window, cx);
+                        });
+                        cx.stop_propagation();
+                    })
+            }))
+        }))
+}
+
+fn hue_bar(
+    id: String,
+    selected_hue: f32,
+    theme: aura_theme::Theme,
+    picker: gpui::Entity<ColorPicker>,
+) -> impl IntoElement {
+    let hues = [
+        0.0, 30.0, 60.0, 90.0, 120.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0,
+    ];
+    div()
+        .w(px(14.0))
+        .h(px(180.0))
+        .flex()
+        .flex_col()
+        .rounded(px(4.0))
+        .overflow_hidden()
+        .border_1()
+        .border_color(theme.neutral.border)
+        .children(hues.into_iter().enumerate().map(move |(index, hue)| {
+            let color = ColorPicker::hex_from_hsv(hue, 1.0, 1.0);
+            let active = (normalize_hue(selected_hue) - hue).abs() < 0.1;
             let picker = picker.clone();
             div()
                 .id(format!("{}-{}", id, index))
-                .w(size)
-                .h(size)
-                .p(px(2.0))
-                .rounded(px(theme.radius.sm))
+                .h(px(16.0))
+                .w_full()
                 .border_1()
                 .border_color(if active {
-                    theme.primary.base
+                    theme.neutral.card
                 } else {
-                    theme.neutral.border
+                    hex_to_hsla(&color).unwrap_or(theme.primary.base)
                 })
+                .bg(hex_to_hsla(&color).unwrap_or(theme.primary.base))
                 .cursor_pointer()
-                .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
-                .child(color_square(
-                    hsla,
-                    px(f32::from(size) - 6.0),
-                    theme.neutral.border,
-                ))
-                .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                    picker.update(cx, |picker, cx| {
-                        picker.select_color(color.clone(), window, cx);
-                    });
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                    picker.update(cx, |picker, cx| picker.select_hue(hue, cx));
                     cx.stop_propagation();
                 })
         }))
 }
 
-fn color_square(color: Hsla, size: Pixels, border: Hsla) -> impl IntoElement {
+fn alpha_bar(
+    id: String,
+    selected: SharedString,
+    alpha: f32,
+    theme: aura_theme::Theme,
+    picker: gpui::Entity<ColorPicker>,
+) -> impl IntoElement {
+    let base = hex_to_hsla(&selected).unwrap_or(theme.primary.base);
+    let alphas = [0.0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0];
     div()
-        .w(size)
-        .h(size)
-        .rounded(px(4.0))
+        .flex()
+        .h(px(14.0))
+        .rounded(px(3.0))
+        .overflow_hidden()
         .border_1()
-        .border_color(border)
-        .bg(color)
+        .border_color(theme.neutral.border)
+        .children(alphas.into_iter().enumerate().map(move |(index, value)| {
+            let active = (alpha - value).abs() < 0.03;
+            let picker = picker.clone();
+            div()
+                .id(format!("{}-{}", id, index))
+                .flex_1()
+                .border_1()
+                .border_color(if active {
+                    theme.primary.base
+                } else {
+                    base.opacity(value)
+                })
+                .bg(base.opacity(value))
+                .cursor_pointer()
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                    picker.update(cx, |picker, cx| picker.select_alpha(value, cx));
+                    cx.stop_propagation();
+                })
+        }))
 }
 
 struct BoundsCapturer {
@@ -434,6 +589,41 @@ impl Element for BoundsCapturer {
         _: &mut App,
     ) {
     }
+}
+
+fn normalize_hue(hue: f32) -> f32 {
+    let mut hue = hue % 360.0;
+    if hue < 0.0 {
+        hue += 360.0;
+    }
+    hue
+}
+
+fn hsv_to_rgb(hue: f32, saturation: f32, value: f32) -> (u8, u8, u8) {
+    let hue = normalize_hue(hue);
+    let saturation = saturation.clamp(0.0, 1.0);
+    let value = value.clamp(0.0, 1.0);
+    let chroma = value * saturation;
+    let x = chroma * (1.0 - ((hue / 60.0) % 2.0 - 1.0).abs());
+    let m = value - chroma;
+    let (r1, g1, b1) = if hue < 60.0 {
+        (chroma, x, 0.0)
+    } else if hue < 120.0 {
+        (x, chroma, 0.0)
+    } else if hue < 180.0 {
+        (0.0, chroma, x)
+    } else if hue < 240.0 {
+        (0.0, x, chroma)
+    } else if hue < 300.0 {
+        (x, 0.0, chroma)
+    } else {
+        (chroma, 0.0, x)
+    };
+    (
+        ((r1 + m) * 255.0).round() as u8,
+        ((g1 + m) * 255.0).round() as u8,
+        ((b1 + m) * 255.0).round() as u8,
+    )
 }
 
 fn hex_to_hsla(value: &str) -> Option<Hsla> {

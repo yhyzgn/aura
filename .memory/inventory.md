@@ -102,7 +102,7 @@
 | 5 | Upload | `crates/aura-components/src/upload.rs` | ✅ | ✅ Button / drag style / text list / picture card / progress / status / limit / disabled / callbacks |
 | 6 | Cascader | `crates/aura-components/src/cascader.rs` | ✅ | ✅ Multi-level / default selected / disabled / clearable / loading / lazy load / search results / callbacks |
 | 7 | Transfer | `crates/aura-components/src/transfer.rs` | ✅ | ✅ Source/target panels / checked move / disabled items / filter display / callbacks |
-| 8 | ColorPicker | `crates/aura-components/src/color_picker.rs` | ✅ | ✅ Cube trigger / popup rainbow panel / preset swatches / custom presets / disabled / callback |
+| 8 | ColorPicker | `crates/aura-components/src/color_picker.rs` | ✅ | ✅ Cube trigger / popup HSV panel / hue bar / alpha bar / rgba display / presets / disabled / callback |
 | 9 | Carousel | — | — | ⬜ |
 | 10 | Image | — | — | ⬜ |
 | 11 | Calendar | — | — | ⬜ |
