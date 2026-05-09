@@ -2,9 +2,9 @@ use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    App, Context, IntoElement, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*,
-    px,
+    Context, IntoElement, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
 };
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UploadStatus {
@@ -43,8 +43,9 @@ pub struct Upload {
     button_text: SharedString,
     tip: Option<SharedString>,
     width: Option<Pixels>,
-    on_select: Option<Box<dyn Fn(&mut Window, &mut App) + 'static>>,
-    on_remove: Option<Box<dyn Fn(UploadFile, &mut Window, &mut App) + 'static>>,
+    on_select: Option<Arc<dyn Fn(&mut Upload, &mut Window, &mut Context<Upload>) + 'static>>,
+    on_remove:
+        Option<Arc<dyn Fn(&mut Upload, UploadFile, &mut Window, &mut Context<Upload>) + 'static>>,
 }
 
 impl UploadFile {
@@ -165,13 +166,19 @@ impl Upload {
         self
     }
 
-    pub fn on_select(mut self, f: impl Fn(&mut Window, &mut App) + 'static) -> Self {
-        self.on_select = Some(Box::new(f));
+    pub fn on_select(
+        mut self,
+        f: impl Fn(&mut Upload, &mut Window, &mut Context<Upload>) + 'static,
+    ) -> Self {
+        self.on_select = Some(Arc::new(f));
         self
     }
 
-    pub fn on_remove(mut self, f: impl Fn(UploadFile, &mut Window, &mut App) + 'static) -> Self {
-        self.on_remove = Some(Box::new(f));
+    pub fn on_remove(
+        mut self,
+        f: impl Fn(&mut Upload, UploadFile, &mut Window, &mut Context<Upload>) + 'static,
+    ) -> Self {
+        self.on_remove = Some(Arc::new(f));
         self
     }
 
@@ -181,29 +188,38 @@ impl Upload {
     }
 
     pub fn push_file(&mut self, file: UploadFile, cx: &mut Context<Self>) {
-        if self.limit.is_some_and(|limit| self.files.len() >= limit) {
+        if !Self::can_accept_more_len(self.files.len(), self.limit, self.disabled) {
             return;
         }
         self.files.push(file);
         cx.notify();
     }
 
+    pub fn file_count(&self) -> usize {
+        self.files.len()
+    }
+
+    pub fn can_accept_more_len(current_len: usize, limit: Option<usize>, disabled: bool) -> bool {
+        !disabled && !limit.is_some_and(|limit| current_len >= limit)
+    }
+
     pub fn remove_file_by_id(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(index) = self.files.iter().position(|file| file.id.as_ref() == id) {
             let file = self.files.remove(index);
-            if let Some(ref on_remove) = self.on_remove {
-                on_remove(file, window, cx);
+            if let Some(on_remove) = self.on_remove.clone() {
+                on_remove(self, file, window, cx);
+            } else {
+                cx.notify();
             }
-            cx.notify();
         }
     }
 
     fn trigger_select(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.disabled || self.limit.is_some_and(|limit| self.files.len() >= limit) {
+        if !Self::can_accept_more_len(self.files.len(), self.limit, self.disabled) {
             return;
         }
-        if let Some(ref on_select) = self.on_select {
-            on_select(window, cx);
+        if let Some(on_select) = self.on_select.clone() {
+            on_select(self, window, cx);
         }
     }
 }
@@ -211,7 +227,7 @@ impl Upload {
 impl Render for Upload {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
-        let can_add = !self.disabled && !self.limit.is_some_and(|limit| self.files.len() >= limit);
+        let can_add = Self::can_accept_more_len(self.files.len(), self.limit, self.disabled);
         let entity = cx.entity().clone();
         let trigger_id = format!("{}-trigger", self.id);
 

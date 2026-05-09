@@ -1214,3 +1214,24 @@
 
 ### Key Discoveries
 - Transfer should preserve user intent across side changes by transferring checked state with moved items instead of clearing all destination checks.
+
+
+## Session 77 — 2026-05-10 (Upload Select Callback Demo Fix)
+
+### Actions
+- **Fixed Upload click/select behavior in Gallery**:
+  - Updated `Upload::on_select` to receive `&mut Upload` and `&mut Context<Upload>` so callbacks can safely mutate the same component without nested `Entity::update`.
+  - Updated `Upload::on_remove` to follow the same direct-mutation callback shape.
+  - Added `Upload::file_count` and `Upload::can_accept_more_len` helpers.
+  - Extended the Upload demo so clicking the button/drag/picture-card triggers adds a simulated file via `on_select`.
+- **Added tests**:
+  - Created `crates/aura-components/tests/upload.rs` for accept/limit checks and progress clamping.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test upload` passed with 2 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Upload demo previously exposed an empty select callback path, so clicking appeared broken. Same-component mutation callbacks should pass the active component/context directly to avoid GPUI double-lease risks.
