@@ -61,6 +61,7 @@ pub mod time_picker;
 pub mod timeline;
 pub mod title;
 pub mod tooltip;
+pub mod transfer;
 pub mod tree;
 pub mod upload;
 
@@ -128,5 +129,6 @@ pub use time_picker::*;
 pub use timeline::*;
 pub use title::*;
 pub use tooltip::*;
+pub use transfer::*;
 pub use tree::*;
 pub use upload::*;

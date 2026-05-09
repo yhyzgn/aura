@@ -44,6 +44,7 @@ pub mod tag_demo;
 pub mod time_picker_demo;
 pub mod timeline_demo;
 pub mod tooltip_demo;
+pub mod transfer_demo;
 pub mod tree_demo;
 pub mod typography_demo;
 pub mod upload_demo;
@@ -173,6 +174,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Cascader 级联选择器",
             description: "多级联动选择",
             render: |cx| cascader_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "Transfer 穿梭框",
+            description: "在两个列表之间移动条目",
+            render: |cx| transfer_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Timeline 时间线",

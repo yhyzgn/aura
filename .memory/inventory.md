@@ -91,7 +91,7 @@
 | 20 | Avatar | `crates/aura-components/src/avatar.rs` | ✅ | ✅ Image / Icon / Shapes |
 | 21 | Badge | `crates/aura-components/src/badge.rs` | ✅ | ✅ Value / Dot / Max |
 
-## P5 Advanced 🏃 (6/20)
+## P5 Advanced 🏃 (7/20)
 
 | # | Component | File | Demo | Status |
 |---|-----------|------|------|--------|
@@ -101,7 +101,7 @@
 | 4 | DateTimePicker | `crates/aura-components/src/date_time_picker.rs` | ✅ | ✅ DateTime / DateTime range / formats / steps / hide seconds / confirm / disabled / callbacks |
 | 5 | Upload | `crates/aura-components/src/upload.rs` | ✅ | ✅ Button / drag style / text list / picture card / progress / status / limit / disabled / callbacks |
 | 6 | Cascader | `crates/aura-components/src/cascader.rs` | ✅ | ✅ Multi-level / default selected / disabled / clearable / loading / lazy load / search results / callbacks |
-| 7 | Transfer | — | — | ⬜ |
+| 7 | Transfer | `crates/aura-components/src/transfer.rs` | ✅ | ✅ Source/target panels / checked move / disabled items / filter display / callbacks |
 | 8 | ColorPicker | — | — | ⬜ |
 | 9 | Carousel | — | — | ⬜ |
 | 10 | Image | — | — | ⬜ |

@@ -1168,3 +1168,31 @@
 
 ### Key Discoveries
 - GPUI entities cannot be updated recursively while already leased; component callbacks that may mutate the same component should receive the active mutable component/context rather than requiring callers to re-enter `Entity::update`.
+
+
+## Session 75 — 2026-05-09 (P5 Transfer)
+
+### Actions
+- **Added Transfer component**:
+  - Implemented `Transfer` and `TransferItem` in `crates/aura-components/src/transfer.rs`.
+  - Supports source/target panels, checked item movement, disabled items, target key ordering, optional filter display, custom titles/sizing, and `on_change` callbacks.
+  - Added public exports in `crates/aura-components/src/lib.rs`.
+- **Added test coverage**:
+  - Created `crates/aura-components/tests/transfer.rs`.
+  - Covered moving checked source items, moving checked target items back, disabled item preservation, and filtering by key/label/description.
+- **Added Gallery demo**:
+  - Created `apps/aura-gallery/src/demos/transfer_demo.rs`.
+  - Registered `Transfer 穿梭框` in the Gallery demo registry.
+  - Demo covers basic movement, filtered display, and disabled target items.
+- **Updated memory**:
+  - Marked P5 progress as 7/20 in `.memory/state.md`.
+  - Added Transfer status to `.memory/inventory.md`.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test transfer` passed with 3 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Transfer needs to be a stateful `Render` component, not `RenderOnce`, because item checking and move actions mutate internal selected-key state before emitting changed target keys.
