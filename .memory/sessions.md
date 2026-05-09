@@ -1288,3 +1288,27 @@
 
 ### Key Discoveries
 - A preset-swatch ColorPicker can keep color parsing testable by exposing pure HEX normalization/RGB helpers while leaving richer custom color input for a future enhancement.
+
+
+## Session 80 — 2026-05-10 (ColorPicker Popup Rainbow Panel)
+
+### Actions
+- **Updated ColorPicker interaction model**:
+  - Changed the visible control to a compact color cube trigger.
+  - Added a portal popup panel that opens on trigger click and closes on outside click or color selection.
+  - Added a rainbow color matrix plus custom preset swatches inside the popup.
+  - Added stable trigger/panel bounds capture and row item ids for popup interaction.
+- **Updated tests and demo**:
+  - Added `ColorPicker::rainbow_palette()` coverage.
+  - Updated Gallery copy to explain the cube trigger and popup color panel.
+- **Updated memory**:
+  - Updated ColorPicker inventory status to include cube trigger and popup rainbow panel.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test color_picker` passed with 4 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI does not expose a CSS-style gradient background helper in this version, so the ColorPicker popup uses a dense rainbow swatch matrix to approximate a colorful gradient panel while preserving reliable hit testing.

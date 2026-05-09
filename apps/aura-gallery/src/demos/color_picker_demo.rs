@@ -49,7 +49,7 @@ impl Render for ColorPickerDemo {
                             .child("ColorPicker 颜色选择器"),
                     )
                     .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "从预设色板中选择颜色，支持 HEX 规范化、禁用状态、自定义色板和紧凑展示。",
+                        "点击颜色方块弹出彩虹面板和预设色板，支持 HEX 规范化、禁用状态和紧凑展示。",
                     )),
             )
             .child(section(
@@ -61,12 +61,12 @@ impl Render for ColorPickerDemo {
                     .child(self.basic.clone())
                     .child(
                         Text::new(
-                            "点击预设色块会更新当前颜色值。支持 #RGB 和 #RRGGBB 输入规范化。",
+                            "点击颜色方块打开 popup；在彩虹面板或预设色块中选择颜色后会更新当前颜色值。支持 #RGB 和 #RRGGBB 输入规范化。",
                         )
                         .size(px(theme.font_size.sm)),
                     ),
             ))
-            .child(section("自定义预设色", self.custom.clone()))
+            .child(section("自定义 Popup 预设色", self.custom.clone()))
             .child(section("隐藏文本标签", self.compact.clone()))
             .child(section("禁用状态", self.disabled.clone()))
     }

@@ -21,3 +21,12 @@ fn converts_hex_to_rgb_channels() {
     assert_eq!(ColorPicker::hex_rgb("#409EFF"), Some((64, 158, 255)));
     assert_eq!(ColorPicker::hex_rgb("#AABBCC"), Some((170, 187, 204)));
 }
+
+#[test]
+fn provides_a_rainbow_panel_palette() {
+    let palette = ColorPicker::rainbow_palette();
+
+    assert!(palette.len() >= 24);
+    assert!(palette.contains(&"#FF0000".into()));
+    assert!(palette.contains(&"#0000FF".into()));
+}
