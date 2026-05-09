@@ -57,3 +57,20 @@ Table 是 Aura 最复杂的单一组件。参考 Element-Plus el-table 的能力
 | 编辑单元格 | P3 |
 | 导出 CSV | P3 |
 | 汇总行 | P3 |
+
+
+## 当前收尾状态（2026-05-10）
+
+P5 当前用户请求范围已结束。已完成的 P5 subset 包括 Table、DatePicker、TimePicker、DateTimePicker、Upload、Cascader、Transfer、ColorPicker、Image、Autocomplete，以及 P1 已完成的 Scrollbar/Splitter。
+
+以下 P5 条目已移入 `.prompt/P9-deferred-advanced.md`，后续需要时再补充：
+
+- Carousel
+- Calendar
+- TreeSelect
+- InputTag
+- Mention
+- Watermark
+- Tour
+- VirtualizedTable
+- VirtualizedTree

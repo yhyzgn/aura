@@ -1777,3 +1777,19 @@
 
 ### Key Discoveries
 - The safe event split is: Input owns clear on mouse-down; popup panel owns outside dismissal. The Autocomplete input wrapper should remain non-interactive over the Input region.
+
+
+
+## Session 108 — 2026-05-10 (P9 Deferred Advanced Phase)
+
+### Actions
+- Created `.prompt/P9-deferred-advanced.md` as the latest phase for components skipped/deferred from P5.
+- Moved Carousel, Calendar, TreeSelect, InputTag, Mention, Watermark, Tour, VirtualizedTable, and VirtualizedTree into P9 backlog.
+- Updated `prompt.md`, `.memory/state.md`, and `.memory/inventory.md` so future sessions remember P9 is deferred and should be supplemented later only when requested.
+
+### Verification
+- `git diff --check` passed.
+- Documentation/memory references checked locally: `prompt.md`, `.prompt/P5-advanced.md`, `.prompt/P8-engineering.md`, `.prompt/P9-deferred-advanced.md`, `.memory/state.md`, `.memory/inventory.md`.
+
+### Key Discoveries
+- P5 requested subset is over for now; deferred advanced components should remain visible as identified future scope rather than being lost or treated as active work.

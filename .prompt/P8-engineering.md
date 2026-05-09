@@ -1,6 +1,7 @@
 # P6 Engineering — 工程化交付
 
 > 上游: `.prompt/P7-demo-self-contained.md`
+> 下游: `.prompt/P9-deferred-advanced.md`（deferred backlog，非自动执行）
 
 ## 目标
 

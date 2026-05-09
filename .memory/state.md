@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-**P5 - Advanced** (重型组件 · requested subset complete; remaining deferred 🏁)
+**P6 - Built-in Unique ID** (下一阶段待启动；P9 deferred backlog 已创建)
 
 ## Completed in P4
 
@@ -22,9 +22,16 @@
 | P6 Built-in Unique ID | ⬜ Pending | 0/1 | 1 |
 | P7 Demo Self-Contained | ⬜ Pending | 0/1 | 1 |
 | P8 Engineering | ⬜ Pending | 0/1 | 1 |
+| P9 Deferred Advanced | ⏸️ Deferred backlog | 0/9 | 9 |
 
 ## Git Status
 
 - Branch: main
 - Remote: https://github.com/yhyzgn/aura.git
 
+
+## Deferred Backlog
+
+- P9 Deferred Advanced created in `.prompt/P9-deferred-advanced.md`.
+- Components moved from P5 deferred/skipped scope: Carousel, Calendar, TreeSelect, InputTag, Mention, Watermark, Tour, VirtualizedTable, VirtualizedTree.
+- P9 is the latest phase and should be supplemented later only when explicitly requested.

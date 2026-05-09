@@ -91,7 +91,7 @@
 | 20 | Avatar | `crates/aura-components/src/avatar.rs` | ✅ | ✅ Image / Icon / Shapes |
 | 21 | Badge | `crates/aura-components/src/badge.rs` | ✅ | ✅ Value / Dot / Max |
 
-## P5 Advanced 🏁 (11/20 complete, remaining deferred by user request)
+## P5 Advanced 🏁 (11/20 complete; deferred scope moved to P9)
 
 | # | Component | File | Demo | Status |
 |---|-----------|------|------|--------|
@@ -103,18 +103,18 @@
 | 6 | Cascader | `crates/aura-components/src/cascader.rs` | ✅ | ✅ Multi-level / default selected / disabled / clearable / loading / lazy load / search results / callbacks |
 | 7 | Transfer | `crates/aura-components/src/transfer.rs` | ✅ | ✅ Source/target panels / checked move / disabled items / filter display / callbacks |
 | 8 | ColorPicker | `crates/aura-components/src/color_picker.rs` | ✅ | ✅ Cube trigger / popup HSV panel / hue bar / alpha bar / rgba display / presets / disabled / callback |
-| 9 | Carousel | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 9 | Carousel | — | — | ↩️ Moved to P9 deferred backlog |
 | 10 | Image | `crates/aura-components/src/image.rs` | ✅ | ✅ Remote URL / local file / fit modes / circle + round options / transparent ring sleeve / loading + fallback / empty / preview |
-| 11 | Calendar | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 12 | TreeSelect | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 11 | Calendar | — | — | ↩️ Moved to P9 deferred backlog |
+| 12 | TreeSelect | — | — | ↩️ Moved to P9 deferred backlog |
 | 13 | Autocomplete | `crates/aura-components/src/autocomplete.rs` | ✅ | ✅ Static suggestions / filtering / click select / clearable / disabled / demo |
-| 14 | InputTag | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 15 | Mention | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 16 | Watermark | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 17 | Tour | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 14 | InputTag | — | — | ↩️ Moved to P9 deferred backlog |
+| 15 | Mention | — | — | ↩️ Moved to P9 deferred backlog |
+| 16 | Watermark | — | — | ↩️ Moved to P9 deferred backlog |
+| 17 | Tour | — | — | ↩️ Moved to P9 deferred backlog |
 | 18 | Scrollbar | `crates/aura-components/src/scrollbar.rs` | ✅ | ✅ Already completed in P1 |
 | 19 | Splitter | `crates/aura-components/src/splitter.rs` | ✅ | ✅ Already completed in P1 |
-| 20 | VirtualizedTable/VirtualizedTree | — | — | ↩️ Deferred / identified for later (skip by user request) |
+| 20 | VirtualizedTable/VirtualizedTree | — | — | ↩️ Moved to P9 deferred backlog |
 
 ## P6 Built-in Unique ID ⬜
 
@@ -127,3 +127,17 @@
 ## P8 Engineering ⬜
 
 — See `.prompt/P8-engineering.md` for task list
+
+## P9 Deferred Advanced ⏸️ (0/9 — backlog for later supplementation)
+
+| # | Component | File | Demo | Status |
+|---|-----------|------|------|--------|
+| 1 | Carousel | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 2 | Calendar | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 3 | TreeSelect | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 4 | InputTag | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 5 | Mention | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 6 | Watermark | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 7 | Tour | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 8 | VirtualizedTable | — | — | ⏸️ Deferred from P5; implement later when requested |
+| 9 | VirtualizedTree | — | — | ⏸️ Deferred from P5; implement later when requested |

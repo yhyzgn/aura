@@ -14,7 +14,7 @@
 | UI 框架 | GPUI 0.2.2 (git = "https://github.com/zed-industries/zed") |
 | 参考规范 | Element-Plus 2.x (https://element-plus.org/zh-CN/) |
 | 架构 | Cargo Workspace Monorepo |
-| 目标 | ~76 个企业级组件, 分 6 阶段交付 |
+| 目标 | ~76 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog |
 
 ---
 
@@ -27,6 +27,7 @@
 | 初始调研 | `chat.txt` | Gemini 技术可行性分析 |
 | **记忆库** | `.memory/` | 当前状态、架构决策、组件清单、会话历史 |
 | **阶段提示词** | `.prompt/` | 各阶段开发指令，链式继承 |
+| **P9 延后高级组件** | `.prompt/P9-deferred-advanced.md` | P5 跳过/延后的高级组件 backlog，后续需要时补充 |
 
 ---
 
@@ -63,7 +64,8 @@ aura/
 │   ├── P5-advanced.md
 │   ├── P6-builtin-id.md
 │   ├── P7-demo-self-contained.md
-│   └── P8-engineering.md
+│   ├── P8-engineering.md
+│   └── P9-deferred-advanced.md
 ├── prompt.md                         # 📌 本文件 (AI 入口)
 ├── architecture-design.md
 └── structure.txt
@@ -81,6 +83,12 @@ aura/
 3. 阅读 .prompt/<current-phase>.md  了解当前阶段任务
 4. 开始工作
 ```
+
+
+### 4.1.1 阶段状态提示
+
+- P5 当前请求范围已结束；Carousel、Calendar、TreeSelect、InputTag、Mention、Watermark、Tour、VirtualizedTable、VirtualizedTree 已移入 `.prompt/P9-deferred-advanced.md`。
+- P9 是最新阶段，但属于 deferred backlog；只有用户明确要求补齐这些组件时才启动。
 
 ### 4.2 每个组件/功能开发流程
 
