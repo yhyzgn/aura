@@ -38,8 +38,8 @@
 | 1 | Input | `crates/aura-components/src/input.rs` | ✅ |
 | 2 | InputNumber | `crates/aura-components/src/input_number.rs` | ✅ |
 | 3 | Textarea | `crates/aura-components/src/textarea.rs` | ✅ |
-| 4 | Checkbox / CheckboxGroup | `crates/aura-components/src/checkbox.rs`, `checkbox_group.rs` | ✅ |
-| 5 | Radio / RadioGroup | `crates/aura-components/src/radio.rs` | ✅ |
+| 4 | Checkbox / CheckboxGroup | `crates/aura-components/src/checkbox.rs`, `checkbox_group.rs` | ✅ Vertical/Horizontal/Button layouts |
+| 5 | Radio / RadioGroup | `crates/aura-components/src/radio.rs`, `radio_group.rs` | ✅ Vertical/Horizontal/Button layouts |
 | 6 | Switch | `crates/aura-components/src/switch.rs` | ✅ |
 | 7 | Select | `crates/aura-components/src/select.rs` | ✅ |
 | 8 | Slider | `crates/aura-components/src/slider.rs` | ✅ |

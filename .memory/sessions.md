@@ -1793,3 +1793,21 @@
 
 ### Key Discoveries
 - P5 requested subset is over for now; deferred advanced components should remain visible as identified future scope rather than being lost or treated as active work.
+
+## Session 109 — 2026-05-10 (RadioGroup and CheckboxGroup Button Layouts)
+
+### Actions
+- Added explicit `Vertical`, `Horizontal`, and `Button` layout variants for `RadioGroup` and `CheckboxGroup`.
+- Added `Large`, `Default`, and `Small` group sizing APIs so button-style groups can match the provided segmented reference.
+- Updated the Form demo with large/default/small segmented RadioGroup and CheckboxGroup examples using the New York / Washington / Los Angeles / Chicago labels.
+- Added lightweight layout default regression tests for the new public layout/size enums.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components` passed: 37 tests total across component/unit/integration suites.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- The reference maps best to an opt-in segmented button layout, not a replacement of the existing radio-circle / checkbox-row defaults.
+- Existing GPUI styling helpers in this project do not include `inline_flex` / `w_fit`, so the segmented container uses the available flex/border/radius/overflow primitives.

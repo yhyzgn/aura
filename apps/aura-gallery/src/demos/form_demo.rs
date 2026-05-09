@@ -26,7 +26,13 @@ pub struct FormDemo {
     radio_disabled: Entity<Radio>,
     radio_disabled_checked: Entity<Radio>,
     radio_group: Entity<RadioGroup>,
+    radio_group_buttons_large: Entity<RadioGroup>,
+    radio_group_buttons_default: Entity<RadioGroup>,
+    radio_group_buttons_small: Entity<RadioGroup>,
     radio_group_disabled: Entity<RadioGroup>,
+    cb_group_buttons_large: Entity<CheckboxGroup>,
+    cb_group_buttons_default: Entity<CheckboxGroup>,
+    cb_group_buttons_small: Entity<CheckboxGroup>,
     input_plain: Entity<Input>,
     input_placeholder: Entity<Input>,
     input_password: Entity<Input>,
@@ -76,8 +82,60 @@ impl FormDemo {
             radio_disabled_checked: cx.new(|cx| Radio::new(true, cx).disabled(true)),
             radio_group: cx
                 .new(|cx| RadioGroup::new(vec!["Option A", "Option B", "Option C"], 1, cx)),
+            radio_group_buttons_large: cx.new(|cx| {
+                RadioGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    1,
+                    cx,
+                )
+                .button()
+                .large()
+            }),
+            radio_group_buttons_default: cx.new(|cx| {
+                RadioGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    1,
+                    cx,
+                )
+                .button()
+            }),
+            radio_group_buttons_small: cx.new(|cx| {
+                RadioGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    1,
+                    cx,
+                )
+                .button()
+                .small()
+            }),
             radio_group_disabled: cx
                 .new(|cx| RadioGroup::new(vec!["Disabled A", "Disabled B"], 0, cx).disabled(true)),
+            cb_group_buttons_large: cx.new(|cx| {
+                CheckboxGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    vec![1],
+                    cx,
+                )
+                .button()
+                .large()
+            }),
+            cb_group_buttons_default: cx.new(|cx| {
+                CheckboxGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    vec![1],
+                    cx,
+                )
+                .button()
+            }),
+            cb_group_buttons_small: cx.new(|cx| {
+                CheckboxGroup::new(
+                    vec!["New York", "Washington", "Los Angeles", "Chicago"],
+                    vec![1],
+                    cx,
+                )
+                .button()
+                .small()
+            }),
             input_plain: cx.new(|cx| Input::new("", cx)),
             input_placeholder: cx.new(|cx| Input::new("", cx).placeholder("Type something...")),
             input_password: cx.new(|cx| Input::new("", cx).password().placeholder("Password")),
@@ -193,9 +251,16 @@ impl Render for FormDemo {
                 ),
             )
             .child(
-                FormItem::new()
-                    .label("CheckboxGroup 多选组")
-                    .child(self.cb_group.clone()),
+                FormItem::new().label("CheckboxGroup 多选组").child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_3()
+                        .child(self.cb_group.clone())
+                        .child(self.cb_group_buttons_large.clone())
+                        .child(self.cb_group_buttons_default.clone())
+                        .child(self.cb_group_buttons_small.clone()),
+                ),
             )
             .child(
                 FormItem::new().label("Radio 单选").child(
@@ -218,6 +283,9 @@ impl Render for FormDemo {
                         .flex_col()
                         .gap_2()
                         .child(self.radio_group.clone())
+                        .child(self.radio_group_buttons_large.clone())
+                        .child(self.radio_group_buttons_default.clone())
+                        .child(self.radio_group_buttons_small.clone())
                         .child(self.radio_group_disabled.clone()),
                 ),
             )
