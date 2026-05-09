@@ -1504,3 +1504,20 @@
 
 ### Key Discoveries
 - Absolute local paths were correct, but relying on GPUI's path-resource async image branch still did not render in the demo. Directly decoding local files to `RenderImage` makes local image display deterministic for Aura Image.
+
+
+## Session 92 — 2026-05-10 (Image Local Custom Painter)
+
+### Actions
+- Added a small custom `LocalImageElement` for `Image::local(...)` that paints decoded `RenderImage` data directly with `Window::paint_image`.
+- Kept remote URL rendering on GPUI `img(...)`, but stopped routing local files through GPUI `img(...)` after decode.
+- Preserved object-fit and grayscale support for local images in the custom painter.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 6 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process exited successfully in this run.
+
+### Key Discoveries
+- Local file decoding and asset-path existence were both verified, so the remaining blank local display path is the local RenderImage handoff through `gpui::img`; direct `paint_image` is the narrower rendering path.

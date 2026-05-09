@@ -2,8 +2,9 @@ use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, App, Component, IntoElement, ObjectFit, Pixels, RenderImage, RenderOnce,
-    SharedString, Window, div, img, prelude::*, px,
+    AnyElement, App, Bounds, Component, Corners, Element, ElementId, GlobalElementId,
+    InspectorElementId, IntoElement, LayoutId, ObjectFit, Pixels, RenderImage, RenderOnce,
+    SharedString, Style, Window, div, img, prelude::*, px, relative,
 };
 use std::{
     path::{Path, PathBuf},
@@ -295,12 +296,11 @@ impl RenderOnce for Image {
                 || Arc::new(move || default_fallback(&theme, alt.clone()))
             });
             if let Some(local_image) = local_image {
-                frame = frame.child(
-                    img(local_image)
-                        .size_full()
-                        .object_fit(self.fit.as_object_fit())
-                        .grayscale(self.grayscale),
-                );
+                frame = frame.child(LocalImageElement {
+                    image: local_image,
+                    fit: self.fit.as_object_fit(),
+                    grayscale: self.grayscale,
+                });
             } else if let ImageSource::Url(src) = src {
                 frame = frame.child(
                     img(src)
@@ -348,6 +348,80 @@ impl IntoElement for Image {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+struct LocalImageElement {
+    image: Arc<RenderImage>,
+    fit: ObjectFit,
+    grayscale: bool,
+}
+
+impl IntoElement for LocalImageElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for LocalImageElement {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        let mut style = Style::default();
+        style.size.width = relative(1.0).into();
+        style.size.height = relative(1.0).into();
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _: &mut (),
+        _window: &mut Window,
+        _cx: &mut App,
+    ) {
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut (),
+        _: &mut (),
+        window: &mut Window,
+        _cx: &mut App,
+    ) {
+        if self.image.frame_count() == 0 {
+            return;
+        }
+        let image_bounds = self.fit.get_bounds(bounds, self.image.size(0));
+        let _ = window.paint_image(
+            image_bounds,
+            Corners::all(px(0.0)),
+            self.image.clone(),
+            0,
+            self.grayscale,
+        );
     }
 }
 
