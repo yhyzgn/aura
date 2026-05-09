@@ -104,7 +104,7 @@
 | 7 | Transfer | `crates/aura-components/src/transfer.rs` | ✅ | ✅ Source/target panels / checked move / disabled items / filter display / callbacks |
 | 8 | ColorPicker | `crates/aura-components/src/color_picker.rs` | ✅ | ✅ Cube trigger / popup HSV panel / hue bar / alpha bar / rgba display / presets / disabled / callback |
 | 9 | Carousel | — | — | ↩️ Deferred / identified for later (skip by user request) |
-| 10 | Image | `crates/aura-components/src/image.rs` | ✅ | ✅ Fit modes / rounded frame / loading + fallback / empty / preview badge |
+| 10 | Image | `crates/aura-components/src/image.rs` | ✅ | ✅ Remote URL / local file / fit modes / rounded frame / loading + fallback / empty / preview badge |
 | 11 | Calendar | — | — | ⬜ |
 | 12 | TreeSelect | — | — | ⬜ |
 | 13 | Autocomplete | — | — | ⬜ |

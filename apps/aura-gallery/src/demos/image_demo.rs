@@ -13,8 +13,8 @@ struct ImageDemo;
 impl Render for ImageDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
-        let sample =
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=640&h=420&fit=crop";
+        let remote = "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
+        let local = "apps/aura-gallery/assets/local.jpeg";
 
         div()
             .flex()
@@ -45,12 +45,13 @@ impl Render for ImageDemo {
                     .gap_4()
                     .flex_wrap()
                     .child(
-                        Image::new(sample)
+                        Image::new(remote)
                             .size(px(180.0), px(120.0))
                             .cover()
                             .preview(true),
                     )
-                    .child(Image::new(sample).size(px(180.0), px(120.0)).contain()),
+                    .child(Image::local(local).size(px(180.0), px(120.0)).cover())
+                    .child(Image::new(remote).size(px(180.0), px(120.0)).contain()),
             ))
             .child(section(
                 "填充方式",
@@ -68,7 +69,7 @@ impl Render for ImageDemo {
                                 .flex()
                                 .flex_col()
                                 .gap_2()
-                                .child(Image::new(sample).size(px(132.0), px(88.0)).fit(fit))
+                                .child(Image::new(remote).size(px(132.0), px(88.0)).fit(fit))
                                 .child(
                                     div()
                                         .text_xs()
@@ -86,9 +87,9 @@ impl Render for ImageDemo {
                     .flex()
                     .gap_4()
                     .flex_wrap()
-                    .child(Image::new(sample).square(px(96.0)).cover().round())
+                    .child(Image::new(remote).square(px(96.0)).cover().round())
                     .child(
-                        Image::new(sample)
+                        Image::local(local)
                             .size(px(150.0), px(96.0))
                             .cover()
                             .radius(ImageRadius::Large)

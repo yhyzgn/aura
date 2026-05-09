@@ -5,7 +5,7 @@ use gpui::{
     AnyElement, App, Component, IntoElement, ObjectFit, Pixels, RenderOnce, SharedString, Window,
     div, img, prelude::*, px,
 };
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageFit {
@@ -39,8 +39,24 @@ pub enum ImageRadius {
     Round,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImageSource {
+    Url(SharedString),
+    File(PathBuf),
+}
+
+impl ImageSource {
+    pub fn is_file(&self) -> bool {
+        matches!(self, ImageSource::File(_))
+    }
+
+    pub fn is_url(&self) -> bool {
+        matches!(self, ImageSource::Url(_))
+    }
+}
+
 pub struct Image {
-    src: Option<SharedString>,
+    src: Option<ImageSource>,
     alt: Option<SharedString>,
     width: Option<Pixels>,
     height: Option<Pixels>,
@@ -57,7 +73,7 @@ pub struct Image {
 impl Image {
     pub fn new(src: impl Into<SharedString>) -> Self {
         Self {
-            src: Some(src.into()),
+            src: Some(ImageSource::Url(src.into())),
             alt: None,
             width: None,
             height: None,
@@ -90,8 +106,17 @@ impl Image {
     }
 
     pub fn src(mut self, src: impl Into<SharedString>) -> Self {
-        self.src = Some(src.into());
+        self.src = Some(ImageSource::Url(src.into()));
         self
+    }
+
+    pub fn file(mut self, path: impl Into<PathBuf>) -> Self {
+        self.src = Some(ImageSource::File(path.into()));
+        self
+    }
+
+    pub fn local(path: impl Into<PathBuf>) -> Self {
+        Self::empty().file(path)
     }
 
     pub fn alt(mut self, alt: impl Into<SharedString>) -> Self {
@@ -210,6 +235,10 @@ impl Image {
     pub fn dimensions(&self) -> (Option<Pixels>, Option<Pixels>) {
         (self.width, self.height)
     }
+
+    pub fn source(&self) -> Option<&ImageSource> {
+        self.src.as_ref()
+    }
 }
 
 impl RenderOnce for Image {
@@ -250,6 +279,10 @@ impl RenderOnce for Image {
         }
 
         if let Some(src) = self.src {
+            let image = match src {
+                ImageSource::Url(src) => img(src),
+                ImageSource::File(path) => img(path),
+            };
             let loading = self.placeholder.unwrap_or_else({
                 let theme = theme.clone();
                 || Arc::new(move || default_loading(&theme))
@@ -259,7 +292,7 @@ impl RenderOnce for Image {
                 || Arc::new(move || default_fallback(&theme, alt.clone()))
             });
             frame = frame.child(
-                img(src)
+                image
                     .size_full()
                     .object_fit(self.fit.as_object_fit())
                     .grayscale(self.grayscale)

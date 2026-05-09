@@ -25,3 +25,15 @@ fn image_empty_has_no_dimensions_until_configured() {
     assert_eq!(image.fit_kind(), ImageFit::Fill);
     assert_eq!(image.dimensions(), (None, None));
 }
+
+#[test]
+fn image_supports_local_file_sources() {
+    let image = Image::local("apps/aura-gallery/assets/local.jpeg");
+    assert!(image.source().is_some_and(|source| source.is_file()));
+}
+
+#[test]
+fn image_supports_remote_url_sources() {
+    let image = Image::new("https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg");
+    assert!(image.source().is_some_and(|source| source.is_url()));
+}

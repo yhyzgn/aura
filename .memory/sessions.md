@@ -1453,3 +1453,21 @@
 
 ### Key Discoveries
 - GPUI `img` already provides object-fit, loading, and fallback hooks, so Aura Image can wrap that API with Element-style defaults and gallery-friendly states.
+
+## Session 89 — 2026-05-10 (Image Remote URL and Local File Sources)
+
+### Actions
+- Copied `~/Downloads/local.jpeg` into `apps/aura-gallery/assets/local.jpeg` for the Image demo workspace.
+- Added first-class `ImageSource` support for remote URL strings and local filesystem paths.
+- Added `Image::local(...)` / `Image::file(...)` builders and source inspection helpers.
+- Updated the Image demo to show the provided Element remote URL and the copied local image asset.
+- Expanded Image tests to cover both remote URL and local file source selection.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 5 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI `img` treats strings as URI/embedded resources, while filesystem images should be passed as `PathBuf`; Aura Image now preserves that distinction instead of forcing all sources through `SharedString`.
