@@ -207,6 +207,36 @@ impl Transfer {
         moved
     }
 
+    pub fn move_to_target_with_checked(
+        items: &[TransferItem],
+        target_keys: &mut Vec<SharedString>,
+        checked_source_keys: &mut Vec<SharedString>,
+        checked_target_keys: &mut Vec<SharedString>,
+    ) -> Vec<SharedString> {
+        let moved = Self::move_to_target(items, target_keys, checked_source_keys);
+        for key in &moved {
+            if !checked_target_keys.contains(key) {
+                checked_target_keys.push(key.clone());
+            }
+        }
+        moved
+    }
+
+    pub fn move_to_source_with_checked(
+        items: &[TransferItem],
+        target_keys: &mut Vec<SharedString>,
+        checked_target_keys: &mut Vec<SharedString>,
+        checked_source_keys: &mut Vec<SharedString>,
+    ) -> Vec<SharedString> {
+        let moved = Self::move_to_source(items, target_keys, checked_target_keys);
+        for key in &moved {
+            if !checked_source_keys.contains(key) {
+                checked_source_keys.push(key.clone());
+            }
+        }
+        moved
+    }
+
     fn source_items(&self) -> Vec<TransferItem> {
         self.items
             .iter()
@@ -231,13 +261,13 @@ impl Transfer {
     }
 
     fn move_checked_to_target(&mut self, window: &mut Window, cx: &mut App) {
-        let moved = Self::move_to_target(
+        let moved = Self::move_to_target_with_checked(
             &self.items,
             &mut self.target_keys,
             &mut self.checked_source_keys,
+            &mut self.checked_target_keys,
         );
         if !moved.is_empty() {
-            self.checked_target_keys.clear();
             if let Some(on_change) = &self.on_change {
                 on_change(self.target_keys.clone(), window, cx);
             }
@@ -245,13 +275,13 @@ impl Transfer {
     }
 
     fn move_checked_to_source(&mut self, window: &mut Window, cx: &mut App) {
-        let moved = Self::move_to_source(
+        let moved = Self::move_to_source_with_checked(
             &self.items,
             &mut self.target_keys,
             &mut self.checked_target_keys,
+            &mut self.checked_source_keys,
         );
         if !moved.is_empty() {
-            self.checked_source_keys.clear();
             if let Some(on_change) = &self.on_change {
                 on_change(self.target_keys.clone(), window, cx);
             }

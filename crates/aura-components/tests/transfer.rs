@@ -40,3 +40,38 @@ fn filters_items_by_label_or_key() {
     let result = Transfer::filter_items(&fixture(), "c");
     assert_eq!(result, vec!["c"]);
 }
+
+#[test]
+fn moved_source_items_stay_checked_on_target_side() {
+    let mut target = vec![];
+    let mut source_checked = vec!["a".into(), "c".into()];
+    let mut target_checked = vec![];
+
+    Transfer::move_to_target_with_checked(
+        &fixture(),
+        &mut target,
+        &mut source_checked,
+        &mut target_checked,
+    );
+
+    assert!(source_checked.is_empty());
+    assert_eq!(target_checked, vec!["a", "c"]);
+}
+
+#[test]
+fn moved_target_items_stay_checked_on_source_side() {
+    let mut target = vec!["a".into(), "c".into()];
+    let mut source_checked = vec![];
+    let mut target_checked = vec!["a".into()];
+
+    Transfer::move_to_source_with_checked(
+        &fixture(),
+        &mut target,
+        &mut target_checked,
+        &mut source_checked,
+    );
+
+    assert_eq!(target, vec!["c"]);
+    assert!(target_checked.is_empty());
+    assert_eq!(source_checked, vec!["a"]);
+}

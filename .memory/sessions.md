@@ -1196,3 +1196,21 @@
 
 ### Key Discoveries
 - Transfer needs to be a stateful `Render` component, not `RenderOnce`, because item checking and move actions mutate internal selected-key state before emitting changed target keys.
+
+
+## Session 76 — 2026-05-09 (Transfer Checked-state Handoff)
+
+### Actions
+- **Adjusted Transfer move semantics**:
+  - Added `move_to_target_with_checked` and `move_to_source_with_checked` helpers.
+  - Updated UI move actions so moved items remain checked on the destination side.
+  - Added regression tests for source→target and target→source checked-state handoff.
+
+### Verification
+- `cargo test -p aura-components --test transfer` passed with 5 tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Transfer should preserve user intent across side changes by transferring checked state with moved items instead of clearing all destination checks.
