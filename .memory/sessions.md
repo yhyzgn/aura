@@ -1405,3 +1405,18 @@
 
 ### Key Discoveries
 - The second stall came from painting tens of thousands of quads each frame; cached raster surfaces keep the 1px appearance and selection accuracy without rebuilding scene geometry on every popup/click.
+
+## Session 86 — 2026-05-10 (ColorPicker Raster Channel Order Fix)
+
+### Actions
+- Aligned ColorPicker raster surface pixels with GPUI `RenderImage` BGRA channel order.
+- Kept HSV click mapping unchanged so the displayed panel color now matches the selected preview value.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test color_picker` passed with 7 tests.
+- `git diff --check` passed.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- `RenderImage` data is expected in BGRA order; generating RGBA bytes made the rasterized panel display a different color than the HSV value selected by clicking it.

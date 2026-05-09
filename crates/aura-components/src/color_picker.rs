@@ -201,7 +201,7 @@ impl ColorPicker {
             } else {
                 1.0 - y as f32 / (SV_HEIGHT - 1) as f32
             };
-            rgba_pixel(hsla_from_hsv(hue_key as f32, saturation, value, 1.0))
+            bgra_pixel(hsla_from_hsv(hue_key as f32, saturation, value, 1.0))
         });
         self.sv_image = Some((hue_key, image.clone()));
         image
@@ -218,7 +218,7 @@ impl ColorPicker {
             } else {
                 y as f32 / (HUE_HEIGHT - 1) as f32 * 360.0
             };
-            rgba_pixel(hsla_from_hsv(hue, 1.0, 1.0, 1.0))
+            bgra_pixel(hsla_from_hsv(hue, 1.0, 1.0, 1.0))
         });
         self.hue_image = Some(image.clone());
         image
@@ -238,7 +238,7 @@ impl ColorPicker {
             } else {
                 x as f32 / (ALPHA_WIDTH - 1) as f32
             };
-            rgba_pixel(base.opacity(alpha))
+            bgra_pixel(base.opacity(alpha))
         });
         self.alpha_image = Some((self.value.clone(), image.clone()));
         image
@@ -735,12 +735,12 @@ fn render_image_from_pixels(
     Arc::new(RenderImage::new([image::Frame::new(buffer)]))
 }
 
-fn rgba_pixel(color: Hsla) -> ImageRgba<u8> {
+fn bgra_pixel(color: Hsla) -> ImageRgba<u8> {
     let rgba = Rgba::from(color);
     ImageRgba([
-        (rgba.r.clamp(0.0, 1.0) * 255.0).round() as u8,
-        (rgba.g.clamp(0.0, 1.0) * 255.0).round() as u8,
         (rgba.b.clamp(0.0, 1.0) * 255.0).round() as u8,
+        (rgba.g.clamp(0.0, 1.0) * 255.0).round() as u8,
+        (rgba.r.clamp(0.0, 1.0) * 255.0).round() as u8,
         (rgba.a.clamp(0.0, 1.0) * 255.0).round() as u8,
     ])
 }
