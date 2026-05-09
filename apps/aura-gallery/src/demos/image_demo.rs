@@ -1,4 +1,4 @@
-use aura_components::{Card, Image, ImageFit, ImageRadius};
+use aura_components::{Card, Image, ImageFit, ImageRadius, ImageRing, ImageRoundOptions};
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -87,7 +87,27 @@ impl Render for ImageDemo {
                     .flex()
                     .gap_4()
                     .flex_wrap()
-                    .child(Image::new(local.clone()).square(px(96.0)).cover().round())
+                    .child(labeled_image(
+                        Image::new(local.clone()).square(px(96.0)).cover().round(),
+                        "Circle",
+                        theme.neutral.text_3,
+                    ))
+                    .child(labeled_image(
+                        Image::new(local.clone())
+                            .square(px(96.0))
+                            .cover()
+                            .round_options(ImageRoundOptions::without_square_crop()),
+                        "Round bounds",
+                        theme.neutral.text_3,
+                    ))
+                    .child(labeled_image(
+                        Image::new(local.clone())
+                            .square(px(96.0))
+                            .cover()
+                            .round_ring(ImageRing::new(px(6.0), gpui::white().opacity(0.72))),
+                        "Ring sleeve",
+                        theme.neutral.text_3,
+                    ))
                     .child(
                         Image::new(local.clone())
                             .size(px(150.0), px(96.0))
@@ -131,4 +151,14 @@ fn section(title: &'static str, content: impl IntoElement) -> impl IntoElement {
         .gap_4()
         .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
         .child(content)
+}
+
+fn labeled_image(image: Image, label: &'static str, text_color: gpui::Hsla) -> impl IntoElement {
+    div()
+        .flex()
+        .flex_col()
+        .items_center()
+        .gap_2()
+        .child(image)
+        .child(div().text_xs().text_color(text_color).child(label))
 }

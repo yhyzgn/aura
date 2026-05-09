@@ -2,7 +2,7 @@ use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, App, Bounds, Component, Corners, Element, ElementId, Global, GlobalElementId,
+    AnyElement, App, Bounds, Component, Corners, Element, ElementId, Global, GlobalElementId, Hsla,
     InspectorElementId, IntoElement, LayoutId, ObjectFit, Pixels, RenderImage, RenderOnce,
     SharedString, Style, Window, div, img, prelude::*, px, relative,
 };
@@ -45,6 +45,54 @@ pub enum ImageRadius {
     Round,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ImageRing {
+    pub width: Pixels,
+    pub color: Hsla,
+}
+
+impl ImageRing {
+    pub fn new(width: impl Into<Pixels>, color: impl Into<Hsla>) -> Self {
+        Self {
+            width: width.into(),
+            color: color.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ImageRoundOptions {
+    pub crop_to_square: bool,
+    pub ring: Option<ImageRing>,
+}
+
+impl Default for ImageRoundOptions {
+    fn default() -> Self {
+        Self::circle()
+    }
+}
+
+impl ImageRoundOptions {
+    pub fn circle() -> Self {
+        Self {
+            crop_to_square: true,
+            ring: None,
+        }
+    }
+
+    pub fn without_square_crop() -> Self {
+        Self {
+            crop_to_square: false,
+            ring: None,
+        }
+    }
+
+    pub fn ring(mut self, ring: ImageRing) -> Self {
+        self.ring = Some(ring);
+        self
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImageSource {
     Url(SharedString),
@@ -81,6 +129,7 @@ pub struct Image {
     shadow: bool,
     grayscale: bool,
     preview: bool,
+    round_options: ImageRoundOptions,
     placeholder: Option<Arc<dyn Fn() -> AnyElement + 'static>>,
     fallback: Option<Arc<dyn Fn() -> AnyElement + 'static>>,
 }
@@ -98,6 +147,7 @@ impl Image {
             shadow: false,
             grayscale: false,
             preview: false,
+            round_options: ImageRoundOptions::default(),
             placeholder: None,
             fallback: None,
         }
@@ -115,6 +165,7 @@ impl Image {
             shadow: false,
             grayscale: false,
             preview: false,
+            round_options: ImageRoundOptions::default(),
             placeholder: None,
             fallback: None,
         }
@@ -199,6 +250,19 @@ impl Image {
 
     pub fn round(mut self) -> Self {
         self.radius = ImageRadius::Round;
+        self.round_options = ImageRoundOptions::default();
+        self
+    }
+
+    pub fn round_options(mut self, options: ImageRoundOptions) -> Self {
+        self.radius = ImageRadius::Round;
+        self.round_options = options;
+        self
+    }
+
+    pub fn round_ring(mut self, ring: ImageRing) -> Self {
+        self.radius = ImageRadius::Round;
+        self.round_options = self.round_options.ring(ring);
         self
     }
 
@@ -245,6 +309,14 @@ impl Image {
 
     pub fn fit_kind(&self) -> ImageFit {
         self.fit
+    }
+
+    pub fn radius_kind(&self) -> ImageRadius {
+        self.radius
+    }
+
+    pub fn round_config(&self) -> ImageRoundOptions {
+        self.round_options
     }
 
     pub fn dimensions(&self) -> (Option<Pixels>, Option<Pixels>) {
@@ -306,6 +378,7 @@ pub fn render_image_preview(window: &mut Window, cx: &mut App) {
                             grayscale: false,
                             radius: px(theme.radius.lg),
                             round: false,
+                            round_options: ImageRoundOptions::without_square_crop(),
                         }),
                 )
                 .into_any_element()
@@ -380,6 +453,7 @@ impl RenderOnce for Image {
                         grayscale: self.grayscale,
                         radius,
                         round: self.radius == ImageRadius::Round,
+                        round_options: self.round_options,
                     },
                 ));
             } else if let ImageSource::Url(src) = src {
@@ -399,6 +473,19 @@ impl RenderOnce for Image {
                 self.fallback
                     .map(|fallback| fallback())
                     .unwrap_or_else(|| default_empty(&theme)),
+            );
+        }
+
+        if let Some(ring) = self.round_options.ring
+            && self.radius == ImageRadius::Round
+        {
+            frame = frame.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .child(RingSleeveElement { ring }),
             );
         }
 
@@ -457,6 +544,7 @@ struct RasterImageElement {
     grayscale: bool,
     radius: Pixels,
     round: bool,
+    round_options: ImageRoundOptions,
 }
 
 impl IntoElement for RasterImageElement {
@@ -526,7 +614,11 @@ impl Element for RasterImageElement {
                 size: gpui::size(side, side),
             };
             (
-                square_cropped_render_image(&self.image),
+                if self.round_options.crop_to_square {
+                    square_cropped_render_image(&self.image)
+                } else {
+                    self.image.clone()
+                },
                 square_bounds,
                 Corners::all(side / 2.0),
             )
@@ -539,6 +631,83 @@ impl Element for RasterImageElement {
             )
         };
         let _ = window.paint_image(image_bounds, corner_radii, image, 0, self.grayscale);
+    }
+}
+
+struct RingSleeveElement {
+    ring: ImageRing,
+}
+
+impl IntoElement for RingSleeveElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for RingSleeveElement {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        let mut style = Style::default();
+        style.size.width = relative(1.0).into();
+        style.size.height = relative(1.0).into();
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _: &mut (),
+        _window: &mut Window,
+        _cx: &mut App,
+    ) {
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut (),
+        _: &mut (),
+        window: &mut Window,
+        _cx: &mut App,
+    ) {
+        let side = bounds.size.width.min(bounds.size.height);
+        let sleeve_bounds = Bounds {
+            origin: gpui::point(
+                bounds.origin.x + (bounds.size.width - side) / 2.0,
+                bounds.origin.y + (bounds.size.height - side) / 2.0,
+            ),
+            size: gpui::size(side, side),
+        };
+        window.paint_quad(gpui::PaintQuad {
+            bounds: sleeve_bounds,
+            corner_radii: Corners::all(side / 2.0),
+            background: gpui::transparent_black().into(),
+            border_widths: gpui::Edges::all(self.ring.width),
+            border_color: self.ring.color,
+            border_style: gpui::BorderStyle::Solid,
+        });
     }
 }
 

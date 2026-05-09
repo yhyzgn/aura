@@ -52,3 +52,24 @@ fn image_supports_file_protocol_sources() {
     let image = Image::new("file:///tmp/local.jpeg");
     assert!(image.source().is_some_and(|source| source.is_file()));
 }
+
+#[test]
+fn image_supports_round_options() {
+    let image = Image::new("https://example.com/image.png")
+        .round_options(aura_components::ImageRoundOptions::circle());
+
+    assert_eq!(image.radius_kind(), aura_components::ImageRadius::Round);
+    assert_eq!(
+        image.round_config(),
+        aura_components::ImageRoundOptions::circle()
+    );
+}
+
+#[test]
+fn image_supports_transparent_ring_sleeve() {
+    let ring = aura_components::ImageRing::new(gpui::px(4.0), gpui::white().opacity(0.76));
+    let image = Image::new("https://example.com/image.png").round_ring(ring);
+
+    assert_eq!(image.radius_kind(), aura_components::ImageRadius::Round);
+    assert_eq!(image.round_config().ring, Some(ring));
+}

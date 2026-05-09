@@ -1620,3 +1620,21 @@
 
 ### Key Discoveries
 - Painting a rectangular cover-fitted raster with large radii still produces a rounded rectangle because the rounded rectangle is computed against the expanded cover bounds. A true circle requires a square paint target and square source crop.
+
+
+## Session 99 — 2026-05-10 (Image Round Options and Ring Sleeve)
+
+### Actions
+- Added `ImageRoundOptions` for configurable round rendering and `ImageRing` for a transparent circular ring sleeve overlay.
+- Added builder APIs: `round_options(...)`, `round_ring(...)`, and `round_config()` inspection for tests.
+- Updated the Image demo with Circle, Round bounds, and Ring sleeve examples.
+
+### Verification
+- Red test first: `cargo test -p aura-components --test image image_supports` failed before the new API existed.
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed: 9 tests.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; timeout stopped the running GUI smoke test.
+
+### Key Discoveries
+- The ring sleeve should be a transparent-background paint overlay with only border pixels, so the image remains visible through the center of the circular sleeve.
