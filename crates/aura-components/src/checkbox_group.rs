@@ -216,7 +216,8 @@ impl CheckboxGroup {
             .border_1()
             .border_color(theme.neutral.border)
             .overflow_hidden()
-            .when(self.stretch, |s| s.w_full());
+            .when(self.stretch, |s| s.w_full())
+            .when(!self.stretch, |s| s.self_start());
 
         if !self.disabled {
             group = group.track_focus(&self.focus_handle);

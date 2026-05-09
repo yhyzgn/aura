@@ -1828,3 +1828,18 @@
 
 ### Key Discoveries
 - This behavior matches the existing Tabs `stretch(true)` pattern and Segmented `block(true)` width semantics: default content width, opt-in full parent width with equal option widths.
+
+## Session 111 — 2026-05-10 (Group Button Wrap Content Fix)
+
+### Actions
+- Fixed button-mode `RadioGroup` and `CheckboxGroup` default width by setting `align-self: start` when `stretch` is false.
+- Preserved `stretch(true)` / `block(true)` behavior as full parent width with equal option widths.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test group_layout` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Root cause: the Form demo places groups inside a flex-column parent whose default cross-axis alignment stretches child flex items. The group itself needed `self_start()` when not stretched; width auto alone was not enough.

@@ -199,6 +199,7 @@ impl RadioGroup {
             .border_color(theme.neutral.border)
             .overflow_hidden()
             .when(self.stretch, |s| s.w_full())
+            .when(!self.stretch, |s| s.self_start())
             .on_action(cx.listener(Self::up))
             .on_action(cx.listener(Self::down));
 
