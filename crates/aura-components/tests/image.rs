@@ -28,7 +28,7 @@ fn image_empty_has_no_dimensions_until_configured() {
 
 #[test]
 fn image_supports_local_file_sources() {
-    let image = Image::local("apps/aura-gallery/assets/local.jpeg");
+    let image = Image::local(std::path::PathBuf::from("/tmp/local.jpeg"));
     assert!(image.source().is_some_and(|source| source.is_file()));
 }
 

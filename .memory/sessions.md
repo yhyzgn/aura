@@ -1471,3 +1471,18 @@
 
 ### Key Discoveries
 - GPUI `img` treats strings as URI/embedded resources, while filesystem images should be passed as `PathBuf`; Aura Image now preserves that distinction instead of forcing all sources through `SharedString`.
+
+## Session 90 — 2026-05-10 (Image Demo Local Asset Absolute Path)
+
+### Actions
+- Fixed Image demo local asset path to use `env!("CARGO_MANIFEST_DIR")/assets/local.jpeg` instead of a workspace-relative string.
+- Kept `Image::local(...)` path-based loading, now passing an absolute path in the gallery demo so runtime cwd changes do not break local images.
+
+### Verification
+- `cargo check` passed.
+- `cargo test -p aura-components --test image` passed with 5 tests.
+- `git diff --check` passed after reverting unrelated local formatting noise.
+- `timeout 20s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI `img(PathBuf)` resolves filesystem paths literally; a workspace-relative string can fail when the gallery binary runs with a different cwd, so demo assets should use the gallery crate manifest directory.
