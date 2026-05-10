@@ -467,4 +467,15 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn navigation_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("breadcrumb_demo.rs", include_str!("breadcrumb_demo.rs")),
+            ("collapse_demo.rs", include_str!("collapse_demo.rs")),
+            ("steps_demo.rs", include_str!("steps_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }

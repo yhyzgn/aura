@@ -2128,3 +2128,23 @@
 
 ### Key Discoveries
 - Progress needed small semantic builders to keep the demo expressive without reaching for low-level pixel/color primitives.
+
+## Session 127 — 2026-05-11 (P7 Navigation Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for `breadcrumb_demo.rs`, `collapse_demo.rs`, and `steps_demo.rs` before migration.
+- Migrated Breadcrumb, Collapse, and Steps demos to `page`/`section`/`Space` helpers and existing Aura components.
+- Replaced Collapse item content demo-level `div()` wrappers with Aura `Text` content.
+- Removed the Steps vertical example's demo-level fixed-height GPUI wrapper so the demo no longer reaches for `px()`.
+
+### Verification
+- `cargo test -p aura-gallery demos::tests::navigation_demos_use_aura_layout_primitives -- --exact` failed before migration and passed after migration.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- Confirmed Breadcrumb/Collapse/Steps demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Navigation/structure demos can be expressed with the existing common helper stack without adding new production component APIs.
