@@ -2524,3 +2524,35 @@
 
 ### Key Discoveries
 - Preview demos commonly need a thumbnail-sized Image; making that a component API avoids repeating raw pixel sizing in demos.
+
+## Session 141 — 2026-05-11 (P7 Image Demo Self-Bootstrap Batch)
+
+### Actions
+- Added a gallery guard for `image_demo.rs` so it cannot use raw GPUI demo primitives (`div`, `px`, flex helpers) going forward.
+- Added Image component helpers for common demo/example shapes: `thumbnail_sm()`, `square_lg()`, and `round_sleeve()`.
+- Rewrote the Image demo with shared `page`/`section`/`row` helpers plus `Space`, `Text`, `Card`, and `Image` APIs.
+- Preserved the main feature coverage: remote/local images, preview, cover/contain/fill/scale-down fit variants, circle crop, rounded bounds, ring sleeve, large-radius shadow, fallback, and empty states.
+
+### Verification
+- `cargo test -p aura-gallery image_demo_uses_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-components image_demo_size_helpers_track_common_examples --lib` failed before the Image size helpers and passed after implementation.
+- `cargo test -p aura-components image_round_sleeve_sets_ring_configuration --lib` failed before `Image::round_sleeve()` and passed after implementation.
+- `cargo test -p aura-components` passed: 28 component tests plus integration/doc tests.
+- `cargo test -p aura-gallery` passed: 21 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained After This Session
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `layout_demo.rs`
+- `menu_demo.rs`
+- `table_demo.rs`
+
+### Key Discoveries
+- Image examples repeatedly need named visual presets; component-level helpers keep demo code self-contained while documenting supported presentation patterns.

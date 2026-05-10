@@ -1,8 +1,7 @@
-use aura_components::{Card, Image, ImageFit, ImageRadius, ImageRing, ImageRoundOptions};
-use aura_core::Config;
-use aura_icons::Icon;
-use aura_icons_lucide::IconName;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*, px};
+use aura_components::{Card, Image, ImageFit, ImageRadius, ImageRoundOptions, Space, Text};
+use gpui::{AnyView, App, Context, Render, Window, prelude::*};
+
+use super::common::{page, row, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| ImageDemo).into()
@@ -11,52 +10,29 @@ pub fn render(cx: &mut App) -> AnyView {
 struct ImageDemo;
 
 impl Render for ImageDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.global::<Config>().theme.clone();
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let remote = "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
         let local = format!("file://{}/assets/local.jpeg", env!("CARGO_MANIFEST_DIR"));
 
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Image 图片"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("图片容器，支持不同填充方式、圆角、边框、占位与加载失败状态。"),
-                    ),
-            )
-            .child(section(
-                "基础用法",
-                div()
-                    .flex()
-                    .gap_4()
-                    .flex_wrap()
-                    .child(
-                        Image::new(remote)
-                            .size(px(180.0), px(120.0))
-                            .cover()
-                            .preview(true),
-                    )
-                    .child(Image::new(local.clone()).size(px(180.0), px(120.0)).cover())
-                    .child(Image::new(remote).size(px(180.0), px(120.0)).contain()),
-            ))
-            .child(section(
-                "填充方式",
-                div().flex().gap_4().flex_wrap().children(
-                    [
+        page(
+            "Image 图片",
+            "图片容器，支持不同填充方式、圆角、边框、占位与加载失败状态。",
+            Space::new()
+                .vertical()
+                .gap_xl()
+                .child(section(
+                    "基础用法",
+                    "展示远程、 本地与 contain 填充图片。",
+                    row(vec![
+                        Image::new(remote).thumbnail().cover().preview(true),
+                        Image::new(local.clone()).thumbnail().cover(),
+                        Image::new(remote).thumbnail().contain(),
+                    ]),
+                ))
+                .child(section(
+                    "填充方式",
+                    "对比不同 object-fit 效果。",
+                    row([
                         ("Fill", ImageFit::Fill),
                         ("Contain", ImageFit::Contain),
                         ("Cover", ImageFit::Cover),
@@ -65,100 +41,61 @@ impl Render for ImageDemo {
                     .into_iter()
                     .map(|(label, fit)| {
                         Card::new(
-                            div()
-                                .flex()
-                                .flex_col()
-                                .gap_2()
-                                .child(Image::new(remote).size(px(132.0), px(88.0)).fit(fit))
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.neutral.text_3)
-                                        .child(label),
-                                ),
+                            Space::new()
+                                .vertical()
+                                .gap_sm()
+                                .child(Image::new(remote).thumbnail_sm().fit(fit))
+                                .child(Text::new(label).nowrap()),
                         )
                         .no_shadow()
-                    }),
-                ),
-            ))
-            .child(section(
-                "形状与状态",
-                div()
-                    .flex()
-                    .gap_4()
-                    .flex_wrap()
-                    .child(labeled_image(
-                        Image::new(local.clone()).square(px(96.0)).cover().round(),
-                        "Circle",
-                        theme.neutral.text_3,
-                    ))
-                    .child(labeled_image(
-                        Image::new(local.clone())
-                            .size(px(140.0), px(96.0))
-                            .cover()
-                            .round_options(ImageRoundOptions::without_square_crop()),
-                        "Round bounds",
-                        theme.neutral.text_3,
-                    ))
-                    .child(labeled_image(
-                        Image::new(local.clone())
-                            .square(px(96.0))
-                            .cover()
-                            .round_ring(ImageRing::new(px(6.0), gpui::white().opacity(0.72))),
-                        "Ring sleeve",
-                        theme.neutral.text_3,
-                    ))
-                    .child(
-                        Image::new(local.clone())
-                            .size(px(150.0), px(96.0))
-                            .cover()
-                            .radius(ImageRadius::Large)
-                            .shadow(true),
-                    )
-                    .child(
-                        Image::new("aura://missing-image.png")
-                            .size(px(150.0), px(96.0))
-                            .alt("加载失败")
-                            .fallback({
-                                let theme = theme.clone();
-                                move || {
-                                    div()
-                                        .flex()
-                                        .flex_col()
-                                        .items_center()
-                                        .justify_center()
-                                        .gap_2()
-                                        .size_full()
-                                        .text_color(theme.neutral.text_3)
-                                        .child(
-                                            Icon::new(IconName::ImageOff)
-                                                .size(px(24.0))
-                                                .color(theme.neutral.icon),
-                                        )
-                                        .child(div().text_xs().child("加载失败"))
-                                }
-                            }),
-                    )
-                    .child(Image::empty().size(px(150.0), px(96.0))),
-            ))
+                    })
+                    .collect::<Vec<_>>()),
+                ))
+                .child(section(
+                    "形状与状态",
+                    "展示圆形裁剪、圆角边界、ring sleeve、阴影与空/失败状态。",
+                    row(vec![
+                        labeled_image(
+                            Image::new(local.clone()).square_lg().cover().round(),
+                            "Circle",
+                        ),
+                        labeled_image(
+                            Image::new(local.clone())
+                                .thumbnail_sm()
+                                .cover()
+                                .round_options(ImageRoundOptions::without_square_crop()),
+                            "Round bounds",
+                        ),
+                        labeled_image(
+                            Image::new(local.clone()).square_lg().cover().round_sleeve(),
+                            "Ring sleeve",
+                        ),
+                        labeled_image(
+                            Image::new(local.clone())
+                                .thumbnail()
+                                .cover()
+                                .radius(ImageRadius::Large)
+                                .shadow(true),
+                            "Large shadow",
+                        ),
+                        labeled_image(
+                            Image::new("aura://missing-image.png")
+                                .thumbnail()
+                                .alt("加载失败"),
+                            "Fallback",
+                        ),
+                        labeled_image(Image::empty().thumbnail(), "Empty"),
+                    ]),
+                )),
+        )
     }
 }
 
-fn section(title: &'static str, content: impl IntoElement) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .gap_4()
-        .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
-        .child(content)
-}
-
-fn labeled_image(image: Image, label: &'static str, text_color: gpui::Hsla) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .items_center()
-        .gap_2()
+fn labeled_image(image: Image, label: &'static str) -> impl IntoElement {
+    Space::new()
+        .vertical()
+        .align_center()
+        .gap_sm()
         .child(image)
-        .child(div().text_xs().text_color(text_color).child(label))
+        .child(Text::new(label).nowrap())
 }

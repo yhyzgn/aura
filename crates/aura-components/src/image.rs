@@ -212,11 +212,19 @@ impl Image {
         self.size(px(180.0), px(120.0))
     }
 
+    pub fn thumbnail_sm(self) -> Self {
+        self.size(px(132.0), px(88.0))
+    }
+
     pub fn square(mut self, size: impl Into<Pixels>) -> Self {
         let size = size.into();
         self.width = Some(size);
         self.height = Some(size);
         self
+    }
+
+    pub fn square_lg(self) -> Self {
+        self.square(px(96.0))
     }
 
     pub fn fit(mut self, fit: ImageFit) -> Self {
@@ -270,6 +278,10 @@ impl Image {
         self.radius = ImageRadius::Round;
         self.round_options = self.round_options.ring(ring);
         self
+    }
+
+    pub fn round_sleeve(self) -> Self {
+        self.round_ring(ImageRing::new(px(6.0), gpui::white().opacity(0.72)))
     }
 
     pub fn bordered(mut self, bordered: bool) -> Self {
@@ -827,5 +839,27 @@ mod tests {
 
         assert_eq!(image.width, Some(px(180.0)));
         assert_eq!(image.height, Some(px(120.0)));
+    }
+
+    #[test]
+    fn image_demo_size_helpers_track_common_examples() {
+        let thumbnail_sm = Image::new("https://example.com/image.png").thumbnail_sm();
+        assert_eq!(thumbnail_sm.width, Some(px(132.0)));
+        assert_eq!(thumbnail_sm.height, Some(px(88.0)));
+
+        let square_lg = Image::new("https://example.com/image.png").square_lg();
+        assert_eq!(square_lg.width, Some(px(96.0)));
+        assert_eq!(square_lg.height, Some(px(96.0)));
+    }
+
+    #[test]
+    fn image_round_sleeve_sets_ring_configuration() {
+        let image = Image::new("https://example.com/image.png").round_sleeve();
+
+        assert_eq!(image.radius, ImageRadius::Round);
+        assert_eq!(
+            image.round_options.ring.map(|ring| ring.width),
+            Some(px(6.0))
+        );
     }
 }
