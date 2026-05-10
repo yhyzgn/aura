@@ -1,7 +1,9 @@
-use aura_components::{Menu, MenuMode};
+use aura_components::{Card, Col, Menu, MenuMode, Row, Space, Text};
 use aura_core::Config;
 use aura_icons_lucide::IconName;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| {
@@ -149,113 +151,76 @@ impl Render for MenuContent {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = &cx.global::<Config>().theme;
 
-        div()
-            .flex()
-            .flex_col()
-            .gap_3()
-            .min_h(px(160.0))
-            .p_5()
-            .border_1()
-            .border_color(theme.neutral.border)
-            .rounded(px(theme.radius.md))
-            .bg(theme.neutral.card)
-            .child(
-                div()
-                    .text_xs()
-                    .text_color(theme.neutral.text_3)
-                    .child(format!("{} · active = {}", self.scope, self.active_id)),
-            )
-            .child(
-                div()
-                    .text_lg()
-                    .font_weight(gpui::FontWeight::BOLD)
-                    .text_color(theme.neutral.text_1)
-                    .child(self.title.clone()),
-            )
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(theme.neutral.text_2)
-                    .child(self.description.clone()),
-            )
+        Card::new(
+            Space::new()
+                .vertical()
+                .gap_md()
+                .child(
+                    Text::new(format!("{} · active = {}", self.scope, self.active_id))
+                        .text_color(theme.neutral.text_3)
+                        .nowrap(),
+                )
+                .child(
+                    Text::new(self.title.clone())
+                        .text_color(theme.neutral.text_1)
+                        .bold(),
+                )
+                .child(Text::new(self.description.clone()).text_color(theme.neutral.text_2)),
+        )
+        .no_shadow()
     }
 }
 
 impl Render for MenuDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Menu 导航菜单"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("为网站提供导航轮廓。"),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("水平模式"))
-                    .child(self.horizontal.clone())
-                    .child(self.horizontal_content.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_6()
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .gap_4()
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .gap_4()
-                                    .w(px(240.0))
-                                    .child(
-                                        div().font_weight(gpui::FontWeight::BOLD).child("垂直模式"),
-                                    )
-                                    .child(self.vertical.clone()),
-                            )
-                            .child(div().flex_1().child(self.vertical_content.clone())),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .gap_4()
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .gap_4()
-                                    .w(px(64.0))
-                                    .child(div().font_weight(gpui::FontWeight::BOLD).child("折叠"))
-                                    .child(self.collapsed.clone()),
-                            )
-                            .child(div().flex_1().child(self.collapsed_content.clone())),
-                    ),
-            )
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Menu 导航菜单",
+            "为网站提供导航轮廓。",
+            Space::new()
+                .vertical()
+                .gap_xl()
+                .child(section(
+                    "水平模式",
+                    "适用于顶部导航，点击菜单项后内容区域同步切换。",
+                    Space::new()
+                        .vertical()
+                        .gap_md()
+                        .child(self.horizontal.clone())
+                        .child(self.horizontal_content.clone()),
+                ))
+                .child(section(
+                    "垂直与折叠模式",
+                    "垂直菜单适合侧边导航，折叠菜单适合紧凑侧栏。",
+                    Space::new()
+                        .vertical()
+                        .gap_lg()
+                        .child(
+                            Row::new()
+                                .column(
+                                    Col::new(6).child(
+                                        Space::new()
+                                            .vertical()
+                                            .gap_md()
+                                            .child(Text::new("垂直模式").bold())
+                                            .child(self.vertical.clone()),
+                                    ),
+                                )
+                                .column(Col::new(18).child(self.vertical_content.clone())),
+                        )
+                        .child(
+                            Row::new()
+                                .column(
+                                    Col::new(4).child(
+                                        Space::new()
+                                            .vertical()
+                                            .gap_md()
+                                            .child(Text::new("折叠").bold())
+                                            .child(self.collapsed.clone()),
+                                    ),
+                                )
+                                .column(Col::new(20).child(self.collapsed_content.clone())),
+                        ),
+                )),
+        )
     }
 }

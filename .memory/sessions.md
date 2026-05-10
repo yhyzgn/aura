@@ -2556,3 +2556,32 @@
 
 ### Key Discoveries
 - Image examples repeatedly need named visual presets; component-level helpers keep demo code self-contained while documenting supported presentation patterns.
+
+## Session 142 — 2026-05-11 (P7 Menu Demo Self-Bootstrap Batch)
+
+### Actions
+- Added `menu_demo.rs` to the navigation self-bootstrap guard batch.
+- Rewrote the Menu demo with shared `page`/`section` helpers and Aura `Space`, `Row`, `Col`, `Card`, and `Text` components.
+- Preserved horizontal, vertical, and collapsed menu examples plus active content updates for each mode.
+- Replaced hand-written content card styling with `Card::new(...).no_shadow()` and text styling through `Text`.
+
+### Verification
+- `cargo test -p aura-gallery navigation_demos_use_aura_layout_primitives` failed before migration because `menu_demo.rs` contained raw GPUI primitives, then passed after migration.
+- `cargo test -p aura-components` passed: 28 component tests plus integration/doc tests.
+- `cargo test -p aura-gallery` passed: 21 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained After This Session
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `layout_demo.rs`
+- `table_demo.rs`
+
+### Key Discoveries
+- Menu demo could be migrated without new component APIs by reusing `Row`/`Col` for side-navigation layout and `Card` for the active content panel.
