@@ -1,11 +1,19 @@
-use gpui::{App, Component, IntoElement, RenderOnce, Window, prelude::*, px};
+use aura_core::stable_unique_id;
+use gpui::{AnyElement, App, Component, IntoElement, Pixels, RenderOnce, Window, prelude::*, px};
 
 pub struct Container {
-    header: Option<gpui::AnyElement>,
-    aside: Option<gpui::AnyElement>,
+    header: Option<AnyElement>,
+    aside: Option<AnyElement>,
     aside_right: bool,
-    footer: Option<gpui::AnyElement>,
-    main: Vec<gpui::AnyElement>,
+    footer: Option<AnyElement>,
+    main: Vec<AnyElement>,
+    overlays: Vec<AnyElement>,
+    header_height: Pixels,
+    footer_height: Pixels,
+    aside_width: Pixels,
+    aside_scroll: bool,
+    main_scroll: bool,
+    main_padding: Option<Pixels>,
 }
 
 impl Container {
@@ -16,6 +24,13 @@ impl Container {
             aside_right: false,
             footer: None,
             main: vec![],
+            overlays: vec![],
+            header_height: px(48.0),
+            footer_height: px(48.0),
+            aside_width: px(200.0),
+            aside_scroll: false,
+            main_scroll: false,
+            main_padding: None,
         }
     }
 
@@ -39,19 +54,72 @@ impl Container {
         self.main.push(el.into_any_element());
         self
     }
+    pub fn overlay(mut self, el: impl IntoElement) -> Self {
+        self.overlays.push(el.into_any_element());
+        self
+    }
+
+    pub fn header_height(mut self, height: impl Into<Pixels>) -> Self {
+        self.header_height = height.into();
+        self
+    }
+
+    pub fn header_height_lg(self) -> Self {
+        self.header_height(px(84.0))
+    }
+
+    pub fn footer_height(mut self, height: impl Into<Pixels>) -> Self {
+        self.footer_height = height.into();
+        self
+    }
+
+    pub fn aside_width(mut self, width: impl Into<Pixels>) -> Self {
+        self.aside_width = width.into();
+        self
+    }
+
+    pub fn aside_width_lg(self) -> Self {
+        self.aside_width(px(280.0))
+    }
+
+    pub fn aside_scroll(mut self) -> Self {
+        self.aside_scroll = true;
+        self
+    }
+
+    pub fn main_scroll(mut self) -> Self {
+        self.main_scroll = true;
+        self
+    }
+
+    pub fn main_padding(mut self, padding: impl Into<Pixels>) -> Self {
+        self.main_padding = Some(padding.into());
+        self
+    }
+
+    pub fn main_padding_xl(self) -> Self {
+        self.main_padding(px(32.0))
+    }
 }
 
 impl RenderOnce for Container {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = &cx.global::<aura_core::Config>().theme;
-        let header_h = 48.0;
-        let footer_h = 48.0;
-        let aside_w = 200.0;
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let aside_id = stable_unique_id("container", "aside", window, cx);
+        let main_id = stable_unique_id("container", "main", window, cx);
+        let theme = cx.global::<aura_core::Config>().theme.clone();
+        let aside_right = self.aside_right;
+        let main_children = self.main;
+        let overlays = self.overlays;
+        let aside_width = self.aside_width;
+        let aside_scroll = self.aside_scroll;
+        let main_scroll = self.main_scroll;
+        let main_padding = self.main_padding;
 
         let mut page = gpui::div()
             .flex()
             .flex_col()
             .size_full()
+            .relative()
             .bg(theme.neutral.body);
 
         // Header
@@ -59,7 +127,7 @@ impl RenderOnce for Container {
             page = page.child(
                 gpui::div()
                     .flex_none()
-                    .h(px(header_h))
+                    .h(self.header_height)
                     .w_full()
                     .border_b_1()
                     .border_color(theme.neutral.border)
@@ -71,24 +139,36 @@ impl RenderOnce for Container {
         }
 
         // Body: aside + main
-        let mut body = gpui::div().flex().flex_1().flex_row();
+        let main = gpui::div()
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_col()
+            .id(main_id)
+            .when(main_scroll, |s| s.overflow_y_scroll())
+            .when_some(main_padding, |s, padding| s.p(padding))
+            .children(main_children);
+
+        let mut body = gpui::div().flex().flex_1().min_h_0().flex_row();
         if let Some(a) = self.aside {
             let aside_el = gpui::div()
                 .flex_none()
-                .w(px(aside_w))
+                .w(aside_width)
                 .h_full()
                 .border_r_1()
                 .border_color(theme.neutral.border)
+                .id(aside_id)
+                .when(aside_scroll, |s| s.overflow_y_scroll())
                 .child(a);
-            if self.aside_right {
-                body = body.child(gpui::div().flex_1().flex().flex_col().children(self.main));
+            if aside_right {
+                body = body.child(main);
                 body = body.child(aside_el);
             } else {
                 body = body.child(aside_el);
-                body = body.child(gpui::div().flex_1().flex().flex_col().children(self.main));
+                body = body.child(main);
             }
         } else {
-            body = body.child(gpui::div().flex_1().flex().flex_col().children(self.main));
+            body = body.child(main);
         }
         page = page.child(body);
 
@@ -97,7 +177,7 @@ impl RenderOnce for Container {
             page = page.child(
                 gpui::div()
                     .flex_none()
-                    .h(px(footer_h))
+                    .h(self.footer_height)
                     .w_full()
                     .border_t_1()
                     .border_color(theme.neutral.border)
@@ -108,7 +188,7 @@ impl RenderOnce for Container {
             );
         }
 
-        page
+        page.children(overlays)
     }
 }
 
@@ -116,5 +196,28 @@ impl IntoElement for Container {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn container_gallery_shell_helpers_track_layout_state() {
+        let container = Container::new()
+            .header_height_lg()
+            .aside_width_lg()
+            .aside_scroll()
+            .main_scroll()
+            .main_padding_xl()
+            .overlay("portal");
+
+        assert_eq!(container.header_height, px(84.0));
+        assert_eq!(container.aside_width, px(280.0));
+        assert!(container.aside_scroll);
+        assert!(container.main_scroll);
+        assert_eq!(container.main_padding, Some(px(32.0)));
+        assert_eq!(container.overlays.len(), 1);
     }
 }

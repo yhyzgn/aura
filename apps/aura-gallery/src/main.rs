@@ -1,11 +1,14 @@
 mod category;
 mod demos;
 
-use aura_components::{Checkbox, Dialog, Drawer, Input, Radio, RadioGroup, Switch};
-use aura_core::{ContextExt, PassivePortal, Portal, init_aura};
+use aura_components::{
+    Card, Checkbox, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph, Radio, RadioGroup,
+    Space, Switch, Text, Title,
+};
+use aura_core::{PassivePortal, Portal, init_aura};
 use aura_theme::Theme;
 use gpui::{
-    AnyView, App, Bounds, Component, Context, MouseButton, Render, Window, WindowBounds,
+    AnyView, App, Bounds, Component, Context, Render, WeakEntity, Window, WindowBounds,
     WindowOptions, div, prelude::*, px, size,
 };
 
@@ -13,6 +16,7 @@ pub struct Gallery {
     entries: Vec<demos::DemoEntry>,
     demos: Vec<AnyView>,
     selected: usize,
+    nav_menu: Option<gpui::Entity<aura_components::Menu>>,
 }
 
 fn run_gallery() {
@@ -47,166 +51,58 @@ fn run_gallery() {
                     entries,
                     demos,
                     selected: 0,
+                    nav_menu: None,
                 })
             },
         );
     });
 }
 
+#[cfg(test)]
+mod shell_tests {
+    #[test]
+    fn gallery_shell_uses_container_and_menu() {
+        let source = include_str!("main.rs");
+
+        assert!(source.contains("Container::new()"));
+        assert!(source.contains("Menu::new()"));
+        assert!(!source.contains(&format!("gallery-demo{}nav-", "-")));
+    }
+}
+
 impl Render for Gallery {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.aura();
         let selected = self.selected.min(self.entries.len().saturating_sub(1));
         self.selected = selected;
 
-        let header = div()
-            .flex()
-            .flex_col()
-            .gap_1()
-            .px_6()
-            .py_5()
-            .border_b_1()
-            .border_color(theme.neutral.border)
-            .child(
-                div()
-                    .text_2xl()
-                    .text_color(theme.neutral.text_1)
-                    .font_weight(gpui::FontWeight::BOLD)
-                    .child("Aura UI"),
-            )
-            .child(
-                div()
-                    .text_size(px(theme.font_size.md))
-                    .text_color(theme.neutral.text_3)
-                    .child(format!(
-                        "Native Component Library · {} demos · rendering one demo at a time",
-                        self.entries.len()
-                    )),
-            );
-
-        let nav = div()
-            .flex()
-            .flex_col()
-            .w(px(280.0))
-            .h_full()
-            .flex_shrink_0()
-            .id("gallery-nav")
-            .overflow_y_scroll()
-            .border_r_1()
-            .border_color(theme.neutral.border)
-            .bg(theme.neutral.card)
-            .children(self.entries.iter().enumerate().map(|(i, entry)| {
-                let active = i == selected;
-                let bg = if active {
-                    theme.primary.light_9
-                } else {
-                    theme.neutral.card
-                };
-                let title_color = if active {
-                    theme.primary.base
-                } else {
-                    theme.neutral.text_1
-                };
-                let desc_color = if active {
-                    theme.primary.base.opacity(0.75)
-                } else {
-                    theme.neutral.text_3
-                };
-
-                div()
-                    .id(format!("gallery-demo-nav-{}", i))
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .px_4()
-                    .py_3()
-                    .border_b_1()
-                    .border_color(theme.neutral.divider)
-                    .bg(bg)
-                    .cursor_pointer()
-                    .hover(|style| style.bg(theme.neutral.hover))
-                    .on_mouse_up(
-                        MouseButton::Left,
-                        cx.listener(move |this, _, _, cx| {
-                            this.selected = i;
-                            cx.notify();
-                        }),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(theme.font_size.md))
-                            .text_color(title_color)
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child(entry.name),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(theme.font_size.sm))
-                            .text_color(desc_color)
-                            .child(entry.description),
-                    )
-            }));
+        let nav_menu = self.gallery_nav_menu(selected, cx);
 
         let selected_entry = &self.entries[selected];
         let selected_demo = self.demos[selected].clone();
 
-        let content = div()
-            .flex()
-            .flex_col()
-            .flex_1()
-            .h_full()
-            .id("gallery-content")
-            .overflow_y_scroll()
-            .p_8()
-            .bg(theme.neutral.body)
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .p_4()
-                    .border_1()
-                    .border_color(theme.neutral.divider)
-                    .rounded(px(theme.radius.lg))
-                    .bg(theme.neutral.card)
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child(
-                                div()
-                                    .text_size(px(theme.font_size.lg))
-                                    .text_color(theme.neutral.text_1)
-                                    .font_weight(gpui::FontWeight::BOLD)
-                                    .child(selected_entry.name),
-                            )
-                            .child(
-                                div()
-                                    .text_size(px(theme.font_size.sm))
-                                    .text_color(theme.neutral.text_3)
-                                    .child(selected_entry.description),
-                            ),
-                    )
-                    .child(selected_demo),
-            );
+        let header = Space::new()
+            .vertical()
+            .gap_xs()
+            .child(Title::new("Aura UI").h2())
+            .child(Text::new(format!(
+                "Native Component Library · {} demos · rendering one demo at a time",
+                self.entries.len()
+            )));
 
-        let body = div()
-            .flex()
-            .flex_row()
-            .flex_1()
-            .min_h_0()
-            .child(nav)
-            .child(content);
-
-        let container = div()
-            .size_full()
-            .relative()
-            .flex()
-            .flex_col()
-            .bg(theme.neutral.body)
-            .child(header)
-            .child(body);
+        let content = Card::new(
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(
+                    Space::new()
+                        .vertical()
+                        .gap_xs()
+                        .child(Title::new(selected_entry.name).h3())
+                        .child(Paragraph::with_text(selected_entry.description)),
+                )
+                .child(selected_demo),
+        )
+        .no_shadow();
 
         aura_components::message::render_messages(cx);
         aura_components::notification::render_notifications(cx);
@@ -216,8 +112,62 @@ impl Render for Gallery {
         aura_core::render_active_modal_in_window(_window, cx);
         aura_core::render_active_drawer_in_window(_window, cx);
 
-        container.child(PortalLayer)
+        Container::new()
+            .header(header)
+            .header_height_lg()
+            .aside(nav_menu)
+            .aside_width_lg()
+            .aside_scroll()
+            .main_scroll()
+            .main_padding_xl()
+            .child(content)
+            .overlay(PortalLayer)
     }
+}
+
+impl Gallery {
+    fn gallery_nav_menu(&mut self, selected: usize, cx: &mut Context<Self>) -> gpui::Entity<Menu> {
+        if let Some(nav_menu) = &self.nav_menu {
+            return nav_menu.clone();
+        }
+
+        let gallery = cx.entity().downgrade();
+        let items = self
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| (index, entry.name))
+            .collect::<Vec<_>>();
+        let nav_menu = cx.new(move |_| build_gallery_menu(items, selected, gallery));
+        self.nav_menu = Some(nav_menu.clone());
+        nav_menu
+    }
+}
+
+fn build_gallery_menu(
+    items: Vec<(usize, &'static str)>,
+    selected: usize,
+    gallery: WeakEntity<Gallery>,
+) -> Menu {
+    let mut menu = Menu::new()
+        .id("gallery-menu")
+        .mode(MenuMode::Vertical)
+        .default_active(selected.to_string())
+        .on_select(move |id, _, cx| {
+            let Ok(index) = id.parse::<usize>() else {
+                return;
+            };
+            let _ = gallery.update(cx, |gallery, cx| {
+                gallery.selected = index;
+                cx.notify();
+            });
+        });
+
+    for (index, name) in items {
+        menu = menu.item(index.to_string(), name, None);
+    }
+
+    menu
 }
 
 struct PortalLayer;

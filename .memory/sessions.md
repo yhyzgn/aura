@@ -2585,3 +2585,35 @@
 
 ### Key Discoveries
 - Menu demo could be migrated without new component APIs by reusing `Row`/`Col` for side-navigation layout and `Card` for the active content panel.
+
+## Session 143 — 2026-05-11 (Gallery Shell Container/Menu Self-Bootstrap)
+
+### Actions
+- Added a shell-level regression test requiring the gallery main view to use Aura `Container` and `Menu` instead of the bespoke left-nav implementation.
+- Extended `Container` for real app-shell usage: configurable header/footer height, aside width, aside/main scrolling, main padding, and root overlays for portal layers.
+- Rebuilt the Aura gallery shell with `Container::new()` for header/aside/main layout and an Aura `Menu` entity for demo navigation.
+- Preserved one-demo-at-a-time rendering, selected demo content cards, and all existing portal/message/notification/tooltip/popover/modal/drawer rendering.
+- Kept the remaining raw GPUI in `main.rs` scoped to the low-level portal layer implementation rather than the app shell/navigation layout.
+
+### Verification
+- `cargo test -p aura-gallery gallery_shell_uses_container_and_menu` failed before the shell refactor and passed after it.
+- `cargo test -p aura-components container_gallery_shell_helpers_track_layout_state --lib` failed before the Container API additions and passed after implementation.
+- `cargo test -p aura-components` passed: 29 component tests plus integration/doc tests.
+- `cargo test -p aura-gallery` passed: 22 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained Demo Pages
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `layout_demo.rs`
+- `table_demo.rs`
+
+### Key Discoveries
+- `Container` needed app-shell capabilities (scrolling slots, wider aside, taller header, overlay support) before it could credibly dogfood the gallery root.
+- `Menu` can drive the gallery navigation as single-line demo labels; detailed descriptions remain in the selected content card.
