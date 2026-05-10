@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{ButtonVariant, Theme};
@@ -6,10 +6,6 @@ use gpui::{
     App, Component, Hsla, IntoElement, MouseButton, RenderOnce, SharedString, Window, prelude::*,
     px,
 };
-use std::panic::Location;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-static LINK_ID: AtomicU64 = AtomicU64::new(0);
 
 pub struct Link {
     label: SharedString,
@@ -19,11 +15,10 @@ pub struct Link {
     underline: bool,
     icon_start: Option<IconName>,
     icon_end: Option<IconName>,
-    creation_site: &'static Location<'static>,
+    id: SharedString,
 }
 
 impl Link {
-    #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
             label: label.into(),
@@ -33,7 +28,7 @@ impl Link {
             underline: true,
             icon_start: None,
             icon_end: None,
-            creation_site: Location::caller(),
+            id: unique_id("link"),
         }
     }
     pub fn href(mut self, url: impl Into<SharedString>) -> Self {
@@ -81,6 +76,11 @@ impl Link {
         self
     }
 
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
+        self
+    }
+
     fn color_for(&self, theme: &Theme) -> (Hsla, Hsla) {
         if self.disabled {
             return (theme.neutral.text_disabled, theme.neutral.text_disabled);
@@ -102,11 +102,7 @@ impl Link {
         let (color, hover_color) = self.color_for(theme);
         let fs = theme.font_size.md;
         let icon_sz = 14.0;
-        let id = SharedString::from(format!(
-            "link-{}-{}",
-            self.creation_site,
-            LINK_ID.fetch_add(1, Ordering::Relaxed)
-        ));
+        let id = self.id.clone();
 
         let mut div = gpui::div()
             .flex()

@@ -49,11 +49,9 @@ pub struct Menu {
 }
 
 impl Menu {
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("menu-{}", caller).into(),
+            id: aura_core::unique_id("menu"),
             mode: MenuMode::Vertical,
             is_collapsed: false,
             active_index: None,

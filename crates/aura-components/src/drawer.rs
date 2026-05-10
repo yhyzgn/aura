@@ -188,11 +188,9 @@ impl Drawer {
         cx.bind_keys([KeyBinding::new("escape", DrawerClose, None)]);
     }
 
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("drawer-{}", caller).into(),
+            id: aura_core::unique_id("drawer"),
             title: SharedString::default(),
             content: Arc::new(|_, _| div().child("Drawer Content").into_any_element()),
             placement: DrawerPlacement::Right,

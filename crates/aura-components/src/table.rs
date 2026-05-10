@@ -122,11 +122,9 @@ impl TableRow {
 }
 
 impl Table {
-    #[track_caller]
     pub fn new(columns: Vec<TableColumn>) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("table-{}", caller).into(),
+            id: aura_core::unique_id("table"),
             columns,
             rows: vec![],
             border: false,

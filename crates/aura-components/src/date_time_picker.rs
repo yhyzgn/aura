@@ -90,13 +90,11 @@ impl DateTimeValue {
 }
 
 impl DateTimePicker {
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         let default_date = DateValue::new(2026, 5, 8).expect("valid default date");
         let default_time = TimeValue::new(0, 0, 0).expect("valid default time");
         Self {
-            id: format!("date-time-picker-{}", caller).into(),
+            id: aura_core::unique_id("date-time-picker"),
             picker_type: DateTimePickerType::DateTime,
             value: None,
             range_start: None,

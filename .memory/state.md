@@ -2,12 +2,19 @@
 
 ## Current Phase
 
-**P6 - Built-in Unique ID** (下一阶段待启动；P9 deferred backlog 已创建)
+**P7 - Demo Self-Contained** (下一阶段待启动；P6 Built-in Unique ID 已完成；P9 deferred backlog 保持等待明确请求)
 
 ## Completed in P4
 
 - ✅ 全部导航组件: Menu, Tabs, Breadcrumb, Steps, PageHeader, Affix, Backtop, Anchor
 - ✅ 核心数据展示: Progress, Skeleton, Empty, Result, Descriptions, Timeline, Tree, Pagination, Statistic, Segmented, Tag, Avatar, Badge
+
+
+## Completed in P6
+
+- ✅ `aura-core` added process-wide atomic unique ID helpers: `next_unique_id()` and `unique_id(prefix)`.
+- ✅ Replaced `track_caller` / render-site / literal repeated interactive IDs in high-risk components with component-prefixed runtime unique IDs.
+- ✅ Preserved/added `.id(...)` override APIs for migrated components where applicable.
 
 ## Phase Progress
 
@@ -19,7 +26,7 @@
 | P3 Popper+Feedback | ✅ Done | 13/13 | 13 |
 | P4 Nav+Data | ✅ Done | 21/21 | 21 |
 | P5 Advanced | 🏁 Requested subset complete / remaining deferred | 11/20 | 20 |
-| P6 Built-in Unique ID | ⬜ Pending | 0/1 | 1 |
+| P6 Built-in Unique ID | ✅ Done | 1/1 | 1 |
 | P7 Demo Self-Contained | ⬜ Pending | 0/1 | 1 |
 | P8 Engineering | ⬜ Pending | 0/1 | 1 |
 | P9 Deferred Advanced | ⏸️ Deferred backlog | 0/9 | 9 |

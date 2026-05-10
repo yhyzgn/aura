@@ -1,5 +1,19 @@
 use gpui::{App, Bounds, Context, Global, Hsla, TextRun, prelude::*, px};
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_UNIQUE_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Generate a process-wide unique, monotonically increasing numeric id.
+pub fn next_unique_id() -> u64 {
+    NEXT_UNIQUE_ID.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Generate a process-wide unique id string with a stable component prefix.
+pub fn unique_id(prefix: &str) -> gpui::SharedString {
+    format!("{}-{}", prefix, next_unique_id()).into()
+}
+
 pub mod popper;
 
 pub use popper::*;
@@ -168,4 +182,19 @@ pub fn z_index_tooltip<V>(cx: &Context<'_, V>) -> u32 {
 
 pub fn hex_color(hex: u32) -> Hsla {
     gpui::rgb(hex).into()
+}
+
+#[cfg(test)]
+mod unique_id_tests {
+    use super::*;
+
+    #[test]
+    fn generated_ids_are_prefixed_and_unique() {
+        let first = unique_id("component");
+        let second = unique_id("component");
+
+        assert!(first.as_ref().starts_with("component-"));
+        assert!(second.as_ref().starts_with("component-"));
+        assert_ne!(first, second);
+    }
 }

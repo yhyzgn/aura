@@ -18,14 +18,12 @@ pub struct Dropdown {
 }
 
 impl Dropdown {
-    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
             trigger: trigger.into_any_element(),
             items: vec![],
             placement: Placement::BottomStart,
-            id: format!("dropdown-{}", caller).into(),
+            id: aura_core::unique_id("dropdown"),
         }
     }
 
@@ -53,12 +51,10 @@ impl Dropdown {
 }
 
 impl RenderOnce for Dropdown {
-    #[track_caller]
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let items = self.items;
         let dropdown_id = self.id.clone();
-        let caller = std::panic::Location::caller();
 
         Popover::new(self.trigger)
             .id(dropdown_id.clone())
@@ -79,13 +75,7 @@ impl RenderOnce for Dropdown {
                         let on_click = item.on_click.clone();
                         let label = item.label.clone();
                         let dropdown_id = dropdown_id.clone();
-                        let item_id = format!(
-                            "{}-item-{}-{}-{}",
-                            dropdown_id,
-                            caller.line(),
-                            caller.column(),
-                            i
-                        );
+                        let item_id = format!("{}-item-{}", dropdown_id, i);
 
                         div()
                             .id(item_id)

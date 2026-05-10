@@ -46,11 +46,9 @@ impl TimeValue {
 }
 
 impl TimePicker {
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("time-picker-{}", caller).into(),
+            id: aura_core::unique_id("time-picker"),
             value: None,
             is_open: false,
             placeholder: "请选择时间".into(),

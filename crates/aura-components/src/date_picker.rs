@@ -68,11 +68,9 @@ impl DateValue {
 }
 
 impl DatePicker {
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("date-picker-{}", caller).into(),
+            id: aura_core::unique_id("date-picker"),
             picker_type: DatePickerType::Date,
             value: None,
             range_start: None,

@@ -55,11 +55,9 @@ impl TransferItem {
 }
 
 impl Transfer {
-    #[track_caller]
     pub fn new(items: Vec<TransferItem>) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("transfer-{caller}").into(),
+            id: aura_core::unique_id("transfer"),
             items,
             target_keys: vec![],
             checked_source_keys: vec![],

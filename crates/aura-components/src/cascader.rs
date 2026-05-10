@@ -84,11 +84,9 @@ impl CascaderOption {
 }
 
 impl Cascader {
-    #[track_caller]
     pub fn new(options: Vec<CascaderOption>, cx: &mut Context<Self>) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("cascader-{caller}").into(),
+            id: aura_core::unique_id("cascader"),
             options,
             selected_path: vec![],
             active_path: vec![],
@@ -735,7 +733,7 @@ fn render_match_list(
     theme: aura_theme::Theme,
 ) -> AnyElement {
     div()
-        .id("cascader-search-results")
+        .id(format!("{}-search-results", cascader_id))
         .flex()
         .flex_col()
         .max_h(px(280.0))

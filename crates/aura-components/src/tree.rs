@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
@@ -21,6 +21,7 @@ pub struct Tree {
     indent: Pixels,
     show_checkbox: bool,
     on_node_click: Option<Box<dyn Fn(SharedString, &mut Window, &mut App) + 'static>>,
+    id: SharedString,
 }
 
 impl TreeNode {
@@ -48,11 +49,17 @@ impl Tree {
             indent: px(18.0),
             show_checkbox: false,
             on_node_click: None,
+            id: unique_id("tree"),
         }
     }
 
     pub fn indent(mut self, indent: impl Into<Pixels>) -> Self {
         self.indent = indent.into();
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -136,7 +143,7 @@ impl Tree {
             .flex_col()
             .child(
                 div()
-                    .id(id.clone())
+                    .id(format!("{}-node-{}", self.id, id))
                     .cursor_pointer()
                     .flex()
                     .flex_row()
@@ -163,7 +170,7 @@ impl Tree {
                             .items_center()
                             .justify_center()
                             .w(px(20.0))
-                            .id(format!("expand-{}", id.clone()))
+                            .id(format!("{}-expand-{}", self.id, id))
                             .when(has_children, |s| {
                                 s.on_click(cx.listener({
                                     let id = id.clone();
@@ -192,7 +199,7 @@ impl Tree {
                     .child(
                         div()
                             .flex_1()
-                            .id(format!("content-{}", id.clone()))
+                            .id(format!("{}-content-{}", self.id, id))
                             .child(div().text_sm().child(node.label.clone())),
                     ),
             )

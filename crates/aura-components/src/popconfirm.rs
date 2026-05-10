@@ -17,9 +17,7 @@ pub struct Popconfirm {
 }
 
 impl Popconfirm {
-    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
             trigger: trigger.into_any_element(),
             title: SharedString::default(),
@@ -28,7 +26,7 @@ impl Popconfirm {
             on_confirm: None,
             on_cancel: None,
             placement: Placement::Top,
-            trigger_id: format!("popconfirm-trigger-{}", caller).into(),
+            trigger_id: aura_core::unique_id("popconfirm-trigger"),
         }
     }
 

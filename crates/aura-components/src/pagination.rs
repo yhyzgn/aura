@@ -18,11 +18,9 @@ pub struct Pagination {
 }
 
 impl Pagination {
-    #[track_caller]
     pub fn new(total: usize) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("pagination-{}", caller).into(),
+            id: aura_core::unique_id("pagination"),
             total,
             page_size: 10,
             current_page: 1,

@@ -103,11 +103,9 @@ impl UploadFile {
 }
 
 impl Upload {
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("upload-{}", caller).into(),
+            id: aura_core::unique_id("upload"),
             files: Vec::new(),
             list_type: UploadListType::Text,
             drag: false,

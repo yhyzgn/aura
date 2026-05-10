@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use gpui::{
     AnyElement, App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px,
 };
@@ -51,11 +51,9 @@ impl Card {
 }
 
 impl RenderOnce for Card {
-    #[track_caller]
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
-        let caller = std::panic::Location::caller();
-        let id = format!("card-{}-{}", caller.line(), caller.column());
+        let id = unique_id("card");
 
         let mut el = div()
             .id(id)

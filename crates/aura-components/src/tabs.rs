@@ -45,12 +45,10 @@ pub struct Tabs {
 }
 
 impl Tabs {
-    #[track_caller]
     pub fn new(active_name: impl Into<SharedString>) -> Self {
-        let caller = std::panic::Location::caller();
         let name = active_name.into();
         Self {
-            id: format!("tabs-{}", caller).into(),
+            id: aura_core::unique_id("tabs"),
             active_name: name,
             position: TabPosition::Top,
             tab_type: TabType::Standard,

@@ -17,11 +17,9 @@ pub struct Backtop {
 }
 
 impl Backtop {
-    #[track_caller]
     pub fn new(scroll_handle: ScrollHandle) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("backtop-{}", caller).into(),
+            id: aura_core::unique_id("backtop"),
             scroll_handle,
             visibility_height: px(200.0),
             right: px(40.0),

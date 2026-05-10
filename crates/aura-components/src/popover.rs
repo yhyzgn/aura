@@ -1,4 +1,4 @@
-use aura_core::{Config, Placement, clear_popover, is_popover_active, set_active_popover};
+use aura_core::{Config, Placement, clear_popover, is_popover_active, set_active_popover, unique_id};
 use gpui::{
     AnyElement, App, Bounds, Component, Context, ElementId, GlobalElementId, InspectorElementId,
     IntoElement, LayoutId, MouseButton, Pixels, Render, RenderOnce, SharedString, Window, div,
@@ -172,16 +172,14 @@ fn popover_anchor_corner(placement: Placement) -> gpui::Anchor {
 }
 
 impl Popover {
-    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
             trigger: trigger.into_any_element(),
             content: Arc::new(|_, _| div().child("Popover Content").into_any_element()),
             placement: Placement::Bottom,
             offset: px(8.0),
             close_on_click_outside: true,
-            trigger_id: ElementId::from(SharedString::from(format!("popover-trigger-{}", caller))),
+            trigger_id: ElementId::from(unique_id("popover-trigger")),
         }
     }
 

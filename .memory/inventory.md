@@ -116,9 +116,13 @@
 | 19 | Splitter | `crates/aura-components/src/splitter.rs` | ✅ | ✅ Already completed in P1 |
 | 20 | VirtualizedTable/VirtualizedTree | — | — | ↩️ Moved to P9 deferred backlog |
 
-## P6 Built-in Unique ID ⬜
+## P6 Built-in Unique ID ✅
 
-— See `.prompt/P6-builtin-id.md` for task list
+| Item | File(s) | Status |
+|------|---------|--------|
+| Global unique ID generator | `crates/aura-core/src/lib.rs` | ✅ `next_unique_id()` + `unique_id(prefix)` |
+| Component default IDs | `crates/aura-components/src/*.rs` | ✅ Runtime unique IDs replace `track_caller`/literal repeated interactive IDs in migrated components |
+| Override APIs | Multiple components | ✅ `.id(...)` retained or added for migrated interactive components |
 
 ## P7 Demo Self-Contained ⬜
 

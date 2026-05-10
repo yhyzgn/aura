@@ -1859,3 +1859,23 @@
 
 ### Key Discoveries
 - The safest extraction path is additive: standalone component demos can duplicate the existing usage examples while leaving `FormDemo` as the form-layout integration reference.
+
+
+## Session 113 — 2026-05-10 (P6 Built-in Unique IDs)
+
+### Actions
+- Added `aura_core::next_unique_id()` and `aura_core::unique_id(prefix)` backed by a process-wide `AtomicU64`.
+- Replaced call-site/render-site derived default IDs in interactive components with runtime unique, component-prefixed IDs.
+- Added/retained `.id(...)` override APIs for migrated components including Alert, Breadcrumb, Collapse, Link, PageHeader, Scrollbar, Tag, and Tree.
+- Prefixed internal child IDs with each component root ID for migrated controls, including Dropdown items, Cascader search results, Tag close buttons, Tree node sub-elements, and Scrollbar viewport.
+- Advanced project state from P6 to P7 pending.
+
+### Verification
+- `cargo test -p aura-core unique_id_tests::generated_ids_are_prefixed_and_unique` passed.
+- `cargo test -p aura-components` passed.
+- `cargo check` passed with 0 warnings.
+- `git diff --check` passed.
+
+### Key Discoveries
+- Several components already prefixed child IDs with a component ID but seeded that component ID from `track_caller`; loops/helpers could still collide.
+- Literal IDs remained in a few interactive children (`close-btn`, `back-btn`, `scroll-viewport`, Cascader search results); those now derive from the component ID.

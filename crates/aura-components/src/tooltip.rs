@@ -15,15 +15,13 @@ pub struct Tooltip {
 }
 
 impl Tooltip {
-    #[track_caller]
     pub fn new(trigger: impl IntoElement) -> Self {
-        let caller = std::panic::Location::caller();
         Self {
             trigger: trigger.into_any_element(),
             content: SharedString::default(),
             placement: Placement::Top,
             offset: px(8.0),
-            id: format!("tooltip-{}", caller).into(),
+            id: aura_core::unique_id("tooltip"),
         }
     }
 

@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
@@ -19,6 +19,7 @@ pub struct Alert {
     closable: bool,
     show_icon: bool,
     on_close: Option<Box<dyn Fn(&mut Window, &mut App) + 'static>>,
+    id: SharedString,
 }
 
 impl Alert {
@@ -30,6 +31,7 @@ impl Alert {
             closable: false,
             show_icon: true,
             on_close: None,
+            id: unique_id("alert"),
         }
     }
 
@@ -55,6 +57,11 @@ impl Alert {
 
     pub fn on_close(mut self, f: impl Fn(&mut Window, &mut App) + 'static) -> Self {
         self.on_close = Some(Box::new(f));
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
         self
     }
 }
@@ -107,7 +114,7 @@ impl RenderOnce for Alert {
             .child(div().flex().items_center().when(self.closable, |s| {
                 s.child(
                     div()
-                        .id("close-btn")
+                        .id(format!("{}-close-btn", self.id))
                         .cursor_pointer()
                         .child(Icon::new(IconName::X).size(px(14.0)).color(color))
                         .on_click(|_, _window, _cx| {

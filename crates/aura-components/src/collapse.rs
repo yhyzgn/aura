@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{AnyElement, Context, IntoElement, Render, SharedString, Window, div, prelude::*, px};
@@ -15,6 +15,7 @@ pub struct Collapse {
     items: Vec<CollapseItem>,
     active_names: HashSet<SharedString>,
     accordion: bool,
+    id: SharedString,
 }
 
 impl Collapse {
@@ -23,11 +24,17 @@ impl Collapse {
             items: vec![],
             active_names: HashSet::new(),
             accordion: false,
+            id: unique_id("collapse"),
         }
     }
 
     pub fn accordion(mut self) -> Self {
         self.accordion = true;
+        self
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -63,7 +70,6 @@ impl Collapse {
 }
 
 impl Render for Collapse {
-    #[track_caller]
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
 
@@ -77,7 +83,7 @@ impl Render for Collapse {
                 let name = item.name.clone();
                 let is_active = self.active_names.contains(&name);
                 let is_last = i == self.items.len() - 1;
-                let header_id = format!("collapse-header-{}", name);
+                let header_id = format!("{}-header-{}", self.id, name);
 
                 div()
                     .flex()

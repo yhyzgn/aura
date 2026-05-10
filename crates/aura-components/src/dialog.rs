@@ -130,11 +130,9 @@ impl Dialog {
         cx.bind_keys([KeyBinding::new("escape", DialogClose, None)]);
     }
 
-    #[track_caller]
     pub fn new() -> Self {
-        let caller = std::panic::Location::caller();
         Self {
-            id: format!("dialog-{}", caller).into(),
+            id: aura_core::unique_id("dialog"),
             title: SharedString::default(),
             content: Arc::new(|_, _| div().child("Dialog Content").into_any_element()),
             close_on_click_outside: true,

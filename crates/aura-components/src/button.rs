@@ -1,4 +1,4 @@
-use aura_core::Config;
+use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{ButtonSize, ButtonVariant, ButtonVariantColors, Theme};
@@ -6,7 +6,6 @@ use gpui::{
     AbsoluteLength, AnyElement, App, Component, ElementId, Hsla, IntoElement, RenderOnce, Rgba,
     SharedString, Window, prelude::*, px,
 };
-use std::panic::Location;
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
     Rgba {
@@ -59,11 +58,9 @@ pub struct Button {
     icon_bottom: Option<IconName>,
     icon_only: Option<IconName>,
     on_click: Option<Box<dyn Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static>>,
-    creation_site: &'static Location<'static>,
 }
 
 impl Button {
-    #[track_caller]
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
             label: label.into(),
@@ -82,7 +79,6 @@ impl Button {
             icon_bottom: None,
             icon_only: None,
             on_click: None,
-            creation_site: Location::caller(),
         }
     }
     pub fn variant(mut self, v: ButtonVariant) -> Self {
@@ -202,18 +198,7 @@ impl Button {
     }
 
     fn auto_id(&self) -> ElementId {
-        SharedString::from(format!(
-            "aura-button:{}:{}:{:?}:{:?}:secondary={}:background={}:border={}:rounded={:?}",
-            self.creation_site,
-            self.label,
-            self.variant,
-            self.size,
-            self.secondary,
-            self.background,
-            self.border,
-            self.rounded
-        ))
-        .into()
+        unique_id("aura-button").into()
     }
 
     fn icon_size(&self) -> f32 {

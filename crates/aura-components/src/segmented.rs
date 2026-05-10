@@ -31,12 +31,10 @@ pub struct Segmented {
 }
 
 impl Segmented {
-    #[track_caller]
     pub fn new(options: Vec<SegmentedOption>) -> Self {
-        let caller = std::panic::Location::caller();
         let first_value = options.first().map(|o| o.value.clone());
         Self {
-            id: format!("segmented-{}", caller).into(),
+            id: aura_core::unique_id("segmented"),
             options,
             value: first_value,
             block: false,

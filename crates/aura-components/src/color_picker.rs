@@ -30,12 +30,10 @@ pub struct ColorPicker {
 }
 
 impl ColorPicker {
-    #[track_caller]
     pub fn new(value: impl Into<SharedString>) -> Self {
-        let caller = std::panic::Location::caller();
         let value = value.into();
         Self {
-            id: format!("color-picker-{caller}").into(),
+            id: aura_core::unique_id("color-picker"),
             value: Self::normalize_hex(value.as_ref()).unwrap_or_else(|| "#409EFF".into()),
             alpha: 1.0,
             hue: 210.0,
