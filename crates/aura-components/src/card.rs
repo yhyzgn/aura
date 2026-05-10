@@ -1,6 +1,7 @@
 use aura_core::{Config, stable_unique_id};
 use gpui::{
-    AnyElement, App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px,
+    AnyElement, App, Component, IntoElement, Pixels, RenderOnce, SharedString, Window, div,
+    prelude::*, px,
 };
 
 pub struct Card {
@@ -10,6 +11,7 @@ pub struct Card {
     body: AnyElement,
     hoverable: bool,
     shadow: bool,
+    width: Option<Pixels>,
 }
 
 impl Card {
@@ -21,6 +23,7 @@ impl Card {
             body: body.into_any_element(),
             hoverable: false,
             shadow: true,
+            width: None,
         }
     }
 
@@ -48,6 +51,19 @@ impl Card {
         self.shadow = false;
         self
     }
+
+    pub fn width(mut self, width: impl Into<Pixels>) -> Self {
+        self.width = Some(width.into());
+        self
+    }
+
+    pub fn width_md(self) -> Self {
+        self.width(px(300.0))
+    }
+
+    pub fn width_lg(self) -> Self {
+        self.width(px(400.0))
+    }
 }
 
 impl RenderOnce for Card {
@@ -61,7 +77,8 @@ impl RenderOnce for Card {
             .border_1()
             .border_color(theme.neutral.border)
             .rounded(px(theme.radius.md))
-            .overflow_hidden();
+            .overflow_hidden()
+            .when_some(self.width, |s, width| s.w(width));
 
         if self.shadow {
             el = el.shadow_md();
@@ -116,5 +133,16 @@ impl IntoElement for Card {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn card_width_helpers_set_demo_widths() {
+        assert_eq!(Card::new("body").width_md().width, Some(px(300.0)));
+        assert_eq!(Card::new("body").width_lg().width, Some(px(400.0)));
     }
 }

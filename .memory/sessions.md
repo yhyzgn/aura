@@ -2195,3 +2195,25 @@
 
 ### Key Discoveries
 - Timeline color examples needed semantic component-level tone APIs to remain self-contained without exposing demo code to theme internals.
+
+## Session 130 — 2026-05-11 (P7 Layout Container Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for Card, Scrollbar, and Splitter demos before migration.
+- Migrated those demos to shared Aura helpers and component APIs, removing demo-level `div()`, `px()`, and flex primitives.
+- Added `Card::width`, `Card::width_md()`, and `Card::width_lg()` to keep card demo sizing inside component semantics.
+- Added `Splitter::height`, `Splitter::height_md()`, and `Splitter::bordered()` to express demo presentation without raw GPUI wrappers.
+- Added unit coverage for the new Card and Splitter helpers.
+
+### Verification
+- `cargo test -p aura-gallery layout_container_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-components helpers` passed the helper-focused tests.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- Confirmed Card/Scrollbar/Splitter demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Layout-oriented demos often need small semantic presentation helpers; migrating broader `layout_demo.rs` should be handled as a separate pass because grid color boxes still need component-level API support.

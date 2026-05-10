@@ -506,4 +506,15 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn layout_container_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("card_demo.rs", include_str!("card_demo.rs")),
+            ("scrollbar_demo.rs", include_str!("scrollbar_demo.rs")),
+            ("splitter_demo.rs", include_str!("splitter_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }

@@ -1,23 +1,12 @@
-use aura_components::Scrollbar;
-use gpui::{App, Entity, div, prelude::*, px};
+use aura_components::{Scrollbar, Space, Text};
+use gpui::{App, Entity, prelude::*};
 
 pub fn render(cx: &mut App) -> Entity<Scrollbar> {
     cx.new(|cx| {
         Scrollbar::new(cx, |_, _| {
-            let items: Vec<String> = (1..=20).map(|i| format!("Scrollable line {}", i)).collect();
-            div()
-                .flex()
-                .flex_col()
-                .p_2()
-                .children(items.iter().map(|s| {
-                    div()
-                        .h(px(36.0))
-                        .flex()
-                        .items_center()
-                        .border_b_1()
-                        .border_color(gpui::hsla(0.0, 0.0, 0.5, 0.2))
-                        .child(s.clone())
-                }))
+            let items = (1..=20).map(|i| Text::new(format!("Scrollable line {}", i)));
+
+            Space::new().vertical().gap_lg().children(items)
         })
         .height(150.0)
     })

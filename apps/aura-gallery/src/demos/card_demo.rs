@@ -1,6 +1,7 @@
-use aura_components::{Button, Card};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*, px};
+use aura_components::{Button, Card, Row, Space};
+use gpui::{AnyView, App, Context, Render, Window, prelude::*};
+
+use super::common::{page, row_md, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| CardDemo).into()
@@ -9,68 +10,41 @@ pub fn render(cx: &mut App) -> AnyView {
 struct CardDemo;
 
 impl Render for CardDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Card 卡片"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("将信息聚合在卡片容器中展示。"),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .gap_4()
-                    .child(div().w(px(300.0)).child(
-                        Card::new("Standard card content goes here.").title("Standard Card"),
-                    ))
-                    .child(
-                        div().w(px(300.0)).child(
-                            Card::new("This card will change shadow on hover.")
-                                .title("Hoverable Card")
-                                .hoverable(),
-                        ),
-                    ),
-            )
-            .child(
-                div().flex().flex_col().gap_2().child(
-                    div()
-                        .text_lg()
-                        .font_weight(gpui::FontWeight::BOLD)
-                        .child("底部操作"),
-                ),
-            )
-            .child(
-                div().w(px(400.0)).child(
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Card 卡片",
+            "将信息聚合在卡片容器中展示。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础卡片",
+                    "常规卡片和可悬停卡片。",
+                    row_md(vec![
+                        Card::new("Standard card content goes here.")
+                            .title("Standard Card")
+                            .width_md()
+                            .into_any_element(),
+                        Card::new("This card will change shadow on hover.")
+                            .title("Hoverable Card")
+                            .hoverable()
+                            .width_md()
+                            .into_any_element(),
+                    ]),
+                ))
+                .child(section(
+                    "底部操作",
+                    "footer 区域可承载操作按钮。",
                     Card::new("Card body with a custom footer.")
                         .title("Card with Footer")
+                        .width_lg()
                         .footer(
-                            div()
-                                .flex()
-                                .justify_end()
-                                .gap_2()
+                            Row::new()
+                                .justify(aura_components::RowJustify::End)
                                 .child(Button::new("Cancel").small())
                                 .child(Button::new("Save").primary().small()),
                         ),
-                ),
-            )
+                )),
+        )
     }
 }
