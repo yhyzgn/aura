@@ -1,9 +1,7 @@
-use aura_components::{Button, ButtonGroup};
-use aura_core::Config;
+use aura_components::{Button, ButtonGroup, Space, Title};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use aura_theme::Theme;
-use gpui::{App, Context, Entity, IntoElement, Render, Window, div, prelude::*, px};
+use gpui::{App, Context, Entity, IntoElement, Render, Window, prelude::*};
 
 pub fn render(cx: &mut App) -> Entity<ButtonDemo> {
     cx.new(|_| ButtonDemo)
@@ -12,53 +10,40 @@ pub fn render(cx: &mut App) -> Entity<ButtonDemo> {
 pub struct ButtonDemo;
 
 impl Render for ButtonDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-        div()
-            .flex()
-            .flex_col()
-            .gap_3()
-            .child(hdr(theme, "Types 按钮类型"))
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        Space::new()
+            .vertical()
+            .gap_md()
+            .child(hdr("Types 按钮类型"))
             .child(row(types()))
-            .child(hdr(theme, "Text 幽灵按钮 / 文字按钮"))
+            .child(hdr("Text 幽灵按钮 / 文字按钮"))
             .child(row(text_buttons()))
-            .child(hdr(theme, "Secondary 次要按钮"))
+            .child(hdr("Secondary 次要按钮"))
             .child(row(secondary()))
-            .child(hdr(theme, "Secondary · no border"))
+            .child(hdr("Secondary · no border"))
             .child(row(secondary_nb()))
-            .child(hdr(theme, "Sizes 尺寸"))
+            .child(hdr("Sizes 尺寸"))
             .child(row(sizes()))
-            .child(hdr(theme, "Icons 图标"))
+            .child(hdr("Icons 图标"))
             .child(row(icons()))
-            .child(hdr(theme, "Custom Icons 自定义图标 (AnyElement)"))
+            .child(hdr("Custom Icons 自定义图标 (AnyElement)"))
             .child(row(custom_icons()))
-            .child(hdr(theme, "Button Group 按钮组"))
+            .child(hdr("Button Group 按钮组"))
             .child(button_groups())
-            .child(hdr(theme, "States 状态"))
+            .child(hdr("States 状态"))
             .child(row(states()))
             .child(row(loading_states()))
-            .child(hdr(theme, "Rounded 圆角"))
+            .child(hdr("Rounded 圆角"))
             .child(row(rounded()))
     }
 }
 
-fn hdr(theme: &Theme, s: &str) -> impl IntoElement {
-    div()
-        .text_size(px(theme.font_size.lg))
-        .text_color(theme.neutral.text_1)
-        .font_weight(gpui::FontWeight::BOLD)
-        .mt_2()
-        .child(s.to_string())
+fn hdr(s: &str) -> impl IntoElement {
+    Title::new(s.to_string()).h3()
 }
 
 fn row(elements: Vec<impl IntoElement>) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_row()
-        .gap_2()
-        .items_center()
-        .flex_wrap()
-        .children(elements)
+    Space::new().wrap().gap_sm().children(elements)
 }
 
 fn types() -> Vec<impl IntoElement> {
@@ -140,13 +125,9 @@ fn icons() -> Vec<impl IntoElement> {
 
 fn custom_icons() -> Vec<impl IntoElement> {
     vec![
-        Button::new("Custom Element").primary().icon_start(
-            div()
-                .size(px(12.0))
-                .bg(gpui::red())
-                .rounded_full()
-                .into_any_element(),
-        ),
+        Button::new("Custom Element")
+            .primary()
+            .icon_start(Icon::new(IconName::Star)),
         Button::new("Multiple Icons")
             .success()
             .icon_start(Icon::new(IconName::Check))
@@ -155,10 +136,9 @@ fn custom_icons() -> Vec<impl IntoElement> {
 }
 
 fn button_groups() -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
+    Space::new()
+        .vertical()
+        .gap_sm()
         .child(
             ButtonGroup::new()
                 .button(Button::new("Previous").icon_start(Icon::new(IconName::ArrowLeft)))
@@ -225,9 +205,9 @@ fn loading_states() -> Vec<impl IntoElement> {
 
 fn rounded() -> Vec<impl IntoElement> {
     vec![
-        Button::new("4px").primary().rounded(px(4.0)),
-        Button::new("12px").primary().rounded(px(12.0)),
-        Button::new("20px").primary().rounded(px(20.0)),
-        Button::new("Pill").primary().rounded(px(9999.0)),
+        Button::new("4px").primary().rounded_sm(),
+        Button::new("12px").primary().rounded_md(),
+        Button::new("20px").primary().rounded_lg(),
+        Button::new("Pill").primary().pill(),
     ]
 }

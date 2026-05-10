@@ -149,6 +149,22 @@ impl Button {
         self.rounded = Some(r.into());
         self
     }
+
+    pub fn rounded_sm(self) -> Self {
+        self.rounded(px(4.0))
+    }
+
+    pub fn rounded_md(self) -> Self {
+        self.rounded(px(12.0))
+    }
+
+    pub fn rounded_lg(self) -> Self {
+        self.rounded(px(20.0))
+    }
+
+    pub fn pill(self) -> Self {
+        self.rounded(px(9999.0))
+    }
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = Some(id.into());
         self
@@ -431,5 +447,16 @@ impl IntoElement for Button {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn button_rounded_helpers_set_custom_radius() {
+        assert!(Button::new("small").rounded_sm().rounded.is_some());
+        assert!(Button::new("pill").pill().rounded.is_some());
     }
 }

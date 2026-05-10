@@ -64,7 +64,7 @@ pub struct DemoEntry {
 }
 
 pub fn registry() -> Vec<DemoEntry> {
-    vec![
+    let mut entries = vec![
         DemoEntry {
             name: "Button 按钮",
             description: "常用的操作按钮",
@@ -380,5 +380,35 @@ pub fn registry() -> Vec<DemoEntry> {
             description: "基于 Lucide 的图标系统",
             render: |cx| icon_demo::render(cx).into(),
         },
-    ]
+    ];
+
+    entries.sort_by(|a, b| a.name.cmp(b.name));
+    entries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn registry_entries_are_sorted_by_component_name() {
+        let entries = registry();
+        let names = entries.iter().map(|entry| entry.name).collect::<Vec<_>>();
+        let mut sorted = names.clone();
+        sorted.sort();
+
+        assert_eq!(names, sorted);
+    }
+
+    #[test]
+    fn button_demo_uses_aura_layout_primitives() {
+        let source = include_str!("button_demo.rs");
+
+        for forbidden in ["div(", "px(", ".flex()", ".flex_col()", ".flex_row()"] {
+            assert!(
+                !source.contains(forbidden),
+                "button_demo.rs still contains forbidden GPUI primitive `{forbidden}`"
+            );
+        }
+    }
 }

@@ -2007,3 +2007,30 @@
 
 ### Key Discoveries
 - The audit is documentation-only and does not modify component behavior.
+
+## Session 121 — 2026-05-10 (Start P7 Demo Self-Contained)
+
+### Actions
+- Started P7 Demo Self-Contained work.
+- Locked Gallery demo ordering with a regression test and sorted `registry()` by component name ascending at runtime.
+- Migrated `button_demo.rs` away from direct GPUI layout primitives by using Aura `Space` and `Title`.
+- Added small Aura API helpers needed for demo self-containment: `Space::wrap`, semantic gap helpers, and Button rounded convenience builders.
+- Added tests for the new ordering rule, Button demo primitive ban, Space wrap builder, and Button rounded helpers.
+
+### Verification
+- Confirmed the new registry-order test failed before implementation.
+- Confirmed the Button demo primitive-ban test failed before migration.
+- `cargo fmt --all` passed.
+- `cargo test -p aura-gallery registry_entries_are_sorted_by_component_name` passed.
+- `cargo test -p aura-gallery button_demo_uses_aura_layout_primitives` passed.
+- `cargo test -p aura-components space_wrap_builder_tracks_state` passed.
+- `cargo test -p aura-components button_rounded_helpers_set_custom_radius` passed.
+- `cargo test -p aura-components` passed.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- P7 needs a few small semantic builder helpers in existing Aura components before demos can stop using GPUI primitives cleanly.
+- Sorting the registry at return time enforces the ASC requirement without risky manual reorder churn.

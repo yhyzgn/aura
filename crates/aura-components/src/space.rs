@@ -1,10 +1,11 @@
 use gpui::{
-    AnyElement, App, Component, DefiniteLength, IntoElement, RenderOnce, Window, prelude::*,
+    AnyElement, App, Component, DefiniteLength, IntoElement, RenderOnce, Window, prelude::*, px,
 };
 
 pub struct Space {
     children: Vec<AnyElement>,
     vertical: bool,
+    wrap: bool,
     gap: Option<DefiniteLength>,
 }
 
@@ -13,6 +14,7 @@ impl Space {
         Self {
             children: Vec::new(),
             vertical: false,
+            wrap: false,
             gap: None,
         }
     }
@@ -24,6 +26,31 @@ impl Space {
 
     pub fn gap(mut self, gap: impl Into<DefiniteLength>) -> Self {
         self.gap = Some(gap.into());
+        self
+    }
+
+    pub fn gap_xs(self) -> Self {
+        self.gap(px(4.0))
+    }
+
+    pub fn gap_sm(self) -> Self {
+        self.gap(px(8.0))
+    }
+
+    pub fn gap_md(self) -> Self {
+        self.gap(px(12.0))
+    }
+
+    pub fn gap_lg(self) -> Self {
+        self.gap(px(16.0))
+    }
+
+    pub fn gap_xl(self) -> Self {
+        self.gap(px(24.0))
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.wrap = true;
         self
     }
 
@@ -48,6 +75,10 @@ impl RenderOnce for Space {
             div = div.flex_row().items_center();
         }
 
+        if self.wrap {
+            div = div.flex_wrap();
+        }
+
         if let Some(gap) = self.gap {
             div = div.gap(gap);
         } else {
@@ -62,5 +93,17 @@ impl IntoElement for Space {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn space_wrap_builder_tracks_state() {
+        let space = Space::new().wrap();
+
+        assert!(space.wrap);
     }
 }

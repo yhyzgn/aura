@@ -124,9 +124,15 @@
 | Component default IDs | `crates/aura-components/src/*.rs` | ✅ Runtime unique IDs replace `track_caller`/literal repeated interactive IDs in migrated components |
 | Override APIs | Multiple components | ✅ `.id(...)` retained or added for migrated interactive components |
 
-## P7 Demo Self-Contained ⬜
+## P7 Demo Self-Contained 🔄
 
-— See `.prompt/P7-demo-self-contained.md` for task list
+— See `.prompt/P7-demo-self-contained.md` for full task list.
+
+| Item | File(s) | Status |
+|------|---------|--------|
+| Gallery registry ASC order | `apps/aura-gallery/src/demos/mod.rs` | ✅ Runtime sort + regression test |
+| Button demo self-contained slice | `apps/aura-gallery/src/demos/button_demo.rs` | ✅ Uses Aura `Space`/`Title` instead of direct `div()`/`px()` layout primitives |
+| Aura demo helpers | `crates/aura-components/src/space.rs`, `button.rs` | ✅ `Space::wrap` + semantic gaps; Button rounded helpers |
 
 ## P8 Engineering ⬜
 
