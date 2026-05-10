@@ -26,7 +26,7 @@ pub struct Progress {
     stroke_width: Pixels,
     status: Option<ProgressStatus>,
     color: Option<Hsla>,
-    gradient: Option<(Hsla, Hsla, Hsla)>,
+    gradient: Option<Vec<Hsla>>,
     show_text: bool,
     text_inside: bool,
     text_inside_center: bool,
@@ -68,8 +68,12 @@ impl Progress {
         self
     }
 
-    pub fn gradient(mut self, left: Hsla, middle: Hsla, right: Hsla) -> Self {
-        self.gradient = Some((left, middle, right));
+    pub fn gradient(mut self, colors: Vec<Hsla>) -> Self {
+        self.gradient = if colors.is_empty() {
+            None
+        } else {
+            Some(colors)
+        };
         self.color = None;
         self
     }
@@ -94,6 +98,22 @@ impl Progress {
         self.text_inside_center = true;
         self
     }
+}
+
+fn render_gradient_segments(mut bar: gpui::Div, colors: Vec<Hsla>) -> gpui::Div {
+    if colors.len() == 1 {
+        return bar.bg(colors[0]);
+    }
+
+    bar = bar.flex().flex_row();
+    for pair in colors.windows(2) {
+        bar = bar.child(div().h_full().flex_1().bg(linear_gradient(
+            90.0,
+            linear_color_stop(pair[0], 0.0),
+            linear_color_stop(pair[1], 1.0),
+        )));
+    }
+    bar
 }
 
 impl RenderOnce for Progress {
@@ -126,20 +146,7 @@ impl RenderOnce for Progress {
                 .rounded_full()
                 .overflow_hidden()
                 .when(gradient.is_none(), |s| s.bg(status_color))
-                .when_some(gradient, |s, (left, middle, right)| {
-                    s.flex()
-                        .flex_row()
-                        .child(div().h_full().flex_1().bg(linear_gradient(
-                            90.0,
-                            linear_color_stop(left, 0.0),
-                            linear_color_stop(middle, 1.0),
-                        )))
-                        .child(div().h_full().flex_1().bg(linear_gradient(
-                            90.0,
-                            linear_color_stop(middle, 0.0),
-                            linear_color_stop(right, 1.0),
-                        )))
-                })
+                .when_some(gradient, |s, colors| render_gradient_segments(s, colors))
                 .when(
                     self.show_text
                         && self.text_inside

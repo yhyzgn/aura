@@ -1955,3 +1955,20 @@
 - `cargo fmt --all` passed.
 - `cargo check` passed.
 - `git diff --check` passed.
+
+## Session 118 — 2026-05-10 (Progress Gradient Vector API)
+
+### Actions
+- Changed `Progress::gradient` to accept `gradient(vec![...])` with any non-empty number of colors instead of fixed left/middle/right arguments.
+- Rendered one color as a solid fill and two or more colors as adjacent two-stop gradient segments, preserving support for arbitrary color counts despite GPUI's two-stop linear gradient primitive.
+- Updated the Gallery Progress demo to use a four-color gradient vector.
+
+### Verification
+- `cargo fmt --all` passed.
+- `cargo test -p aura-components` passed.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- GPUI `linear_gradient` currently accepts two stops, so arbitrary multi-color gradients are best represented as equal-width adjacent two-stop segments until a multi-stop background API exists.
