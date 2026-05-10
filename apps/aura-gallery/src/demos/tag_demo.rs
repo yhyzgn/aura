@@ -1,6 +1,7 @@
-use aura_components::{Button, Input, Tag};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*};
+use aura_components::{Button, Card, Input, Space, Tag};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, row_md, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| TagDemo {
@@ -19,54 +20,28 @@ struct TagDemo {
 
 impl Render for TagDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Tag 标签"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("用于标记和选择。"),
-                    ),
-            )
-            // Dynamic Tags
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("动态添加和移除"),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
+        page(
+            "Tag 标签",
+            "用于标记和选择。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "动态添加和移除",
+                    "通过输入框新增标签，点击关闭图标移除标签。",
+                    Card::new(
+                        Space::new()
+                            .gap_md()
+                            .wrap()
                             .children(self.tags.iter().enumerate().map(|(idx, label)| {
                                 let label_clone = label.clone();
                                 Tag::new(label_clone).closable(true).on_close({
                                     let view = cx.entity().clone();
                                     move |_, cx| {
                                         view.update(cx, |view: &mut Self, cx| {
-                                            view.tags.remove(idx);
+                                            if idx < view.tags.len() {
+                                                view.tags.remove(idx);
+                                            }
                                             cx.notify();
                                         });
                                     }
@@ -75,7 +50,6 @@ impl Render for TagDemo {
                             .child({
                                 let view_handle = cx.entity().clone();
                                 if self.is_input_visible {
-                                    // Set up the input for this frame
                                     cx.update_entity(&self.input, |input, cx| {
                                         input.set_placeholder("Tag Name", cx);
                                         input.set_on_enter(
@@ -105,7 +79,10 @@ impl Render for TagDemo {
                                         );
                                     });
 
-                                    div().w_24().child(self.input.clone()).into_any_element()
+                                    Card::new(self.input.clone())
+                                        .no_shadow()
+                                        .width_md()
+                                        .into_any_element()
                                 } else {
                                     Button::new("+ New Tag")
                                         .small()
@@ -120,115 +97,71 @@ impl Render for TagDemo {
                                 }
                             }),
                     ),
-            )
-            // Basic Tags
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Tag 1"))
-                            .child(Tag::new("Tag 2").success())
-                            .child(Tag::new("Tag 3").warning())
-                            .child(Tag::new("Tag 4").danger()),
-                    ),
-            )
-            // Closable Tags
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("可移除标签"),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Tag 1").closable(true))
-                            .child(Tag::new("Tag 2").success().closable(true))
-                            .child(Tag::new("Tag 3").warning().closable(true))
-                            .child(Tag::new("Tag 4").danger().closable(true)),
-                    ),
-            )
-            // Effects
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("不同主题"))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Dark").dark())
-                            .child(Tag::new("Success").success().dark())
-                            .child(Tag::new("Warning").warning().dark())
-                            .child(Tag::new("Danger").danger().dark()),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Plain").plain())
-                            .child(Tag::new("Success").success().plain())
-                            .child(Tag::new("Warning").warning().plain())
-                            .child(Tag::new("Danger").danger().plain()),
-                    ),
-            )
-            // Sizes
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("不同尺寸"))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Default"))
-                            .child(Tag::new("Large").large())
-                            .child(Tag::new("Small").small()),
-                    ),
-            )
-            // Round Tags
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("圆角按钮"))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_center()
-                            .gap_2()
-                            .child(Tag::new("Tag 1").round(true))
-                            .child(Tag::new("Tag 2").success().round(true))
-                            .child(Tag::new("Tag 3").warning().round(true))
-                            .child(Tag::new("Tag 4").danger().round(true)),
-                    ),
-            )
+                ))
+                .child(section(
+                    "基础用法",
+                    "展示不同语义类型。",
+                    row_md(vec![
+                        Tag::new("Tag 1").into_any_element(),
+                        Tag::new("Tag 2").success().into_any_element(),
+                        Tag::new("Tag 3").warning().into_any_element(),
+                        Tag::new("Tag 4").danger().into_any_element(),
+                    ]),
+                ))
+                .child(section(
+                    "可移除标签",
+                    "closable 标签会展示关闭图标。",
+                    row_md(vec![
+                        Tag::new("Tag 1").closable(true).into_any_element(),
+                        Tag::new("Tag 2")
+                            .success()
+                            .closable(true)
+                            .into_any_element(),
+                        Tag::new("Tag 3")
+                            .warning()
+                            .closable(true)
+                            .into_any_element(),
+                        Tag::new("Tag 4").danger().closable(true).into_any_element(),
+                    ]),
+                ))
+                .child(section(
+                    "不同主题",
+                    "Dark 与 Plain 展示不同视觉效果。",
+                    Space::new()
+                        .vertical()
+                        .gap_md()
+                        .child(row_md(vec![
+                            Tag::new("Dark").dark().into_any_element(),
+                            Tag::new("Success").success().dark().into_any_element(),
+                            Tag::new("Warning").warning().dark().into_any_element(),
+                            Tag::new("Danger").danger().dark().into_any_element(),
+                        ]))
+                        .child(row_md(vec![
+                            Tag::new("Plain").plain().into_any_element(),
+                            Tag::new("Success").success().plain().into_any_element(),
+                            Tag::new("Warning").warning().plain().into_any_element(),
+                            Tag::new("Danger").danger().plain().into_any_element(),
+                        ])),
+                ))
+                .child(section(
+                    "不同尺寸",
+                    "提供默认、大号和小号尺寸。",
+                    row_md(vec![
+                        Tag::new("Default").into_any_element(),
+                        Tag::new("Large").large().into_any_element(),
+                        Tag::new("Small").small().into_any_element(),
+                    ]),
+                ))
+                .child(section(
+                    "圆角按钮",
+                    "round 模式展示胶囊形标签。",
+                    row_md(vec![
+                        Tag::new("Tag 1").round(true).into_any_element(),
+                        Tag::new("Tag 2").success().round(true).into_any_element(),
+                        Tag::new("Tag 3").warning().round(true).into_any_element(),
+                        Tag::new("Tag 4").danger().round(true).into_any_element(),
+                    ]),
+                )),
+        )
     }
 }

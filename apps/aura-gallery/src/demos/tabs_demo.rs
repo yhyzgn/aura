@@ -1,64 +1,65 @@
-use aura_components::{TabPosition, TabType, Tabs};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*};
+use aura_components::{Space, TabPosition, TabType, Tabs, Text};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| TabsDemo {
         basic: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-basic")
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
-                .pane("third", "角色管理", |_, _| div().child("角色管理内容"))
-                .pane("fourth", "定时任务", |_, _| div().child("定时任务内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
+                .pane("third", "角色管理", |_, _| Text::new("角色管理内容"))
+                .pane("fourth", "定时任务", |_, _| Text::new("定时任务内容"))
         }),
         stretch: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-stretch")
                 .stretch(true)
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
-                .pane("third", "角色管理", |_, _| div().child("角色管理内容"))
-                .pane("fourth", "定时任务", |_, _| div().child("定时任务内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
+                .pane("third", "角色管理", |_, _| Text::new("角色管理内容"))
+                .pane("fourth", "定时任务", |_, _| Text::new("定时任务内容"))
         }),
         card: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-card")
                 .type_(TabType::Card)
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
-                .pane("third", "角色管理", |_, _| div().child("角色管理内容"))
-                .pane("fourth", "定时任务", |_, _| div().child("定时任务内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
+                .pane("third", "角色管理", |_, _| Text::new("角色管理内容"))
+                .pane("fourth", "定时任务", |_, _| Text::new("定时任务内容"))
         }),
         border_card: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-border-card")
                 .type_(TabType::BorderCard)
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
-                .pane("third", "角色管理", |_, _| div().child("角色管理内容"))
-                .pane("fourth", "定时任务", |_, _| div().child("定时任务内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
+                .pane("third", "角色管理", |_, _| Text::new("角色管理内容"))
+                .pane("fourth", "定时任务", |_, _| Text::new("定时任务内容"))
         }),
         left: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-left")
                 .position(TabPosition::Left)
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
         }),
         right: cx.new(|_| {
             Tabs::new("first")
                 .id("tabs-demo-right")
                 .position(TabPosition::Right)
-                .pane("first", "用户管理", |_, _| div().child("用户管理内容"))
-                .pane("second", "配置管理", |_, _| div().child("配置管理内容"))
+                .pane("first", "用户管理", |_, _| Text::new("用户管理内容"))
+                .pane("second", "配置管理", |_, _| Text::new("配置管理内容"))
         }),
         editable: cx.new(|_| {
             Tabs::new("1")
                 .id("tabs-demo-editable")
                 .editable(true)
-                .pane("1", "Tab 1", |_, _| div().child("Content of Tab 1"))
-                .pane("2", "Tab 2", |_, _| div().child("Content of Tab 2"))
+                .pane("1", "Tab 1", |_, _| Text::new("Content of Tab 1"))
+                .pane("2", "Tab 2", |_, _| Text::new("Content of Tab 2"))
                 .on_tab_add(|_, _| println!("Add Tab Clicked"))
                 .on_tab_remove(|name, _, _| println!("Remove Tab: {}", name))
         }),
@@ -77,102 +78,43 @@ struct TabsDemo {
 }
 
 impl Render for TabsDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Tabs 标签页"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("在同一区域展示多个面板，通过点击标签进行切换。"),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(self.basic.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("自动均分并占满宽度"),
-                    )
-                    .child(self.stretch.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("卡片样式"))
-                    .child(self.card.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("带边框卡片样式"),
-                    )
-                    .child(self.border_card.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("不同位置 (Left / Right)"),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .gap_8()
-                            .child(self.left.clone())
-                            .child(self.right.clone()),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("可编辑 (Add / Remove)"),
-                    )
-                    .child(self.editable.clone()),
-            )
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Tabs 标签页",
+            "在同一区域展示多个面板，通过点击标签进行切换。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section("基础用法", "默认标签页。", self.basic.clone()))
+                .child(section(
+                    "自动均分并占满宽度",
+                    "stretch 模式让标签均分宽度。",
+                    self.stretch.clone(),
+                ))
+                .child(section(
+                    "卡片样式",
+                    "使用 Card 类型标签。",
+                    self.card.clone(),
+                ))
+                .child(section(
+                    "带边框卡片样式",
+                    "带外边框的卡片标签页。",
+                    self.border_card.clone(),
+                ))
+                .child(section(
+                    "不同位置 (Left / Right)",
+                    "标签可展示在左右两侧。",
+                    Space::new()
+                        .gap_lg()
+                        .wrap()
+                        .child(self.left.clone())
+                        .child(self.right.clone()),
+                ))
+                .child(section(
+                    "可编辑 (Add / Remove)",
+                    "支持新增和移除标签。",
+                    self.editable.clone(),
+                )),
+        )
     }
 }

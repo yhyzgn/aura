@@ -2323,3 +2323,35 @@
 ### Key Discoveries
 - Popover default content padding belongs in the component shell because caller content can be plain text or compact Aura layout primitives.
 - Cursor semantics need to be explicit on disabled states; merely omitting pointer hover leaves the default cursor.
+
+## Session 134 — 2026-05-11 (P7 Tag and Tabs Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for Tag and Tabs demos before migration.
+- Migrated Tag demo to shared `page`/`section`/`row_md`/`Space`/`Card` helpers while preserving dynamic add/remove behavior.
+- Migrated Tabs demo to shared helpers and changed tab pane closures to return Aura `Text` instead of demo-level GPUI `div()`.
+- Regenerated the remaining non-self-contained demo scan after migration.
+
+### Verification
+- `cargo test -p aura-gallery tag_and_tabs_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- Confirmed Tag/Tabs demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained After This Session
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `icon_demo.rs`
+- `image_demo.rs`
+- `layout_demo.rs`
+- `menu_demo.rs`
+- `preview_demo.rs`
+- `skeleton_demo.rs`
+- `table_demo.rs`

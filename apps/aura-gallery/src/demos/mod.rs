@@ -540,4 +540,14 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn tag_and_tabs_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("tag_demo.rs", include_str!("tag_demo.rs")),
+            ("tabs_demo.rs", include_str!("tabs_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }
