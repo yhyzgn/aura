@@ -457,4 +457,14 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn typography_and_progress_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("progress_demo.rs", include_str!("progress_demo.rs")),
+            ("typography_demo.rs", include_str!("typography_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }

@@ -2107,3 +2107,24 @@
 
 ### Key Discoveries
 - The common `page`/`section`/`row` helpers cover Popper-style demo pages without needing new production APIs.
+
+## Session 126 — 2026-05-11 (P7 Typography and Progress Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for `progress_demo.rs` and `typography_demo.rs` before migration.
+- Migrated Progress demo to `page`/`section`/`Space` helpers and added `Progress::thick()` / `Progress::primary()` semantic builders to avoid demo-level `px()` and raw GPUI colors.
+- Migrated Typography demo to shared helpers and Aura text/layout components, removing direct demo-level GPUI layout primitives.
+- Added a unit test for `Progress::thick()`.
+
+### Verification
+- `cargo test -p aura-gallery typography_and_progress_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-components progress_thick_sets_stroke_width` passed.
+- `cargo test -p aura-components` passed.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `git diff --check` passed.
+- Confirmed Progress/Typography demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Progress needed small semantic builders to keep the demo expressive without reaching for low-level pixel/color primitives.

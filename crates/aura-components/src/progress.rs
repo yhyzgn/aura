@@ -57,6 +57,10 @@ impl Progress {
         self
     }
 
+    pub fn thick(self) -> Self {
+        self.stroke_width(px(20.0))
+    }
+
     pub fn status(mut self, s: ProgressStatus) -> Self {
         self.status = Some(s);
         self
@@ -65,6 +69,13 @@ impl Progress {
     pub fn color(mut self, c: Hsla) -> Self {
         self.color = Some(c);
         self.gradient = None;
+        self
+    }
+
+    pub fn primary(mut self) -> Self {
+        self.color = None;
+        self.gradient = None;
+        self.status = None;
         self
     }
 
@@ -235,5 +246,15 @@ impl IntoElement for Progress {
     type Element = gpui::Component<Self>;
     fn into_element(self) -> Self::Element {
         gpui::Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn progress_thick_sets_stroke_width() {
+        assert_eq!(Progress::new(42.0).thick().stroke_width, px(20.0));
     }
 }
