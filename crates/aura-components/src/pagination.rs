@@ -217,17 +217,21 @@ impl Render for Pagination {
 
             let hover_bg = if active {
                 if background {
-                    theme.primary.hover
+                    theme.neutral.text_3.opacity(0.35)
                 } else {
-                    theme.primary.base.opacity(0.16)
+                    theme.neutral.text_3.opacity(0.18)
                 }
             } else {
-                theme.primary.base.opacity(0.1)
+                theme.neutral.text_3.opacity(0.14)
             };
-            let hover_text_color = if active && background {
-                gpui::white()
+            let hover_text_color = if active {
+                if background {
+                    gpui::white()
+                } else {
+                    theme.primary.base
+                }
             } else {
-                theme.primary.base
+                theme.neutral.text_1
             };
             let hover_group = SharedString::from(format!("{}-hover", id));
 

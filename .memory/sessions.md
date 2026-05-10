@@ -1923,3 +1923,24 @@
 ### Key Discoveries
 - Passive/non-modal overlays must not use the active `Portal` layer because `PortalLayer` intentionally occludes the full window whenever active portals exist.
 - Toasts and tooltips are visual overlays, not modal interaction surfaces; modal/popover overlays can remain active portals.
+
+
+## Session 116 — 2026-05-10 (Menu/Select/Pagination/Progress polish)
+
+### Actions
+- Fixed Menu popover item selection to clear the actual collapsed/horizontal popover id after selecting an item.
+- Changed Pagination hover from green-tinted backgrounds to darker neutral gray hover states, with a distinct current-page hover treatment.
+- Added explicit IDs to Select dropdown options so GPUI hover styling applies reliably in the portal list, including a selected-option hover state.
+- Added `Progress::gradient(left, middle, right)` and rendered the line progress fill as two linear-gradient halves for left→middle→right transitions.
+- Added a gradient progress example to the Gallery demo.
+
+### Verification
+- `cargo fmt --all` passed.
+- `cargo test -p aura-components` passed.
+- `cargo test -p aura-core unique_id_tests::generated_ids_are_prefixed_and_unique` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Menu popover close must clear the trigger popover id, not a child item id-derived string.
+- Select portal options need their own stable IDs for hover styles to be tracked consistently.

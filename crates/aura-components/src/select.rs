@@ -344,6 +344,7 @@ impl Render for Select {
                             let label = label.clone();
 
                             gpui::div()
+                                .id(format!("select-option-{}", idx))
                                 .px(gpui::px(12.0))
                                 .py(gpui::px(8.0))
                                 .cursor_pointer()
@@ -352,7 +353,13 @@ impl Render for Select {
                                 } else {
                                     theme.neutral.card
                                 })
-                                .hover(|s| s.cursor_pointer().bg(theme.neutral.hover))
+                                .hover(move |s| {
+                                    s.cursor_pointer().bg(if is_selected {
+                                        theme.neutral.text_3.opacity(0.16)
+                                    } else {
+                                        theme.neutral.hover
+                                    })
+                                })
                                 .child(
                                     gpui::div()
                                         .text_size(gpui::px(theme.font_size.md))

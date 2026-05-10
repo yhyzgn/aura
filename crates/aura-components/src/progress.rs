@@ -1,7 +1,10 @@
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{App, Hsla, IntoElement, Pixels, RenderOnce, Window, div, prelude::*, px};
+use gpui::{
+    App, Hsla, IntoElement, Pixels, RenderOnce, Window, div, linear_color_stop, linear_gradient,
+    prelude::*, px,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ProgressType {
@@ -23,6 +26,7 @@ pub struct Progress {
     stroke_width: Pixels,
     status: Option<ProgressStatus>,
     color: Option<Hsla>,
+    gradient: Option<(Hsla, Hsla, Hsla)>,
     show_text: bool,
     text_inside: bool,
     text_inside_center: bool,
@@ -36,6 +40,7 @@ impl Progress {
             stroke_width: px(6.0),
             status: None,
             color: None,
+            gradient: None,
             show_text: true,
             text_inside: false,
             text_inside_center: false,
@@ -59,6 +64,13 @@ impl Progress {
 
     pub fn color(mut self, c: Hsla) -> Self {
         self.color = Some(c);
+        self.gradient = None;
+        self
+    }
+
+    pub fn gradient(mut self, left: Hsla, middle: Hsla, right: Hsla) -> Self {
+        self.gradient = Some((left, middle, right));
+        self.color = None;
         self
     }
 
@@ -94,6 +106,11 @@ impl RenderOnce for Progress {
             Some(ProgressStatus::Exception) => theme.danger.base,
             None => self.color.unwrap_or(theme.primary.base),
         };
+        let gradient = if self.status.is_none() {
+            self.gradient
+        } else {
+            None
+        };
 
         if self.type_ == ProgressType::Line {
             let percent_text = format!("{}%", self.percentage.round() as i32);
@@ -106,8 +123,23 @@ impl RenderOnce for Progress {
             let bar = div()
                 .h_full()
                 .w(gpui::relative(self.percentage / 100.0))
-                .bg(status_color)
                 .rounded_full()
+                .overflow_hidden()
+                .when(gradient.is_none(), |s| s.bg(status_color))
+                .when_some(gradient, |s, (left, middle, right)| {
+                    s.flex()
+                        .flex_row()
+                        .child(div().h_full().flex_1().bg(linear_gradient(
+                            90.0,
+                            linear_color_stop(left, 0.0),
+                            linear_color_stop(middle, 1.0),
+                        )))
+                        .child(div().h_full().flex_1().bg(linear_gradient(
+                            90.0,
+                            linear_color_stop(middle, 0.0),
+                            linear_color_stop(right, 1.0),
+                        )))
+                })
                 .when(
                     self.show_text
                         && self.text_inside

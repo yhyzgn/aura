@@ -91,7 +91,12 @@ impl Render for ProgressDemo {
                             .font_weight(gpui::FontWeight::BOLD)
                             .child("自定义颜色"),
                     )
-                    .child(Progress::new(50.0).color(gpui::blue())),
+                    .child(Progress::new(50.0).color(gpui::blue()))
+                    .child(Progress::new(75.0).gradient(
+                        theme.success.base,
+                        theme.warning.base,
+                        theme.danger.base,
+                    )),
             )
     }
 }

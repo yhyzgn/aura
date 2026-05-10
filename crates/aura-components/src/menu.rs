@@ -282,6 +282,8 @@ impl Menu {
             .id(format!("{}-collapsed-popover-{}", self.id, id))
             .placement(Placement::RightStart)
             .content({
+                let popover_id: SharedString =
+                    format!("{}-collapsed-popover-{}", self.id, id).into();
                 let children: Vec<MenuItem> = submenu
                     .children
                     .iter()
@@ -298,6 +300,7 @@ impl Menu {
                     })
                     .collect();
                 let theme = theme.clone();
+                let popover_id = popover_id.clone();
                 move |_window, _cx| {
                     let menu_handle = menu_handle.clone();
                     div()
@@ -347,11 +350,15 @@ impl Menu {
                                     gpui::transparent_black()
                                 })
                                 .hover(|s| s.bg(theme.neutral.hover))
-                                .on_click(move |_, window, cx| {
-                                    let _ = menu_handle.update(cx, |this, cx| {
-                                        this.select_item(id.clone(), window, cx);
-                                        cx.notify();
-                                    });
+                                .on_click({
+                                    let popover_id = popover_id.clone();
+                                    move |_, window, cx| {
+                                        let _ = menu_handle.update(cx, |this, cx| {
+                                            this.select_item(id.clone(), window, cx);
+                                            cx.notify();
+                                        });
+                                        aura_core::clear_popover(&popover_id, cx);
+                                    }
                                 })
                                 .when_some(icon, |s, i| {
                                     s.child(Icon::new(i).size(px(16.0)).color(item_color))
@@ -536,6 +543,7 @@ impl Menu {
         .id(format!("{}-horizontal-popover-{}", self.id, id))
         .placement(Placement::BottomStart)
         .content({
+            let popover_id: SharedString = format!("{}-horizontal-popover-{}", self.id, id).into();
             let children: Vec<MenuItem> = submenu
                 .children
                 .iter()
@@ -552,6 +560,7 @@ impl Menu {
                 })
                 .collect();
             let theme = theme.clone();
+            let popover_id = popover_id.clone();
             move |_window, _cx| {
                 let menu_handle = menu_handle.clone();
                 div()
@@ -605,17 +614,13 @@ impl Menu {
                             })
                             .hover(|s| s.bg(theme.neutral.hover))
                             .on_click({
-                                let popover_id = format!(
-                                    "{}-collapsed-popover-{}",
-                                    menu_handle.read(_cx).id,
-                                    id
-                                );
+                                let popover_id = popover_id.clone();
                                 move |_, window, cx| {
                                     let _ = menu_handle.update(cx, |this, cx| {
                                         this.select_item(id.clone(), window, cx);
                                         cx.notify();
                                     });
-                                    aura_core::clear_popover(&popover_id.clone().into(), cx);
+                                    aura_core::clear_popover(&popover_id, cx);
                                 }
                             })
                             .when_some(icon, |s, i| {
