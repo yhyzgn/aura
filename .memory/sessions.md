@@ -2381,3 +2381,25 @@
 ### Key Discoveries
 - Compact input sizing should be component-level API (`Input::width_sm`) rather than borrowing Card width presets.
 - Tabs is often embedded in scrollable documents; forcing full height at the component root breaks stacked demo/document layouts.
+
+## Session 136 — 2026-05-11 (Statistic Horizontal Layout and Icon API)
+
+### Actions
+- Extended `Statistic` with explicit layout state: default vertical, compact horizontal, and space-between horizontal.
+- Added `Statistic::icon(...)` using the existing `IntoIconPath`/`Icon` pipeline so lucide icon names and custom icon paths both work.
+- Added icon position controls (`icon_left`, `icon_right`, `icon_position`) and `icon_color`; icon color defaults to the resolved statistic value color when not explicitly set.
+- Preserved existing `prefix`/`suffix` element APIs for arbitrary custom adornments.
+- Updated the Statistic gallery demo with icon color/position examples and horizontal compact/space-between cards.
+- Added TDD regression coverage for horizontal layout helpers, icon position/color builders, and default icon color resolution.
+
+### Verification
+- `cargo test -p aura-components statistic_ --lib` failed before implementation because the new layout/icon API did not exist, then passed after implementation.
+- `cargo test -p aura-components` passed: 21 unit tests plus component integration/doc tests.
+- `cargo test -p aura-gallery` passed: 16 gallery tests including the Statistic demo self-contained guard batch.
+- `cargo check` passed for the workspace.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- `Icon::color(Hsla)` already exists, but an unset Icon falls back to neutral icon color; Statistic therefore needs to explicitly pass the resolved value color to satisfy “icon follows number color by default”.
+- `prefix`/`suffix` are too generic to enforce inherited icon coloring, so the new `icon(...)` API is the safer component-level path while keeping existing compatibility.
