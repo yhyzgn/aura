@@ -6,7 +6,7 @@ use super::common::{page, row_md, section};
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| TagDemo {
         tags: vec!["Tag 1".into(), "Tag 2".into(), "Tag 3".into()],
-        input: cx.new(|cx| Input::new("", cx)),
+        input: cx.new(|cx| Input::new("", cx).width_sm()),
         is_input_visible: false,
     })
     .into()
@@ -52,6 +52,7 @@ impl Render for TagDemo {
                                 if self.is_input_visible {
                                     cx.update_entity(&self.input, |input, cx| {
                                         input.set_placeholder("Tag Name", cx);
+                                        input.set_width_sm(cx);
                                         input.set_on_enter(
                                             {
                                                 let view_handle = view_handle.clone();
@@ -79,10 +80,7 @@ impl Render for TagDemo {
                                         );
                                     });
 
-                                    Card::new(self.input.clone())
-                                        .no_shadow()
-                                        .width_md()
-                                        .into_any_element()
+                                    self.input.clone().into_any_element()
                                 } else {
                                     Button::new("+ New Tag")
                                         .small()

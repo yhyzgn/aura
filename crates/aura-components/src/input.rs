@@ -65,6 +65,7 @@ pub struct Input {
     mask_char: char,
     prepend: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
     append: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyElement + 'static>>,
+    width: Option<Pixels>,
     height: Option<Pixels>,
     pub min_rows: usize,
     text_align: gpui::TextAlign,
@@ -97,6 +98,7 @@ impl Input {
             mask_char: '•',
             prepend: None,
             append: None,
+            width: None,
             height: None,
             min_rows: 1,
             text_align: gpui::TextAlign::Left,
@@ -161,6 +163,20 @@ impl Input {
     pub fn height(mut self, h: impl Into<Pixels>) -> Self {
         self.height = Some(h.into());
         self
+    }
+    pub fn width(mut self, w: impl Into<Pixels>) -> Self {
+        self.width = Some(w.into());
+        self
+    }
+    pub fn width_sm(self) -> Self {
+        self.width(px(96.0))
+    }
+    pub fn set_width(&mut self, w: impl Into<Pixels>, cx: &mut Context<Self>) {
+        self.width = Some(w.into());
+        cx.notify();
+    }
+    pub fn set_width_sm(&mut self, cx: &mut Context<Self>) {
+        self.set_width(px(96.0), cx);
     }
     pub fn text_align(mut self, align: gpui::TextAlign) -> Self {
         self.text_align = align;
@@ -1145,6 +1161,7 @@ impl Render for Input {
         let mut row = gpui::div()
             .flex()
             .flex_row()
+            .when_some(self.width, |s, w| s.w(w))
             .when_some(self.height, |s, h| s.h(h))
             .when(self.height.is_none(), |s| {
                 if self.min_rows > 1 {
@@ -1306,5 +1323,20 @@ impl Render for Input {
         }
 
         row
+    }
+}
+
+#[cfg(test)]
+mod width_tests {
+    #[test]
+    fn input_width_sm_sets_compact_width() {
+        let source = include_str!("input.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("width: Option<Pixels>"));
+        assert!(source.contains("pub fn width_sm(self) -> Self"));
+        assert!(source.contains(".when_some(self.width, |s, w| s.w(w))"));
     }
 }

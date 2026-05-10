@@ -550,4 +550,30 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn tag_dynamic_input_uses_compact_input_width() {
+        let source = include_str!("tag_demo.rs");
+
+        assert!(
+            source.contains(r#"Input::new("", cx).width_sm()"#),
+            "dynamic tag input should use compact input width instead of a medium card wrapper"
+        );
+        assert!(
+            !source.contains("Card::new(self.input.clone())"),
+            "dynamic tag input should not be wrapped in a Card just to set width"
+        );
+    }
+
+    #[test]
+    fn tabs_demo_scrolls_with_natural_tab_height() {
+        let source = include_str!("../../../../crates/aura-components/src/tabs.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+
+        assert!(
+            !production
+                .contains(".w_full()\n            .h_full()\n            .when(!is_vertical"),
+            "Tabs root should not force full height inside scrollable demo pages"
+        );
+    }
 }

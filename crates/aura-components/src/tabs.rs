@@ -364,7 +364,6 @@ impl Render for Tabs {
         div()
             .flex()
             .w_full()
-            .h_full()
             .when(!is_vertical, |s| s.flex_col())
             .when(is_vertical, |s| s.flex_row())
             .when(tab_type == TabType::BorderCard, |s| {

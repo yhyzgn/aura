@@ -2355,3 +2355,29 @@
 - `preview_demo.rs`
 - `skeleton_demo.rs`
 - `table_demo.rs`
+
+## Session 135 — 2026-05-11 (Tag Input and Tabs Scroll Fix)
+
+### Actions
+- Investigated Tag dynamic input becoming too large after self-contained migration.
+- Identified root cause: the migrated demo wrapped the input in `Card::width_md()` only to get width, making the editor visually too large.
+- Added `Input::width`, `Input::width_sm()`, `Input::set_width`, and `Input::set_width_sm()` so compact field sizing can live on the input itself.
+- Updated Tag demo dynamic input to use `Input::width_sm()` and removed the Card wrapper.
+- Investigated Tabs demo bottom content being cramped and page not scrolling.
+- Identified root cause: `Tabs` root forced `.h_full()`, causing each Tabs instance in a scroll page to compete for full parent height instead of natural content height.
+- Removed root `h_full()` from `Tabs` while keeping width and orientation behavior.
+- Added regression tests for compact Tag input usage and natural Tabs height in scroll pages.
+
+### Verification
+- `cargo test -p aura-gallery tag_dynamic_input_uses_compact_input_width` failed before fix and passed after fix.
+- `cargo test -p aura-gallery tabs_demo_scrolls_with_natural_tab_height` failed before fix and passed after fix.
+- `cargo test -p aura-components input_width_sm_sets_compact_width` passed.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Compact input sizing should be component-level API (`Input::width_sm`) rather than borrowing Card width presets.
+- Tabs is often embedded in scrollable documents; forcing full height at the component root breaks stacked demo/document layouts.
