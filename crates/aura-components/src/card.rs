@@ -12,6 +12,7 @@ pub struct Card {
     hoverable: bool,
     shadow: bool,
     width: Option<Pixels>,
+    shrink: bool,
 }
 
 impl Card {
@@ -24,6 +25,7 @@ impl Card {
             hoverable: false,
             shadow: true,
             width: None,
+            shrink: true,
         }
     }
 
@@ -64,6 +66,11 @@ impl Card {
     pub fn width_lg(self) -> Self {
         self.width(px(400.0))
     }
+
+    pub fn no_shrink(mut self) -> Self {
+        self.shrink = false;
+        self
+    }
 }
 
 impl RenderOnce for Card {
@@ -78,6 +85,7 @@ impl RenderOnce for Card {
             .border_color(theme.neutral.border)
             .rounded(px(theme.radius.md))
             .overflow_hidden()
+            .when(!self.shrink, |s| s.flex_none())
             .when_some(self.width, |s, width| s.w(width));
 
         if self.shadow {
@@ -144,5 +152,10 @@ mod tests {
     fn card_width_helpers_set_demo_widths() {
         assert_eq!(Card::new("body").width_md().width, Some(px(300.0)));
         assert_eq!(Card::new("body").width_lg().width, Some(px(400.0)));
+    }
+
+    #[test]
+    fn card_no_shrink_tracks_scroll_container_usage() {
+        assert!(!Card::new("body").no_shrink().shrink);
     }
 }

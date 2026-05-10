@@ -66,6 +66,7 @@ mod shell_tests {
 
         assert!(source.contains("Container::new()"));
         assert!(source.contains("Menu::new()"));
+        assert!(source.contains(".no_shrink()"));
         assert!(!source.contains(&format!("gallery-demo{}nav-", "-")));
     }
 }
@@ -102,7 +103,8 @@ impl Render for Gallery {
                 )
                 .child(selected_demo),
         )
-        .no_shadow();
+        .no_shadow()
+        .no_shrink();
 
         aura_components::message::render_messages(cx);
         aura_components::notification::render_notifications(cx);

@@ -2659,3 +2659,24 @@
 
 ### Key Discoveries
 - For GPUI scroll regions nested in flex layouts, `flex_1/min_h_0` alone may not create the bounded viewport; the previous working gallery implementation also had `h_full()`, which Container now mirrors.
+
+## Session 146 — 2026-05-11 (Gallery Content Card Scroll Fix)
+
+### Actions
+- Continued investigating the right-panel scroll regression using `form_demo` as the long-content reproduction case.
+- Identified the next conflict introduced by the shell self-bootstrap: the selected demo is wrapped in `Card`, and `Card` defaults to `overflow_hidden()`. In a flex-column scroll container, the card can shrink to the viewport and clip the long form internally, leaving no overflow for the outer main scroll region.
+- Added `Card::no_shrink()` to opt a card out of flex shrinking when it is used as scroll-region content.
+- Applied `.no_shrink()` to the gallery selected-demo content card.
+- Added tests for the Card helper and the gallery shell requirement.
+
+### Verification
+- `cargo test -p aura-components card_no_shrink_tracks_scroll_container_usage --lib` passed.
+- `cargo test -p aura-gallery gallery_shell_uses_container_and_menu` passed.
+- `cargo test -p aura-components` passed: 32 component tests plus integration/doc tests.
+- `cargo test -p aura-gallery` passed: 22 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- `Card::overflow_hidden()` is correct for visual clipping, but scroll-region content cards must be non-shrinking so long child content contributes to the outer scroll height instead of being clipped inside the card.
