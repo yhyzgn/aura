@@ -2217,3 +2217,46 @@
 
 ### Key Discoveries
 - Layout-oriented demos often need small semantic presentation helpers; migrating broader `layout_demo.rs` should be handled as a separate pass because grid color boxes still need component-level API support.
+
+## Session 131 — 2026-05-11 (P7 Selection Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for Autocomplete, Cascader, and Transfer demos before migration.
+- Migrated those demos to shared `page`/`section`/`Space`/`Card` helpers and Aura `Text`, removing demo-level GPUI layout primitives.
+- Added semantic width helpers used by the migrated demos:
+  - `Autocomplete::width_lg()`
+  - `Cascader::width_md()`
+  - `Transfer::width_lg()`
+- Added unit coverage for `Transfer::width_lg()`; Autocomplete/Cascader width helpers are compile-verified through migrated demo construction.
+- Regenerated the remaining un-self-contained demo scan after migration.
+
+### Verification
+- `cargo test -p aura-gallery selection_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-components transfer_width_lg_sets_demo_width` passed.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- Confirmed Autocomplete/Cascader/Transfer demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained After This Session
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `dialog_demo.rs`
+- `drawer_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `icon_demo.rs`
+- `image_demo.rs`
+- `layout_demo.rs`
+- `menu_demo.rs`
+- `page_header_demo.rs`
+- `popover_demo.rs`
+- `preview_demo.rs`
+- `skeleton_demo.rs`
+- `table_demo.rs`
+- `tabs_demo.rs`
+- `tag_demo.rs`

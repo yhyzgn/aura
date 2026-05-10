@@ -135,6 +135,10 @@ impl Transfer {
         self
     }
 
+    pub fn width_lg(self) -> Self {
+        self.width(px(680.0))
+    }
+
     pub fn height(mut self, height: impl Into<gpui::Pixels>) -> Self {
         self.height = height.into();
         self
@@ -633,4 +637,19 @@ fn has_enabled_checked(items: &[TransferItem], checked_keys: &[SharedString]) ->
     items
         .iter()
         .any(|item| !item.disabled && checked_keys.contains(&item.key))
+}
+
+#[cfg(test)]
+mod demo_width_tests {
+    use super::*;
+
+    #[test]
+    fn transfer_width_lg_sets_demo_width() {
+        assert_eq!(
+            Transfer::new(vec![TransferItem::new("a", "A")])
+                .width_lg()
+                .width,
+            px(680.0)
+        );
+    }
 }

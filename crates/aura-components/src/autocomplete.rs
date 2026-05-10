@@ -107,6 +107,10 @@ impl Autocomplete {
         self
     }
 
+    pub fn width_lg(self) -> Self {
+        self.width(px(320.0))
+    }
+
     pub fn max_suggestions(mut self, max: usize) -> Self {
         self.max_suggestions = max.max(1);
         self

@@ -1,7 +1,8 @@
-use aura_components::{Autocomplete, AutocompleteItem, Card};
-use aura_core::Config;
+use aura_components::{Autocomplete, AutocompleteItem, Card, Space, Text};
 use aura_icons_lucide::IconName;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| AutocompleteDemo::new(cx)).into()
@@ -39,7 +40,7 @@ impl AutocompleteDemo {
                 move |cx| {
                     Autocomplete::new(suggestions, cx)
                         .placeholder("Jump to route")
-                        .width(px(320.0))
+                        .width_lg()
                         .max_suggestions(4)
                         .suffix_icon(IconName::Command)
                 }
@@ -65,78 +66,44 @@ impl AutocompleteDemo {
 }
 
 impl Render for AutocompleteDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.global::<Config>().theme.clone();
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Autocomplete 自动补全"),
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Autocomplete 自动补全",
+            "输入时展示匹配建议，点击选项回填输入框。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础用法",
+                    "Try: rust, gpui, aura。",
+                    Space::new()
+                        .vertical()
+                        .gap_md()
+                        .child(self.basic.clone())
+                        .child(Text::new("Try: rust, gpui, aura")),
+                ))
+                .child(section(
+                    "自定义建议",
+                    "Value and label can be different, useful for routes or commands.",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.custom.clone())
+                            .child(Text::new("Value and label can be different, useful for routes or commands.")),
                     )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("输入时展示匹配建议，点击选项回填输入框。"),
-                    ),
-            )
-            .child(section(
-                "基础用法",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.basic.clone())
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("Try: rust, gpui, aura"),
-                    ),
-            ))
-            .child(section(
-                "自定义建议",
-                Card::new(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap_3()
-                        .child(self.custom.clone())
-                        .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                            "Value and label can be different, useful for routes or commands.",
-                        )),
-                )
-                .no_shadow(),
-            ))
-            .child(section(
-                "无右侧图标",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.no_suffix.clone())
-                    .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "Suffix icon can be disabled; clear icon still appears only after typing.",
-                    )),
-            ))
-            .child(section("禁用状态", self.disabled.clone()))
+                    .no_shadow(),
+                ))
+                .child(section(
+                    "无右侧图标",
+                    "Suffix icon can be disabled; clear icon still appears only after typing.",
+                    Space::new()
+                        .vertical()
+                        .gap_md()
+                        .child(self.no_suffix.clone())
+                        .child(Text::new("Suffix icon can be disabled; clear icon still appears only after typing.")),
+                ))
+                .child(section("禁用状态", "禁用后不可输入或展开建议。", self.disabled.clone())),
+        )
     }
-}
-
-fn section(title: &'static str, content: impl IntoElement) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .gap_4()
-        .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
-        .child(content)
 }

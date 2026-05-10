@@ -517,4 +517,15 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn selection_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("autocomplete_demo.rs", include_str!("autocomplete_demo.rs")),
+            ("cascader_demo.rs", include_str!("cascader_demo.rs")),
+            ("transfer_demo.rs", include_str!("transfer_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }

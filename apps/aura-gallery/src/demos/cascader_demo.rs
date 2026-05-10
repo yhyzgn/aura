@@ -1,6 +1,7 @@
-use aura_components::{Card, Cascader, CascaderOption, Text};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
+use aura_components::{Card, Cascader, CascaderOption, Space, Text};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| CascaderDemo::new(cx)).into()
@@ -21,32 +22,32 @@ impl CascaderDemo {
                 Cascader::new(region_options(), cx)
                     .placeholder("请选择地区")
                     .clearable(true)
-                    .width(px(360.0))
+                    .width_md()
             }),
             selected: cx.new(|cx| {
                 Cascader::new(product_options(), cx)
                     .selected_path(["cloud", "compute", "ecs"])
                     .placeholder("请选择产品")
-                    .width(px(360.0))
+                    .width_md()
             }),
             disabled: cx.new(|cx| {
                 Cascader::new(region_options(), cx)
                     .disabled(true)
                     .selected_path(["zhejiang", "hangzhou", "xihu"])
-                    .width(px(360.0))
+                    .width_md()
             }),
             searchable: cx.new(|cx| {
                 Cascader::new(region_options(), cx)
                     .filterable(true)
                     .search_query("hang")
                     .placeholder("搜索 hang")
-                    .width(px(360.0))
+                    .width_md()
             }),
             lazy: cx.new(|cx| {
                 Cascader::new(lazy_options(), cx)
                     .lazy(true)
                     .placeholder("请选择远程节点")
-                    .width(px(360.0))
+                    .width_md()
                     .on_lazy_load(|cascader, path, _, cx| {
                         let children = lazy_children_for(&path);
                         cascader.set_children_at_path(&path, children, cx);
@@ -57,74 +58,50 @@ impl CascaderDemo {
 }
 
 impl Render for CascaderDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.global::<Config>().theme.clone();
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Cascader 级联选择器"),
-                    )
-                    .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "从一组相关联的数据集合中逐级选择，支持默认选中、禁用、清空、搜索结果面板和懒加载。",
-                    )),
-            )
-            .child(section(
-                "基础用法",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.basic.clone())
-                    .child(Text::new("点击含子级的选项会展开下一列，点击叶子节点完成选择。").size(px(theme.font_size.sm))),
-            ))
-            .child(section("默认选中", self.selected.clone()))
-            .child(section("禁用状态", self.disabled.clone()))
-            .child(section(
-                "可搜索",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.searchable.clone())
-                    .child(
-                        Text::new("示例预置 search_query=\"hang\" 展示叶子路径匹配结果。")
-                            .size(px(theme.font_size.sm)),
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Cascader 级联选择器",
+            "从一组相关联的数据集合中逐级选择，支持默认选中、禁用、清空、搜索结果面板和懒加载。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础用法",
+                    "点击含子级的选项会展开下一列，点击叶子节点完成选择。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.basic.clone())
+                            .child(Text::new("点击含子级的选项会展开下一列，点击叶子节点完成选择。")),
                     ),
-            ))
-            .child(section(
-                "懒加载",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.lazy.clone())
-                    .child(
-                        Text::new("点击空子级的分支会触发 on_lazy_load，回调内通过 set_children_at_path 写回远程子节点；点击最终 leaf(true) 节点才会选择并关闭。")
-                            .size(px(theme.font_size.sm)),
+                ))
+                .child(section("默认选中", "预置已选择的路径。", Card::new(self.selected.clone())))
+                .child(section("禁用状态", "禁用后不可展开或修改。", Card::new(self.disabled.clone())))
+                .child(section(
+                    "可搜索",
+                    "示例预置 search_query=\"hang\" 展示叶子路径匹配结果。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.searchable.clone())
+                            .child(Text::new("示例预置 search_query=\"hang\" 展示叶子路径匹配结果。")),
                     ),
-            ))
+                ))
+                .child(section(
+                    "懒加载",
+                    "点击空子级的分支会触发 on_lazy_load，回调内写回远程子节点。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.lazy.clone())
+                            .child(Text::new("点击空子级的分支会触发 on_lazy_load，回调内通过 set_children_at_path 写回远程子节点；点击最终 leaf(true) 节点才会选择并关闭。")),
+                    ),
+                )),
+        )
     }
-}
-
-fn section(title: &'static str, content: impl IntoElement) -> gpui::Div {
-    div()
-        .flex()
-        .flex_col()
-        .gap_4()
-        .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
-        .child(Card::new(content))
 }
 
 fn region_options() -> Vec<CascaderOption> {

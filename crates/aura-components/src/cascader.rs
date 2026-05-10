@@ -165,6 +165,10 @@ impl Cascader {
         self
     }
 
+    pub fn width_md(self) -> Self {
+        self.width(px(360.0))
+    }
+
     pub fn lazy(mut self, lazy: bool) -> Self {
         self.lazy = lazy;
         self

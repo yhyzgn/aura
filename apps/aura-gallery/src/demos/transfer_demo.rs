@@ -1,6 +1,7 @@
-use aura_components::{Card, Text, Transfer, TransferItem};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*, px};
+use aura_components::{Card, Space, Text, Transfer, TransferItem};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| TransferDemo::new(cx)).into()
@@ -29,7 +30,7 @@ impl TransferDemo {
                     .target_filter("ops")
                     .target_keys(["ops"])
                     .checked_source_keys(["admin"])
-                    .width(px(680.0))
+                    .width_lg()
             }),
             disabled: cx.new(|_| {
                 Transfer::new(city_items())
@@ -42,66 +43,48 @@ impl TransferDemo {
 }
 
 impl Render for TransferDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.global::<Config>().theme.clone();
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Transfer 穿梭框"),
-                    )
-                    .child(div().text_sm().text_color(theme.neutral.text_3).child(
-                        "在两个列表之间移动条目，适合权限分配、人员选择等场景。",
-                    )),
-            )
-            .child(section(
-                "基础用法",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.basic.clone())
-                    .child(Text::new("示例预勾选两个源列表条目，点击右箭头移动到目标列表。").size(px(theme.font_size.sm))),
-            ))
-            .child(section(
-                "过滤展示",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.filtered.clone())
-                    .child(Text::new("当前过滤文本通过 source_filter / target_filter 预置，业务可用自己的输入框驱动这些值。").size(px(theme.font_size.sm))),
-            ))
-            .child(section(
-                "禁用项",
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_3()
-                    .child(self.disabled.clone())
-                    .child(Text::new("禁用条目不可勾选或移动，已选目标中的禁用项也会保留。路径测试覆盖了该行为。").size(px(theme.font_size.sm))),
-            ))
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Transfer 穿梭框",
+            "在两个列表之间移动条目，适合权限分配、人员选择等场景。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础用法",
+                    "示例预勾选两个源列表条目，点击右箭头移动到目标列表。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.basic.clone())
+                            .child(Text::new("示例预勾选两个源列表条目，点击右箭头移动到目标列表。")),
+                    ),
+                ))
+                .child(section(
+                    "过滤展示",
+                    "当前过滤文本通过 source_filter / target_filter 预置，业务可用自己的输入框驱动这些值。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.filtered.clone())
+                            .child(Text::new("当前过滤文本通过 source_filter / target_filter 预置，业务可用自己的输入框驱动这些值。")),
+                    ),
+                ))
+                .child(section(
+                    "禁用项",
+                    "禁用条目不可勾选或移动，已选目标中的禁用项也会保留。",
+                    Card::new(
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(self.disabled.clone())
+                            .child(Text::new("禁用条目不可勾选或移动，已选目标中的禁用项也会保留。路径测试覆盖了该行为。")),
+                    ),
+                )),
+        )
     }
-}
-
-fn section(title: &'static str, content: impl IntoElement) -> gpui::Div {
-    div()
-        .flex()
-        .flex_col()
-        .gap_4()
-        .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
-        .child(Card::new(content))
 }
 
 fn city_items() -> Vec<TransferItem> {
