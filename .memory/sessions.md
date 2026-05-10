@@ -2089,3 +2089,21 @@
 
 ### Key Discoveries
 - Several display demos can be significantly reduced by composing `page`, `section`, `row`, `Space`, and existing Aura presentation components.
+
+## Session 125 — 2026-05-10 (P7 Interaction Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for interaction demos before migration.
+- Migrated `pagination_demo.rs`, `popconfirm_demo.rs`, and `tooltip_demo.rs` to Aura/common demo helpers.
+- Removed direct demo-level `div(`, `px(`, and low-level flex primitives from that batch.
+
+### Verification
+- `cargo test -p aura-gallery interaction_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `git diff --check` passed.
+- Confirmed migrated interaction demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- The common `page`/`section`/`row` helpers cover Popper-style demo pages without needing new production APIs.

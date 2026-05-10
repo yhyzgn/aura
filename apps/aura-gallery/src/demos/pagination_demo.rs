@@ -1,6 +1,7 @@
-use aura_components::{Card, Pagination};
-use aura_core::Config;
-use gpui::{AnyView, App, Context, Entity, Render, Window, div, prelude::*};
+use aura_components::{Card, Pagination, Space};
+use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| PaginationDemo {
@@ -36,65 +37,28 @@ struct PaginationDemo {
 }
 
 impl Render for PaginationDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .id("pagination-scroll")
-            .overflow_y_scroll()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Pagination 分页"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("当数据量过多时，使用分页分解数据。"),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(Card::new(self.basic.clone())),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("带有背景色的分页"),
-                    )
-                    .child(Card::new(self.background.clone())),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("附加功能 (Total, Sizes, Jumper)"),
-                    )
-                    .child(Card::new(self.page_sizes.clone())),
-            )
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Pagination 分页",
+            "当数据量过多时，使用分页分解数据。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础用法",
+                    "基础分页控制。",
+                    Card::new(self.basic.clone()),
+                ))
+                .child(section(
+                    "带有背景色的分页",
+                    "使用背景样式突出页码按钮。",
+                    Card::new(self.background.clone()),
+                ))
+                .child(section(
+                    "附加功能 (Total, Sizes, Jumper)",
+                    "组合总数、页尺寸和跳转输入。",
+                    Card::new(self.page_sizes.clone()),
+                )),
+        )
     }
 }

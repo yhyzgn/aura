@@ -446,4 +446,15 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn interaction_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("pagination_demo.rs", include_str!("pagination_demo.rs")),
+            ("popconfirm_demo.rs", include_str!("popconfirm_demo.rs")),
+            ("tooltip_demo.rs", include_str!("tooltip_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }
