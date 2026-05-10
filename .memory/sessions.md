@@ -2174,3 +2174,24 @@
 
 ### Key Discoveries
 - Picker demos are blocked mostly by repeated literal widths; narrow semantic width helpers keep demos self-contained without changing component behavior.
+
+## Session 129 — 2026-05-11 (P7 Data Display Demo Batch)
+
+### Actions
+- Added and confirmed a failing self-contained guard test for Avatar, Badge, Descriptions, and Timeline demos before migration.
+- Migrated those demos to shared `page`/`section`/`row`/`Space` helpers and existing Aura components.
+- Added `TimelineTone` plus semantic `TimelineItem::{primary,success,warning,danger,info}` helpers so timeline demos can avoid reaching into theme/raw GPUI colors.
+- Added unit coverage for Timeline tone helper precedence.
+
+### Verification
+- `cargo test -p aura-gallery data_display_demos_use_aura_layout_primitives` failed before migration and passed after migration.
+- `cargo test -p aura-components timeline_tone_helpers_track_semantic_tone` passed.
+- `cargo test -p aura-gallery` passed.
+- `cargo check` passed.
+- `cargo test -p aura-components` passed.
+- `git diff --check` passed.
+- Confirmed Avatar/Badge/Descriptions/Timeline demo files have zero occurrences of `div(`, `px(`, `.flex()`, `.flex_col()`, `.flex_row()`.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- Timeline color examples needed semantic component-level tone APIs to remain self-contained without exposing demo code to theme internals.

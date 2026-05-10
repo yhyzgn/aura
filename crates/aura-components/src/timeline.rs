@@ -13,10 +13,20 @@ pub enum TimelineMode {
     Alternate,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimelineTone {
+    Primary,
+    Success,
+    Warning,
+    Danger,
+    Info,
+}
+
 pub struct TimelineItem {
     pub timestamp: Option<SharedString>,
     pub content: AnyElement,
     pub color: Option<Hsla>,
+    pub tone: Option<TimelineTone>,
     pub icon: Option<IconName>,
     pub hollow: bool,
     pub hide_timestamp: bool,
@@ -42,6 +52,7 @@ impl TimelineItem {
             timestamp: None,
             content: div().into_any_element(),
             color: None,
+            tone: None,
             icon: None,
             hollow: false,
             hide_timestamp: false,
@@ -61,7 +72,34 @@ impl TimelineItem {
 
     pub fn color(mut self, c: Hsla) -> Self {
         self.color = Some(c);
+        self.tone = None;
         self
+    }
+
+    pub fn tone(mut self, tone: TimelineTone) -> Self {
+        self.tone = Some(tone);
+        self.color = None;
+        self
+    }
+
+    pub fn primary(self) -> Self {
+        self.tone(TimelineTone::Primary)
+    }
+
+    pub fn success(self) -> Self {
+        self.tone(TimelineTone::Success)
+    }
+
+    pub fn warning(self) -> Self {
+        self.tone(TimelineTone::Warning)
+    }
+
+    pub fn danger(self) -> Self {
+        self.tone(TimelineTone::Danger)
+    }
+
+    pub fn info(self) -> Self {
+        self.tone(TimelineTone::Info)
     }
 
     pub fn icon(mut self, icon: IconName) -> Self {
@@ -125,7 +163,14 @@ impl RenderOnce for Timeline {
             .w_full()
             .children(items.into_iter().enumerate().map(|(i, item)| {
                 let is_last = i == items_count - 1;
-                let dot_color = item.color.unwrap_or(theme.neutral.border);
+                let dot_color = item.color.unwrap_or_else(|| match item.tone {
+                    Some(TimelineTone::Primary) => theme.primary.base,
+                    Some(TimelineTone::Success) => theme.success.base,
+                    Some(TimelineTone::Warning) => theme.warning.base,
+                    Some(TimelineTone::Danger) => theme.danger.base,
+                    Some(TimelineTone::Info) => theme.info.base,
+                    None => theme.neutral.border,
+                });
                 let text_color = theme.neutral.text_2;
                 let timestamp_color = theme.neutral.text_3;
 
@@ -219,5 +264,21 @@ impl IntoElement for Timeline {
     type Element = gpui::Component<Self>;
     fn into_element(self) -> Self::Element {
         gpui::Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timeline_tone_helpers_track_semantic_tone() {
+        let item = TimelineItem::new().success();
+        assert_eq!(item.tone, Some(TimelineTone::Success));
+        assert!(item.color.is_none());
+
+        let custom = TimelineItem::new().success().color(gpui::red());
+        assert_eq!(custom.tone, None);
+        assert_eq!(custom.color, Some(gpui::red()));
     }
 }

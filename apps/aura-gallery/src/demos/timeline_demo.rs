@@ -1,7 +1,8 @@
-use aura_components::{Card, Timeline, TimelineItem, TimelinePlacement};
-use aura_core::Config;
+use aura_components::{Card, Space, Timeline, TimelineItem, TimelinePlacement};
 use aura_icons_lucide::IconName;
-use gpui::{AnyView, App, Context, Render, Window, div, prelude::*};
+use gpui::{AnyView, App, Context, Render, Window, prelude::*};
+
+use super::common::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| TimelineDemo).into()
@@ -10,41 +11,17 @@ pub fn render(cx: &mut App) -> AnyView {
 struct TimelineDemo;
 
 impl Render for TimelineDemo {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = &cx.global::<Config>().theme;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_8()
-            .p_4()
-            .id("timeline-scroll")
-            .overflow_y_scroll()
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("Timeline 时间线"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(theme.neutral.text_3)
-                            .child("垂直展示一系列信息。"),
-                    ),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("基础用法"))
-                    .child(Card::new(
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        page(
+            "Timeline 时间线",
+            "垂直展示一系列信息。",
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(section(
+                    "基础用法",
+                    "按时间顺序展示事件。",
+                    Card::new(
                         Timeline::new()
                             .item(
                                 TimelineItem::new()
@@ -61,60 +38,46 @@ impl Render for TimelineDemo {
                                     .timestamp("2026-05-03")
                                     .content("项目发布"),
                             ),
-                    )),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("自定义节点样式"),
-                    )
-                    .child(Card::new(
+                    ),
+                ))
+                .child(section(
+                    "自定义节点样式",
+                    "使用语义状态、空心节点和图标节点。",
+                    Card::new(
                         Timeline::new()
                             .item(
                                 TimelineItem::new()
                                     .timestamp("2026-05-01")
                                     .content("成功状态")
-                                    .color(theme.success.base),
+                                    .success(),
                             )
                             .item(
                                 TimelineItem::new()
                                     .timestamp("2026-05-02")
                                     .content("警告状态")
-                                    .color(theme.warning.base)
+                                    .warning()
                                     .hollow(true),
                             )
                             .item(
                                 TimelineItem::new()
                                     .timestamp("2026-05-03")
                                     .content("错误状态")
-                                    .color(theme.danger.base)
+                                    .danger()
                                     .icon(IconName::CircleX),
                             )
                             .item(
                                 TimelineItem::new()
                                     .timestamp("2026-05-04")
                                     .content("自定义图标")
-                                    .icon(IconName::Star)
-                                    .color(gpui::blue()),
+                                    .primary()
+                                    .icon(IconName::Star),
                             ),
-                    )),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(
-                        div()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .child("时间戳位置"),
-                    )
-                    .child(Card::new(
+                    ),
+                ))
+                .child(section(
+                    "时间戳位置",
+                    "时间戳可以展示在内容顶部或底部。",
+                    Card::new(
                         Timeline::new()
                             .item(
                                 TimelineItem::new()
@@ -128,15 +91,12 @@ impl Render for TimelineDemo {
                                     .content("时间戳在底部")
                                     .placement(TimelinePlacement::Bottom),
                             ),
-                    )),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_4()
-                    .child(div().font_weight(gpui::FontWeight::BOLD).child("倒序排列"))
-                    .child(Card::new(
+                    ),
+                ))
+                .child(section(
+                    "倒序排列",
+                    "reverse 模式会反向展示事件。",
+                    Card::new(
                         Timeline::new()
                             .reverse(true)
                             .item(
@@ -154,7 +114,8 @@ impl Render for TimelineDemo {
                                     .timestamp("2026-05-03")
                                     .content("事件 3"),
                             ),
-                    )),
-            )
+                    ),
+                )),
+        )
     }
 }

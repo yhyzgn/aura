@@ -494,4 +494,16 @@ mod tests {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
     }
+
+    #[test]
+    fn data_display_demos_use_aura_layout_primitives() {
+        for (file_name, source) in [
+            ("avatar_demo.rs", include_str!("avatar_demo.rs")),
+            ("badge_demo.rs", include_str!("badge_demo.rs")),
+            ("descriptions_demo.rs", include_str!("descriptions_demo.rs")),
+            ("timeline_demo.rs", include_str!("timeline_demo.rs")),
+        ] {
+            assert_demo_uses_aura_layout_primitives(file_name, source);
+        }
+    }
 }
