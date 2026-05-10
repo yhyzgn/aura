@@ -2403,3 +2403,33 @@
 ### Key Discoveries
 - `Icon::color(Hsla)` already exists, but an unset Icon falls back to neutral icon color; Statistic therefore needs to explicitly pass the resolved value color to satisfy “icon follows number color by default”.
 - `prefix`/`suffix` are too generic to enforce inherited icon coloring, so the new `icon(...)` API is the safer component-level path while keeping existing compatibility.
+
+## Session 137 — 2026-05-11 (P7 Icon Demo Self-Bootstrap Batch)
+
+### Actions
+- Added a failing gallery guard for `icon_demo.rs` so it cannot use raw GPUI demo primitives (`div`, `px`, flex helpers) going forward.
+- Added `Icon::size_xs`, `Icon::size_md`, `Icon::size_lg`, and `Icon::size_xl` helpers to replace demo-level pixel sizing with component-level semantic sizing.
+- Rewrote the Icon demo with shared `page`/`section`/`row` helpers plus Aura `Space` and `Text`, preserving default color, size, and theme color examples.
+
+### Verification
+- `cargo test -p aura-icons icon_size_helpers_set_common_demo_sizes --lib` failed before the Icon helper implementation and passed after it.
+- `cargo test -p aura-gallery icon_demo_uses_aura_layout_primitives` failed before the demo migration and passed after it.
+- `cargo test -p aura-icons` passed.
+- `cargo test -p aura-gallery` passed: 17 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Remaining Not Self-Contained After This Session
+- `affix_demo.rs`
+- `anchor_demo.rs`
+- `backtop_demo.rs`
+- `container_demo.rs`
+- `form_controls_demo.rs`
+- `form_demo.rs`
+- `image_demo.rs`
+- `layout_demo.rs`
+- `menu_demo.rs`
+- `preview_demo.rs`
+- `skeleton_demo.rs`
+- `table_demo.rs`

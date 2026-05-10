@@ -552,6 +552,11 @@ mod tests {
     }
 
     #[test]
+    fn icon_demo_uses_aura_layout_primitives() {
+        assert_demo_uses_aura_layout_primitives("icon_demo.rs", include_str!("icon_demo.rs"));
+    }
+
+    #[test]
     fn tag_dynamic_input_uses_compact_input_width() {
         let source = include_str!("tag_demo.rs");
 

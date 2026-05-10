@@ -42,6 +42,22 @@ impl Icon {
         self
     }
 
+    pub fn size_xs(self) -> Self {
+        self.size(px(12.0))
+    }
+
+    pub fn size_md(self) -> Self {
+        self.size(px(18.0))
+    }
+
+    pub fn size_lg(self) -> Self {
+        self.size(px(24.0))
+    }
+
+    pub fn size_xl(self) -> Self {
+        self.size(px(32.0))
+    }
+
     /// Set explicit color. If not called, inherits parent's text_color.
     pub fn color(mut self, color: Hsla) -> Self {
         self.color = Some(color);
@@ -77,5 +93,18 @@ impl IntoElement for Icon {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_size_helpers_set_common_demo_sizes() {
+        assert_eq!(Icon::new("home").size_xs().size, Some(px(12.0).into()));
+        assert_eq!(Icon::new("home").size_md().size, Some(px(18.0).into()));
+        assert_eq!(Icon::new("home").size_lg().size, Some(px(24.0).into()));
+        assert_eq!(Icon::new("home").size_xl().size, Some(px(32.0).into()));
     }
 }
