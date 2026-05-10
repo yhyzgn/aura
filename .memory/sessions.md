@@ -2638,3 +2638,24 @@
 
 ### Key Discoveries
 - `stable_unique_id`'s first argument is the keyed-state key; the prefix only affects the generated value. Distinct scroll regions must not share the same key even if their prefixes differ.
+
+## Session 145 — 2026-05-11 (Container Main Scroll Height Fix)
+
+### Actions
+- Continued investigating the gallery shell right-panel scroll regression after fixing Container scroll ID collisions.
+- Identified the remaining layout difference from the old hand-written gallery content scroller: the old right scroll container used `h_full()`, while the new Container main scroll slot only had `flex_1/min_h_0`.
+- Added `h_full()` to the Container main scroll region before `overflow_y_scroll()` so GPUI creates a bounded scroll viewport instead of letting content height expand the region.
+- Added a source-sliced regression test to keep the main scroll region height-constrained.
+
+### Verification
+- `cargo test -p aura-components container_main_scroll_region_is_height_constrained --lib` failed before the fix and passed after it.
+- `cargo test -p aura-components container_scroll_regions_use_distinct_stable_id_keys --lib` passed.
+- `cargo test -p aura-gallery gallery_shell_uses_container_and_menu` passed.
+- `cargo test -p aura-components` passed: 31 component tests plus integration/doc tests.
+- `cargo test -p aura-gallery` passed: 22 gallery tests.
+- `cargo check` passed.
+- `git diff --check` passed.
+- `timeout 25s cargo run -p aura-gallery` compiled and launched `target/debug/aura-gallery`; process ended by timeout with no startup compile error or immediate crash.
+
+### Key Discoveries
+- For GPUI scroll regions nested in flex layouts, `flex_1/min_h_0` alone may not create the bounded viewport; the previous working gallery implementation also had `h_full()`, which Container now mirrors.

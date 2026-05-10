@@ -144,6 +144,7 @@ impl RenderOnce for Container {
             .min_h_0()
             .flex()
             .flex_col()
+            .h_full()
             .id(main_id)
             .when(main_scroll, |s| s.overflow_y_scroll())
             .when_some(main_padding, |s, padding| s.p(padding))
@@ -239,6 +240,19 @@ mod tests {
         assert!(
             !production.contains(r#"stable_unique_id("container", "aside""#),
             "aside/main scroll regions must not share the same keyed state"
+        );
+    }
+
+    #[test]
+    fn container_main_scroll_region_is_height_constrained() {
+        let production = include_str!("container.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(
+            production.contains(".h_full()\n            .id(main_id)"),
+            "main scroll region needs h_full before overflow_y_scroll so it forms a bounded viewport"
         );
     }
 }
