@@ -2804,3 +2804,29 @@
 
 ### Key Discoveries
 - The 3D depth can live on the same image-sized hitbox; GPUI shadows paint outside the frame, so the visible shadow area remains outside the consumed click bounds and still dismisses via the backdrop.
+
+## Session 154 — 2026-05-11 (Aura Motion Foundation and Component Coverage)
+
+### Actions
+- Added `crates/aura-components/src/motion.rs` as the shared Aura motion layer on top of GPUI `AnimationExt`, with duration tokens, easing tokens, fade/pop/pulse/spin helpers, and elastic slide easing.
+- Added icon rotation support in `aura-icons::Icon` using GPUI SVG transformation so loading indicators can spin without changing layout or hitboxes.
+- Covered high-impact animated components:
+  - Preview: fade in/out overlay, pop-in image frame, delayed close state for fade-out.
+  - Dialog / Drawer: fade-in overlay plus pop-in panel.
+  - Popover / Dropdown: pop-in shell through the shared Popover renderer.
+  - Tooltip: native GPUI fade-in in the passive tooltip renderer.
+  - Message / Notification: pop-in toast/card entries.
+  - Loading: fade-in wrapper plus spinning loader icon.
+  - Button loading state: spinning loader icon.
+  - Switch: elastic thumb slide using previous checked state to avoid first-render false-position animation.
+  - Skeleton: pulsing animated rows when `animated` is enabled.
+- Added source-sliced and unit regression coverage for the motion layer and each covered component path.
+
+### Verification
+- Targeted motion tests passed for `aura-components`, `aura-icons`, and `aura-core` before the final full verification run.
+- Full verification rerun after this memory update is recorded in the assistant response for this session.
+
+### Key Discoveries
+- GPUI already provides `Animation` / `AnimationExt`; Aura needed a design-system wrapper for consistent duration/easing and component usage.
+- Switch animation must remember the previous checked state; using only the target checked state makes initially unchecked switches animate from the wrong side on first render.
+- SVG icon rotation is the narrowest native way to animate loading spinners without adding a custom paint wrapper.

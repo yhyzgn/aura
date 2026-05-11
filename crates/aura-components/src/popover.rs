@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{
     Config, Placement, clear_popover, is_popover_active, set_active_popover, stable_unique_id,
 };
@@ -96,7 +97,8 @@ impl Render for PopoverView {
                     .position(popover_anchor)
                     .anchor(popover_anchor_corner)
                     .snap_to_window_with_margin(viewport_margin)
-                    .child(
+                    .child(pop_in(
+                        format!("{}-motion", id),
                         div()
                             .id(format!("{}-content", id))
                             .flex_shrink_0() // Ensure content is not squeezed by flex layout
@@ -119,7 +121,7 @@ impl Render for PopoverView {
                             .shadow_lg()
                             .p_4()
                             .child(content),
-                    ),
+                    )),
             )
     }
 }
@@ -346,6 +348,17 @@ mod tests {
     #[test]
     fn popover_offset_lg_sets_demo_offset() {
         assert_eq!(Popover::new("trigger").offset_lg().offset, px(20.0));
+    }
+
+    #[test]
+    fn popover_content_uses_aura_motion() {
+        let source = include_str!("popover.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("pop_in("));
+        assert!(source.contains("-motion"));
     }
 }
 

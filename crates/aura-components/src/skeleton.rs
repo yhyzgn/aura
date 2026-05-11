@@ -1,3 +1,4 @@
+use crate::motion::pulse;
 use aura_core::Config;
 use gpui::{AnyElement, App, DefiniteLength, IntoElement, RenderOnce, Window, div, prelude::*, px};
 
@@ -127,6 +128,8 @@ impl RenderOnce for Skeleton {
         }
 
         // Default: multiple rows of paragraph
+        let animated = self.animated;
+
         div()
             .flex()
             .flex_col()
@@ -138,9 +141,15 @@ impl RenderOnce for Skeleton {
                 } else {
                     gpui::relative(1.0)
                 };
-                div()
+                let row = div()
                     .w(width)
-                    .child(SkeletonItem::new(SkeletonVariant::Paragraph))
+                    .child(SkeletonItem::new(SkeletonVariant::Paragraph));
+
+                if animated {
+                    pulse(("aura-skeleton-row-motion", i as usize), row).into_any_element()
+                } else {
+                    row.into_any_element()
+                }
             }))
             .into_any_element()
     }
@@ -165,5 +174,17 @@ mod tests {
                 .width,
             Some(gpui::relative(0.4))
         );
+    }
+
+    #[test]
+    fn skeleton_default_rows_use_pulse_motion_when_animated() {
+        let source = include_str!("skeleton.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("pulse("));
+        assert!(source.contains("aura-skeleton-row-motion"));
+        assert!(source.contains("if animated"));
     }
 }

@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, push_passive_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -112,30 +113,49 @@ impl Render for NotificationManager {
                     NotificationType::Error => (theme.danger.base, IconName::CircleX),
                 };
 
-                div()
-                    .w(px(320.0))
-                    .bg(theme.neutral.card)
-                    .border_1()
-                    .border_color(theme.neutral.border)
-                    .p_4()
-                    .rounded(px(theme.radius.md))
-                    .shadow_lg()
-                    .flex()
-                    .flex_row()
-                    .gap_3()
-                    .child(Icon::new(icon).size(px(24.0)).color(color))
-                    .child(
-                        div()
-                            .flex_1()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child(div().font_weight(gpui::FontWeight::BOLD).child(item.title))
-                            .when_some(item.description, |s, d| {
-                                s.child(div().text_sm().text_color(theme.neutral.text_3).child(d))
-                            }),
-                    )
+                pop_in(
+                    ("aura-notification", item.id),
+                    div()
+                        .w(px(320.0))
+                        .bg(theme.neutral.card)
+                        .border_1()
+                        .border_color(theme.neutral.border)
+                        .p_4()
+                        .rounded(px(theme.radius.md))
+                        .shadow_lg()
+                        .flex()
+                        .flex_row()
+                        .gap_3()
+                        .child(Icon::new(icon).size(px(24.0)).color(color))
+                        .child(
+                            div()
+                                .flex_1()
+                                .flex()
+                                .flex_col()
+                                .gap_1()
+                                .child(div().font_weight(gpui::FontWeight::BOLD).child(item.title))
+                                .when_some(item.description, |s, d| {
+                                    s.child(
+                                        div().text_sm().text_color(theme.neutral.text_3).child(d),
+                                    )
+                                }),
+                        ),
+                )
             }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn notifications_use_aura_motion() {
+        let source = include_str!("notification.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("pop_in("));
+        assert!(source.contains("aura-notification"));
     }
 }
 

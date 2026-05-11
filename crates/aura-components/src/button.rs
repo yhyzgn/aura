@@ -1,3 +1,4 @@
+use crate::motion::spin_icon;
 use aura_core::{Config, stable_unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -327,11 +328,14 @@ impl Button {
             let sz = icon_sz;
             let group = hover_group.clone();
             children.push(
-                Icon::new(IconName::LoaderCircle)
-                    .size(px(sz))
-                    .color(c.text)
-                    .group_hover_color(group, c.text_hover)
-                    .into_any_element(),
+                spin_icon(
+                    format!("{id}:loading-spinner-motion"),
+                    Icon::new(IconName::LoaderCircle)
+                        .size(px(sz))
+                        .color(c.text)
+                        .group_hover_color(group, c.text_hover),
+                )
+                .into_any_element(),
             );
             children.push(gpui::div().child(label.clone()).into_any_element());
         } else {
@@ -458,5 +462,16 @@ mod tests {
     fn button_rounded_helpers_set_custom_radius() {
         assert!(Button::new("small").rounded_sm().rounded.is_some());
         assert!(Button::new("pill").pill().rounded.is_some());
+    }
+
+    #[test]
+    fn button_loading_icon_uses_spin_motion() {
+        let source = include_str!("button.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("spin_icon("));
+        assert!(source.contains("loading-spinner-motion"));
     }
 }

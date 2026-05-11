@@ -2,12 +2,13 @@ use crate::image::{
     ImageRoundOptions, ImageSource, RasterImageElement, load_local_render_image,
     load_remote_render_image,
 };
+use crate::motion::{FadeDirection, fade, pop_in};
 use aura_core::{Config, push_portal};
 use gpui::{
     AnyElement, App, BoxShadow, Component, Global, IntoElement, KeyBinding, ObjectFit, Pixels,
     RenderImage, RenderOnce, SharedString, Size, Window, actions, div, prelude::*, px, size,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 actions!(preview, [PreviewClose]);
 
@@ -19,6 +20,7 @@ pub struct Preview {
 
 pub struct ActiveImagePreview {
     image: Option<Arc<RenderImage>>,
+    closing: bool,
 }
 
 impl Global for ActiveImagePreview {}
@@ -86,9 +88,9 @@ impl Preview {
 }
 
 pub fn render_image_preview(window: &mut Window, cx: &mut App) {
-    let Some(image) = cx
+    let Some((image, closing)) = cx
         .try_global::<ActiveImagePreview>()
-        .and_then(|preview| preview.image.clone())
+        .and_then(|preview| preview.image.clone().map(|image| (image, preview.closing)))
     else {
         return;
     };
@@ -99,44 +101,62 @@ pub fn render_image_preview(window: &mut Window, cx: &mut App) {
             let viewport = window.viewport_size();
             let preview_size =
                 preview_image_box_size(&image, viewport.width * 0.72, viewport.height * 0.72);
-            div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .size_full()
-                .flex()
-                .items_center()
-                .justify_center()
-                .bg(gpui::black().opacity(0.55))
-                .on_action(|_: &PreviewClose, _, cx| {
-                    close_active_preview(cx);
-                })
-                .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                    close_active_preview(cx);
-                    cx.stop_propagation();
-                })
-                .child(
-                    div()
-                        .w(preview_size.width)
-                        .h(preview_size.height)
-                        .rounded(px(theme.radius.lg))
-                        .border_1()
-                        .border_color(gpui::white().opacity(0.28))
-                        .overflow_hidden()
-                        .shadow(preview_image_frame_shadow())
-                        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                            cx.stop_propagation();
-                        })
-                        .child(RasterImageElement {
-                            image,
-                            fit: ObjectFit::Contain,
-                            grayscale: false,
-                            radius: px(theme.radius.lg),
-                            round: false,
-                            round_options: ImageRoundOptions::without_square_crop(),
-                        }),
-                )
-                .into_any_element()
+            let overlay_motion = if closing {
+                FadeDirection::Out
+            } else {
+                FadeDirection::In
+            };
+            fade(
+                if closing {
+                    "aura-preview-overlay-exit"
+                } else {
+                    "aura-preview-overlay-enter"
+                },
+                overlay_motion,
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(gpui::black().opacity(0.55))
+                    .on_action(|_: &PreviewClose, _, cx| {
+                        close_active_preview(cx);
+                    })
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        close_active_preview(cx);
+                        cx.stop_propagation();
+                    })
+                    .child(pop_in(
+                        if closing {
+                            "aura-preview-frame-exit"
+                        } else {
+                            "aura-preview-frame-enter"
+                        },
+                        div()
+                            .w(preview_size.width)
+                            .h(preview_size.height)
+                            .rounded(px(theme.radius.lg))
+                            .border_1()
+                            .border_color(gpui::white().opacity(0.28))
+                            .overflow_hidden()
+                            .shadow(preview_image_frame_shadow())
+                            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation();
+                            })
+                            .child(RasterImageElement {
+                                image,
+                                fit: ObjectFit::Contain,
+                                grayscale: false,
+                                radius: px(theme.radius.lg),
+                                round: false,
+                                round_options: ImageRoundOptions::without_square_crop(),
+                            }),
+                    )),
+            )
+            .into_any_element()
         },
         cx,
     );
@@ -147,12 +167,34 @@ pub fn render_image_preview(window: &mut Window, cx: &mut App) {
 fn close_active_preview(cx: &mut App) {
     if cx.has_global::<ActiveImagePreview>() {
         let preview = cx.global_mut::<ActiveImagePreview>();
-        if preview.image.is_none() {
+        if preview.image.is_none() || preview.closing {
             return;
         }
-        preview.image = None;
+        preview.closing = true;
         cx.refresh_windows();
+
+        let async_cx = cx.to_async();
+        let executor = cx.background_executor().clone();
+        cx.foreground_executor()
+            .spawn(async move {
+                executor.timer(preview_close_duration()).await;
+                async_cx.update(|cx| {
+                    if cx.has_global::<ActiveImagePreview>() {
+                        let preview = cx.global_mut::<ActiveImagePreview>();
+                        if preview.closing {
+                            preview.image = None;
+                            preview.closing = false;
+                            cx.refresh_windows();
+                        }
+                    }
+                });
+            })
+            .detach();
     }
+}
+
+fn preview_close_duration() -> Duration {
+    Duration::from_millis(120)
 }
 
 fn preview_image_box_size(
@@ -214,9 +256,14 @@ impl RenderOnce for Preview {
             .on_mouse_down(gpui::MouseButton::Left, move |_, _, cx| {
                 if let Some(image) = preview_image.clone() {
                     if !cx.has_global::<ActiveImagePreview>() {
-                        cx.set_global(ActiveImagePreview { image: None });
+                        cx.set_global(ActiveImagePreview {
+                            image: None,
+                            closing: false,
+                        });
                     }
-                    cx.global_mut::<ActiveImagePreview>().image = Some(image);
+                    let preview = cx.global_mut::<ActiveImagePreview>();
+                    preview.image = Some(image);
+                    preview.closing = false;
                     cx.refresh_windows();
                 }
                 cx.stop_propagation();
@@ -269,10 +316,14 @@ mod tests {
         assert!(production.contains("cx.on_action(|_: &PreviewClose"));
         assert!(production.contains(".on_action(|_: &PreviewClose"));
         assert!(production.contains("fn close_active_preview"));
+        assert!(production.contains("preview_close_duration"));
+        assert!(production.contains("closing: bool"));
         assert!(production.contains("fn preview_image_box_size"));
         assert!(production.contains(".w(preview_size.width)"));
         assert!(production.contains(".h(preview_size.height)"));
         assert!(production.contains(".shadow(preview_image_frame_shadow())"));
+        assert!(production.contains("FadeDirection::Out"));
+        assert!(production.contains("pop_in("));
         assert!(
             !production.contains(
                 ".w(viewport.width * 0.72)\n                        .h(viewport.height * 0.72)"

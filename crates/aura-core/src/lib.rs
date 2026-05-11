@@ -1,6 +1,9 @@
-use gpui::{App, Bounds, Context, Global, Hsla, TextRun, Window, prelude::*, px};
+use gpui::{
+    Animation, AnimationExt, App, Bounds, Context, Global, Hsla, TextRun, Window, prelude::*, px,
+};
 
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 static NEXT_UNIQUE_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -156,10 +159,27 @@ pub fn render_active_tooltip_in_window(window: &mut gpui::Window, cx: &mut App) 
                     .shadow_lg()
                     .text_size(font_size)
                     .child(data.content.clone())
+                    .with_animation(
+                        format!("{}-tooltip-motion", data.id),
+                        Animation::new(Duration::from_millis(120))
+                            .with_easing(gpui::ease_out_quint()),
+                        |tooltip, delta| tooltip.opacity(delta),
+                    )
                     .into_any_element()
             },
             cx,
         );
+    }
+}
+
+#[cfg(test)]
+mod motion_tests {
+    #[test]
+    fn tooltip_rendering_uses_gpui_motion() {
+        let source = include_str!("lib.rs").split("#[cfg(test)]").next().unwrap();
+
+        assert!(source.contains("tooltip-motion"));
+        assert!(source.contains("with_animation("));
     }
 }
 

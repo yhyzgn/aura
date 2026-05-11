@@ -110,3 +110,17 @@ impl IntoElement for Dropdown {
         Component::new(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dropdown_inherits_popover_motion_shell() {
+        let source = include_str!("dropdown.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("Popover::new(self.trigger)"));
+        assert!(source.contains(".content(move |_window, _cx|"));
+    }
+}

@@ -1,3 +1,4 @@
+use crate::motion::{fade_in, pop_in};
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -56,72 +57,91 @@ impl Render for DialogView {
         let close_on_click_outside = self.close_on_click_outside;
         let close_on_escape = self.close_on_escape;
 
-        div()
-            .id(id.clone())
-            .absolute()
-            .size_full()
-            .cursor_default()
-            .bg(gpui::rgba(0x00000066))
-            .flex()
-            .items_center()
-            .justify_center()
-            .on_mouse_move(|_, _, cx| {
-                cx.stop_propagation();
-            })
-            .when(close_on_click_outside, |s| {
-                s.on_mouse_down(MouseButton::Left, {
-                    let on_close = on_close.clone();
-                    move |_, window, cx| {
-                        on_close(window, cx);
-                    }
+        fade_in(
+            format!("{id}-overlay-motion"),
+            div()
+                .id(id.clone())
+                .absolute()
+                .size_full()
+                .cursor_default()
+                .bg(gpui::rgba(0x00000066))
+                .flex()
+                .items_center()
+                .justify_center()
+                .on_mouse_move(|_, _, cx| {
+                    cx.stop_propagation();
                 })
-            })
-            .when(close_on_escape, |s| {
-                s.on_action(cx.listener({
-                    let on_close = on_close.clone();
-                    move |_, _action: &DialogClose, window, cx| {
-                        on_close(window, cx);
-                    }
-                }))
-            })
-            .child(
-                div()
-                    .w(px(400.0))
-                    .bg(theme.neutral.card)
-                    .cursor_default()
-                    .rounded(px(theme.radius.md))
-                    .shadow_xl()
-                    .on_mouse_move(|_, _, cx| {
-                        cx.stop_propagation();
+                .when(close_on_click_outside, |s| {
+                    s.on_mouse_down(MouseButton::Left, {
+                        let on_close = on_close.clone();
+                        move |_, window, cx| {
+                            on_close(window, cx);
+                        }
                     })
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    }) // Consume click so it doesn't trigger the background
-                    .child(
-                        div()
-                            .p_4()
-                            .border_b_1()
-                            .border_color(theme.neutral.border)
-                            .flex()
-                            .justify_between()
-                            .items_center()
-                            .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
-                            .child(
-                                div()
-                                    .id(format!("{id}-close-btn"))
-                                    .cursor_pointer()
-                                    .child(
-                                        Icon::new(IconName::X)
-                                            .size(px(16.0))
-                                            .color(theme.neutral.icon),
-                                    )
-                                    .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                                        on_close(window, cx);
-                                    }),
-                            ),
-                    )
-                    .child(div().p_4().child(content_fn(_window, cx))),
-            )
+                })
+                .when(close_on_escape, |s| {
+                    s.on_action(cx.listener({
+                        let on_close = on_close.clone();
+                        move |_, _action: &DialogClose, window, cx| {
+                            on_close(window, cx);
+                        }
+                    }))
+                })
+                .child(pop_in(
+                    format!("{id}-panel-motion"),
+                    div()
+                        .w(px(400.0))
+                        .bg(theme.neutral.card)
+                        .cursor_default()
+                        .rounded(px(theme.radius.md))
+                        .shadow_xl()
+                        .on_mouse_move(|_, _, cx| {
+                            cx.stop_propagation();
+                        })
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        }) // Consume click so it doesn't trigger the background
+                        .child(
+                            div()
+                                .p_4()
+                                .border_b_1()
+                                .border_color(theme.neutral.border)
+                                .flex()
+                                .justify_between()
+                                .items_center()
+                                .child(div().font_weight(gpui::FontWeight::BOLD).child(title))
+                                .child(
+                                    div()
+                                        .id(format!("{id}-close-btn"))
+                                        .cursor_pointer()
+                                        .child(
+                                            Icon::new(IconName::X)
+                                                .size(px(16.0))
+                                                .color(theme.neutral.icon),
+                                        )
+                                        .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                                            on_close(window, cx);
+                                        }),
+                                ),
+                        )
+                        .child(div().p_4().child(content_fn(_window, cx))),
+                )),
+        )
+    }
+}
+
+#[cfg(test)]
+mod motion_tests {
+    #[test]
+    fn dialog_uses_aura_motion_on_overlay_and_panel() {
+        let source = include_str!("dialog.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("fade_in("));
+        assert!(source.contains("pop_in("));
+        assert!(source.contains("panel-motion"));
     }
 }
 

@@ -1,7 +1,7 @@
 use aura_core::Config;
 use gpui::{
-    App, Component, DefiniteLength, Hsla, IntoElement, RenderOnce, SharedString, Window,
-    prelude::*, px,
+    App, Component, DefiniteLength, Hsla, IntoElement, Radians, RenderOnce, SharedString,
+    Transformation, Window, prelude::*, px,
 };
 use std::borrow::Cow;
 
@@ -24,6 +24,7 @@ pub struct Icon {
     size: Option<DefiniteLength>,
     color: Option<Hsla>,
     group_hover_color: Option<(SharedString, Hsla)>,
+    rotation: Option<Radians>,
     asset_path: String,
 }
 
@@ -33,6 +34,7 @@ impl Icon {
             size: None,
             color: None,
             group_hover_color: None,
+            rotation: None,
             asset_path: path.icon_path().into_owned(),
         }
     }
@@ -69,6 +71,12 @@ impl Icon {
         self.group_hover_color = Some((group.into(), color));
         self
     }
+
+    /// Rotate the icon around its center while preserving layout and hitbox.
+    pub fn rotation(mut self, rotation: Radians) -> Self {
+        self.rotation = Some(rotation);
+        self
+    }
 }
 
 impl RenderOnce for Icon {
@@ -84,6 +92,9 @@ impl RenderOnce for Icon {
         }
         if let Some((group, color)) = self.group_hover_color {
             el = el.group_hover(group, move |style| style.text_color(color));
+        }
+        if let Some(rotation) = self.rotation {
+            el = el.with_transformation(Transformation::rotate(rotation));
         }
         el
     }
@@ -106,5 +117,13 @@ mod tests {
         assert_eq!(Icon::new("home").size_md().size, Some(px(18.0).into()));
         assert_eq!(Icon::new("home").size_lg().size, Some(px(24.0).into()));
         assert_eq!(Icon::new("home").size_xl().size, Some(px(32.0).into()));
+    }
+
+    #[test]
+    fn icon_rotation_tracks_transform_request() {
+        assert_eq!(
+            Icon::new("loader").rotation(gpui::radians(1.0)).rotation,
+            Some(gpui::radians(1.0))
+        );
     }
 }

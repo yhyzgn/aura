@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, push_passive_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -102,25 +103,28 @@ impl Render for MessageManager {
             .children(messages.into_iter().map(|msg| {
                 let style = message_style(&theme, msg.msg_type);
 
-                div()
-                    .bg(style.bg)
-                    .border_1()
-                    .border_color(style.border)
-                    .px_4()
-                    .py_2()
-                    .rounded(px(theme.radius.md))
-                    .shadow_lg()
-                    .flex()
-                    .flex_row()
-                    .items_center()
-                    .gap_2()
-                    .child(Icon::new(style.icon).size(px(16.0)).color(style.fg))
-                    .child(
-                        div()
-                            .text_color(style.fg)
-                            .text_size(px(theme.font_size.sm))
-                            .child(msg.content),
-                    )
+                pop_in(
+                    ("aura-message", msg.id),
+                    div()
+                        .bg(style.bg)
+                        .border_1()
+                        .border_color(style.border)
+                        .px_4()
+                        .py_2()
+                        .rounded(px(theme.radius.md))
+                        .shadow_lg()
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap_2()
+                        .child(Icon::new(style.icon).size(px(16.0)).color(style.fg))
+                        .child(
+                            div()
+                                .text_color(style.fg)
+                                .text_size(px(theme.font_size.sm))
+                                .child(msg.content),
+                        ),
+                )
             }))
     }
 }
@@ -182,5 +186,16 @@ mod tests {
             assert_eq!(message.border, expected_bg);
             assert_eq!(message.fg, theme.neutral.card);
         }
+    }
+
+    #[test]
+    fn messages_use_aura_motion() {
+        let source = include_str!("message.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("pop_in("));
+        assert!(source.contains("aura-message"));
     }
 }

@@ -1,6 +1,7 @@
+use crate::motion::{MotionDuration, MotionEasing, elastic_slide, motion_animation};
 use gpui::{
-    App, Context, FocusHandle, Focusable, Hsla, KeyBinding, MouseButton, Render, Rgba, Window,
-    prelude::*, px,
+    AnimationExt, App, Context, FocusHandle, Focusable, Hsla, KeyBinding, MouseButton, Render,
+    Rgba, Window, prelude::*, px,
 };
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
@@ -17,6 +18,7 @@ gpui::actions!(switch, [SwitchToggle]);
 
 pub struct Switch {
     checked: bool,
+    thumb_from_checked: bool,
     disabled: bool,
     focus_handle: FocusHandle,
     on_change: Option<Box<dyn Fn(bool, &mut Window, &mut App) + 'static>>,
@@ -26,6 +28,7 @@ impl Switch {
     pub fn new(checked: bool, cx: &mut Context<Self>) -> Self {
         Self {
             checked,
+            thumb_from_checked: checked,
             disabled: false,
             focus_handle: cx.focus_handle(),
             on_change: None,
@@ -50,6 +53,7 @@ impl Switch {
 
     fn toggle(&mut self, _: &SwitchToggle, window: &mut Window, cx: &mut Context<Self>) {
         if !self.disabled {
+            self.thumb_from_checked = self.checked;
             self.checked = !self.checked;
             cx.notify();
             if let Some(ref cb) = self.on_change {
@@ -72,11 +76,16 @@ impl Render for Switch {
         let w = 40.0;
         let h = 22.0;
         let thumb_sz = 16.0;
-        let thumb_offset = if self.checked {
-            w - thumb_sz - 3.0
-        } else {
-            3.0
-        };
+        let thumb_start = 3.0;
+        let thumb_end = w - thumb_sz - 3.0;
+        let checked = self.checked;
+        let from_checked = self.thumb_from_checked;
+        let from_left = if from_checked { thumb_end } else { thumb_start };
+        let to_left = if checked { thumb_end } else { thumb_start };
+        let thumb_motion_id = format!(
+            "aura-switch-thumb-motion:{:?}:{from_checked}:{checked}",
+            self.focus_handle
+        );
 
         let thumb_color = if self.disabled {
             theme.neutral.text_disabled
@@ -109,11 +118,24 @@ impl Render for Switch {
                 gpui::div()
                     .absolute()
                     .top(px((h - thumb_sz) / 2.0))
-                    .left(px(thumb_offset))
                     .w(px(thumb_sz))
                     .h(px(thumb_sz))
                     .rounded(px(thumb_sz / 2.0))
-                    .bg(thumb_color),
+                    .bg(thumb_color)
+                    .with_animation(
+                        thumb_motion_id,
+                        motion_animation(MotionDuration::Normal, MotionEasing::Elastic),
+                        move |thumb, delta| {
+                            let progress = elastic_slide(delta);
+                            let left = if (to_left - from_left).abs() < f32::EPSILON {
+                                to_left
+                            } else {
+                                from_left + (to_left - from_left) * progress
+                            };
+
+                            thumb.left(px(left))
+                        },
+                    ),
             );
 
         if !self.disabled {
@@ -149,5 +171,21 @@ impl Render for Switch {
         }
 
         el.on_action(cx.listener(Self::toggle))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn switch_thumb_uses_elastic_motion() {
+        let source = include_str!("switch.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("with_animation("));
+        assert!(source.contains("MotionEasing::Elastic"));
+        assert!(source.contains("elastic_slide(delta)"));
+        assert!(source.contains("thumb_from_checked"));
     }
 }

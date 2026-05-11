@@ -1,3 +1,4 @@
+use crate::motion::{fade_in, spin_icon};
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -31,31 +32,37 @@ impl RenderOnce for Loading {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
 
+        let spinner_icon = spin_icon(
+            "aura-loading-spinner-motion",
+            Icon::new(IconName::LoaderCircle)
+                .size(px(32.0))
+                .color(theme.primary.base),
+        );
+
         let spinner = div()
             .flex()
             .flex_col()
             .items_center()
             .gap_2()
-            .child(
-                Icon::new(IconName::LoaderCircle)
-                    .size(px(32.0))
-                    .color(theme.primary.base),
-            )
+            .child(spinner_icon)
             .when_some(self.text, |s, t| {
                 s.child(div().text_sm().text_color(theme.primary.base).child(t))
             });
 
         if self.full_screen {
-            div()
-                .absolute()
-                .size_full()
-                .bg(gpui::rgba(0xFFFFFF99))
-                .flex()
-                .items_center()
-                .justify_center()
-                .child(spinner)
+            fade_in(
+                "aura-loading-fullscreen-motion",
+                div()
+                    .absolute()
+                    .size_full()
+                    .bg(gpui::rgba(0xFFFFFF99))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(spinner),
+            )
         } else {
-            spinner
+            fade_in("aura-loading-inline-motion", spinner)
         }
     }
 }
@@ -64,5 +71,20 @@ impl IntoElement for Loading {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn loading_uses_spin_and_fade_motion() {
+        let source = include_str!("loading.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("spin_icon("));
+        assert!(source.contains("fade_in("));
+        assert!(source.contains("aura-loading-spinner-motion"));
     }
 }
