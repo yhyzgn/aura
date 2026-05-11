@@ -2,7 +2,7 @@ use crate::image::{
     ImageRoundOptions, ImageSource, RasterImageElement, load_local_render_image,
     load_remote_render_image,
 };
-use crate::motion::{FadeDirection, fade, pop_in};
+use crate::motion::{FadeDirection, MotionDuration, fade, pop_in};
 use aura_core::{Config, push_portal};
 use gpui::{
     AnyElement, App, BoxShadow, Component, Global, IntoElement, KeyBinding, ObjectFit, Pixels,
@@ -194,7 +194,7 @@ fn close_active_preview(cx: &mut App) {
 }
 
 fn preview_close_duration() -> Duration {
-    Duration::from_millis(120)
+    MotionDuration::Fast.as_duration()
 }
 
 fn preview_image_box_size(

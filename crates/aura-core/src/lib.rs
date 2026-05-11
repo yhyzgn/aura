@@ -161,7 +161,7 @@ pub fn render_active_tooltip_in_window(window: &mut gpui::Window, cx: &mut App) 
                     .child(data.content.clone())
                     .with_animation(
                         format!("{}-tooltip-motion", data.id),
-                        Animation::new(Duration::from_millis(120))
+                        Animation::new(Duration::from_millis(220))
                             .with_easing(gpui::ease_out_quint()),
                         |tooltip, delta| tooltip.opacity(delta),
                     )

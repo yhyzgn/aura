@@ -2830,3 +2830,21 @@
 - GPUI already provides `Animation` / `AnimationExt`; Aura needed a design-system wrapper for consistent duration/easing and component usage.
 - Switch animation must remember the previous checked state; using only the target checked state makes initially unchecked switches animate from the wrong side on first render.
 - SVG icon rotation is the narrowest native way to animate loading spinners without adding a custom paint wrapper.
+
+## Session 155 — 2026-05-11 (Motion Timing and Switch Crash Fix)
+
+### Actions
+- Fixed the Switch crash caused by using an overshooting elastic curve as a GPUI easing function. GPUI asserts easing output must stay in `0..=1`, so Aura now clamps the `MotionEasing::Elastic` easing output for GPUI while keeping `elastic_slide` available for visual overshoot inside component interpolation.
+- Changed Switch thumb animation to use bounded `MotionEasing::EaseOut` for GPUI and apply `elastic_slide(delta)` only when computing the thumb position.
+- Slowed global motion timing from `120/180/240ms` to `220/320/900ms` for fast/normal/slow so overlays, switch movement, pulse, and spinner animations are more legible.
+- Updated Preview close delay to use `MotionDuration::Fast` and Tooltip fade-in to 220ms so hard-coded timings align with the slower motion system.
+- Added a regression test proving `MotionEasing::Elastic` remains bounded for GPUI animation.
+
+### Verification
+- Targeted motion and Switch tests passed after the fix.
+- Full verification passed: `cargo test -p aura-core`, `cargo test -p aura-icons`, `cargo test -p aura-components`, `cargo test -p aura-gallery`, `cargo check`, `git diff --check`.
+- Smoke-ran `cargo run -p aura-gallery` with the normal default entry and with a temporary Switch-selected startup entry; both launched and were stopped by timeout without reproducing the panic.
+
+### Key Discoveries
+- GPUI `AnimationElement` validates the eased delta before invoking the component animator, so any easing passed to `Animation::with_easing` must never overshoot.
+- Elastic overshoot should be applied inside the animated property interpolation, not as the GPUI easing function itself.

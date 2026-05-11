@@ -36,9 +36,9 @@ pub enum FadeDirection {
 impl MotionDuration {
     pub fn as_duration(self) -> Duration {
         match self {
-            Self::Fast => Duration::from_millis(120),
-            Self::Normal => Duration::from_millis(180),
-            Self::Slow => Duration::from_millis(240),
+            Self::Fast => Duration::from_millis(220),
+            Self::Normal => Duration::from_millis(320),
+            Self::Slow => Duration::from_millis(900),
         }
     }
 }
@@ -128,7 +128,7 @@ fn ease(delta: f32, easing: MotionEasing) -> f32 {
         MotionEasing::Linear => gpui::linear(delta),
         MotionEasing::EaseInOut => gpui::ease_in_out(delta),
         MotionEasing::EaseOut => gpui::ease_out_quint()(delta),
-        MotionEasing::Elastic => elastic_slide(delta),
+        MotionEasing::Elastic => elastic_slide(delta).clamp(0.0, 1.0),
     }
 }
 
@@ -144,15 +144,15 @@ mod tests {
     fn motion_duration_tokens_track_aura_defaults() {
         assert_eq!(
             MotionDuration::Fast.as_duration(),
-            Duration::from_millis(120)
+            Duration::from_millis(220)
         );
         assert_eq!(
             MotionDuration::Normal.as_duration(),
-            Duration::from_millis(180)
+            Duration::from_millis(320)
         );
         assert_eq!(
             MotionDuration::Slow.as_duration(),
-            Duration::from_millis(240)
+            Duration::from_millis(900)
         );
     }
 
@@ -161,6 +161,14 @@ mod tests {
         assert!(elastic_slide(0.0).abs() < 0.000_01);
         assert_eq!(elastic_slide(1.0), 1.0);
         assert!(elastic_slide(0.7) > 1.0);
+    }
+
+    #[test]
+    fn elastic_easing_is_bounded_for_gpui_animation() {
+        let animation = motion_animation(MotionDuration::Normal, MotionEasing::Elastic);
+        let eased = (animation.easing)(0.7);
+
+        assert!((0.0..=1.0).contains(&eased));
     }
 
     #[test]

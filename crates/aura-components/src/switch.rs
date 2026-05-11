@@ -124,7 +124,7 @@ impl Render for Switch {
                     .bg(thumb_color)
                     .with_animation(
                         thumb_motion_id,
-                        motion_animation(MotionDuration::Normal, MotionEasing::Elastic),
+                        motion_animation(MotionDuration::Normal, MotionEasing::EaseOut),
                         move |thumb, delta| {
                             let progress = elastic_slide(delta);
                             let left = if (to_left - from_left).abs() < f32::EPSILON {
@@ -184,7 +184,7 @@ mod tests {
             .unwrap();
 
         assert!(source.contains("with_animation("));
-        assert!(source.contains("MotionEasing::Elastic"));
+        assert!(source.contains("MotionEasing::EaseOut"));
         assert!(source.contains("elastic_slide(delta)"));
         assert!(source.contains("thumb_from_checked"));
     }
