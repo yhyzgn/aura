@@ -2,8 +2,8 @@ mod category;
 mod demos;
 
 use aura_components::{
-    Card, Checkbox, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph, Radio, RadioGroup,
-    Space, Switch, Text, Title,
+    Card, Checkbox, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph, Preview, Radio,
+    RadioGroup, Space, Switch, Text, Title,
 };
 use aura_core::{PassivePortal, Portal, init_aura};
 use aura_theme::Theme;
@@ -31,6 +31,7 @@ fn run_gallery() {
         Switch::register_key_bindings(cx);
         Dialog::register_key_bindings(cx);
         Drawer::register_key_bindings(cx);
+        Preview::register_key_bindings(cx);
 
         let _ = cx.open_window(
             WindowOptions {
@@ -67,6 +68,7 @@ mod shell_tests {
         assert!(source.contains("Container::new()"));
         assert!(source.contains("Menu::new()"));
         assert!(source.contains(".no_shrink()"));
+        assert!(source.contains("Preview::register_key_bindings(cx)"));
         assert!(!source.contains(&format!("gallery-demo{}nav-", "-")));
     }
 }

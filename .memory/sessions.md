@@ -2773,3 +2773,19 @@
 ### Key Discoveries
 - The previous URL branch could start two remote image loaders for the same URL: Aura's background cache fetch plus GPUI `img(src)`.
 - The Image and Preview gallery pages are performance-sensitive because selecting those cached views renders many image instances at once; local file decode must be cached too.
+
+## Session 152 — 2026-05-11 (Preview Outside-Image Close)
+
+### Actions
+- Changed the Preview overlay so the backdrop close handler is blocked only by an image-sized preview box, not by the previous fixed 72% viewport container.
+- Added `PreviewClose` and `Preview::register_key_bindings(cx)` so ESC closes an active image preview.
+- Registered Preview key bindings in Aura Gallery startup.
+- Added regression coverage for image-aspect preview sizing, ESC action registration, and gallery key-binding registration.
+
+### Verification
+- Targeted Preview and Gallery tests passed after the interaction changes.
+- Full verification rerun after this memory update is recorded in the assistant response for this session.
+
+### Key Discoveries
+- The old preview hit target was a fixed 72% viewport box; with `ObjectFit::Contain`, letterboxed/shadow-adjacent areas inside that oversized box consumed clicks and prevented backdrop close.
+- Matching the interactive preview box to the contained image aspect ratio keeps clicks on image open while allowing clicks outside the actual image box to close.
