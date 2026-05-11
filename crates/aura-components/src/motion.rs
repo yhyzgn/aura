@@ -28,9 +28,23 @@ pub enum MotionPreset {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MotionCurve {
+    Linear,
+    EaseInOut,
+    EaseOut,
+    ElasticSnap,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FadeDirection {
     In,
     Out,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Interpolator {
+    from: f32,
+    to: f32,
 }
 
 impl MotionDuration {
@@ -40,6 +54,32 @@ impl MotionDuration {
             Self::Normal => Duration::from_millis(320),
             Self::Slow => Duration::from_millis(900),
         }
+    }
+}
+
+impl Interpolator {
+    pub fn new(from: f32, to: f32) -> Self {
+        Self { from, to }
+    }
+
+    pub fn from(&self) -> f32 {
+        self.from
+    }
+
+    pub fn to(&self) -> f32 {
+        self.to
+    }
+
+    pub fn sample(&self, delta: f32) -> f32 {
+        self.sample_with(delta, MotionCurve::Linear)
+    }
+
+    pub fn sample_with(&self, delta: f32, curve: MotionCurve) -> f32 {
+        self.from + (self.to - self.from) * curve_progress(delta, curve)
+    }
+
+    pub fn map(&self, delta: f32, mapper: impl FnOnce(f32) -> f32) -> f32 {
+        self.from + (self.to - self.from) * mapper(delta.clamp(0.0, 1.0))
     }
 }
 
@@ -123,6 +163,31 @@ pub fn elastic_slide(delta: f32) -> f32 {
     1.0 + c3 * (t - 1.0).powi(3) + c1 * (t - 1.0).powi(2)
 }
 
+pub fn elastic_snap(delta: f32) -> f32 {
+    let eased = gpui::ease_in_out(delta.clamp(0.0, 1.0));
+    let snap_start = 0.62;
+
+    if eased <= snap_start {
+        eased
+    } else {
+        let local = (eased - snap_start) / (1.0 - snap_start);
+        snap_start + (1.0 - snap_start) * elastic_slide(local)
+    }
+}
+
+pub fn slide_snap(from: f32, to: f32, delta: f32) -> f32 {
+    Interpolator::new(from, to).sample_with(delta, MotionCurve::ElasticSnap)
+}
+
+fn curve_progress(delta: f32, curve: MotionCurve) -> f32 {
+    match curve {
+        MotionCurve::Linear => gpui::linear(delta.clamp(0.0, 1.0)),
+        MotionCurve::EaseInOut => gpui::ease_in_out(delta.clamp(0.0, 1.0)),
+        MotionCurve::EaseOut => gpui::ease_out_quint()(delta.clamp(0.0, 1.0)),
+        MotionCurve::ElasticSnap => elastic_snap(delta),
+    }
+}
+
 fn ease(delta: f32, easing: MotionEasing) -> f32 {
     match easing {
         MotionEasing::Linear => gpui::linear(delta),
@@ -161,6 +226,32 @@ mod tests {
         assert!(elastic_slide(0.0).abs() < 0.000_01);
         assert_eq!(elastic_slide(1.0), 1.0);
         assert!(elastic_slide(0.7) > 1.0);
+    }
+
+    #[test]
+    fn interpolator_samples_common_curves() {
+        let interpolator = Interpolator::new(10.0, 20.0);
+
+        assert_eq!(interpolator.from(), 10.0);
+        assert_eq!(interpolator.to(), 20.0);
+        assert_eq!(interpolator.sample(0.5), 15.0);
+        assert!(interpolator.sample_with(0.25, MotionCurve::EaseInOut) < 12.5);
+        assert_eq!(interpolator.map(0.5, |delta| delta * delta), 12.5);
+    }
+
+    #[test]
+    fn elastic_snap_accelerates_decelerates_and_snaps() {
+        assert!(elastic_snap(0.25) < 0.25);
+        assert!((elastic_snap(1.0) - 1.0).abs() < 0.000_01);
+        assert!(elastic_snap(0.75) > 1.0);
+    }
+
+    #[test]
+    fn slide_snap_overshoots_toward_target() {
+        assert!(slide_snap(3.0, 21.0, 0.25) < 3.0 + (21.0 - 3.0) * 0.25);
+        assert!(slide_snap(3.0, 21.0, 0.75) > 21.0);
+        assert!(slide_snap(21.0, 3.0, 0.75) < 3.0);
+        assert_eq!(slide_snap(3.0, 21.0, 1.0), 21.0);
     }
 
     #[test]

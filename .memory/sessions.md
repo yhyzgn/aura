@@ -2848,3 +2848,21 @@
 ### Key Discoveries
 - GPUI `AnimationElement` validates the eased delta before invoking the component animator, so any easing passed to `Animation::with_easing` must never overshoot.
 - Elastic overshoot should be applied inside the animated property interpolation, not as the GPUI easing function itself.
+
+## Session 156 — 2026-05-11 (Motion Interpolator and Elastic Snap Slide)
+
+### Actions
+- Added an `Interpolator` helper to `aura-components::motion` for reusable numeric interpolation across complex animations.
+- Added `MotionCurve` with `Linear`, `EaseInOut`, `EaseOut`, and `ElasticSnap` curves.
+- Added `elastic_snap(delta)` and `slide_snap(from, to, delta)` helpers so components can implement springy property interpolation without passing overshooting values into GPUI easing.
+- Updated Switch thumb movement to use bounded linear GPUI animation plus `slide_snap(...)` for the default slide behavior: slow start, acceleration, deceleration, and a small snap/settle overshoot near the target.
+- Added unit coverage for Interpolator sampling, elastic snap behavior, reverse-direction overshoot, and Switch use of `slide_snap`.
+
+### Verification
+- `cargo test -p aura-components motion --lib` passed.
+- `cargo test -p aura-components switch_thumb_uses_elastic_motion --lib` passed.
+- Full verification passed: `cargo test -p aura-core`, `cargo test -p aura-icons`, `cargo test -p aura-components`, `cargo test -p aura-gallery`, `cargo check`, `git diff --check`.
+- Smoke-ran normal Gallery startup and a temporary Switch-selected startup; both launched and were stopped by timeout without panic.
+
+### Key Discoveries
+- The safe pattern for complex motion is: keep GPUI easing bounded, then use Aura `Interpolator` / `slide_snap` inside the animator closure for overshoot or other non-linear property effects.
