@@ -449,6 +449,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-docs"
+version = "0.1.0"
+dependencies = [
+ "aura-components",
+ "aura-core",
+ "aura-theme",
+ "gpui",
+ "gpui_platform",
+ "pulldown-cmark",
+]
+
+[[package]]
 name = "aura-gallery"
 version = "0.1.0"
 dependencies = [
@@ -459,7 +471,6 @@ dependencies = [
  "aura-theme",
  "gpui",
  "gpui_platform",
- "pulldown-cmark",
 ]
 
 [[package]]

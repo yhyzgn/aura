@@ -59,12 +59,15 @@ aura/
 │   └── aura-icons/               # 图标库
 │       └── src/lib.rs
 ├── apps/
-│   └── aura-gallery/             # 官方原生文档与组件展示大屏（GPUI）
+│   ├── aura-gallery/             # 组件看板（GPUI）
+│   │   └── src/
+│   │       ├── main.rs
+│   │       ├── category.rs
+│   │       └── demos/
+│   └── aura-docs/                # 官方原生文档主程序（GPUI）
 │       └── src/
 │           ├── main.rs
-│           ├── category.rs
-│           ├── markdown.rs       # P8: Markdown AST → Aura 原生元素树（规划）
-│           └── demos/
+│           └── markdown.rs       # P8: Markdown AST → Aura 原生元素树
 └── architecture-design.md
 ```
 
@@ -77,7 +80,8 @@ aura/
 | `aura-icons-lucide` | `aura-icons` | build.rs 代码生成 → IconName 枚举（1,703 Lucide 图标），实现 IntoIconPath |
 | `aura-core` | `gpui`, `aura-theme` | Config(Global)、init_aura()、ContextExt trait、ElementExt trait、Z-Index 管理器、工具函数 |
 | `aura-components` | `gpui`, `aura-core`, `aura-theme`, `aura-icons` | 全部业务组件（Button/Input/Dialog/Table 等） |
-| `aura-gallery` | `gpui`(default), `gpui_platform`, 全部 aura crates；P8 增加 `pulldown-cmark` | 官方原生文档与组件展示大屏，包含组件 Demo、Markdown 渲染、Live Demo 注入 |
+| `aura-gallery` | `gpui`(default), `gpui_platform`, 全部 aura crates | 组件看板，展示已实现组件 Demo |
+| `aura-docs` | `gpui`(default), `gpui_platform`, 全部 aura crates；P8 增加 `pulldown-cmark` | 官方原生文档主程序，包含 Markdown 渲染与 Live Demo 注入 |
 
 ### 2.3 GPUI 依赖策略
 
@@ -209,14 +213,14 @@ pub fn render(theme: &Theme) -> AnyElement {
 ---
 
 
-### 2.5 P8 Aura Gallery 原生文档架构
+### 2.5 P8 Aura Docs 主程序架构
 
-**定位**：P8 将 `aura-gallery` 从组件看板升级为 Aura UI 的官方原生文档与组件展示大屏。官方文档不再作为 Web 文档站交付，而是在 GPUI 原生窗口中完成导航、Markdown 渲染、组件 API 展示和 Live Demo 注入。
+**定位**：P8 将 `aura-gallery` 继续作为组件看板，`aura-docs` 作为官方原生文档主程序。官方文档不再作为 Web 文档站交付，而是在 GPUI 原生窗口中完成导航、Markdown 渲染、组件 API 展示和 Live Demo 注入。
 
 **绝对边界**：
 
 - 100% GPUI 原生视窗运行。
-- 不建设 `apps/docs` / VitePress 文档站。
+- 不建设 `apps/aura-docs` / VitePress 文档站。
 - 不引入浏览器运行时、跨端转译运行时或网页排版模型。
 - 文档渲染输出必须是 Rust 数据结构驱动的 Aura/GPUI 原生元素树。
 
@@ -394,7 +398,7 @@ P4 · Navigation + Data ░░░░░░░░░░  导航组件 + 数据展
 P5 · Advanced          ░░░░░░░░░░  重型组件（Table/DatePicker/Upload 等）
 P6 · Built-in Unique ID  ██░░░░░░░░  已完成 — 内建唯一 ID
 P7 · Demo Self-Contained ██░░░░░░░░  已完成 — Gallery Demo 自举
-P8 · Native Gallery Docs ░░░░░░░░░░  原生文档大屏 + Markdown + Live Demo + 工程化
+P8 · Native Docs App ░░░░░░░░░░  原生文档大屏 + Markdown + Live Demo + 工程化
 ```
 
 ### P0 · Foundation（已完成）
@@ -532,9 +536,9 @@ Table 是企业级组件库中最复杂、工作量最大的组件。Aura Table 
 
 | 任务 | 说明 |
 |------|------|
-| **Aura Gallery 官方文档大屏** | 在 GPUI 原生窗口中承载文档导航、Markdown 内容、组件 Demo 和组件 API 说明 |
+| **Aura Docs 官方文档主程序** | 在 GPUI 原生窗口中承载文档导航、Markdown 内容、组件 Demo 和组件 API 说明 |
 | **Typography 自举基础设施** | 富文本片段 + 段落组件；基于 GPUI StyledText 或等价机制实现多样式片段流式拼接、自动换行、不截断 |
-| **Markdown 解析引擎** | `pulldown-cmark` 生成 AST/Event；`apps/aura-gallery/src/markdown.rs` 映射为 Aura/GPUI 原生元素树 |
+| **Markdown 解析引擎** | `pulldown-cmark` 生成 AST/Event；`apps/aura-docs/src/markdown.rs` 映射为 Aura/GPUI 原生元素树 |
 | **代码块/行内代码渲染** | 等宽字体、主题化背景、代码块水平滚动、行内代码不破坏段落换行 |
 | **双栏文档窗口** | 左侧文档/组件导航树，右侧 Markdown 渲染结果区，右侧支持垂直滚动 |
 | **Live Demo 注入** | `::AuraDemo{component="Button"}::` 映射为真实 Aura 组件 view node，保留原生交互 |
@@ -768,7 +772,7 @@ pub struct FormRule {
 | P5 Advanced | 20 | 6-8 周 ⚠️ | Table/DatePicker/Upload/Carousel/Cascader+ |
 | P6 Built-in Unique ID | — | ✅ 已完成 | 内建唯一 ID |
 | P7 Demo Self-Contained | — | ✅ 已完成 | Gallery Demo 自举 |
-| P8 Native Gallery Docs | — | 3-4 周 | 原生文档大屏/Markdown/Live Demo/Test/CI/Release |
+| P8 Native Docs App | — | 3-4 周 | 原生文档大屏/Markdown/Live Demo/Test/CI/Release |
 | **合计** | **76+** | **约 6 个月** | 完整企业级组件库 |
 
 ---

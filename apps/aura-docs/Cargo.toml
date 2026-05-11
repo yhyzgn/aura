@@ -1,10 +1,10 @@
 [package]
-name = "aura-gallery"
+name = "aura-docs"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "aura-gallery"
+name = "aura-docs"
 path = "src/main.rs"
 
 [dependencies]
@@ -13,5 +13,4 @@ gpui_platform = { workspace = true, features = ["wayland", "x11"] }
 aura-core = { path = "../../crates/aura-core" }
 aura-theme = { path = "../../crates/aura-theme" }
 aura-components = { path = "../../crates/aura-components" }
-aura-icons = { path = "../../crates/aura-icons" }
-aura-icons-lucide = { path = "../../crates/aura-icons-lucide" }
+pulldown-cmark = "0.13.3"

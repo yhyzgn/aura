@@ -28,7 +28,7 @@
 | P5 Advanced | 🏁 Requested subset complete / remaining deferred | 11/20 | 20 |
 | P6 Built-in Unique ID | ✅ Done | 1/1 | 1 |
 | P7 Demo Self-Contained | ✅ Done | 1/1 | 1 |
-| P8 Native Gallery Docs | ✅ Core Done | 4/4 | 4 |
+| P8 Native Docs App | ✅ Core Done | 4/4 | 4 |
 | P9 Deferred Advanced | ⏸️ Deferred backlog | 0/9 | 9 |
 
 ## Git Status

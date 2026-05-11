@@ -6,9 +6,9 @@ use gpui::{
 };
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
-const INTRO_DOC: &str = r#"# Aura Gallery
+const INTRO_DOC: &str = r#"# Aura Docs
 
-Aura Gallery 是 Aura UI 的原生文档与组件展示大屏。Markdown 只作为输入格式，最终结果全部映射为 GPUI 原生元素树。
+Aura Docs 是 Aura UI 的官方原生文档主程序。Markdown 只作为输入格式，最终结果全部映射为 GPUI 原生元素树。
 
 ## Native bootstrapping
 
@@ -55,24 +55,20 @@ Phase 4 支持类似 `::AuraDemo{component="Button"}::` 的活体组件注入语
 "#;
 
 pub struct DocPage {
-    pub id: &'static str,
     pub title: &'static str,
     pub markdown: &'static str,
 }
 
 const DOC_PAGES: &[DocPage] = &[
     DocPage {
-        id: "intro",
         title: "Overview",
         markdown: INTRO_DOC,
     },
     DocPage {
-        id: "typography",
         title: "Typography",
         markdown: TYPOGRAPHY_DOC,
     },
     DocPage {
-        id: "components",
         title: "Components",
         markdown: COMPONENT_DOC,
     },
@@ -617,7 +613,7 @@ impl Render for DocsShell {
                 Space::new()
                     .vertical()
                     .gap_xs()
-                    .child(Title::new("Aura Gallery Docs").h2())
+                    .child(Title::new("Aura Docs").h2())
                     .child(Text::new(
                         "Native Markdown · GPUI elements · Aura components",
                     )),
@@ -844,13 +840,11 @@ mod tests {
     #[test]
     fn docs_shell_uses_native_container_and_menu() {
         let source = include_str!("markdown.rs");
-        let registry = include_str!("demos/mod.rs");
 
         assert!(source.contains("Container::new()"));
         assert!(source.contains("Menu::new()"));
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains(".main_scroll()"));
-        assert!(registry.contains("Docs 原生文档"));
     }
 
     #[test]

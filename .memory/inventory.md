@@ -141,8 +141,8 @@
 | Item | Target | Status |
 |------|--------|--------|
 | Typography bootstrapping | `crates/aura-components/src/` rich text/paragraph primitives | ✅ `Paragraph` now renders GPUI `StyledText` runs from `Text` segments |
-| Markdown renderer | `apps/aura-gallery/src/markdown.rs` + `pulldown-cmark` | ✅ Stack-based native renderer for headings, paragraphs, inline strong/em/code/strike, lists, blockquotes |
-| Code block styling + document shell | Native Aura/GPUI two-column gallery docs UI | ✅ Fenced code blocks + `Docs 原生文档` Gallery entry with `Container`/`Menu` shell |
+| Markdown renderer | `apps/aura-docs/src/markdown.rs` + `pulldown-cmark` | ✅ Stack-based native renderer for headings, paragraphs, inline strong/em/code/strike, lists, blockquotes |
+| Code block styling + document shell | Native Aura/GPUI two-column docs UI | ✅ Fenced code blocks + `Aura Docs` main window with `Container`/`Menu` shell |
 | Live Demo injection | `::AuraDemo{component="..."}::` → real Aura view nodes | ✅ Button demo marker maps to a real Aura `Button` node |
 
 ## P9 Deferred Advanced ⏸️ (0/9 — backlog for later supplementation)

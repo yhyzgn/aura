@@ -2902,7 +2902,7 @@
 
 ### Actions
 - Added `pulldown-cmark` to `aura-gallery`.
-- Created `apps/aura-gallery/src/markdown.rs` with `render_markdown(md_text: &str) -> gpui::AnyElement`.
+- Created `apps/aura-docs/src/markdown.rs` with `render_markdown(md_text: &str) -> gpui::AnyElement`.
 - Implemented a stack-based Markdown parser using `Vec<Frame>` for Root/Paragraph/Heading/BlockQuote/List/ListItem and an inline style context for strong/emphasis/code/strikethrough.
 - Mapped parsed Markdown blocks to native Aura/GPUI elements: `Title`, `Paragraph`, `Text`, `Space`, and GPUI layout primitives.
 - Added regression tests for entrypoint construction, heading + mixed inline styles, unordered/ordered lists, and blockquote nesting.
@@ -2923,7 +2923,7 @@
 - Extended the native Markdown renderer with fenced/indented code block parsing using `Tag::CodeBlock` and `CodeBlockKind`.
 - Rendered code blocks as native GPUI/Aura shells with neutral background, border, monospace text, no wrapping, and horizontal scrolling via `overflow_x_scroll`.
 - Added a `DocsShell` native two-column document window: Aura `Container` + left Aura `Menu` navigation + right Markdown-rendered document content with vertical scrolling.
-- Registered `Docs 原生文档` in the Gallery registry so the native docs shell is reachable from the existing demo bootstrap.
+- Registered `Aura Docs` in the Gallery registry so the native docs shell is reachable from the existing demo bootstrap.
 - Kept inline code styling through the existing `Text::code_style` path from Phase 1/2.
 - Added tests for fenced code parsing, code block horizontal scroll styling, and docs shell native Container/Menu integration.
 - Updated P8 tracking docs to mark Phase 3 complete and set Phase 4 Live Demo injection as next.
@@ -2952,3 +2952,17 @@
 ### Key Discoveries
 - `pulldown-cmark` emits the custom live demo syntax as normal `Event::Text`, so recognition belongs in the text-event path and must be disabled while the top frame is a code block.
 - Live demo injection is safest as a block-level split for now: surrounding paragraph text becomes normal Paragraph blocks, and the component marker becomes a dedicated native demo block.
+
+## Session 85 — 2026-05-11 (P8 Docs App Split)
+
+### Actions
+- Split the native docs surface into a dedicated `apps/aura-docs` binary crate with its own `main.rs` and Markdown renderer.
+- Removed the docs shell entry and markdown module from `aura-gallery`, restoring gallery to a pure component showcase.
+- Updated workspace membership, app Cargo manifests, and the project/phase docs to describe `aura-docs` as the official native docs main window.
+- Adjusted app titles and shell text to refer to Aura Docs instead of the old gallery-hosted docs shell.
+
+### Verification
+- `cargo check -p aura-gallery -p aura-docs` passed.
+- `cargo test -p aura-docs --no-run` passed.
+- `timeout 8s cargo run -p aura-docs` started successfully and was stopped by timeout.
+- `timeout 8s cargo run -p aura-gallery` started successfully and was stopped by timeout.

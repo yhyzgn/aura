@@ -1,6 +1,5 @@
 mod category;
 mod demos;
-pub mod markdown;
 
 use aura_components::{
     Card, Checkbox, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph, Preview, Radio,

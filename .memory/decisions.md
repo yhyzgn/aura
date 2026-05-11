@@ -144,7 +144,7 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 
 ## ADR-013: P8 Documentation Runs Inside Native Aura Gallery
 
-**Decision**: P8 abandons the previous VitePress/Web documentation plan. Aura's official documentation and component showcase will run entirely inside `aura-gallery`, a GPUI native application. Markdown is an input format only; rendering output must be Aura/GPUI native elements.
+**Decision**: P8 abandons the previous VitePress/Web documentation plan. Aura's official documentation now runs in a separate `aura-docs` GPUI native application, while `aura-gallery` remains the component showcase. Markdown is an input format only; rendering output must be Aura/GPUI native elements.
 
 **Rationale**:
 - The project goal is a native Rust/GPUI component library; the official documentation surface should dogfood Aura rather than fork into a Web stack.
@@ -154,7 +154,7 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 **Implementation constraints**:
 - Use `pulldown-cmark` for Markdown AST/Event parsing.
 - Use Aura Typography/Layout components for all layout, styling, wrapping, and scrolling.
-- Implement Markdown rendering as a stack-based state machine in `aura-gallery`.
+- Implement Markdown rendering as a stack-based state machine in `aura-docs`.
 - Support Live Demo injection syntax such as `::AuraDemo{component="Button"}::` by inserting real Aura components.
 - Do not introduce a VitePress app, Web documentation runtime, or cross-runtime rendering path.
 
