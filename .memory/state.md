@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-**P8 - Native Gallery Documentation** (进行中；Phase 1-3 已完成，下一步是 Phase 4 Live Demo injection；P9 deferred backlog 保持等待明确请求)
+**P8 - Native Gallery Documentation** (4 个核心子阶段已完成；后续可进入保留工程化任务：主题切换、搜索、窗口标题、CI/发布文档等；P9 deferred backlog 保持等待明确请求)
 
 ## Completed in P4
 
@@ -28,7 +28,7 @@
 | P5 Advanced | 🏁 Requested subset complete / remaining deferred | 11/20 | 20 |
 | P6 Built-in Unique ID | ✅ Done | 1/1 | 1 |
 | P7 Demo Self-Contained | ✅ Done | 1/1 | 1 |
-| P8 Native Gallery Docs | 🚧 In Progress | 3/4 | 4 |
+| P8 Native Gallery Docs | ✅ Core Done | 4/4 | 4 |
 | P9 Deferred Advanced | ⏸️ Deferred backlog | 0/9 | 9 |
 
 ## Git Status

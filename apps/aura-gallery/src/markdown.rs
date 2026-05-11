@@ -43,9 +43,11 @@ Paragraph::new()
 
 const COMPONENT_DOC: &str = r#"# Component docs
 
-后续 Phase 4 会支持类似 `::AuraDemo{component="Button"}::` 的活体组件注入语法。
+Phase 4 支持类似 `::AuraDemo{component="Button"}::` 的活体组件注入语法。
 
-当前 Phase 3 先验证文档壳、导航、纵向滚动和代码块横向滚动。
+下面的按钮不是截图或文本，而是真实的 Aura `Button` 节点：
+
+::AuraDemo{component="Button"}::
 
 1. 左侧使用 Aura `Menu`。
 2. 右侧使用 Markdown renderer。
@@ -100,6 +102,9 @@ enum Block {
     CodeBlock {
         language: Option<SharedString>,
         code: SharedString,
+    },
+    LiveDemo {
+        component: SharedString,
     },
     Rule,
 }
@@ -183,7 +188,13 @@ impl ParserState {
         match event {
             Event::Start(tag) => self.start_tag(tag),
             Event::End(tag_end) => self.end_tag(tag_end),
-            Event::Text(text) => self.push_text(text.as_ref(), self.inline_style),
+            Event::Text(text) => {
+                if matches!(self.stack.last(), Some(Frame::CodeBlock { .. })) {
+                    self.push_text(text.as_ref(), self.inline_style);
+                } else {
+                    self.push_text_with_live_demos(text.as_ref(), self.inline_style);
+                }
+            }
             Event::Code(text) | Event::InlineMath(text) => {
                 let mut style = self.inline_style;
                 style.code = true;
@@ -350,20 +361,107 @@ impl ParserState {
         }
     }
 
-    fn push_block(&mut self, block: Block) {
-        match self.stack.last_mut() {
-            Some(Frame::Root(blocks))
-            | Some(Frame::BlockQuote(blocks))
-            | Some(Frame::Item(blocks)) => {
-                blocks.push(block);
+    fn push_text_with_live_demos(&mut self, text: &str, style: InlineStyle) {
+        for part in split_live_demo_parts(text) {
+            match part {
+                TextPart::Text(text) => self.push_text(text, style),
+                TextPart::LiveDemo(component) => self.push_live_demo(component),
             }
-            Some(Frame::List { items, .. }) => items.push(vec![block]),
-            Some(Frame::Paragraph(_))
-            | Some(Frame::Heading { .. })
-            | Some(Frame::CodeBlock { .. })
-            | None => {}
         }
     }
+
+    fn push_live_demo(&mut self, component: SharedString) {
+        let block = Block::LiveDemo { component };
+
+        if let Some(Frame::Paragraph(segments)) = self.stack.last_mut() {
+            if !segments.is_empty() {
+                let before_demo = std::mem::take(segments);
+                self.push_block_to_parent(Block::Paragraph(before_demo));
+            }
+            self.push_block_to_parent(block);
+        } else {
+            self.push_block(block);
+        }
+    }
+
+    fn push_block_to_parent(&mut self, block: Block) {
+        if self.stack.len() >= 2 {
+            let parent_index = self.stack.len() - 2;
+            push_block_into_frame(&mut self.stack[parent_index], block);
+        } else {
+            self.push_block(block);
+        }
+    }
+
+    fn push_block(&mut self, block: Block) {
+        match self.stack.last_mut() {
+            Some(frame) => push_block_into_frame(frame, block),
+            None => {}
+        }
+    }
+}
+
+fn push_block_into_frame(frame: &mut Frame, block: Block) {
+    match frame {
+        Frame::Root(blocks) | Frame::BlockQuote(blocks) | Frame::Item(blocks) => {
+            blocks.push(block);
+        }
+        Frame::List { items, .. } => items.push(vec![block]),
+        Frame::Paragraph(_) | Frame::Heading { .. } | Frame::CodeBlock { .. } => {}
+    }
+}
+
+enum TextPart<'a> {
+    Text(&'a str),
+    LiveDemo(SharedString),
+}
+
+fn split_live_demo_parts(text: &str) -> Vec<TextPart<'_>> {
+    const START: &str = "::AuraDemo{";
+    const END: &str = "}::";
+
+    let mut parts = Vec::new();
+    let mut cursor = 0;
+
+    while let Some(relative_start) = text[cursor..].find(START) {
+        let marker_start = cursor + relative_start;
+        if marker_start > cursor {
+            parts.push(TextPart::Text(&text[cursor..marker_start]));
+        }
+
+        let attr_start = marker_start + START.len();
+        let Some(relative_end) = text[attr_start..].find(END) else {
+            parts.push(TextPart::Text(&text[marker_start..]));
+            cursor = text.len();
+            break;
+        };
+        let marker_end = attr_start + relative_end + END.len();
+        let attrs = &text[attr_start..attr_start + relative_end];
+
+        if let Some(component) = parse_demo_component(attrs) {
+            parts.push(TextPart::LiveDemo(component));
+        } else {
+            parts.push(TextPart::Text(&text[marker_start..marker_end]));
+        }
+
+        cursor = marker_end;
+    }
+
+    if cursor < text.len() {
+        parts.push(TextPart::Text(&text[cursor..]));
+    }
+
+    parts
+}
+
+fn parse_demo_component(attrs: &str) -> Option<SharedString> {
+    let component_key = "component=\"";
+    let start = attrs.find(component_key)? + component_key.len();
+    let rest = &attrs[start..];
+    let end = rest.find('"')?;
+    let component = &rest[..end];
+
+    (!component.is_empty()).then(|| component.to_string().into())
 }
 
 impl RenderOnce for MarkdownDocument {
@@ -411,6 +509,7 @@ impl Block {
                 items,
             } => render_list(ordered, start, items, theme),
             Self::CodeBlock { language, code } => render_code_block(language, code, theme),
+            Self::LiveDemo { component } => render_live_demo(component, theme),
             Self::Rule => div()
                 .h(px(1.0))
                 .w_full()
@@ -418,6 +517,35 @@ impl Block {
                 .into_any_element(),
         }
     }
+}
+
+fn render_live_demo(component: SharedString, theme: &aura_theme::Theme) -> AnyElement {
+    let demo = match component.as_ref() {
+        "Button" => Space::new()
+            .vertical()
+            .gap_sm()
+            .child(Text::new("Live Button demo").bold())
+            .child(
+                Button::new("Native Button")
+                    .primary()
+                    .on_click(|_, _, _| {}),
+            )
+            .into_any_element(),
+        _ => Paragraph::with_text(format!(
+            "Unsupported Aura demo component: {}",
+            component.as_ref()
+        ))
+        .into_any_element(),
+    };
+
+    div()
+        .rounded(px(theme.radius.md))
+        .border_1()
+        .border_color(theme.primary.base.opacity(0.35))
+        .bg(theme.primary.light_9)
+        .p_3()
+        .child(Card::new(demo).no_shadow().width_lg())
+        .into_any_element()
 }
 
 fn render_code_block(
@@ -723,5 +851,45 @@ mod tests {
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains(".main_scroll()"));
         assert!(registry.contains("Docs 原生文档"));
+    }
+
+    #[test]
+    fn parses_live_demo_marker_as_real_block() {
+        let document =
+            MarkdownDocument::parse("Before\n\n::AuraDemo{component=\"Button\"}::\n\nAfter");
+        let blocks = document.blocks();
+
+        assert_eq!(blocks.len(), 3);
+        assert!(matches!(
+            &blocks[1],
+            Block::LiveDemo { component } if component.as_ref() == "Button"
+        ));
+        assert!(
+            !blocks.iter().any(|block| {
+                matches!(block, Block::Paragraph(segments) if segments.iter().any(|segment| segment.text.as_ref().contains("::AuraDemo")))
+            }),
+            "live demo marker should not remain as literal paragraph text"
+        );
+    }
+
+    #[test]
+    fn splits_live_demo_markers_from_surrounding_text() {
+        let parts = split_live_demo_parts("A ::AuraDemo{component=\"Button\"}:: B");
+
+        assert_eq!(parts.len(), 3);
+        assert!(matches!(parts[0], TextPart::Text("A ")));
+        assert!(
+            matches!(&parts[1], TextPart::LiveDemo(component) if component.as_ref() == "Button")
+        );
+        assert!(matches!(parts[2], TextPart::Text(" B")));
+    }
+
+    #[test]
+    fn live_demo_renderer_maps_button_to_native_aura_component() {
+        let source = include_str!("markdown.rs");
+
+        assert!(source.contains("Block::LiveDemo"));
+        assert!(source.contains("Button::new(\"Native Button\")"));
+        assert!(source.contains(".on_click(|_, _, _| {})"));
     }
 }

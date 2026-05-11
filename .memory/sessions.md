@@ -2935,3 +2935,20 @@
 ### Key Discoveries
 - Current GPUI supports `overflow_x_scroll` on stateful divs, which is sufficient for Phase 3 horizontal code scrolling without introducing a custom horizontal Scrollbar component.
 - The docs shell can be introduced as a normal Gallery registry entry first, avoiding a disruptive replacement of the existing component demo bootstrap before Live Demo injection is ready.
+
+## Session 84 — 2026-05-11 (P8 Phase 4 Live Demo Injection)
+
+### Actions
+- Implemented Markdown live demo marker recognition for `::AuraDemo{component="Button"}::` in text events outside code blocks.
+- Added text splitting so live demo markers are removed from paragraph text and inserted as dedicated `Block::LiveDemo` nodes while preserving surrounding text.
+- Rendered `Block::LiveDemo { component: "Button" }` as a real Aura `Button` inside a native highlighted card shell with hover/click-capable GPUI interaction.
+- Updated the docs component page to include the live Button marker so the Gallery docs shell exercises the injection path.
+- Added regression tests for marker parsing, split behavior, marker removal from text blocks, and Button mapping to a real Aura component node.
+- Updated P8 tracking docs to mark Phase 4 complete and P8 core done.
+
+### Verification
+- `cargo test -p aura-gallery markdown` passed during implementation.
+
+### Key Discoveries
+- `pulldown-cmark` emits the custom live demo syntax as normal `Event::Text`, so recognition belongs in the text-event path and must be disabled while the top frame is a code block.
+- Live demo injection is safest as a block-level split for now: surrounding paragraph text becomes normal Paragraph blocks, and the component marker becomes a dedicated native demo block.
