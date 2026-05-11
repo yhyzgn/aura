@@ -2881,3 +2881,19 @@
 ### Key Discoveries
 - 本轮适合补动效的是“短生命周期可见性变化”和“选中态视觉反馈”；Progress/Slider/Upload 等连续数值型动效需要记忆前值或自绘动画状态，后续应单独做，不宜用出现动画伪装数值插值。
 - Input/Textarea/InputNumber 等输入类更适合未来做 focus-ring/边框过渡，当前无需为了动效覆盖而增加复杂度。
+
+## Session 81 — 2026-05-11 (P8 Phase 1 Typography Bootstrapping)
+
+### Actions
+- Started P8 Native Gallery Documentation work from `.prompt/P8-engineering.md`.
+- Upgraded `Paragraph` to compose multiple `Text` segments into one GPUI `StyledText` with explicit `TextRun`s instead of fallback flex-wrapped child elements.
+- Added Text segment run conversion for inline styles: color, background, font weight, italic, monospace family, underline, and strikethrough.
+- Added regression tests for mixed style-run composition, inline-code run styling, and non-truncating native wrapping defaults.
+- Updated P8 tracking docs to mark Phase 1 Typography bootstrapping complete and set Phase 2 Markdown renderer as next.
+
+### Verification
+- `cargo test -p aura-components paragraph` passed during implementation.
+
+### Key Discoveries
+- GPUI `StyledText` supports per-run font family/weight/style/color/background/underline/strikethrough via `TextRun`; per-run font size is not represented in `TextRun`, so segment-level size remains a standalone `Text` behavior rather than mixed-run paragraph behavior.
+- Native wrapping is controlled by inherited GPUI `TextStyle.white_space`, so `Paragraph` sets a normal whitespace, full-width, no-overflow/no-line-clamp shell around the `StyledText`.

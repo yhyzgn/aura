@@ -1,7 +1,7 @@
 use aura_core::Config;
 use gpui::{
     App, Component, FontStyle, FontWeight, Hsla, IntoElement, Pixels, RenderOnce, SharedString,
-    Window, div, prelude::*, px,
+    StrikethroughStyle, TextRun, TextStyle, UnderlineStyle, Window, div, prelude::*, px,
 };
 
 #[derive(Clone)]
@@ -111,6 +111,50 @@ impl Text {
         self.bg = Some(theme.neutral.hover);
         self.text_color(theme.danger.base)
     }
+
+    pub(crate) fn apply_to_text_style(&self, mut style: TextStyle) -> TextStyle {
+        if let Some(color) = self.color {
+            style.color = color;
+        }
+
+        if let Some(bg) = self.bg {
+            style.background_color = Some(bg);
+        }
+
+        if let Some(weight) = self.weight {
+            style.font_weight = weight;
+        }
+
+        if let Some(font_style) = self.style {
+            style.font_style = font_style;
+        }
+
+        if let Some(family) = self.font_family.clone() {
+            style.font_family = family;
+        }
+
+        if self.underline {
+            style.underline = Some(UnderlineStyle {
+                thickness: px(1.0),
+                color: self.color,
+                ..Default::default()
+            });
+        }
+
+        if self.strikethrough {
+            style.strikethrough = Some(StrikethroughStyle {
+                thickness: px(1.0),
+                color: self.color,
+            });
+        }
+
+        style
+    }
+
+    pub(crate) fn to_text_run(&self, default_style: &TextStyle) -> TextRun {
+        self.apply_to_text_style(default_style.clone())
+            .to_run(self.content.len())
+    }
 }
 
 impl RenderOnce for Text {
@@ -154,9 +198,7 @@ impl RenderOnce for Text {
         }
 
         if self.strikethrough {
-            // strikethrough might not be available directly on div in all GPUI versions,
-            // but we'll try common names or just omit if it fails.
-            // el = el.strikethrough();
+            el = el.line_through();
         }
 
         if let Some(family) = self.font_family {

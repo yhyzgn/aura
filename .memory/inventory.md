@@ -140,7 +140,7 @@
 
 | Item | Target | Status |
 |------|--------|--------|
-| Typography bootstrapping | `crates/aura-components/src/` rich text/paragraph primitives | ⬜ Pending |
+| Typography bootstrapping | `crates/aura-components/src/` rich text/paragraph primitives | ✅ `Paragraph` now renders GPUI `StyledText` runs from `Text` segments |
 | Markdown renderer | `apps/aura-gallery/src/markdown.rs` + `pulldown-cmark` | ⬜ Pending |
 | Code block styling + document shell | Native Aura/GPUI two-column gallery docs UI | ⬜ Pending |
 | Live Demo injection | `::AuraDemo{component="..."}::` → real Aura view nodes | ⬜ Pending |
