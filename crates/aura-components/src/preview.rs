@@ -4,8 +4,8 @@ use crate::image::{
 };
 use aura_core::{Config, push_portal};
 use gpui::{
-    AnyElement, App, Component, Global, IntoElement, KeyBinding, ObjectFit, Pixels, RenderImage,
-    RenderOnce, SharedString, Size, Window, actions, div, prelude::*, px, size,
+    AnyElement, App, BoxShadow, Component, Global, IntoElement, KeyBinding, ObjectFit, Pixels,
+    RenderImage, RenderOnce, SharedString, Size, Window, actions, div, prelude::*, px, size,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -120,8 +120,10 @@ pub fn render_image_preview(window: &mut Window, cx: &mut App) {
                         .w(preview_size.width)
                         .h(preview_size.height)
                         .rounded(px(theme.radius.lg))
+                        .border_1()
+                        .border_color(gpui::white().opacity(0.28))
                         .overflow_hidden()
-                        .shadow_xl()
+                        .shadow(preview_image_frame_shadow())
                         .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
                             cx.stop_propagation();
                         })
@@ -164,6 +166,29 @@ fn preview_image_box_size(
     let scale = (max_width.as_f32() / image_width).min(max_height.as_f32() / image_height);
 
     size(px(image_width * scale), px(image_height * scale))
+}
+
+fn preview_image_frame_shadow() -> Vec<BoxShadow> {
+    vec![
+        BoxShadow {
+            color: gpui::black().opacity(0.48),
+            offset: gpui::point(px(0.0), px(28.0)),
+            blur_radius: px(64.0),
+            spread_radius: px(4.0),
+        },
+        BoxShadow {
+            color: gpui::black().opacity(0.34),
+            offset: gpui::point(px(0.0), px(10.0)),
+            blur_radius: px(24.0),
+            spread_radius: px(-2.0),
+        },
+        BoxShadow {
+            color: gpui::white().opacity(0.22),
+            offset: gpui::point(px(0.0), px(-2.0)),
+            blur_radius: px(8.0),
+            spread_radius: px(-4.0),
+        },
+    ]
 }
 
 fn load_preview_image(
@@ -247,11 +272,23 @@ mod tests {
         assert!(production.contains("fn preview_image_box_size"));
         assert!(production.contains(".w(preview_size.width)"));
         assert!(production.contains(".h(preview_size.height)"));
+        assert!(production.contains(".shadow(preview_image_frame_shadow())"));
         assert!(
             !production.contains(
                 ".w(viewport.width * 0.72)\n                        .h(viewport.height * 0.72)"
             ),
             "preview should not consume clicks in the whole max viewport box; only the fitted image box should stop backdrop close"
         );
+    }
+
+    #[test]
+    fn preview_frame_shadow_keeps_3d_border_depth() {
+        let shadow = preview_image_frame_shadow();
+
+        assert_eq!(shadow.len(), 3);
+        assert_eq!(shadow[0].offset.y, px(28.0));
+        assert_eq!(shadow[0].blur_radius, px(64.0));
+        assert_eq!(shadow[1].offset.y, px(10.0));
+        assert_eq!(shadow[2].offset.y, px(-2.0));
     }
 }

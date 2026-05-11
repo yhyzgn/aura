@@ -2789,3 +2789,18 @@
 ### Key Discoveries
 - The old preview hit target was a fixed 72% viewport box; with `ObjectFit::Contain`, letterboxed/shadow-adjacent areas inside that oversized box consumed clicks and prevented backdrop close.
 - Matching the interactive preview box to the contained image aspect ratio keeps clicks on image open while allowing clicks outside the actual image box to close.
+
+## Session 153 — 2026-05-11 (Preview 3D Frame Shadow)
+
+### Actions
+- Restored a stronger 3D frame treatment on the Preview overlay image box while preserving outside-image click dismissal.
+- Replaced the generic `shadow_xl()` on the Preview image frame with layered `BoxShadow`s: deep drop shadow, tighter contact shadow, and subtle top highlight.
+- Added a translucent light border around the preview image frame to reinforce the lifted/glass edge effect.
+- Added regression coverage for the layered 3D shadow values and kept the image-sized hitbox guard.
+
+### Verification
+- `cargo test -p aura-components preview --lib` passed after the frame treatment change.
+- Full verification rerun after this memory update is recorded in the assistant response for this session.
+
+### Key Discoveries
+- The 3D depth can live on the same image-sized hitbox; GPUI shadows paint outside the frame, so the visible shadow area remains outside the consumed click bounds and still dismisses via the backdrop.
