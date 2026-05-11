@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 4838,
+    "run_count": 4869,
     "leader_only": true,
-    "last_tick_at": "2026-05-11T07:12:54.557Z",
+    "last_tick_at": "2026-05-11T07:13:16.577Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": false,
-    "last_tick_at": "2026-05-11T07:12:54.557Z",
+    "last_tick_at": "2026-05-11T07:13:16.577Z",
     "last_error": null,
-    "run_count": 4838
+    "run_count": 4869
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-11T07:12:54.583Z",
+    "last_state_check_at": "2026-05-11T07:13:16.602Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "blocked_by_current_session",
@@ -57,7 +57,7 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-11T07:12:54.569Z",
+    "last_tick_at": "2026-05-11T07:13:16.589Z",
     "last_turn_at": "2026-05-11T07:11:58.019Z",
     "last_turn_count": 5,
     "last_message": "已完成 P8 技术方案重整并推送。\n\n更新内容：\n- `architecture-design.md`\n  - 新增 P8 原生 Aura Gallery 文档架构\n  - 移除旧 VitePress",
@@ -67,21 +67,21 @@
     "last_nudged_at": ""
   },
   "authority_backoff": {
-    "active": false,
-    "reason": "",
-    "primary_pid": null,
-    "primary_last_tick_at": "",
-    "freshness_ms": null,
-    "threshold_ms": null
+    "active": true,
+    "reason": "primary_watcher_healthy",
+    "primary_pid": 86888,
+    "primary_last_tick_at": "2026-05-11T07:13:16.602Z",
+    "freshness_ms": 674,
+    "threshold_ms": 1000
   },
   "adaptive_poll": {
     "enabled": true,
     "base_ms": 250,
     "max_ms": 1000,
     "current_ms": 1000,
-    "idle_streak": 5,
-    "last_tick_at": "2026-05-11T07:12:54.583Z",
-    "last_activity_at": "2026-05-11T07:12:50.750Z",
+    "idle_streak": 3,
+    "last_tick_at": "2026-05-11T07:13:16.602Z",
+    "last_activity_at": "2026-05-11T07:13:14.794Z",
     "last_activity_reason": "eligible_but_not_sent"
   },
   "last_cycle_activity": "eligible_but_not_sent"
