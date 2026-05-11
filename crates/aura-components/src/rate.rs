@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -96,7 +97,20 @@ impl Render for Rate {
                 .flex()
                 .items_center()
                 .justify_center()
-                .child(Icon::new(IconName::Star).size(px(icon_sz)).color(color));
+                .child({
+                    let icon = Icon::new(IconName::Star).size(px(icon_sz)).color(color);
+                    let icon_shell = gpui::div()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(icon);
+                    if is_active {
+                        pop_in(format!("rate-star-motion-{view_id}-{i}"), icon_shell)
+                            .into_any_element()
+                    } else {
+                        icon_shell.into_any_element()
+                    }
+                });
 
             if !self.disabled {
                 star = star

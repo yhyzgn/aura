@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -84,6 +85,7 @@ impl Render for Collapse {
                 let is_active = self.active_names.contains(&name);
                 let is_last = i == self.items.len() - 1;
                 let header_id = format!("{}-header-{}", self.id, name);
+                let content_motion_id = format!("{}-content-motion-{}", self.id, name);
 
                 div()
                     .flex()
@@ -126,7 +128,8 @@ impl Render for Collapse {
                             ),
                     )
                     .when(is_active, |s| {
-                        s.child(
+                        s.child(pop_in(
+                            content_motion_id,
                             div()
                                 .p_4()
                                 .bg(theme.neutral.card)
@@ -134,7 +137,7 @@ impl Render for Collapse {
                                     s.border_b_1().border_color(theme.neutral.border)
                                 })
                                 .child((item.content)(_window, cx)),
-                        )
+                        ))
                     })
             }))
     }

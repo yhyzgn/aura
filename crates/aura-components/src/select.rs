@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -334,7 +335,7 @@ impl Render for Select {
                     let entity = entity.clone();
                     let theme = theme_portal.clone();
 
-                    gpui::div()
+                    let panel = gpui::div()
                         .absolute()
                         .top(top)
                         .left(left)
@@ -388,8 +389,13 @@ impl Render for Select {
                                         this.select_option(idx, window, cx);
                                     });
                                 })
-                        }))
-                        .into_any_element()
+                        }));
+
+                    pop_in(
+                        format!("aura-select-panel-motion-{}", entity.entity_id()),
+                        panel,
+                    )
+                    .into_any_element()
                 },
                 cx,
             );

@@ -145,3 +145,41 @@ pub use tooltip::*;
 pub use transfer::*;
 pub use tree::*;
 pub use upload::*;
+
+#[cfg(test)]
+mod motion_coverage_tests {
+    #[test]
+    fn interactive_surfaces_use_aura_motion() {
+        let popup_sources = [
+            include_str!("select.rs"),
+            include_str!("cascader.rs"),
+            include_str!("date_picker.rs"),
+            include_str!("time_picker.rs"),
+            include_str!("date_time_picker.rs"),
+        ];
+
+        for source in popup_sources {
+            assert!(source.contains("panel-motion"));
+            assert!(source.contains("pop_in("));
+        }
+    }
+
+    #[test]
+    fn interactive_state_indicators_use_aura_motion() {
+        let state_sources = [
+            include_str!("backtop.rs"),
+            include_str!("checkbox.rs"),
+            include_str!("radio.rs"),
+            include_str!("collapse.rs"),
+            include_str!("tree.rs"),
+            include_str!("menu.rs"),
+            include_str!("segmented.rs"),
+            include_str!("tabs.rs"),
+            include_str!("rate.rs"),
+        ];
+
+        for source in state_sources {
+            assert!(source.contains("pop_in("));
+        }
+    }
+}

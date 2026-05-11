@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -197,11 +198,14 @@ impl Tree {
                     ),
             )
             .when(is_expanded && has_children, |s| {
-                s.children(
-                    node.children
-                        .iter()
-                        .map(|child| self.render_node(child, depth + 1, theme, cx)),
-                )
+                s.child(pop_in(
+                    format!("tree-children-motion-{}", id),
+                    div().flex().flex_col().children(
+                        node.children
+                            .iter()
+                            .map(|child| self.render_node(child, depth + 1, theme, cx)),
+                    ),
+                ))
             })
             .into_any_element()
     }

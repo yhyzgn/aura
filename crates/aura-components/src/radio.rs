@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use gpui::{
     App, Context, FocusHandle, Focusable, Hsla, KeyBinding, MouseButton, Render, Rgba,
     SharedString, Window, prelude::*, px,
@@ -118,6 +119,14 @@ impl Render for Radio {
             row = row.cursor_not_allowed();
         }
 
+        let dot = || {
+            gpui::div()
+                .w(px(inner_sz))
+                .h(px(inner_sz))
+                .rounded(px(inner_sz / 2.0))
+                .bg(dot_color)
+        };
+
         let circle = gpui::div()
             .flex_none()
             .w(px(sz))
@@ -128,13 +137,13 @@ impl Render for Radio {
             .flex()
             .items_center()
             .justify_center()
-            .child(
-                gpui::div()
-                    .w(px(inner_sz))
-                    .h(px(inner_sz))
-                    .rounded(px(inner_sz / 2.0))
-                    .bg(dot_color),
-            );
+            .when(self.checked, |s| {
+                s.child(pop_in(
+                    format!("aura-radio-dot-motion-{}", cx.entity().entity_id()),
+                    dot(),
+                ))
+            })
+            .when(!self.checked, |s| s.child(dot()));
 
         row = row.child(circle);
 

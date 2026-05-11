@@ -1,4 +1,4 @@
-use crate::Popover;
+use crate::{Popover, motion::pop_in};
 use aura_core::{Config, Placement};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -369,6 +369,7 @@ impl Menu {
             })
             .into_any_element()
         } else {
+            let toggle_id = id.clone();
             div()
                 .flex()
                 .flex_col()
@@ -387,7 +388,7 @@ impl Menu {
                         .text_color(submenu_color)
                         .hover(|s| s.bg(theme.neutral.hover))
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            this.toggle_submenu(id.clone(), cx);
+                            this.toggle_submenu(toggle_id.clone(), cx);
                         }))
                         .child(
                             div()
@@ -411,12 +412,15 @@ impl Menu {
                         ),
                 )
                 .when(is_open, |s| {
-                    s.children(
-                        submenu
-                            .children
-                            .iter()
-                            .map(|child| self.render_node(child, depth + 1, theme, cx)),
-                    )
+                    s.child(pop_in(
+                        format!("{}-submenu-motion-{}", self.id, id),
+                        div().flex().flex_col().children(
+                            submenu
+                                .children
+                                .iter()
+                                .map(|child| self.render_node(child, depth + 1, theme, cx)),
+                        ),
+                    ))
                 })
                 .into_any_element()
         }

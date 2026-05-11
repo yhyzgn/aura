@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::Config;
 use gpui::{App, Context, IntoElement, Render, SharedString, Window, div, prelude::*, px};
 
@@ -91,7 +92,7 @@ impl Render for Segmented {
                 let value = opt.value.clone();
                 let disabled = opt.disabled;
 
-                div()
+                let option = div()
                     .id(format!("{}-option-{}", self.id, i))
                     .flex()
                     .items_center()
@@ -126,7 +127,13 @@ impl Render for Segmented {
                             }
                         }))
                     })
-                    .child(div().text_sm().child(opt.label.clone()))
+                    .child(div().text_sm().child(opt.label.clone()));
+
+                if is_active {
+                    pop_in(format!("{}-option-motion-{}", self.id, i), option).into_any_element()
+                } else {
+                    option.into_any_element()
+                }
             }))
     }
 }

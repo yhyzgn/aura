@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
@@ -152,7 +153,14 @@ impl Render for Checkbox {
             .justify_center();
 
         if self.checked {
-            box_el = box_el.child(Icon::new(IconName::Check).size(px(12.0)).color(check_color));
+            box_el = box_el.child(pop_in(
+                format!("aura-checkbox-check-motion-{}", cx.entity().entity_id()),
+                gpui::div()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(Icon::new(IconName::Check).size(px(12.0)).color(check_color)),
+            ));
         }
 
         row = row.child(box_el);

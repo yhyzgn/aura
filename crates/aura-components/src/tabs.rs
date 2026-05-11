@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -236,38 +237,42 @@ impl Render for Tabs {
                                 })
                                 .hover(|s| s.text_color(theme.primary.base))
                                 .when(is_active, |s| match position {
-                                    TabPosition::Top => s.child(
+                                    TabPosition::Top => s.child(pop_in(
+                                        format!("{}-indicator-motion-{}", this.id, name),
                                         div()
                                             .absolute()
                                             .bottom_0()
                                             .w_full()
                                             .h(px(2.0))
                                             .bg(theme.primary.base),
-                                    ),
-                                    TabPosition::Bottom => s.child(
+                                    )),
+                                    TabPosition::Bottom => s.child(pop_in(
+                                        format!("{}-indicator-motion-{}", this.id, name),
                                         div()
                                             .absolute()
                                             .top_0()
                                             .w_full()
                                             .h(px(2.0))
                                             .bg(theme.primary.base),
-                                    ),
-                                    TabPosition::Left => s.child(
+                                    )),
+                                    TabPosition::Left => s.child(pop_in(
+                                        format!("{}-indicator-motion-{}", this.id, name),
                                         div()
                                             .absolute()
                                             .right_0()
                                             .h_full()
                                             .w(px(2.0))
                                             .bg(theme.primary.base),
-                                    ),
-                                    TabPosition::Right => s.child(
+                                    )),
+                                    TabPosition::Right => s.child(pop_in(
+                                        format!("{}-indicator-motion-{}", this.id, name),
                                         div()
                                             .absolute()
                                             .left_0()
                                             .h_full()
                                             .w(px(2.0))
                                             .bg(theme.primary.base),
-                                    ),
+                                    )),
                                 })
                         })
                         .when(

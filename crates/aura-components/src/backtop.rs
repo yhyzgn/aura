@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -84,7 +85,8 @@ impl Render for Backtop {
                 visibility_height: self.visibility_height,
             })
             .when(is_visible, |s| {
-                s.child(
+                s.child(pop_in(
+                    format!("{}-btn-motion", self.id),
                     div()
                         .id(format!("{}-btn", self.id))
                         .absolute()
@@ -112,7 +114,7 @@ impl Render for Backtop {
                                 .color(theme.primary.base)
                                 .into_any_element(),
                         }),
-                )
+                ))
             })
     }
 }

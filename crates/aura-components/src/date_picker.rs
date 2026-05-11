@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -433,14 +434,15 @@ impl Render for DatePicker {
                         .on_mouse_down(MouseButton::Left, move |_, _, cx| {
                             close_entity.update(cx, |picker, cx| picker.close(cx));
                         })
-                        .child(
+                        .child(pop_in(
+                            format!("{}-panel-motion", picker_id),
                             div()
                                 .absolute()
                                 .top(top)
                                 .left(left)
                                 .w(width.max(px(300.0)))
                                 .child(render_picker_panel(picker_id, entity, _cx)),
-                        )
+                        ))
                         .into_any_element()
                 },
                 cx,

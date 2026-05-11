@@ -1,3 +1,4 @@
+use crate::motion::pop_in;
 use aura_core::{Config, push_portal};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
@@ -553,7 +554,7 @@ impl Render for Cascader {
                                 cx.notify();
                             });
                         })
-                        .child(panel)
+                        .child(pop_in(format!("{}-panel-motion", cascader_id), panel))
                         .into_any_element()
                 },
                 cx,

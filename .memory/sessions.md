@@ -2866,3 +2866,18 @@
 
 ### Key Discoveries
 - The safe pattern for complex motion is: keep GPUI easing bounded, then use Aura `Interpolator` / `slide_snap` inside the animator closure for overshoot or other non-linear property effects.
+
+## Session 80 — 2026-05-11 (Motion Coverage Audit)
+
+### Actions
+- 审计组件库动画覆盖面：确认现有 motion 已覆盖 Preview/Dialog/Drawer/Popover/Dropdown/Tooltip/Message/Notification/Loading/Button Loading/Switch/Skeleton。
+- 为仍明显依赖“出现/展开/选中反馈”的交互控件补齐 Aura motion：Select、Cascader、DatePicker、TimePicker、DateTimePicker、Backtop、Checkbox、Radio、Collapse、Tree、Menu、Segmented、Tabs、Rate。
+- 对弹出层统一使用 `pop_in`，对选中/展开/活动指示器使用轻量 `pop_in`，避免引入新的未受控 GPUI easing，继续保持弹性 overshoot 只在受控插值路径中使用。
+- 增加 motion coverage 单测，防止后续重构移除这些交互动效接入点。
+
+### Verification
+- `cargo test -p aura-components` passed locally during implementation.
+
+### Key Discoveries
+- 本轮适合补动效的是“短生命周期可见性变化”和“选中态视觉反馈”；Progress/Slider/Upload 等连续数值型动效需要记忆前值或自绘动画状态，后续应单独做，不宜用出现动画伪装数值插值。
+- Input/Textarea/InputNumber 等输入类更适合未来做 focus-ring/边框过渡，当前无需为了动效覆盖而增加复杂度。
