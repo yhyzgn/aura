@@ -2,12 +2,11 @@ use aura_core::{Config, stable_unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    App, Bounds, ClipboardItem, Component, Context, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, GlobalElementId, Hsla,
-    IntoElement, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
-    Pixels, Point, Render, RenderOnce, Rgba, ShapedLine, SharedString, Style, StyledText, TextRun,
-    TextStyle, UTF16Selection, UnderlineStyle, WhiteSpace, Window, actions, div, fill, point,
-    prelude::*, px, relative, size,
+    App, Bounds, ClipboardItem, Component, Context, ElementId, Entity, FocusHandle, Focusable,
+    FontStyle, FontWeight, GlobalElementId, Hsla, IntoElement, LayoutId, MouseButton,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, RenderOnce,
+    Rgba, ShapedLine, SharedString, Style, StyledText, TextRun, TextStyle, UnderlineStyle,
+    WhiteSpace, Window, actions, div, fill, point, prelude::*, px, relative, size,
 };
 use std::{
     collections::HashMap,
@@ -306,6 +305,23 @@ impl CodeBlock {
             gpui::KeyBinding::new("cmd-c", CodeCopy, Some("CodeBlock")),
             gpui::KeyBinding::new("ctrl-c", CodeCopy, Some("CodeBlock")),
         ]);
+        Self::prewarm_highlighter();
+    }
+
+    pub fn prewarm_highlighter() {
+        let _ = syntax_set();
+        let themes = theme_set();
+        for theme in [
+            CodeTheme::AuraLight,
+            CodeTheme::AuraDark,
+            CodeTheme::GitHubLight,
+            CodeTheme::GitHubDark,
+            CodeTheme::OneDark,
+            CodeTheme::Nord,
+            CodeTheme::Dracula,
+        ] {
+            let _ = themes.get(theme.embedded_theme());
+        }
     }
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
@@ -999,6 +1015,9 @@ impl SelectableCodeText {
 
     fn move_to(&self, state: &mut SelectableCodeState, offset: usize, cx: &mut Context<Self>) {
         let offset = self.clamp_boundary(offset);
+        if state.selected_range == (offset..offset) && !state.selection_reversed {
+            return;
+        }
         state.selected_range = offset..offset;
         state.selection_reversed = false;
         cx.notify();
@@ -1006,6 +1025,8 @@ impl SelectableCodeText {
 
     fn select_to(&self, state: &mut SelectableCodeState, offset: usize, cx: &mut Context<Self>) {
         let offset = self.clamp_boundary(offset);
+        let previous_range = state.selected_range.clone();
+        let previous_reversed = state.selection_reversed;
         if state.selection_reversed {
             state.selected_range.start = offset;
         } else {
@@ -1014,6 +1035,9 @@ impl SelectableCodeText {
         if state.selected_range.end < state.selected_range.start {
             state.selection_reversed = !state.selection_reversed;
             state.selected_range = state.selected_range.end..state.selected_range.start;
+        }
+        if state.selected_range == previous_range && state.selection_reversed == previous_reversed {
+            return;
         }
         cx.notify();
     }
@@ -1024,26 +1048,6 @@ impl SelectableCodeText {
             offset -= 1;
         }
         offset
-    }
-
-    fn offset_from_utf16(&self, target: usize) -> usize {
-        let mut utf8 = 0;
-        let mut utf16 = 0;
-        for ch in self.code.chars() {
-            if utf16 >= target {
-                break;
-            }
-            utf16 += ch.len_utf16();
-            utf8 += ch.len_utf8();
-        }
-        utf8
-    }
-
-    fn offset_to_utf16(&self, offset: usize) -> usize {
-        self.code[..offset.min(self.code.len())]
-            .chars()
-            .map(|ch| ch.len_utf16())
-            .sum()
     }
 
     fn index_for_point(&self, pt: Point<Pixels>) -> usize {
@@ -1125,8 +1129,14 @@ impl SelectableCodeText {
     }
 
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
-        with_selectable_state(&self.id, |state| state.selecting = false);
-        cx.notify();
+        let mut changed = false;
+        with_selectable_state(&self.id, |state| {
+            changed = state.selecting;
+            state.selecting = false;
+        });
+        if changed {
+            cx.notify();
+        }
     }
 
     fn word_range_at(&self, idx: usize) -> Range<usize> {
@@ -1225,94 +1235,6 @@ impl SelectableCodeText {
 impl Focusable for SelectableCodeText {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus_handle.clone()
-    }
-}
-
-impl EntityInputHandler for SelectableCodeText {
-    fn text_for_range(
-        &mut self,
-        range_utf16: Range<usize>,
-        actual_range: &mut Option<Range<usize>>,
-        _: &mut Window,
-        _: &mut Context<Self>,
-    ) -> Option<String> {
-        let start = self.offset_from_utf16(range_utf16.start);
-        let end = self.offset_from_utf16(range_utf16.end);
-        actual_range.replace(self.offset_to_utf16(start)..self.offset_to_utf16(end));
-        Some(self.code[start.min(self.code.len())..end.min(self.code.len())].to_string())
-    }
-
-    fn selected_text_range(
-        &mut self,
-        _: bool,
-        _: &mut Window,
-        _: &mut Context<Self>,
-    ) -> Option<UTF16Selection> {
-        let state = selectable_state_snapshot(&self.id);
-        Some(UTF16Selection {
-            range: self.offset_to_utf16(state.selected_range.start)
-                ..self.offset_to_utf16(state.selected_range.end),
-            reversed: state.selection_reversed,
-        })
-    }
-
-    fn marked_text_range(&self, _: &mut Window, _: &mut Context<Self>) -> Option<Range<usize>> {
-        None
-    }
-
-    fn unmark_text(&mut self, _: &mut Window, _: &mut Context<Self>) {}
-
-    fn replace_text_in_range(
-        &mut self,
-        _: Option<Range<usize>>,
-        _: &str,
-        _: &mut Window,
-        _: &mut Context<Self>,
-    ) {
-    }
-
-    fn replace_and_mark_text_in_range(
-        &mut self,
-        _: Option<Range<usize>>,
-        _: &str,
-        _: Option<Range<usize>>,
-        _: &mut Window,
-        _: &mut Context<Self>,
-    ) {
-    }
-
-    fn bounds_for_range(
-        &mut self,
-        range_utf16: Range<usize>,
-        bounds: Bounds<Pixels>,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Option<Bounds<Pixels>> {
-        let start = self.offset_from_utf16(range_utf16.start);
-        let end = self.offset_from_utf16(range_utf16.end);
-        let line_height = self.line_height();
-        let state = selectable_state_snapshot(&self.id);
-        for (line, y, line_start) in &state.lines {
-            let line_end = line_start + line.len();
-            if start >= *line_start && start <= line_end {
-                let x_start = line.x_for_index(start - *line_start);
-                let x_end = line.x_for_index(end.min(line_end) - *line_start);
-                return Some(Bounds::from_corners(
-                    point(bounds.left() + x_start, *y),
-                    point(bounds.left() + x_end, *y + line_height),
-                ));
-            }
-        }
-        None
-    }
-
-    fn character_index_for_point(
-        &mut self,
-        pt: Point<Pixels>,
-        _window: &mut Window,
-        _: &mut Context<Self>,
-    ) -> Option<usize> {
-        Some(self.offset_to_utf16(self.index_for_point(pt)))
     }
 }
 
@@ -1422,11 +1344,7 @@ impl Element for SelectableCodeElement {
         cx: &mut App,
     ) {
         let focus_handle = self.input.read(cx).focus_handle.clone();
-        window.handle_input(
-            &focus_handle,
-            ElementInputHandler::new(bounds, self.input.clone()),
-            cx,
-        );
+        let _ = bounds;
         window.set_cursor_style(gpui::CursorStyle::IBeam, &prepaint.hitbox);
 
         let input = self.input.clone();
@@ -1651,6 +1569,8 @@ mod tests {
         assert!(source.contains("lines: Vec<(ShapedLine"));
         assert!(source.contains("bounds: Option<Bounds"));
         assert!(source.contains("with_selectable_state(&self.id"));
+        assert!(source.contains("prewarm_highlighter"));
+        assert!(source.contains("SelectableCodeLayout"));
         assert!(source.contains("fn id(&self) -> Option<ElementId>"));
         assert!(source.contains("fn font_size(&self) -> Pixels"));
         assert!(source.contains("theme.font_size.md"));
