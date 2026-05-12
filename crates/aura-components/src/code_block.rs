@@ -888,6 +888,19 @@ impl Default for SelectableCodeState {
     }
 }
 
+#[derive(Clone)]
+struct SelectableCodeLayout {
+    lines: Vec<SelectableCodeLine>,
+    width: Pixels,
+    height: Pixels,
+}
+
+#[derive(Clone)]
+struct SelectableCodeLine {
+    shaped: ShapedLine,
+    start: usize,
+}
+
 fn selectable_state_map() -> &'static Mutex<HashMap<String, SelectableCodeState>> {
     static STATES: OnceLock<Mutex<HashMap<String, SelectableCodeState>>> = OnceLock::new();
     STATES.get_or_init(|| Mutex::new(HashMap::new()))
@@ -919,6 +932,7 @@ struct SelectableCodeText {
     code: SharedString,
     runs: Vec<TextRun>,
     theme: aura_theme::Theme,
+    layout: Option<Arc<SelectableCodeLayout>>,
 }
 
 impl SelectableCodeText {
@@ -936,6 +950,7 @@ impl SelectableCodeText {
             code,
             runs,
             theme: theme.clone(),
+            layout: None,
         }
     }
 
@@ -964,6 +979,7 @@ impl SelectableCodeText {
         self.code = code;
         self.runs = runs;
         self.theme = theme.clone();
+        self.layout = None;
 
         if old_id != self.id {
             let old_state = selectable_state_snapshot(&old_id);
@@ -1170,9 +1186,15 @@ impl SelectableCodeText {
         px(self.theme.font_size.md * 1.7)
     }
 
-    fn content_width(&self, window: &mut Window) -> Pixels {
+    fn ensure_layout(&mut self, window: &mut Window) -> Arc<SelectableCodeLayout> {
+        if let Some(layout) = self.layout.as_ref() {
+            return layout.clone();
+        }
+
         let mut max_width = px(1.0);
+        let line_height = self.line_height();
         let mut offset = 0;
+        let mut lines = Vec::new();
         for line in code_lines(self.code.as_ref()) {
             let line_len = line.len();
             let line_runs = slice_runs(&self.runs, offset, offset + line_len);
@@ -1183,9 +1205,20 @@ impl SelectableCodeText {
                 None,
             );
             max_width = max_width.max(shaped.width());
+            lines.push(SelectableCodeLine {
+                shaped,
+                start: offset,
+            });
             offset += line_len + 1;
         }
-        max_width
+
+        let layout = Arc::new(SelectableCodeLayout {
+            height: line_height * lines.len() as f32,
+            lines,
+            width: max_width,
+        });
+        self.layout = Some(layout.clone());
+        layout
     }
 }
 
@@ -1303,7 +1336,7 @@ impl IntoElement for SelectableCodeElement {
 }
 
 impl Element for SelectableCodeElement {
-    type RequestLayoutState = ();
+    type RequestLayoutState = Arc<SelectableCodeLayout>;
     type PrepaintState = SelectableCodePrepaint;
 
     fn id(&self) -> Option<ElementId> {
@@ -1320,14 +1353,15 @@ impl Element for SelectableCodeElement {
         _: Option<&gpui::InspectorElementId>,
         window: &mut Window,
         cx: &mut App,
-    ) -> (LayoutId, ()) {
-        let input = self.input.read(cx);
-        let line_count = code_lines(input.code.as_ref()).count().max(1) as f32;
+    ) -> (LayoutId, Arc<SelectableCodeLayout>) {
+        let layout = self
+            .input
+            .update(cx, |input, _| input.ensure_layout(window));
         let mut style = Style::default();
-        style.size.width = input.content_width(window).into();
+        style.size.width = layout.width.into();
         style.min_size.width = relative(1.).into();
-        style.size.height = (input.line_height() * line_count).into();
-        (window.request_layout(style, [], cx), ())
+        style.size.height = layout.height.into();
+        (window.request_layout(style, [], cx), layout)
     }
 
     fn prepaint(
@@ -1335,35 +1369,25 @@ impl Element for SelectableCodeElement {
         _: Option<&GlobalElementId>,
         _: Option<&gpui::InspectorElementId>,
         bounds: Bounds<Pixels>,
-        _: &mut (),
+        layout: &mut Arc<SelectableCodeLayout>,
         window: &mut Window,
         cx: &mut App,
     ) -> SelectableCodePrepaint {
         let input = self.input.read(cx);
-        let font_size = input.font_size();
         let line_height = input.line_height();
         let mut lines = Vec::new();
         let mut selection_quads = Vec::new();
         let mut y = bounds.top();
-        let mut offset = 0;
+        let selected_range = selectable_state_snapshot(&input.id).selected_range;
 
-        for line in code_lines(input.code.as_ref()) {
-            let line_len = line.len();
-            let line_runs = slice_runs(&input.runs, offset, offset + line_len);
-            let shaped = window.text_system().shape_line(
-                SharedString::from(line.to_string()),
-                font_size,
-                &line_runs,
-                None,
-            );
-
-            let selected_range = selectable_state_snapshot(&input.id).selected_range;
+        for line in &layout.lines {
             if !selected_range.is_empty() {
-                let start = selected_range.start.max(offset);
-                let end = selected_range.end.min(offset + line_len);
+                let line_end = line.start + line.shaped.len();
+                let start = selected_range.start.max(line.start);
+                let end = selected_range.end.min(line_end);
                 if start < end {
-                    let x_start = shaped.x_for_index(start - offset);
-                    let x_end = shaped.x_for_index(end - offset);
+                    let x_start = line.shaped.x_for_index(start - line.start);
+                    let x_end = line.shaped.x_for_index(end - line.start);
                     selection_quads.push(fill(
                         Bounds::new(
                             point(bounds.left() + x_start, y),
@@ -1374,9 +1398,8 @@ impl Element for SelectableCodeElement {
                 }
             }
 
-            lines.push((shaped, y, offset));
+            lines.push((line.shaped.clone(), y, line.start));
             y += line_height;
-            offset += line_len + 1;
         }
 
         let hitbox = window.insert_hitbox(bounds, gpui::HitboxBehavior::Normal);
@@ -1393,7 +1416,7 @@ impl Element for SelectableCodeElement {
         _: Option<&GlobalElementId>,
         _: Option<&gpui::InspectorElementId>,
         bounds: Bounds<Pixels>,
-        _: &mut (),
+        _: &mut Arc<SelectableCodeLayout>,
         prepaint: &mut SelectableCodePrepaint,
         window: &mut Window,
         cx: &mut App,
@@ -1476,14 +1499,7 @@ impl Render for SelectableCodeText {
 }
 
 fn code_lines(text: &str) -> impl Iterator<Item = &str> {
-    let mut lines: Vec<&str> = text.split('\n').collect();
-    if text.ends_with('\n') {
-        lines.pop();
-    }
-    if lines.is_empty() {
-        lines.push("");
-    }
-    lines.into_iter()
+    text.strip_suffix('\n').unwrap_or(text).split('\n')
 }
 
 fn slice_runs(runs: &[TextRun], start: usize, end: usize) -> Vec<TextRun> {
