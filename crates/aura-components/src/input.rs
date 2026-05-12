@@ -659,11 +659,26 @@ impl Input {
 
     pub fn prepend_text(self, text: impl Into<SharedString>) -> Self {
         let text = text.into();
-        self.prepend(move |_, _| gpui::div().px_3().child(text.clone()).into_any_element())
+        self.prepend(move |_, _| {
+            gpui::div()
+                .flex()
+                .items_center()
+                .px_3()
+                .child(text.clone())
+                .into_any_element()
+        })
     }
 
     pub fn prepend_icon(self, icon: IconName) -> Self {
-        self.prepend(move |_, _| Icon::new(icon).size(px(14.0)).into_any_element())
+        self.prepend(move |_, _| {
+            gpui::div()
+                .flex()
+                .items_center()
+                .justify_center()
+                .px_3()
+                .child(Icon::new(icon).size(px(14.0)))
+                .into_any_element()
+        })
     }
 
     pub fn append(
@@ -676,7 +691,14 @@ impl Input {
 
     pub fn append_text(self, text: impl Into<SharedString>) -> Self {
         let text = text.into();
-        self.append(move |_, _| gpui::div().px_3().child(text.clone()).into_any_element())
+        self.append(move |_, _| {
+            gpui::div()
+                .flex()
+                .items_center()
+                .px_3()
+                .child(text.clone())
+                .into_any_element()
+        })
     }
 }
 
@@ -1234,12 +1256,13 @@ impl Render for Input {
             row = row.child(
                 gpui::div()
                     .flex_none()
-                    .h_full()
+                    .self_stretch()
                     .bg(theme.neutral.hover)
                     .border_r_1()
                     .border_color(theme.neutral.border)
                     .flex()
                     .items_center()
+                    .justify_center()
                     .text_color(theme.neutral.text_3)
                     .child(p_render(window, cx)),
             );
@@ -1326,12 +1349,13 @@ impl Render for Input {
             row = row.child(
                 gpui::div()
                     .flex_none()
-                    .h_full()
+                    .self_stretch()
                     .bg(theme.neutral.hover)
                     .border_l_1()
                     .border_color(theme.neutral.border)
                     .flex()
                     .items_center()
+                    .justify_center()
                     .text_color(theme.neutral.text_3)
                     .child(a_render(window, cx)),
             );
