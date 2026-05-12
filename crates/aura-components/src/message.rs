@@ -4,9 +4,10 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::Theme;
 use gpui::{
-    App, Context, Entity, Global, IntoElement, Render, SharedString, Window, div, prelude::*, px,
+    App, AsyncApp, Context, Entity, ForegroundExecutor, Global, IntoElement, Render, SharedString,
+    Window, div, prelude::*, px,
 };
-use std::time::Duration;
+use std::{cell::RefCell, time::Duration};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageType {
@@ -31,6 +32,38 @@ pub struct MessageManager {
 pub struct MessageManagerGlobal(pub Entity<MessageManager>);
 impl Global for MessageManagerGlobal {}
 
+#[derive(Clone)]
+struct ToastDispatcherGlobal {
+    app: AsyncApp,
+    foreground_executor: ForegroundExecutor,
+}
+impl Global for ToastDispatcherGlobal {}
+
+thread_local! {
+    static TOAST_DISPATCHER: RefCell<Option<ToastDispatcherGlobal>> = const { RefCell::new(None) };
+}
+
+impl ToastDispatcherGlobal {
+    fn new(cx: &mut App) -> Self {
+        Self {
+            app: cx.to_async(),
+            foreground_executor: cx.foreground_executor().clone(),
+        }
+    }
+
+    fn show(&self, content: SharedString, msg_type: MessageType) {
+        let app = self.app.clone();
+        self.foreground_executor
+            .spawn(async move {
+                app.update(|cx| {
+                    show_message(content, msg_type, cx);
+                    cx.refresh_windows();
+                });
+            })
+            .detach();
+    }
+}
+
 impl MessageManager {
     pub fn new() -> Self {
         Self {
@@ -44,6 +77,13 @@ impl MessageManager {
             let manager = cx.new(|_| Self::new());
             cx.set_global(MessageManagerGlobal(manager));
         }
+        if !cx.has_global::<ToastDispatcherGlobal>() {
+            let dispatcher = ToastDispatcherGlobal::new(cx);
+            cx.set_global(dispatcher);
+        }
+        TOAST_DISPATCHER.with(|dispatcher| {
+            *dispatcher.borrow_mut() = Some(cx.global::<ToastDispatcherGlobal>().clone());
+        });
     }
 
     pub fn show(content: impl Into<SharedString>, msg_type: MessageType, cx: &mut App) {
@@ -133,6 +173,52 @@ pub fn show_message(content: impl Into<SharedString>, msg_type: MessageType, cx:
     MessageManager::show(content, msg_type, cx);
 }
 
+pub fn toast(content: impl Into<SharedString>, msg_type: MessageType, cx: &mut App) {
+    show_message(content, msg_type, cx);
+}
+
+pub fn toast_info(content: impl Into<SharedString>, cx: &mut App) {
+    toast(content, MessageType::Info, cx);
+}
+
+pub fn toast_success(content: impl Into<SharedString>, cx: &mut App) {
+    toast(content, MessageType::Success, cx);
+}
+
+pub fn toast_warning(content: impl Into<SharedString>, cx: &mut App) {
+    toast(content, MessageType::Warning, cx);
+}
+
+pub fn toast_error(content: impl Into<SharedString>, cx: &mut App) {
+    toast(content, MessageType::Error, cx);
+}
+
+pub fn dispatch_toast(content: impl Into<SharedString>, msg_type: MessageType) {
+    let content = content.into();
+    TOAST_DISPATCHER.with(|dispatcher| {
+        let Some(dispatcher) = dispatcher.borrow().clone() else {
+            panic!("toast macros require MessageManager::init(cx) before use");
+        };
+        dispatcher.show(content, msg_type);
+    });
+}
+
+pub fn dispatch_toast_info(content: impl Into<SharedString>) {
+    dispatch_toast(content, MessageType::Info);
+}
+
+pub fn dispatch_toast_success(content: impl Into<SharedString>) {
+    dispatch_toast(content, MessageType::Success);
+}
+
+pub fn dispatch_toast_warning(content: impl Into<SharedString>) {
+    dispatch_toast(content, MessageType::Warning);
+}
+
+pub fn dispatch_toast_error(content: impl Into<SharedString>) {
+    dispatch_toast(content, MessageType::Error);
+}
+
 pub fn render_messages(cx: &mut App) {
     if cx.has_global::<MessageManagerGlobal>() {
         let manager = cx.global::<MessageManagerGlobal>().0.clone();
@@ -165,6 +251,45 @@ fn message_style(theme: &Theme, msg_type: MessageType) -> MessageStyle {
     }
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __aura_toast_dispatch {
+    ($dispatch:path, $fmt:literal $(, $($arg:tt)+)?) => {{
+        $dispatch(format!($fmt $(, $($arg)+)?));
+    }};
+    ($dispatch:path, $message:expr $(,)?) => {{
+        $dispatch($message);
+    }};
+}
+
+#[macro_export]
+macro_rules! toastInfo {
+    ($($arg:tt)*) => {{
+        $crate::__aura_toast_dispatch!($crate::dispatch_toast_info, $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! toastSuccess {
+    ($($arg:tt)*) => {{
+        $crate::__aura_toast_dispatch!($crate::dispatch_toast_success, $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! toastWarning {
+    ($($arg:tt)*) => {{
+        $crate::__aura_toast_dispatch!($crate::dispatch_toast_warning, $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! toastError {
+    ($($arg:tt)*) => {{
+        $crate::__aura_toast_dispatch!($crate::dispatch_toast_error, $($arg)*);
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,6 +311,44 @@ mod tests {
             assert_eq!(message.border, expected_bg);
             assert_eq!(message.fg, theme.neutral.card);
         }
+    }
+
+    #[test]
+    fn toast_helpers_map_to_message_types() {
+        let source = include_str!("message.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("pub fn toast_info"));
+        assert!(source.contains("pub fn toast_success"));
+        assert!(source.contains("pub fn toast_warning"));
+        assert!(source.contains("pub fn toast_error"));
+        assert!(source.contains("MessageType::Info"));
+        assert!(source.contains("MessageType::Success"));
+        assert!(source.contains("MessageType::Warning"));
+        assert!(source.contains("MessageType::Error"));
+    }
+
+    #[test]
+    fn toast_macros_support_format_arguments() {
+        let source = include_str!("message.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("macro_rules! toastInfo"));
+        assert!(source.contains("format!("));
+        assert!(source.contains("dispatch_toast_info"));
+        assert!(source.contains("dispatch_toast_success"));
+        assert!(source.contains("dispatch_toast_warning"));
+        assert!(source.contains("dispatch_toast_error"));
+    }
+
+    #[test]
+    #[should_panic(expected = "toast macros require MessageManager::init(cx) before use")]
+    fn toast_macro_expands_format_arguments() {
+        crate::toastInfo!("{left}, {right}", left = "left", right = "right");
     }
 
     #[test]

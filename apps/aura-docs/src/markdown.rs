@@ -1,8 +1,8 @@
 use aura_components::{
     Button, Card, CodeBlock as AuraCodeBlock, Container, Menu, MenuMode, Paragraph, Space, Text,
-    Title,
+    Title, toastSuccess,
 };
-use aura_core::Config;
+use aura_core::{Config, PassivePortal, Portal};
 use gpui::{
     AnyElement, App, Component, Context, Entity, IntoElement, Render, RenderOnce, SharedString,
     WeakEntity, Window, div, prelude::*, px,
@@ -785,11 +785,9 @@ fn render_live_demo(component: SharedString, theme: &aura_theme::Theme) -> AnyEl
             .vertical()
             .gap_sm()
             .child(Text::new("Live Button demo").bold())
-            .child(
-                Button::new("Native Button")
-                    .primary()
-                    .on_click(|_, _, _| {}),
-            )
+            .child(Button::new("Native Button").primary().on_click(|_, _, _| {
+                toastSuccess!("Live demo clicked: {}", "Button");
+            }))
             .into_any_element(),
         _ => Paragraph::with_text(format!(
             "Unsupported Aura demo component: {}",
@@ -868,15 +866,85 @@ impl Render for DocsShell {
                         .vertical()
                         .gap_lg()
                         .child(render_markdown(page.markdown))
-                        .child(
-                            Button::new("Native action")
-                                .primary()
-                                .on_click(|_, _, _| {}),
-                        ),
+                        .child(Button::new("Native action").primary().on_click(|_, _, _| {
+                            toastSuccess!("Docs action triggered: {}", page.title);
+                        })),
                 )
                 .no_shadow()
                 .no_shrink(),
             )
+            .overlay(DocsPortalLayer)
+    }
+}
+
+struct DocsPortalLayer;
+
+impl IntoElement for DocsPortalLayer {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
+    }
+}
+
+impl RenderOnce for DocsPortalLayer {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        aura_components::message::render_messages(cx);
+
+        let passive_portals = if cx.has_global::<PassivePortal>() {
+            std::mem::take(&mut cx.global_mut::<PassivePortal>().entries)
+        } else {
+            Vec::new()
+        };
+        let portals = if cx.has_global::<Portal>() {
+            std::mem::take(&mut cx.global_mut::<Portal>().entries)
+        } else {
+            Vec::new()
+        };
+
+        let mut container = div().absolute().top_0().left_0().size_full();
+
+        if !passive_portals.is_empty() {
+            let mut passive_container = div()
+                .id("aura-docs-passive-portal-layer")
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .bg(gpui::transparent_black());
+
+            for entry in passive_portals {
+                passive_container = passive_container.child((entry.render)(window, cx));
+            }
+
+            container = container.child(passive_container);
+        }
+
+        if !portals.is_empty() {
+            let mut active_container = div()
+                .id("aura-docs-portal-layer")
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full()
+                .cursor_default()
+                .occlude()
+                .bg(gpui::transparent_black())
+                .on_hover(|_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .on_mouse_move(|_, _, cx| {
+                    cx.stop_propagation();
+                });
+
+            for entry in portals {
+                active_container = active_container.child((entry.render)(window, cx));
+            }
+
+            container = container.child(active_container);
+        }
+
+        container.into_any_element()
     }
 }
 
@@ -1094,6 +1162,7 @@ mod tests {
         assert!(source.contains("Menu::new()"));
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains(".main_scroll()"));
+        assert!(source.contains("DocsPortalLayer"));
     }
 
     #[test]

@@ -2,8 +2,8 @@ mod category;
 mod demos;
 
 use aura_components::{
-    Card, Checkbox, CodeBlock, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph,
-    Preview, Radio, RadioGroup, Space, Switch, Text, Title,
+    Card, Checkbox, CodeBlock, Container, Dialog, Drawer, Input, Menu, MenuMode, MessageManager,
+    Paragraph, Preview, Radio, RadioGroup, Space, Switch, Text, Title,
 };
 use aura_core::{PassivePortal, Portal, init_aura};
 use aura_theme::Theme;
@@ -22,6 +22,7 @@ pub struct Gallery {
 fn run_gallery() {
     gpui_platform::application().run(|cx: &mut App| {
         init_aura(cx, Theme::light());
+        MessageManager::init(cx);
 
         // Register all key bindings
         Input::register_key_bindings(cx);

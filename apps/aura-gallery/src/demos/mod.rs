@@ -457,6 +457,18 @@ mod tests {
     }
 
     #[test]
+    fn message_demo_uses_toast_macros_with_format_arguments() {
+        let source = include_str!("message_demo.rs");
+
+        assert!(source.contains("toastInfo!"));
+        assert!(source.contains("toastSuccess!"));
+        assert!(source.contains("toastWarning!"));
+        assert!(source.contains("toastError!"));
+        assert!(source.contains("{}"));
+        assert!(!source.contains("show_message"));
+    }
+
+    #[test]
     fn display_demos_use_aura_layout_primitives() {
         for (file_name, source) in [
             ("alert_demo.rs", include_str!("alert_demo.rs")),

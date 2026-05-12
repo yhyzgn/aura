@@ -1,6 +1,6 @@
 use aura_components::layout_helpers::{page, section};
 use aura_components::{
-    CodeBlock, CodeHighlighter, CodeLanguage, CodeTheme, Divider, MessageType, Space, show_message,
+    CodeBlock, CodeHighlighter, CodeLanguage, CodeTheme, Divider, Space, toastSuccess,
 };
 use gpui::{App, Context, Entity, IntoElement, Render, Window, prelude::*};
 
@@ -24,8 +24,8 @@ impl Render for CodeBlockDemo {
                     CodeBlock::new(RUST_SAMPLE)
                         .rust()
                         .selectable(true)
-                        .on_copy(|_, _, cx| {
-                            show_message("复制成功", MessageType::Success, cx);
+                        .on_copy(|_, _, _| {
+                            toastSuccess!("复制成功");
                         }),
                 ))
                 .child(Divider::new())

@@ -1,4 +1,4 @@
-use aura_components::{Button, MessageType, show_message};
+use aura_components::{Button, toastError, toastInfo, toastSuccess, toastWarning};
 use gpui::{AnyView, App, Context, Render, Window, prelude::*};
 
 use aura_components::layout_helpers::{page, row};
@@ -15,21 +15,21 @@ impl Render for MessageDemo {
             "Message 全局提示",
             "常用于主动操作后的反馈提示。",
             row(vec![
-                Button::new("Info Message").on_click(|_, _, cx| {
-                    show_message("This is an info message", MessageType::Info, cx);
+                Button::new("Info Message").on_click(|_, _, _| {
+                    toastInfo!("This is an info message");
                 }),
                 Button::new("Success Message")
                     .primary()
-                    .on_click(|_, _, cx| {
-                        show_message("Congrats! Operation success.", MessageType::Success, cx);
+                    .on_click(|_, _, _| {
+                        toastSuccess!("Congrats! Operation success.");
                     }),
                 Button::new("Warning Message")
                     .warning()
-                    .on_click(|_, _, cx| {
-                        show_message("Be careful! This is a warning.", MessageType::Warning, cx);
+                    .on_click(|_, _, _| {
+                        toastWarning!("Be careful! This is a {}.", "warning");
                     }),
-                Button::new("Error Message").danger().on_click(|_, _, cx| {
-                    show_message("Oops! Something went wrong.", MessageType::Error, cx);
+                Button::new("Error Message").danger().on_click(|_, _, _| {
+                    toastError!("Oops! {} went wrong.", "Something");
                 }),
             ]),
         )
