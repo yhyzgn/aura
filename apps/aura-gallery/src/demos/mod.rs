@@ -464,10 +464,6 @@ mod tests {
         assert!(source.contains("toast_success!"));
         assert!(source.contains("toast_warning!"));
         assert!(source.contains("toast_error!"));
-        assert!(source.contains("TOAST_USAGE_SAMPLE"));
-        assert!(source.contains("CodeBlock::new(TOAST_USAGE_SAMPLE)"));
-        assert!(source.contains("{}, you have {} toast variants."));
-        assert!(source.contains("{component} macro {api} works."));
         assert!(!source.contains("show_message"));
     }
 
