@@ -831,6 +831,8 @@ struct SelectableCodeState {
     selected_range: Range<usize>,
     selection_reversed: bool,
     selecting: bool,
+    lines: Vec<(ShapedLine, Pixels, usize)>,
+    bounds: Option<Bounds<Pixels>>,
 }
 
 impl Default for SelectableCodeState {
@@ -839,6 +841,8 @@ impl Default for SelectableCodeState {
             selected_range: 0..0,
             selection_reversed: false,
             selecting: false,
+            lines: Vec::new(),
+            bounds: None,
         }
     }
 }
@@ -873,8 +877,6 @@ struct SelectableCodeText {
     focus_handle: FocusHandle,
     code: SharedString,
     runs: Vec<TextRun>,
-    last_lines: Vec<(ShapedLine, Pixels, usize)>,
-    last_bounds: Option<Bounds<Pixels>>,
     theme: aura_theme::Theme,
 }
 
@@ -892,8 +894,6 @@ impl SelectableCodeText {
             focus_handle: cx.focus_handle(),
             code,
             runs,
-            last_lines: Vec::new(),
-            last_bounds: None,
             theme: theme.clone(),
         }
     }
@@ -948,15 +948,16 @@ impl SelectableCodeText {
     }
 
     fn index_for_point(&self, pt: Point<Pixels>) -> usize {
-        let Some(bounds) = self.last_bounds.as_ref() else {
+        let state = selectable_state_snapshot(&self.id);
+        let Some(bounds) = state.bounds.as_ref() else {
             return self.code.len();
         };
-        if self.last_lines.is_empty() {
+        if state.lines.is_empty() {
             return 0;
         }
 
         let mut chosen = 0;
-        for (ix, (_line, y, _start)) in self.last_lines.iter().enumerate() {
+        for (ix, (_line, y, _start)) in state.lines.iter().enumerate() {
             let line_height = self.line_height();
             if pt.y >= *y && pt.y < *y + line_height {
                 chosen = ix;
@@ -967,7 +968,7 @@ impl SelectableCodeText {
             }
         }
 
-        let (line, _y, start) = &self.last_lines[chosen];
+        let (line, _y, start) = &state.lines[chosen];
         let x = pt.x - bounds.left();
         let line_index = line.index_for_x(x).unwrap_or(line.len());
         self.clamp_boundary(*start + line_index)
@@ -1161,7 +1162,8 @@ impl EntityInputHandler for SelectableCodeText {
         let start = self.offset_from_utf16(range_utf16.start);
         let end = self.offset_from_utf16(range_utf16.end);
         let line_height = self.line_height();
-        for (line, y, line_start) in &self.last_lines {
+        let state = selectable_state_snapshot(&self.id);
+        for (line, y, line_start) in &state.lines {
             let line_end = line_start + line.len();
             if start >= *line_start && start <= line_end {
                 let x_start = line.x_for_index(start - *line_start);
@@ -1318,10 +1320,11 @@ impl Element for SelectableCodeElement {
             .unwrap();
         }
 
+        let id = self.input.read(cx).id.clone();
         let lines = prepaint.lines.clone();
-        self.input.update(cx, |input, _| {
-            input.last_lines = lines;
-            input.last_bounds = Some(bounds);
+        with_selectable_state(&id, |state| {
+            state.lines = lines;
+            state.bounds = Some(bounds);
         });
     }
 }
@@ -1503,6 +1506,8 @@ mod tests {
         assert!(source.contains("SelectableCodeText"));
         assert!(source.contains("SelectableCodeState"));
         assert!(source.contains("selectable_state_map"));
+        assert!(source.contains("lines: Vec<(ShapedLine"));
+        assert!(source.contains("bounds: Option<Bounds"));
         assert!(source.contains("with_selectable_state(&self.id"));
         assert!(source.contains("fn id(&self) -> Option<ElementId>"));
         assert!(source.contains("fn font_size(&self) -> Pixels"));
