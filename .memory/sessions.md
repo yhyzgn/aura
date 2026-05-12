@@ -3012,3 +3012,20 @@
 - `cargo test -p aura-components code_block` passed.
 - `timeout 8s cargo run -p aura-gallery` started successfully and was stopped by timeout.
 - `timeout 8s cargo run -p aura-docs` started successfully and was stopped by timeout.
+
+## Session 90 — 2026-05-12 (Aura Docs Page Split + External Snippets)
+
+### Actions
+- Split Aura Docs authored content out of `apps/aura-docs/src/markdown.rs` into per-page Markdown files under `apps/aura-docs/content/pages/`.
+- Migrated current docs pages: Overview, Quick Start, Architecture, Typography, Button, CodeBlock, Input, Switch, Message, Markdown, Live Demo, Authoring.
+- Extracted code samples into external `.rs` snippets under `apps/aura-docs/content/snippets/<page>/<case>.rs`.
+- Added fenced code `src="..."` support in the Markdown renderer so snippets are loaded by convention and rendered through the existing native `CodeBlock` component.
+- Updated architecture/prompt/memory docs with the page/snippet naming convention.
+
+### Verification
+- `cargo test -p aura-docs` passed during implementation.
+
+### Key Decisions
+- Docs authored content should not be embedded as large Rust string constants.
+- Component documentation uses one Markdown file per component.
+- Code examples are maintained separately from Markdown and included via `src` paths relative to `apps/aura-docs/content/snippets/`.

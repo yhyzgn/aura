@@ -143,6 +143,8 @@
 |------|--------|--------|
 | Typography bootstrapping | `crates/aura-components/src/` rich text/paragraph primitives | ✅ `Paragraph` now renders GPUI `StyledText` runs from `Text` segments |
 | Markdown renderer | `apps/aura-docs/src/markdown.rs` + `pulldown-cmark` | ✅ Stack-based native renderer for headings, paragraphs, inline strong/em/code/strike, lists, blockquotes |
+| Docs content pages | `apps/aura-docs/content/pages/*.md` | ✅ One Markdown file per page/component |
+| Docs code snippets | `apps/aura-docs/content/snippets/<page>/*.rs` | ✅ External `.rs` snippets referenced by fenced code `src="..."` |
 | Code block styling + document shell | Native Aura/GPUI two-column docs UI | ✅ Fenced code blocks + `Aura Docs` main window with `Container`/`Menu` shell |
 | Live Demo injection | `::AuraDemo{component="..."}::` → real Aura view nodes | ✅ Button demo marker maps to a real Aura `Button` node |
 

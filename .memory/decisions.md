@@ -155,6 +155,8 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 - Use `pulldown-cmark` for Markdown AST/Event parsing.
 - Use Aura Typography/Layout components for all layout, styling, wrapping, and scrolling.
 - Implement Markdown rendering as a stack-based state machine in `aura-docs`.
+- Store authored documentation as one Markdown file per page/component under `apps/aura-docs/content/pages/`.
+- Store code examples outside Markdown under `apps/aura-docs/content/snippets/<page>/<case>.rs`; Markdown code fences reference them with `src="..."`.
 - Support Live Demo injection syntax such as `::AuraDemo{component="Button"}::` by inserting real Aura components.
 - Do not introduce a VitePress app, Web documentation runtime, or cross-runtime rendering path.
 

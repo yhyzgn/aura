@@ -567,8 +567,10 @@ fn render_code_content(
     );
 
     if selectable {
-        let state_key =
-            ElementId::NamedChild(Arc::new(id.clone()), SharedString::from("selectable-code-text"));
+        let state_key = ElementId::NamedChild(
+            Arc::new(id.clone()),
+            SharedString::from("selectable-code-text"),
+        );
         let initial_id = id.clone();
         let initial_code = code.clone();
         let initial_runs = runs.clone();
@@ -606,8 +608,7 @@ impl IntoElement for SelectableCodeTextView {
 
 impl RenderOnce for SelectableCodeTextView {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        self.input
-            .into_any_element()
+        self.input.into_any_element()
     }
 }
 
@@ -1433,15 +1434,16 @@ impl Element for SelectableCodeElement {
         }
 
         for line in &prepaint.layout.lines {
-            line.shaped.paint(
-                point(bounds.left(), bounds.top() + line.y),
-                self.input.read(cx).line_height(),
-                gpui::TextAlign::Left,
-                None,
-                window,
-                cx,
-            )
-            .unwrap();
+            line.shaped
+                .paint(
+                    point(bounds.left(), bounds.top() + line.y),
+                    self.input.read(cx).line_height(),
+                    gpui::TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                )
+                .unwrap();
         }
     }
 }

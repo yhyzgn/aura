@@ -10,554 +10,28 @@ use gpui::{
 };
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
-const INTRO_DOC: &str = r###"# Aura Docs
+const INTRO_DOC: &str = include_str!("../content/pages/overview.md");
 
-Aura Docs 是 Aura UI 的官方原生文档主程序。它不是网页文档站，也不是 WebView，而是一个运行在 GPUI 原生窗口里的 Rust 应用。
+const QUICK_START_DOC: &str = include_str!("../content/pages/quick_start.md");
 
-## 目标
+const ARCHITECTURE_DOC: &str = include_str!("../content/pages/architecture.md");
 
-- 在原生窗口内展示 Aura UI 的设计理念、组件 API 和使用示例。
-- 使用 `pulldown-cmark` 只解析 Markdown AST/Event。
-- 把所有内容渲染为 Aura/GPUI 原生元素树。
-- 通过 Live Demo 把真实组件直接插入文档流。
+const TYPOGRAPHY_DOC: &str = include_str!("../content/pages/typography.md");
 
-> 绝对边界：不引入 HTML、CSS、DOM、WebAssembly、WebView 或跨端转译路径。
+const BUTTON_DOC: &str = include_str!("../content/pages/button.md");
 
-## 当前文档能力
+const CODE_BLOCK_DOC: &str = include_str!("../content/pages/code_block.md");
 
-- 标题、段落、列表、引用块、分割线。
-- 粗体、斜体、删除线、行内代码。
-- 代码块语言识别、语法高亮、主题切换和复制。
-- Button / Message 等组件效果与对应代码。
-- 全局提示 Message / toast 宏。
-- `::AuraDemo{component="Button"}::` 活体组件注入。
-"###;
+const INPUT_DOC: &str = include_str!("../content/pages/input.md");
 
-const QUICK_START_DOC: &str = r###"# Quick Start
+const SWITCH_DOC: &str = include_str!("../content/pages/switch.md");
 
-Aura 是一个 Cargo workspace，组件库和官方应用都在同一个仓库中。
+const MESSAGE_DOC: &str = include_str!("../content/pages/message.md");
+const MARKDOWN_DOC: &str = include_str!("../content/pages/markdown.md");
 
-## 常用命令
+const LIVE_DEMO_DOC: &str = include_str!("../content/pages/live_demo.md");
 
-```shell
-# 组件看板
-cargo run -p aura-gallery
-
-# 官方原生文档主程序
-cargo run -p aura-docs
-
-# 检查两个应用
-cargo check -p aura-gallery -p aura-docs
-```
-
-## 在应用中初始化 Aura
-
-```rust
-use aura_core::init_aura;
-use aura_theme::Theme;
-
-fn main() {
-    gpui_platform::application().run(|cx| {
-        init_aura(cx, Theme::light());
-        // open_window(...)
-    });
-}
-```
-
-## 使用组件
-
-```rust
-use aura_components::{Button, CodeBlock, Space, Title};
-
-Space::new()
-    .vertical()
-    .gap_lg()
-    .child(Title::new("Aura UI").h2())
-    .child(Button::new("Primary").primary())
-    .child(CodeBlock::new("cargo run -p aura-docs").shell());
-```
-"###;
-
-const ARCHITECTURE_DOC: &str = r###"# Native Architecture
-
-Aura Docs 的核心原则是“文档也是原生应用”。Markdown 只是输入格式，最终输出必须是 Aura/GPUI 节点。
-
-## Workspace 边界
-
-- `crates/aura-components`：所有可复用 UI 组件。
-- `apps/aura-gallery`：组件看板，用于展示组件交互效果。
-- `apps/aura-docs`：官方文档主程序，负责 Markdown 文档渲染、组件效果说明和活体组件注入。
-
-## 文档渲染流水线
-
-1. `pulldown-cmark` 读取 Markdown 文本并产生事件。
-2. Renderer 使用 `Vec` 栈管理块级结构。
-3. Inline 样式通过上下文状态记录。
-4. 文本片段交给 `Paragraph` / `Text` 渲染为 `StyledText`。
-5. 代码块交给 `CodeBlock` 组件。
-6. Live Demo 标记转换为真实 Aura 组件。
-
-```rust
-pub fn render_markdown(md_text: &str) -> gpui::AnyElement {
-    Component::new(MarkdownDocument::parse(md_text)).into_any_element()
-}
-```
-
-## 为什么不使用 Web 文档站
-
-- Aura 的目标运行时是 GPUI 原生窗口。
-- 文档系统必须反向验证组件库自己的排版、滚动、文本和交互能力。
-- Live Demo 必须是真实组件，而不是截图、iframe 或转译产物。
-"###;
-
-const TYPOGRAPHY_DOC: &str = r###"# Typography
-
-Aura Typography 可以把多个不同样式的文本片段合成为同一个 `StyledText` 流。
-
-这意味着 **strong**、*emphasis*、~~strike~~ 和 `inline code` 可以在同一段落内自动折行，而不是拆成多个独立块。
-
-## Text
-
-`Text` 用于描述一段文字及其样式：颜色、背景、字号、字重、斜体、下划线、删除线和等宽字体。
-
-## Paragraph
-
-`Paragraph` 接收一个或多个 `Text` 片段，并把它们拼接为单个 GPUI `StyledText`。
-
-```rust
-Paragraph::new()
-    .child(Text::new("Normal "))
-    .child(Text::new("Bold").bold())
-    .child(Text::new(" code ").code_style(theme));
-```
-
-## 自举意义
-
-文档渲染不实现独立排版引擎，而是依赖 Aura 自己的 Typography 组件。这样文档能力和组件库能力会同步成长。
-"###;
-
-const BUTTON_DOC: &str = r###"# Button
-
-`Button` 用于触发操作。Docs 中每个配置都按“效果 + 代码”展示；Gallery 只负责交互预览。
-
-## 类型
-
-### 效果
-
-::AuraDemo{component="ButtonTypes"}::
-
-### 代码
-
-```rust
-Button::new("Default");
-Button::new("Tertiary").tertiary();
-Button::new("Primary").primary();
-Button::new("Info").info();
-Button::new("Success").success();
-Button::new("Warning").warning();
-Button::new("Danger").danger();
-```
-
-## 次要按钮
-
-### 效果
-
-::AuraDemo{component="ButtonSecondary"}::
-
-### 代码
-
-```rust
-Button::new("Default").secondary();
-Button::new("Primary").primary().secondary();
-Button::new("Info").info().secondary();
-Button::new("Success").success().secondary();
-Button::new("Warning").warning().secondary();
-Button::new("Danger").danger().secondary();
-```
-
-## 文字按钮
-
-### 效果
-
-::AuraDemo{component="ButtonText"}::
-
-### 代码
-
-```rust
-Button::new("Default").text();
-Button::new("Primary").primary().text();
-Button::new("Info").info().text();
-Button::new("Success").success().text();
-Button::new("Warning").warning().text();
-Button::new("Danger").danger().text();
-```
-
-## 尺寸
-
-### 效果
-
-::AuraDemo{component="ButtonSizes"}::
-
-### 代码
-
-```rust
-Button::new("Small").primary().small();
-Button::new("Default").primary();
-Button::new("Large").primary().large();
-```
-
-## 状态
-
-### 效果
-
-::AuraDemo{component="ButtonStates"}::
-
-### 代码
-
-```rust
-Button::new("Disabled").primary().disabled(true);
-Button::new("Loading").primary().loading(true);
-Button::new("Saving").success().loading(true);
-```
-
-## 圆角
-
-### 效果
-
-::AuraDemo{component="ButtonRounded"}::
-
-### 代码
-
-```rust
-Button::new("4px").primary().rounded_sm();
-Button::new("12px").primary().rounded_md();
-Button::new("20px").primary().rounded_lg();
-Button::new("Pill").primary().pill();
-```
-"###;
-
-const CODE_BLOCK_DOC: &str = r###"# CodeBlock
-
-`CodeBlock` 是 Aura 的原生代码显示控件，用于展示代码片段、语言标签和复制按钮。
-
-## 能力
-
-- 块级代码显示。
-- 行内代码显示。
-- 语言标识：Rust、TOML、JSON、Markdown、Shell、TypeScript、JavaScript。
-- `syntect` + `two-face` 语法高亮与扩展语法/主题资源。
-- 高亮后端抽象：当前默认 `CodeHighlighter::Syntect`，后续可接 Tree-sitter。
-- 主题切换：默认跟随 Aura 全局主题，也支持显式 Aura / GitHub / One Dark / Nord / Dracula。
-- 鼠标拖拽选中代码并复制：支持 `cmd/ctrl-a` 与 `cmd/ctrl-c`。
-- 复制按钮：使用 GPUI clipboard API。
-- 高亮结果缓存：避免菜单切换和右侧面板滚动时重复解析高亮。
-- 横向滚动：长代码不会撑破布局。
-
-## 基础用法
-
-```rust
-CodeBlock::new("cargo run -p aura-docs")
-    .shell()
-    .copyable(true);
-```
-
-## 指定语言
-
-```rust
-CodeBlock::new(r#"fn main() { println!(\"Aura\"); }"#)
-    .language("rust");
-```
-
-## 主题切换
-
-```rust
-use aura_components::{CodeBlock, CodeHighlighter, CodeTheme};
-
-CodeBlock::new("cargo run -p aura-docs")
-    .shell()
-    .auto_theme(); // 默认：跟随 Aura 全局主题
-
-CodeBlock::new(r#"fn main() { println!(\"Aura\"); }"#)
-    .rust()
-    .github_dark_theme();
-
-CodeBlock::new("[package]\nname = \"aura\"")
-    .toml()
-    .highlighter(CodeHighlighter::Syntect)
-    .theme(CodeTheme::Nord)
-    .selectable(true);
-```
-
-## 行内格式
-
-```rust
-CodeBlock::new("cargo check")
-    .shell()
-    .inline();
-```
-
-## 设计说明
-
-CodeBlock 使用 Rust 原生 `syntect` 解析 Sublime 语法定义和主题，并通过 `two-face` 引入 bat 生态的扩展语法与主题集合，再转换为 GPUI `StyledText` / `TextRun`。高亮能力更完整，但渲染结果仍然是原生 Aura/GPUI 节点。
-
-`CodeHighlighter` 先保留后端边界，当前仅启用 `Syntect`；如果后续需要代码编辑器、AST 交互或更强语义分析，可在不改调用侧主题 API 的前提下新增 Tree-sitter 后端。
-"###;
-
-const INPUT_DOC: &str = r###"# Input
-
-`Input` 是单行文本输入控件，支持 placeholder、禁用态、清除按钮、密码模式、前后缀和图标。
-
-## 基础输入
-
-### 效果
-
-::AuraDemo{component="InputBasic"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Input::new("", cx));
-cx.new(|cx| Input::new("", cx).placeholder("Type something..."));
-```
-
-## 密码输入
-
-### 效果
-
-::AuraDemo{component="InputPassword"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Input::new("", cx).password().placeholder("Password"));
-cx.new(|cx| Input::new("secret", cx).password().mask_char('*'));
-```
-
-## 前后缀
-
-### 效果
-
-::AuraDemo{component="InputAffix"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Input::new("", cx).prepend_text("http://"));
-cx.new(|cx| Input::new("", cx).append_text(".com"));
-cx.new(|cx| {
-    Input::new("", cx)
-        .prepend_icon(IconName::User)
-        .append_text("Admin")
-});
-```
-
-## 可清除与禁用
-
-### 效果
-
-::AuraDemo{component="InputStates"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Input::new("Clear me", cx).clearable(true));
-cx.new(|cx| Input::new("Disabled", cx).disabled(true));
-```
-"###;
-
-const SWITCH_DOC: &str = r###"# Switch
-
-`Switch` 用于在两个互斥状态之间切换。它支持键盘操作、禁用态和弹性滑动动画。
-
-## 基础状态
-
-### 效果
-
-::AuraDemo{component="SwitchBasic"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Switch::new(true, cx));
-cx.new(|cx| Switch::new(false, cx));
-```
-
-## 禁用状态
-
-### 效果
-
-::AuraDemo{component="SwitchDisabled"}::
-
-### 代码
-
-```rust
-cx.new(|cx| Switch::new(false, cx).disabled(true));
-cx.new(|cx| Switch::new(true, cx).disabled(true));
-```
-
-## 变化回调
-
-### 效果
-
-::AuraDemo{component="SwitchCallback"}::
-
-### 代码
-
-```rust
-cx.new(|cx| {
-    Switch::new(false, cx).on_change(|checked, _window, _cx| {
-        if checked {
-            toast_success!("Switch is on");
-        } else {
-            toast_info!("Switch is off");
-        }
-    })
-});
-```
-"###;
-
-const MESSAGE_DOC: &str = r###"# Message
-
-`Message` 是 Aura 的全局提示层，适合用来展示操作反馈、成功提示、告警和错误。
-
-## 快捷宏
-
-下面是四种最常用的 toast 宏，它们都会复用同一个全局 Message 层。
-
-### 效果
-
-::AuraDemo{component="MessageTypes"}::
-
-### 代码
-
-```rust
-use aura_components::{toast_error, toast_info, toast_success, toast_warning};
-
-toast_info!("This is an info toast");
-toast_success!("Operation completed");
-toast_warning!("Please check the input");
-toast_error!("Operation failed");
-```
-
-## 模板格式化
-
-### 效果
-
-::AuraDemo{component="MessageFormatting"}::
-
-### 代码
-
-```rust
-let name = "Aura";
-let count = 4;
-toast_info!("{}, you have {} toast variants.", name, count);
-
-let component = "Message";
-let api = "toast_success!";
-toast_success!("{component} macro {api} works.");
-```
-
-## 交互演示
-
-在 Gallery 里可以点击按钮直接触发这些提示。Docs 里则重点展示用法、配置和对应代码。
-"###;
-const MARKDOWN_DOC: &str = r###"# Markdown Renderer
-
-Aura Docs 的 Markdown renderer 是一个栈式状态机。
-
-## 块级元素
-
-- Heading
-- Paragraph
-- BlockQuote
-- List / Item
-- CodeBlock
-- Rule
-
-## 内联元素
-
-- Strong
-- Emphasis
-- Strikethrough
-- Inline code
-
-## 状态机核心
-
-```rust
-match event {
-    Event::Start(tag) => state.start_tag(tag),
-    Event::End(tag) => state.end_tag(tag),
-    Event::Text(text) => state.push_text_with_live_demos(text.as_ref(), style),
-    Event::Code(text) => state.push_inline_code(text.as_ref()),
-    Event::Rule => state.push_block(Block::Rule),
-    _ => {}
-}
-```
-
-## 当前边界
-
-Markdown 表格、图片、链接跳转等能力还未作为交互控件完整实现。它们应该继续以 Aura 原生组件方式补齐，而不是引入浏览器能力。
-"###;
-
-const LIVE_DEMO_DOC: &str = r###"# Live Demo
-
-Live Demo 是 Aura Docs 区别于静态 Markdown 文档的核心能力。
-
-当 renderer 识别到特殊语法时，不渲染为普通文字，而是创建真实 Aura 组件节点。
-
-```text
-::AuraDemo{component="Button"}::
-```
-
-下面的按钮不是截图或文本，而是真实的 Aura `Button` 节点：
-
-::AuraDemo{component="Button"}::
-
-## 为什么这样设计
-
-- 文档示例和组件实现不会分叉。
-- Hover、click、focus 等交互保留真实行为。
-- 文档本身成为组件库的集成测试面。
-
-## 后续扩展方向
-
-- 支持更多组件：`CodeBlock`、`Input`、`Switch`、`Table`、`Message`。
-- 支持 demo 参数：variant、size、disabled、loading。
-- 支持 demo 容器：示例区、源码区、说明区。
-"###;
-
-const COMPONENT_DOC: &str = r###"# Component Authoring
-
-新增组件时，应先把可复用能力放进 `crates/aura-components`，再在 Gallery 和 Docs 中使用。
-
-## 推荐流程
-
-1. 在 `crates/aura-components/src/<name>.rs` 实现组件。
-2. 在 `crates/aura-components/src/lib.rs` 中 `pub mod` 和 `pub use`。
-3. 在 `apps/aura-gallery/src/demos/` 添加交互 demo。
-4. 如该组件服务文档系统，在 `apps/aura-docs` 中复用它。
-5. 添加最小回归测试。
-
-## 示例：CodeBlock
-
-`CodeBlock` 先进入组件库，然后 Aura Docs 的 fenced code block 渲染改为复用该组件。
-
-```rust
-fn render_code_block(language: Option<SharedString>, code: SharedString) -> AnyElement {
-    let mut code_block = CodeBlock::new(code);
-    if let Some(language) = language {
-        code_block = code_block.language(language.as_ref());
-    }
-    code_block.into_any_element()
-}
-```
-
-## 约束
-
-- Demo 不能绕过组件库重新实现同类 UI。
-- Docs 不能维护一套 app-local 组件替代库。
-- 公共组件命名遵循当前 ADR：不加 `Aura` 前缀。
-"###;
+const COMPONENT_DOC: &str = include_str!("../content/pages/authoring.md");
 
 pub struct DocPage {
     pub title: &'static str,
@@ -638,6 +112,7 @@ enum Block {
     },
     CodeBlock {
         language: Option<SharedString>,
+        source: Option<SharedString>,
         code: SharedString,
     },
     LiveDemo {
@@ -663,6 +138,7 @@ enum Frame {
     Item(Vec<Block>),
     CodeBlock {
         language: Option<SharedString>,
+        source: Option<SharedString>,
         code: String,
     },
 }
@@ -764,16 +240,13 @@ impl ParserState {
             }),
             Tag::Item => self.stack.push(Frame::Item(Vec::new())),
             Tag::CodeBlock(kind) => {
-                let language = match kind {
-                    CodeBlockKind::Indented => None,
-                    CodeBlockKind::Fenced(info) => info
-                        .split_whitespace()
-                        .next()
-                        .filter(|lang| !lang.is_empty())
-                        .map(|lang| SharedString::from(lang.to_string())),
+                let (language, source) = match kind {
+                    CodeBlockKind::Indented => (None, None),
+                    CodeBlockKind::Fenced(info) => parse_code_block_info(info.as_ref()),
                 };
                 self.stack.push(Frame::CodeBlock {
                     language,
+                    source,
                     code: String::new(),
                 });
             }
@@ -871,9 +344,14 @@ impl ParserState {
                     });
                 }
             }
-            Frame::CodeBlock { language, code } => {
+            Frame::CodeBlock {
+                language,
+                source,
+                code,
+            } => {
                 self.push_block(Block::CodeBlock {
                     language,
+                    source,
                     code: code.into(),
                 });
             }
@@ -1001,6 +479,89 @@ fn parse_demo_component(attrs: &str) -> Option<SharedString> {
     (!component.is_empty()).then(|| component.to_string().into())
 }
 
+fn parse_code_block_info(info: &str) -> (Option<SharedString>, Option<SharedString>) {
+    let info = info.trim();
+    if info.is_empty() {
+        return (None, None);
+    }
+
+    let mut language = None;
+    let mut attrs = "";
+
+    if let Some(space_index) = info.find(char::is_whitespace) {
+        let first = info[..space_index].trim();
+        attrs = info[space_index..].trim();
+        if !first.is_empty() && !first.contains('=') {
+            language = Some(first.to_string().into());
+        }
+    } else if !info.contains('=') {
+        language = Some(info.to_string().into());
+    }
+
+    let source = parse_block_attr(attrs, "src");
+    (language, source)
+}
+
+fn parse_block_attr(attrs: &str, key: &str) -> Option<SharedString> {
+    let key = format!("{key}=");
+    let start = attrs.find(&key)? + key.len();
+    let rest = &attrs[start..];
+    let value = if let Some(stripped) = rest.strip_prefix('"') {
+        let end = stripped.find('"')?;
+        &stripped[..end]
+    } else {
+        let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+        &rest[..end]
+    };
+
+    (!value.is_empty()).then(|| value.to_string().into())
+}
+
+fn load_code_snippet(path: &str) -> Option<&'static str> {
+    match path {
+        "quick_start/run.rs" => Some(include_str!("../content/snippets/quick_start/run.rs")),
+        "quick_start/init.rs" => Some(include_str!("../content/snippets/quick_start/init.rs")),
+        "quick_start/components.rs" => Some(include_str!(
+            "../content/snippets/quick_start/components.rs"
+        )),
+        "architecture/render_pipeline.rs" => Some(include_str!(
+            "../content/snippets/architecture/render_pipeline.rs"
+        )),
+        "typography/paragraph.rs" => {
+            Some(include_str!("../content/snippets/typography/paragraph.rs"))
+        }
+        "button/types.rs" => Some(include_str!("../content/snippets/button/types.rs")),
+        "button/secondary.rs" => Some(include_str!("../content/snippets/button/secondary.rs")),
+        "button/text.rs" => Some(include_str!("../content/snippets/button/text.rs")),
+        "button/sizes.rs" => Some(include_str!("../content/snippets/button/sizes.rs")),
+        "button/states.rs" => Some(include_str!("../content/snippets/button/states.rs")),
+        "button/rounded.rs" => Some(include_str!("../content/snippets/button/rounded.rs")),
+        "code_block/basic.rs" => Some(include_str!("../content/snippets/code_block/basic.rs")),
+        "code_block/language.rs" => {
+            Some(include_str!("../content/snippets/code_block/language.rs"))
+        }
+        "code_block/theme.rs" => Some(include_str!("../content/snippets/code_block/theme.rs")),
+        "code_block/inline.rs" => Some(include_str!("../content/snippets/code_block/inline.rs")),
+        "input/basic.rs" => Some(include_str!("../content/snippets/input/basic.rs")),
+        "input/password.rs" => Some(include_str!("../content/snippets/input/password.rs")),
+        "input/affix.rs" => Some(include_str!("../content/snippets/input/affix.rs")),
+        "input/states.rs" => Some(include_str!("../content/snippets/input/states.rs")),
+        "switch/basic.rs" => Some(include_str!("../content/snippets/switch/basic.rs")),
+        "switch/disabled.rs" => Some(include_str!("../content/snippets/switch/disabled.rs")),
+        "switch/callback.rs" => Some(include_str!("../content/snippets/switch/callback.rs")),
+        "message/types.rs" => Some(include_str!("../content/snippets/message/types.rs")),
+        "message/formatting.rs" => Some(include_str!("../content/snippets/message/formatting.rs")),
+        "markdown/state_machine.rs" => Some(include_str!(
+            "../content/snippets/markdown/state_machine.rs"
+        )),
+        "live_demo/button.rs" => Some(include_str!("../content/snippets/live_demo/button.rs")),
+        "authoring/code_block.rs" => {
+            Some(include_str!("../content/snippets/authoring/code_block.rs"))
+        }
+        _ => None,
+    }
+}
+
 impl RenderOnce for MarkdownDocument {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
@@ -1050,7 +611,11 @@ impl Block {
                 start,
                 items,
             } => render_list(ordered, start, items, theme, cx),
-            Self::CodeBlock { language, code } => render_code_block(language, code, theme),
+            Self::CodeBlock {
+                language,
+                source,
+                code,
+            } => render_code_block(language, source, code, theme),
             Self::LiveDemo { component } => render_live_demo(component, theme, cx),
             Self::Rule => div()
                 .h(px(1.0))
@@ -1269,10 +834,20 @@ fn demo_stack(children: Vec<AnyElement>) -> AnyElement {
 
 fn render_code_block(
     language: Option<SharedString>,
+    source: Option<SharedString>,
     code: SharedString,
     _theme: &aura_theme::Theme,
 ) -> AnyElement {
-    let mut code_block = AuraCodeBlock::new(code);
+    let rendered_code = if let Some(source) = source {
+        load_code_snippet(source.as_ref()).map_or_else(
+            || SharedString::from(format!("// Missing external snippet: {}", source.as_ref())),
+            |snippet| SharedString::from(snippet.to_string()),
+        )
+    } else {
+        code
+    };
+
+    let mut code_block = AuraCodeBlock::new(rendered_code);
     if let Some(language) = language {
         code_block = code_block.language(language.as_ref());
     }
@@ -1610,21 +1185,40 @@ mod tests {
 
     #[test]
     fn parses_fenced_code_block_with_language() {
-        let document = MarkdownDocument::parse("```rust\nlet answer = 42;\n```");
-        let [Block::CodeBlock { language, code }] = document.blocks() else {
+        let document = MarkdownDocument::parse("```rust src=\"button/types.rs\"\n```");
+        let [
+            Block::CodeBlock {
+                language,
+                source,
+                code,
+            },
+        ] = document.blocks()
+        else {
             panic!("expected one code block");
         };
 
         assert_eq!(language.as_ref().map(SharedString::as_ref), Some("rust"));
-        assert_eq!(code.as_ref(), "let answer = 42;\n");
+        assert_eq!(
+            source.as_ref().map(SharedString::as_ref),
+            Some("button/types.rs")
+        );
+        assert_eq!(code.as_ref(), "");
+    }
+
+    #[test]
+    fn loads_external_code_snippets_by_path() {
+        assert!(load_code_snippet("button/types.rs").is_some());
+        assert!(load_code_snippet("code_block/theme.rs").is_some());
+        assert!(load_code_snippet("missing.rs").is_none());
     }
 
     #[test]
     fn code_blocks_render_with_horizontal_scroll_shell() {
-        let source = include_str!("markdown.rs");
+        let source = include_str!("../content/pages/code_block.md");
 
-        assert!(source.contains("AuraCodeBlock::new"));
-        assert!(source.contains(".language(language.as_ref())"));
+        assert!(source.contains("src=\"code_block/basic.rs\""));
+        assert!(source.contains("src=\"code_block/theme.rs\""));
+        assert!(load_code_snippet("code_block/basic.rs").is_some());
     }
 
     #[test]
@@ -1671,36 +1265,27 @@ mod tests {
 
     #[test]
     fn component_docs_pair_live_effects_with_code_blocks() {
-        let source = include_str!("markdown.rs");
+        let source = include_str!("../content/pages/button.md");
 
-        for marker in [
-            "ButtonTypes",
-            "ButtonSecondary",
-            "ButtonText",
-            "ButtonSizes",
-            "ButtonStates",
-            "ButtonRounded",
-            "InputBasic",
-            "InputPassword",
-            "InputAffix",
-            "InputStates",
-            "SwitchBasic",
-            "SwitchDisabled",
-            "SwitchCallback",
-            "MessageTypes",
-            "MessageFormatting",
+        for snippet in [
+            "button/types.rs",
+            "button/secondary.rs",
+            "button/text.rs",
+            "button/sizes.rs",
+            "button/states.rs",
+            "button/rounded.rs",
         ] {
-            assert!(source.contains(&format!("component=\"{marker}\"")));
-            assert!(source.contains(&format!("\"{marker}\" =>")));
+            assert!(source.contains(&format!("src=\"{snippet}\"")));
+            assert!(load_code_snippet(snippet).is_some());
         }
     }
 
     #[test]
     fn live_demo_renderer_maps_button_to_native_aura_component() {
-        let source = include_str!("markdown.rs");
+        let source = include_str!("../content/snippets/live_demo/button.rs");
 
-        assert!(source.contains("Block::LiveDemo"));
         assert!(source.contains("Button::new(\"Native Button\")"));
-        assert!(source.contains(".on_click(|_, _, _| {})"));
+        assert!(source.contains("toast_success!"));
+        assert!(source.contains(".on_click(|_, _, _|"));
     }
 }
