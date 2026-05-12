@@ -1,7 +1,7 @@
 //! Input clearable and disabled states.
 
 use aura_components::{Input, Space};
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct InputStatesDemo {
     clearable: Entity<Input>,

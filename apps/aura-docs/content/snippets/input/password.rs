@@ -1,7 +1,7 @@
 //! Password Input examples.
 
 use aura_components::{Input, Space};
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct InputPasswordDemo {
     password: Entity<Input>,

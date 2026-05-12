@@ -2,7 +2,7 @@
 
 use aura_components::{Input, Space};
 use aura_icons_lucide::IconName;
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct InputAffixDemo {
     prepend: Entity<Input>,

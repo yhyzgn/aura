@@ -1,7 +1,7 @@
 //! Disabled Switch states.
 
 use aura_components::{Space, Switch};
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct SwitchDisabledDemo {
     off: Entity<Switch>,

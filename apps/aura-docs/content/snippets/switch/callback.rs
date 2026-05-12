@@ -1,7 +1,7 @@
 //! Switch change callback.
 
 use aura_components::{Space, Switch, toast_info, toast_success};
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct SwitchCallbackDemo {
     switch: Entity<Switch>,

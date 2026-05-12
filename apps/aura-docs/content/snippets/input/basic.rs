@@ -1,7 +1,7 @@
 //! Basic Input fields.
 
 use aura_components::{Input, Space};
-use gpui::{Context, Entity, Render, Window, prelude::*};
+use gpui::{AppContext, Context, Entity, Render, Window};
 
 struct InputBasicDemo {
     plain: Entity<Input>,
