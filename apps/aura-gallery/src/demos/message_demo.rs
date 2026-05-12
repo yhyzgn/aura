@@ -1,7 +1,7 @@
-use aura_components::{Button, toastError, toastInfo, toastSuccess, toastWarning};
+use aura_components::{Button, Space, toast_error, toast_info, toast_success, toast_warning};
 use gpui::{AnyView, App, Context, Render, Window, prelude::*};
 
-use aura_components::layout_helpers::{page, row};
+use aura_components::layout_helpers::{page, section};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| MessageDemo).into()
@@ -14,24 +14,45 @@ impl Render for MessageDemo {
         page(
             "Message 全局提示",
             "常用于主动操作后的反馈提示。",
-            row(vec![
-                Button::new("Info Message").on_click(|_, _, _| {
-                    toastInfo!("This is an info message");
-                }),
-                Button::new("Success Message")
-                    .primary()
-                    .on_click(|_, _, _| {
-                        toastSuccess!("Congrats! Operation success.");
-                    }),
-                Button::new("Warning Message")
-                    .warning()
-                    .on_click(|_, _, _| {
-                        toastWarning!("Be careful! This is a {}.", "warning");
-                    }),
-                Button::new("Error Message").danger().on_click(|_, _, _| {
-                    toastError!("Oops! {} went wrong.", "Something");
-                }),
-            ]),
+            Space::new()
+                .vertical()
+                .gap_xl()
+                .child(section(
+                    "Toast 快捷宏",
+                    "snake_case 宏会复用 Message 全局提示层，不需要在调用处传入 cx。",
+                    Space::new()
+                        .wrap()
+                        .gap_md()
+                        .child(Button::new("toast_info!").on_click(|_, _, _| {
+                            toast_info!("This is an info toast");
+                        }))
+                        .child(Button::new("toast_success!").primary().on_click(|_, _, _| {
+                            toast_success!("Congrats! Operation success.");
+                        }))
+                        .child(Button::new("toast_warning!").warning().on_click(|_, _, _| {
+                            toast_warning!("Be careful! This is a warning.");
+                        }))
+                        .child(Button::new("toast_error!").danger().on_click(|_, _, _| {
+                            toast_error!("Oops! Something went wrong.");
+                        })),
+                ))
+                .child(section(
+                    "模板格式化",
+                    "宏支持 format! 风格的位置参数和命名参数。",
+                    Space::new()
+                        .wrap()
+                        .gap_md()
+                        .child(Button::new("位置参数").on_click(|_, _, _| {
+                            let name = "Aura";
+                            let count = 4;
+                            toast_info!("{}, you have {} toast variants.", name, count);
+                        }))
+                        .child(Button::new("命名参数").primary().on_click(|_, _, _| {
+                            let component = "Message";
+                            let api = "toast_success!";
+                            toast_success!("{component} macro {api} works.");
+                        })),
+                )),
         )
     }
 }

@@ -263,28 +263,28 @@ macro_rules! __aura_toast_dispatch {
 }
 
 #[macro_export]
-macro_rules! toastInfo {
+macro_rules! toast_info {
     ($($arg:tt)*) => {{
         $crate::__aura_toast_dispatch!($crate::dispatch_toast_info, $($arg)*);
     }};
 }
 
 #[macro_export]
-macro_rules! toastSuccess {
+macro_rules! toast_success {
     ($($arg:tt)*) => {{
         $crate::__aura_toast_dispatch!($crate::dispatch_toast_success, $($arg)*);
     }};
 }
 
 #[macro_export]
-macro_rules! toastWarning {
+macro_rules! toast_warning {
     ($($arg:tt)*) => {{
         $crate::__aura_toast_dispatch!($crate::dispatch_toast_warning, $($arg)*);
     }};
 }
 
 #[macro_export]
-macro_rules! toastError {
+macro_rules! toast_error {
     ($($arg:tt)*) => {{
         $crate::__aura_toast_dispatch!($crate::dispatch_toast_error, $($arg)*);
     }};
@@ -337,7 +337,7 @@ mod tests {
             .next()
             .unwrap();
 
-        assert!(source.contains("macro_rules! toastInfo"));
+        assert!(source.contains("macro_rules! toast_info"));
         assert!(source.contains("format!("));
         assert!(source.contains("dispatch_toast_info"));
         assert!(source.contains("dispatch_toast_success"));
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "toast macros require MessageManager::init(cx) before use")]
     fn toast_macro_expands_format_arguments() {
-        crate::toastInfo!("{left}, {right}", left = "left", right = "right");
+        crate::toast_info!("{left}, {right}", left = "left", right = "right");
     }
 
     #[test]

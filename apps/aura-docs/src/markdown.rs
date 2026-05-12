@@ -1,6 +1,6 @@
 use aura_components::{
     Button, Card, CodeBlock as AuraCodeBlock, Container, Menu, MenuMode, Paragraph, Space, Text,
-    Title, toastSuccess,
+    Title, toast_success,
 };
 use aura_core::{Config, PassivePortal, Portal};
 use gpui::{
@@ -786,7 +786,7 @@ fn render_live_demo(component: SharedString, theme: &aura_theme::Theme) -> AnyEl
             .gap_sm()
             .child(Text::new("Live Button demo").bold())
             .child(Button::new("Native Button").primary().on_click(|_, _, _| {
-                toastSuccess!("Live demo clicked: {}", "Button");
+                toast_success!("Live demo clicked: {}", "Button");
             }))
             .into_any_element(),
         _ => Paragraph::with_text(format!(
@@ -867,7 +867,7 @@ impl Render for DocsShell {
                         .gap_lg()
                         .child(render_markdown(page.markdown))
                         .child(Button::new("Native action").primary().on_click(|_, _, _| {
-                            toastSuccess!("Docs action triggered: {}", page.title);
+                            toast_success!("Docs action triggered: {}", page.title);
                         })),
                 )
                 .no_shadow()
