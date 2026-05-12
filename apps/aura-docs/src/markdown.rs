@@ -1864,19 +1864,20 @@ fn render_persistent_list(
 
         rows.push(
             div()
-                .flex()
-                .flex_row()
-                .items_start()
-                .gap_2()
+                .relative()
+                .pl_8()
                 .child(
                     div()
+                        .absolute()
+                        .left_0()
+                        .top_0()
                         .w(px(24.0))
                         .text_color(theme.neutral.text_3)
                         .child(marker),
                 )
                 .child(
                     div()
-                        .flex_1()
+                        .w_full()
                         .child(Space::new().vertical().gap_sm().children(item_children)),
                 ),
         );
@@ -2133,19 +2134,20 @@ fn render_list(
 
         rows.push(
             div()
-                .flex()
-                .flex_row()
-                .items_start()
-                .gap_2()
+                .relative()
+                .pl_8()
                 .child(
                     div()
+                        .absolute()
+                        .left_0()
+                        .top_0()
                         .w(px(24.0))
                         .text_color(theme.neutral.text_3)
                         .child(marker),
                 )
                 .child(
                     div()
-                        .flex_1()
+                        .w_full()
                         .child(Space::new().vertical().gap_sm().children(item_children)),
                 ),
         );
@@ -2459,6 +2461,26 @@ mod tests {
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains(".main_scroll()"));
         assert!(source.contains("DocsPortalLayer"));
+    }
+
+    #[test]
+    fn markdown_lists_keep_inline_code_paragraphs_on_full_content_width() {
+        let source = include_str!("markdown.rs");
+        for (start, end) in [
+            ("fn render_persistent_list(", "fn render_list("),
+            ("fn render_list(", "fn inline_plain_text("),
+        ] {
+            let list_renderer = &source[source.find(start).expect("list renderer should exist")
+                ..source.find(end).expect("next function should exist")];
+
+            assert!(list_renderer.contains(".relative()"));
+            assert!(list_renderer.contains(".pl_8()"));
+            assert!(list_renderer.contains(".absolute()"));
+            assert!(
+                !list_renderer.contains(".flex_row()"),
+                "list rows should not use flex-row layout because it narrows StyledText measurement and forces inline punctuation onto new lines"
+            );
+        }
     }
 
     #[test]
