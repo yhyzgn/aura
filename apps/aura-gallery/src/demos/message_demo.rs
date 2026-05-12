@@ -1,4 +1,6 @@
-use aura_components::{Button, Space, toast_error, toast_info, toast_success, toast_warning};
+use aura_components::{
+    Button, CodeBlock, Space, toast_error, toast_info, toast_success, toast_warning,
+};
 use gpui::{AnyView, App, Context, Render, Window, prelude::*};
 
 use aura_components::layout_helpers::{page, section};
@@ -52,7 +54,31 @@ impl Render for MessageDemo {
                             let api = "toast_success!";
                             toast_success!("{component} macro {api} works.");
                         })),
+                ))
+                .child(section(
+                    "代码用例",
+                    "以下示例是可直接复制的 snake_case toast 宏调用方式。",
+                    CodeBlock::new(TOAST_USAGE_SAMPLE).rust().selectable(true),
                 )),
         )
     }
 }
+
+const TOAST_USAGE_SAMPLE: &str = r#"use aura_components::{toast_error, toast_info, toast_success, toast_warning};
+
+// 基础提示
+toast_info!("This is an info toast");
+toast_success!("Operation completed");
+toast_warning!("Please check the input");
+toast_error!("Operation failed");
+
+// 位置参数模板
+let name = "Aura";
+let count = 4;
+toast_info!("{}, you have {} toast variants.", name, count);
+
+// 命名参数模板
+let component = "Message";
+let api = "toast_success!";
+toast_success!("{component} macro {api} works.");
+"#;
