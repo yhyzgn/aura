@@ -142,8 +142,9 @@ const CODE_BLOCK_DOC: &str = r###"# CodeBlock
 - 块级代码显示。
 - 行内代码显示。
 - 语言标识：Rust、TOML、JSON、Markdown、Shell、TypeScript、JavaScript。
-- `syntect` 语法高亮。
-- 主题切换：默认跟随 Aura 全局主题，也支持显式 light/dark。
+- `syntect` + `two-face` 语法高亮与扩展语法/主题资源。
+- 高亮后端抽象：当前默认 `CodeHighlighter::Syntect`，后续可接 Tree-sitter。
+- 主题切换：默认跟随 Aura 全局主题，也支持显式 Aura / GitHub / One Dark / Nord / Dracula。
 - 复制按钮：使用 GPUI clipboard API。
 - 横向滚动：长代码不会撑破布局。
 
@@ -165,7 +166,7 @@ CodeBlock::new(r#"fn main() { println!(\"Aura\"); }"#)
 ## 主题切换
 
 ```rust
-use aura_components::{CodeBlock, CodeTheme};
+use aura_components::{CodeBlock, CodeHighlighter, CodeTheme};
 
 CodeBlock::new("cargo run -p aura-docs")
     .shell()
@@ -173,11 +174,12 @@ CodeBlock::new("cargo run -p aura-docs")
 
 CodeBlock::new(r#"fn main() { println!(\"Aura\"); }"#)
     .rust()
-    .light_theme();
+    .github_dark_theme();
 
 CodeBlock::new("[package]\nname = \"aura\"")
     .toml()
-    .theme(CodeTheme::Dark);
+    .highlighter(CodeHighlighter::Syntect)
+    .theme(CodeTheme::Nord);
 ```
 
 ## 行内格式
@@ -190,7 +192,9 @@ CodeBlock::new("cargo check")
 
 ## 设计说明
 
-CodeBlock 使用 Rust 原生 `syntect` 解析 Sublime 语法定义和主题，再转换为 GPUI `StyledText` / `TextRun`。高亮能力更完整，但渲染结果仍然是原生 Aura/GPUI 节点。
+CodeBlock 使用 Rust 原生 `syntect` 解析 Sublime 语法定义和主题，并通过 `two-face` 引入 bat 生态的扩展语法与主题集合，再转换为 GPUI `StyledText` / `TextRun`。高亮能力更完整，但渲染结果仍然是原生 Aura/GPUI 节点。
+
+`CodeHighlighter` 先保留后端边界，当前仅启用 `Syntect`；如果后续需要代码编辑器、AST 交互或更强语义分析，可在不改调用侧主题 API 的前提下新增 Tree-sitter 后端。
 "###;
 
 const MARKDOWN_DOC: &str = r###"# Markdown Renderer

@@ -12,3 +12,4 @@ aura-icons-lucide = { path = "../aura-icons-lucide" }
 image = "0.25"
 ureq = "2"
 syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
+two-face = { version = "0.5.1", default-features = false, features = ["syntect-default-fancy"] }

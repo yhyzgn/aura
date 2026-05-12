@@ -9,10 +9,11 @@ use gpui::{
 use std::sync::OnceLock;
 use syntect::{
     easy::HighlightLines,
-    highlighting::{FontStyle as SyntectFontStyle, Style as SyntectStyle, Theme, ThemeSet},
+    highlighting::{FontStyle as SyntectFontStyle, Style as SyntectStyle, Theme},
     parsing::SyntaxSet,
     util::LinesWithEndings,
 };
+use two_face::theme::{EmbeddedLazyThemeSet, EmbeddedThemeName};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeLanguage {
@@ -86,22 +87,80 @@ pub enum CodeFormat {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeHighlighter {
+    Syntect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeTheme {
     Auto,
+    Light,
+    Dark,
+    AuraLight,
+    AuraDark,
+    GitHubLight,
+    GitHubDark,
+    OneDark,
+    Nord,
+    Dracula,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CodeThemeMode {
     Light,
     Dark,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ResolvedCodeTheme {
-    Light,
-    Dark,
+struct ResolvedCodeTheme {
+    theme: CodeTheme,
+    mode: CodeThemeMode,
+}
+
+impl CodeTheme {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Light | Self::AuraLight => "aura-light",
+            Self::Dark | Self::AuraDark => "aura-dark",
+            Self::GitHubLight => "github-light",
+            Self::GitHubDark => "github-dark",
+            Self::OneDark => "one-dark",
+            Self::Nord => "nord",
+            Self::Dracula => "dracula",
+        }
+    }
+
+    fn mode(self) -> CodeThemeMode {
+        match self {
+            Self::Auto | Self::Light | Self::AuraLight | Self::GitHubLight => CodeThemeMode::Light,
+            Self::Dark
+            | Self::AuraDark
+            | Self::GitHubDark
+            | Self::OneDark
+            | Self::Nord
+            | Self::Dracula => CodeThemeMode::Dark,
+        }
+    }
+
+    fn embedded_theme(self) -> EmbeddedThemeName {
+        match self {
+            Self::Auto | Self::Light | Self::AuraLight => EmbeddedThemeName::CatppuccinLatte,
+            Self::Dark | Self::AuraDark => EmbeddedThemeName::CatppuccinMocha,
+            Self::GitHubLight => EmbeddedThemeName::Github,
+            Self::GitHubDark => EmbeddedThemeName::OneHalfDark,
+            Self::OneDark => EmbeddedThemeName::TwoDark,
+            Self::Nord => EmbeddedThemeName::Nord,
+            Self::Dracula => EmbeddedThemeName::Dracula,
+        }
+    }
 }
 
 pub struct CodeBlock {
     code: SharedString,
     language: CodeLanguage,
     format: CodeFormat,
+    highlighter: CodeHighlighter,
     theme: CodeTheme,
     copyable: bool,
     id: Option<ElementId>,
@@ -113,6 +172,7 @@ impl CodeBlock {
             code: code.into(),
             language: CodeLanguage::PlainText,
             format: CodeFormat::Block,
+            highlighter: CodeHighlighter::Syntect,
             theme: CodeTheme::Auto,
             copyable: true,
             id: None,
@@ -163,6 +223,15 @@ impl CodeBlock {
         self
     }
 
+    pub fn highlighter(mut self, highlighter: CodeHighlighter) -> Self {
+        self.highlighter = highlighter;
+        self
+    }
+
+    pub fn syntect(self) -> Self {
+        self.highlighter(CodeHighlighter::Syntect)
+    }
+
     pub fn theme(mut self, theme: CodeTheme) -> Self {
         self.theme = theme;
         self
@@ -178,6 +247,34 @@ impl CodeBlock {
 
     pub fn dark_theme(self) -> Self {
         self.theme(CodeTheme::Dark)
+    }
+
+    pub fn aura_light_theme(self) -> Self {
+        self.theme(CodeTheme::AuraLight)
+    }
+
+    pub fn aura_dark_theme(self) -> Self {
+        self.theme(CodeTheme::AuraDark)
+    }
+
+    pub fn github_light_theme(self) -> Self {
+        self.theme(CodeTheme::GitHubLight)
+    }
+
+    pub fn github_dark_theme(self) -> Self {
+        self.theme(CodeTheme::GitHubDark)
+    }
+
+    pub fn one_dark_theme(self) -> Self {
+        self.theme(CodeTheme::OneDark)
+    }
+
+    pub fn nord_theme(self) -> Self {
+        self.theme(CodeTheme::Nord)
+    }
+
+    pub fn dracula_theme(self) -> Self {
+        self.theme(CodeTheme::Dracula)
     }
 
     pub fn copyable(mut self, copyable: bool) -> Self {
@@ -197,10 +294,11 @@ impl RenderOnce for CodeBlock {
         let id = self.id.clone().unwrap_or_else(|| {
             stable_unique_id(
                 format!(
-                    "aura-code-block:{}:{}:{:?}:{:?}:copyable={}",
+                    "aura-code-block:{}:{}:{:?}:{:?}:{:?}:copyable={}",
                     self.language.label(),
                     self.code.as_ref(),
                     self.format,
+                    self.highlighter,
                     self.theme,
                     self.copyable
                 ),
@@ -212,12 +310,19 @@ impl RenderOnce for CodeBlock {
         });
 
         match self.format {
-            CodeFormat::Inline => render_inline_code(self.code, self.language, self.theme, &theme),
+            CodeFormat::Inline => render_inline_code(
+                self.code,
+                self.language,
+                self.highlighter,
+                self.theme,
+                &theme,
+            ),
             CodeFormat::Block => render_block_code(
                 id,
                 self.code,
                 self.language,
                 self.copyable,
+                self.highlighter,
                 self.theme,
                 &theme,
             ),
@@ -236,6 +341,7 @@ impl IntoElement for CodeBlock {
 fn render_inline_code(
     code: SharedString,
     language: CodeLanguage,
+    highlighter: CodeHighlighter,
     code_theme: CodeTheme,
     theme: &aura_theme::Theme,
 ) -> gpui::AnyElement {
@@ -250,6 +356,7 @@ fn render_inline_code(
         .child(render_highlighted_text(
             code,
             language,
+            highlighter,
             resolved_theme,
             theme,
             false,
@@ -262,6 +369,7 @@ fn render_block_code(
     code: SharedString,
     language: CodeLanguage,
     copyable: bool,
+    highlighter: CodeHighlighter,
     code_theme: CodeTheme,
     theme: &aura_theme::Theme,
 ) -> gpui::AnyElement {
@@ -343,6 +451,7 @@ fn render_block_code(
                 .child(render_highlighted_text(
                     code,
                     language,
+                    highlighter,
                     resolved_theme,
                     theme,
                     true,
@@ -354,13 +463,27 @@ fn render_block_code(
 fn render_highlighted_text(
     code: SharedString,
     language: CodeLanguage,
+    highlighter: CodeHighlighter,
     code_theme: ResolvedCodeTheme,
     theme: &aura_theme::Theme,
     block: bool,
 ) -> StyledText {
     let text = code.to_string();
-    let runs = syntect_runs(&text, language, code_theme, theme, block);
+    let runs = highlight_runs(&text, language, highlighter, code_theme, theme, block);
     StyledText::new(code).with_runs(runs)
+}
+
+fn highlight_runs(
+    text: &str,
+    language: CodeLanguage,
+    highlighter: CodeHighlighter,
+    code_theme: ResolvedCodeTheme,
+    theme: &aura_theme::Theme,
+    block: bool,
+) -> Vec<TextRun> {
+    match highlighter {
+        CodeHighlighter::Syntect => syntect_runs(text, language, code_theme, theme, block),
+    }
 }
 
 fn syntect_runs(
@@ -478,33 +601,31 @@ fn base_style(theme: &aura_theme::Theme, code_theme: ResolvedCodeTheme, block: b
 
 fn syntax_set() -> &'static SyntaxSet {
     static SYNTAX_SET: OnceLock<SyntaxSet> = OnceLock::new();
-    SYNTAX_SET.get_or_init(SyntaxSet::load_defaults_newlines)
+    SYNTAX_SET.get_or_init(two_face::syntax::extra_newlines)
 }
 
 fn resolve_code_theme(code_theme: CodeTheme, theme: &aura_theme::Theme) -> ResolvedCodeTheme {
-    match code_theme {
-        CodeTheme::Light => ResolvedCodeTheme::Light,
-        CodeTheme::Dark => ResolvedCodeTheme::Dark,
-        CodeTheme::Auto if theme.name.eq_ignore_ascii_case("dark") => ResolvedCodeTheme::Dark,
-        CodeTheme::Auto => ResolvedCodeTheme::Light,
+    let resolved = match code_theme {
+        CodeTheme::Auto if theme.name.eq_ignore_ascii_case("dark") => CodeTheme::AuraDark,
+        CodeTheme::Auto => CodeTheme::AuraLight,
+        CodeTheme::Light => CodeTheme::AuraLight,
+        CodeTheme::Dark => CodeTheme::AuraDark,
+        theme => theme,
+    };
+
+    ResolvedCodeTheme {
+        theme: resolved,
+        mode: resolved.mode(),
     }
 }
 
-fn syntect_theme(code_theme: ResolvedCodeTheme) -> &'static Theme {
-    static THEME_SET: OnceLock<ThemeSet> = OnceLock::new();
-    let theme_set = THEME_SET.get_or_init(ThemeSet::load_defaults);
-    let candidates = match code_theme {
-        ResolvedCodeTheme::Light => {
-            &["InspiredGitHub", "base16-ocean.light", "Solarized (light)"][..]
-        }
-        ResolvedCodeTheme::Dark => &["base16-ocean.dark", "Solarized (dark)", "InspiredGitHub"][..],
-    };
+fn theme_set() -> &'static EmbeddedLazyThemeSet {
+    static THEME_SET: OnceLock<EmbeddedLazyThemeSet> = OnceLock::new();
+    THEME_SET.get_or_init(two_face::theme::extra)
+}
 
-    candidates
-        .iter()
-        .find_map(|name| theme_set.themes.get(*name))
-        .or_else(|| theme_set.themes.values().next())
-        .expect("syntect default themes should not be empty")
+fn syntect_theme(code_theme: ResolvedCodeTheme) -> &'static Theme {
+    theme_set().get(code_theme.theme.embedded_theme())
 }
 
 fn syntect_color(color: syntect::highlighting::Color) -> Hsla {
@@ -518,51 +639,51 @@ fn syntect_color(color: syntect::highlighting::Color) -> Hsla {
 }
 
 fn code_surface(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0xf7f8fa),
-        ResolvedCodeTheme::Dark => rgb(0x1b2b34),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0xf7f8fa),
+        CodeThemeMode::Dark => rgb(0x1b2b34),
     }
 }
 
 fn code_header_surface(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0xf0f2f5),
-        ResolvedCodeTheme::Dark => rgb(0x16242c),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0xf0f2f5),
+        CodeThemeMode::Dark => rgb(0x16242c),
     }
 }
 
 fn code_hover_surface(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0xe8edf3),
-        ResolvedCodeTheme::Dark => rgb(0x253c49),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0xe8edf3),
+        CodeThemeMode::Dark => rgb(0x253c49),
     }
 }
 
 fn code_border(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0xd8dee8),
-        ResolvedCodeTheme::Dark => rgb(0x334d5c),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0xd8dee8),
+        CodeThemeMode::Dark => rgb(0x334d5c),
     }
 }
 
 fn code_text(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0x2b303b),
-        ResolvedCodeTheme::Dark => rgb(0xc0c5ce),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0x2b303b),
+        CodeThemeMode::Dark => rgb(0xc0c5ce),
     }
 }
 
 fn code_muted_text(code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => rgb(0x65737e),
-        ResolvedCodeTheme::Dark => rgb(0xa7adba),
+    match code_theme.mode {
+        CodeThemeMode::Light => rgb(0x65737e),
+        CodeThemeMode::Dark => rgb(0xa7adba),
     }
 }
 
 fn code_accent(theme: &aura_theme::Theme, code_theme: ResolvedCodeTheme) -> Hsla {
-    match code_theme {
-        ResolvedCodeTheme::Light => theme.info.base,
-        ResolvedCodeTheme::Dark => rgb(0x96b5b4),
+    match code_theme.mode {
+        CodeThemeMode::Light => theme.info.base,
+        CodeThemeMode::Dark => rgb(0x96b5b4),
     }
 }
 
@@ -612,19 +733,41 @@ mod tests {
 
         assert_eq!(
             resolve_code_theme(CodeTheme::Auto, &light),
-            ResolvedCodeTheme::Light
+            ResolvedCodeTheme {
+                theme: CodeTheme::AuraLight,
+                mode: CodeThemeMode::Light
+            }
         );
         assert_eq!(
             resolve_code_theme(CodeTheme::Auto, &dark),
-            ResolvedCodeTheme::Dark
+            ResolvedCodeTheme {
+                theme: CodeTheme::AuraDark,
+                mode: CodeThemeMode::Dark
+            }
         );
         assert_ne!(
-            syntect_theme(ResolvedCodeTheme::Light).settings.background,
-            syntect_theme(ResolvedCodeTheme::Dark).settings.background
+            syntect_theme(ResolvedCodeTheme {
+                theme: CodeTheme::AuraLight,
+                mode: CodeThemeMode::Light,
+            })
+            .settings
+            .background,
+            syntect_theme(ResolvedCodeTheme {
+                theme: CodeTheme::AuraDark,
+                mode: CodeThemeMode::Dark,
+            })
+            .settings
+            .background
         );
         assert_ne!(
-            code_surface(ResolvedCodeTheme::Light),
-            code_surface(ResolvedCodeTheme::Dark)
+            code_surface(ResolvedCodeTheme {
+                theme: CodeTheme::AuraLight,
+                mode: CodeThemeMode::Light,
+            }),
+            code_surface(ResolvedCodeTheme {
+                theme: CodeTheme::AuraDark,
+                mode: CodeThemeMode::Dark,
+            })
         );
     }
 
@@ -637,9 +780,12 @@ mod tests {
         assert!(source.contains("ThemeSet::load_defaults"));
         assert!(source.contains("ClipboardItem::new_string"));
         assert!(source.contains("CodeFormat::Inline"));
+        assert!(source.contains("CodeHighlighter::Syntect"));
         assert!(source.contains("CodeTheme::Auto"));
         assert!(source.contains("light_theme"));
         assert!(source.contains("dark_theme"));
+        assert!(source.contains("github_dark_theme"));
+        assert!(source.contains("two_face::syntax::extra_newlines"));
         assert!(source.contains("StyledText::new"));
         assert!(source.contains("with_runs"));
     }

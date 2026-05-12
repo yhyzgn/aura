@@ -1,5 +1,5 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{CodeBlock, CodeLanguage, CodeTheme, Divider, Space};
+use aura_components::{CodeBlock, CodeHighlighter, CodeLanguage, CodeTheme, Divider, Space};
 use gpui::{App, Context, Entity, IntoElement, Render, Window, prelude::*};
 
 pub fn render(cx: &mut App) -> Entity<CodeBlockDemo> {
@@ -12,7 +12,7 @@ impl Render for CodeBlockDemo {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         page(
             "CodeBlock 代码块",
-            "原生代码高亮显示，支持语言指定、主题切换、格式指定和复制。",
+            "原生代码高亮显示，支持语言指定、命名主题、高亮后端抽象、格式指定和复制。",
             Space::new()
                 .vertical()
                 .gap_lg()
@@ -34,13 +34,23 @@ impl Render for CodeBlockDemo {
                 .child(Divider::new())
                 .child(section(
                     "主题切换",
-                    "默认 auto_theme() 跟随 Aura 全局主题，也可以显式指定 light_theme() / dark_theme()。",
+                    "默认 auto_theme() 跟随 Aura 全局主题，也可以显式指定 Aura / GitHub / One Dark / Nord / Dracula 等主题。",
                     Space::new()
                         .vertical()
                         .gap_md()
                         .child(CodeBlock::new(RUST_SAMPLE).rust().light_theme())
                         .child(CodeBlock::new(RUST_SAMPLE).rust().dark_theme())
-                        .child(CodeBlock::new(TOML_SAMPLE).toml().theme(CodeTheme::Auto)),
+                        .child(CodeBlock::new(TOML_SAMPLE).toml().theme(CodeTheme::GitHubLight))
+                        .child(CodeBlock::new(JSON_SAMPLE).json().github_dark_theme())
+                        .child(CodeBlock::new(RUST_SAMPLE).rust().one_dark_theme())
+                        .child(CodeBlock::new(SHELL_SAMPLE).shell().nord_theme())
+                        .child(CodeBlock::new(RUST_SAMPLE).rust().dracula_theme())
+                        .child(
+                            CodeBlock::new(TOML_SAMPLE)
+                                .toml()
+                                .highlighter(CodeHighlighter::Syntect)
+                                .theme(CodeTheme::Auto),
+                        ),
                 ))
                 .child(Divider::new())
                 .child(section(
@@ -92,5 +102,11 @@ mod tests {
         assert!(source.contains(".light_theme()"));
         assert!(source.contains(".dark_theme()"));
         assert!(source.contains("CodeTheme::Auto"));
+        assert!(source.contains("CodeTheme::GitHubLight"));
+        assert!(source.contains("CodeHighlighter::Syntect"));
+        assert!(source.contains(".github_dark_theme()"));
+        assert!(source.contains(".one_dark_theme()"));
+        assert!(source.contains(".nord_theme()"));
+        assert!(source.contains(".dracula_theme()"));
     }
 }
