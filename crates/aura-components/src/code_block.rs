@@ -834,6 +834,8 @@ struct SelectableCodeText {
     selected_range: Range<usize>,
     selection_reversed: bool,
     selecting: bool,
+    pending_anchor: Option<usize>,
+    pending_focus: bool,
     last_lines: Vec<(ShapedLine, Pixels, usize)>,
     last_bounds: Option<Bounds<Pixels>>,
     theme: aura_theme::Theme,
@@ -856,6 +858,8 @@ impl SelectableCodeText {
             selected_range: 0..0,
             selection_reversed: false,
             selecting: false,
+            pending_anchor: None,
+            pending_focus: false,
             last_lines: Vec::new(),
             last_bounds: None,
             theme: theme.clone(),
@@ -957,8 +961,14 @@ impl SelectableCodeText {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.pending_focus = true;
         window.focus(&self.focus_handle, cx);
-        let idx = self.index_for_point(event.position);
+        let idx = if self.last_lines.is_empty() {
+            self.pending_anchor = Some(0);
+            0
+        } else {
+            self.index_for_point(event.position)
+        };
         self.selecting = true;
         if event.modifiers.shift {
             self.select_to(idx, cx);
@@ -1038,6 +1048,10 @@ impl SelectableCodeText {
             next += 1;
         }
         next
+    }
+
+    fn font_size(&self) -> Pixels {
+        px(self.theme.font_size.md)
     }
 
     fn line_height(&self) -> Pixels {
@@ -1191,7 +1205,7 @@ impl Element for SelectableCodeElement {
         cx: &mut App,
     ) -> SelectableCodePrepaint {
         let input = self.input.read(cx);
-        let font_size = px(input.theme.font_size.sm);
+        let font_size = input.font_size();
         let line_height = input.line_height();
         let mut lines = Vec::new();
         let mut selection_quads = Vec::new();
@@ -1269,9 +1283,17 @@ impl Element for SelectableCodeElement {
         }
 
         let lines = prepaint.lines.clone();
-        self.input.update(cx, |input, _| {
+        self.input.update(cx, |input, cx| {
             input.last_lines = lines;
             input.last_bounds = Some(bounds);
+            if input.pending_focus {
+                window.focus(&input.focus_handle, cx);
+                input.pending_focus = false;
+            }
+            if let Some(anchor) = input.pending_anchor.take() {
+                input.selected_range = anchor..anchor;
+                input.selection_reversed = false;
+            }
         });
     }
 }
@@ -1448,6 +1470,9 @@ mod tests {
         assert!(source.contains("CodeFormat::Inline"));
         assert!(source.contains("selectable"));
         assert!(source.contains("SelectableCodeText"));
+        assert!(source.contains("pending_anchor"));
+        assert!(source.contains("fn font_size(&self) -> Pixels"));
+        assert!(source.contains("theme.font_size.md"));
         assert!(source.contains("cached_highlight_runs"));
         assert!(source.contains("HighlightCacheKey"));
         assert!(source.contains("CodeHighlighter::Syntect"));
