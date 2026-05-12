@@ -145,7 +145,9 @@ const CODE_BLOCK_DOC: &str = r###"# CodeBlock
 - `syntect` + `two-face` 语法高亮与扩展语法/主题资源。
 - 高亮后端抽象：当前默认 `CodeHighlighter::Syntect`，后续可接 Tree-sitter。
 - 主题切换：默认跟随 Aura 全局主题，也支持显式 Aura / GitHub / One Dark / Nord / Dracula。
+- 鼠标拖拽选中代码并复制：支持 `cmd/ctrl-a` 与 `cmd/ctrl-c`。
 - 复制按钮：使用 GPUI clipboard API。
+- 高亮结果缓存：避免菜单切换和右侧面板滚动时重复解析高亮。
 - 横向滚动：长代码不会撑破布局。
 
 ## 基础用法
@@ -179,7 +181,8 @@ CodeBlock::new(r#"fn main() { println!(\"Aura\"); }"#)
 CodeBlock::new("[package]\nname = \"aura\"")
     .toml()
     .highlighter(CodeHighlighter::Syntect)
-    .theme(CodeTheme::Nord);
+    .theme(CodeTheme::Nord)
+    .selectable(true);
 ```
 
 ## 行内格式

@@ -2,8 +2,8 @@ mod category;
 mod demos;
 
 use aura_components::{
-    Card, Checkbox, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph, Preview, Radio,
-    RadioGroup, Space, Switch, Text, Title,
+    Card, Checkbox, CodeBlock, Container, Dialog, Drawer, Input, Menu, MenuMode, Paragraph,
+    Preview, Radio, RadioGroup, Space, Switch, Text, Title,
 };
 use aura_core::{PassivePortal, Portal, init_aura};
 use aura_theme::Theme;
@@ -25,6 +25,7 @@ fn run_gallery() {
 
         // Register all key bindings
         Input::register_key_bindings(cx);
+        CodeBlock::register_key_bindings(cx);
         Checkbox::register_key_bindings(cx);
         Radio::register_key_bindings(cx);
         RadioGroup::register_key_bindings(cx);

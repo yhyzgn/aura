@@ -19,7 +19,7 @@ impl Render for CodeBlockDemo {
                 .child(section(
                     "Rust 高亮 + 复制",
                     "显示语言标签并提供复制按钮，内容在容器内横向滚动。",
-                    CodeBlock::new(RUST_SAMPLE).rust(),
+                    CodeBlock::new(RUST_SAMPLE).rust().selectable(true),
                 ))
                 .child(Divider::new())
                 .child(section(
@@ -99,6 +99,7 @@ mod tests {
         assert!(source.contains(".rust()"));
         assert!(source.contains(".shell()"));
         assert!(source.contains(".inline()"));
+        assert!(source.contains(".selectable"));
         assert!(source.contains(".light_theme()"));
         assert!(source.contains(".dark_theme()"));
         assert!(source.contains("CodeTheme::Auto"));

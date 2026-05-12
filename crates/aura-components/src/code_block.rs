@@ -2,11 +2,19 @@ use aura_core::{Config, stable_unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    App, ClipboardItem, Component, ElementId, FontStyle, FontWeight, Hsla, IntoElement, RenderOnce,
-    Rgba, SharedString, StyledText, TextRun, TextStyle, UnderlineStyle, WhiteSpace, Window, div,
-    prelude::*, px,
+    App, Bounds, ClipboardItem, Component, Context, ElementId, ElementInputHandler, Entity,
+    EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, GlobalElementId, Hsla,
+    IntoElement, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
+    Pixels, Point, Render, RenderOnce, Rgba, ShapedLine, SharedString, Style, StyledText, TextRun,
+    TextStyle, UTF16Selection, UnderlineStyle, WhiteSpace, Window, actions, div, fill, point,
+    prelude::*, px, size,
 };
-use std::sync::OnceLock;
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+    ops::Range,
+    sync::{Mutex, OnceLock},
+};
 use syntect::{
     easy::HighlightLines,
     highlighting::{FontStyle as SyntectFontStyle, Style as SyntectStyle, Theme},
@@ -15,7 +23,9 @@ use syntect::{
 };
 use two_face::theme::{EmbeddedLazyThemeSet, EmbeddedThemeName};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+actions!(code_block_actions, [CodeSelectAll, CodeCopy]);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeLanguage {
     PlainText,
     Rust,
@@ -86,12 +96,12 @@ pub enum CodeFormat {
     Inline,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeHighlighter {
     Syntect,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeTheme {
     Auto,
     Light,
@@ -163,6 +173,7 @@ pub struct CodeBlock {
     highlighter: CodeHighlighter,
     theme: CodeTheme,
     copyable: bool,
+    selectable: bool,
     id: Option<ElementId>,
 }
 
@@ -175,6 +186,7 @@ impl CodeBlock {
             highlighter: CodeHighlighter::Syntect,
             theme: CodeTheme::Auto,
             copyable: true,
+            selectable: true,
             id: None,
         }
     }
@@ -282,6 +294,20 @@ impl CodeBlock {
         self
     }
 
+    pub fn selectable(mut self, selectable: bool) -> Self {
+        self.selectable = selectable;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([
+            gpui::KeyBinding::new("cmd-a", CodeSelectAll, Some("CodeBlock")),
+            gpui::KeyBinding::new("ctrl-a", CodeSelectAll, Some("CodeBlock")),
+            gpui::KeyBinding::new("cmd-c", CodeCopy, Some("CodeBlock")),
+            gpui::KeyBinding::new("ctrl-c", CodeCopy, Some("CodeBlock")),
+        ]);
+    }
+
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
         self.id = Some(id.into());
         self
@@ -294,13 +320,14 @@ impl RenderOnce for CodeBlock {
         let id = self.id.clone().unwrap_or_else(|| {
             stable_unique_id(
                 format!(
-                    "aura-code-block:{}:{}:{:?}:{:?}:{:?}:copyable={}",
+                    "aura-code-block:{}:{}:{:?}:{:?}:{:?}:copyable={}:selectable={}",
                     self.language.label(),
                     self.code.as_ref(),
                     self.format,
                     self.highlighter,
                     self.theme,
-                    self.copyable
+                    self.copyable,
+                    self.selectable
                 ),
                 "aura-code-block",
                 window,
@@ -322,9 +349,11 @@ impl RenderOnce for CodeBlock {
                 self.code,
                 self.language,
                 self.copyable,
+                self.selectable,
                 self.highlighter,
                 self.theme,
                 &theme,
+                cx,
             ),
         }
     }
@@ -369,9 +398,11 @@ fn render_block_code(
     code: SharedString,
     language: CodeLanguage,
     copyable: bool,
+    selectable: bool,
     highlighter: CodeHighlighter,
     code_theme: CodeTheme,
     theme: &aura_theme::Theme,
+    cx: &mut App,
 ) -> gpui::AnyElement {
     let resolved_theme = resolve_code_theme(code_theme, theme);
     let copied_code = code.to_string();
@@ -434,7 +465,7 @@ fn render_block_code(
     }
 
     div()
-        .id(id)
+        .id(id.clone())
         .w_full()
         .rounded(px(theme.radius.lg))
         .border_1()
@@ -448,13 +479,16 @@ fn render_block_code(
                 .overflow_x_scroll()
                 .p_4()
                 .bg(code_surface(resolved_theme))
-                .child(render_highlighted_text(
+                .cursor_text()
+                .child(render_code_content(
+                    id,
                     code,
                     language,
                     highlighter,
                     resolved_theme,
+                    selectable,
                     theme,
-                    true,
+                    cx,
                 )),
         )
         .into_any_element()
@@ -468,9 +502,114 @@ fn render_highlighted_text(
     theme: &aura_theme::Theme,
     block: bool,
 ) -> StyledText {
-    let text = code.to_string();
-    let runs = highlight_runs(&text, language, highlighter, code_theme, theme, block);
+    let runs = cached_highlight_runs(
+        code.as_ref(),
+        language,
+        highlighter,
+        code_theme,
+        theme,
+        block,
+    );
     StyledText::new(code).with_runs(runs)
+}
+
+fn render_code_content(
+    id: ElementId,
+    code: SharedString,
+    language: CodeLanguage,
+    highlighter: CodeHighlighter,
+    code_theme: ResolvedCodeTheme,
+    selectable: bool,
+    theme: &aura_theme::Theme,
+    cx: &mut App,
+) -> gpui::AnyElement {
+    let runs = cached_highlight_runs(
+        code.as_ref(),
+        language,
+        highlighter,
+        code_theme,
+        theme,
+        true,
+    );
+
+    if selectable {
+        cx.new(|cx| SelectableCodeText::new(cx, id, code, runs, code_theme, theme))
+            .into_any_element()
+    } else {
+        StyledText::new(code).with_runs(runs).into_any_element()
+    }
+}
+
+fn cached_highlight_runs(
+    text: &str,
+    language: CodeLanguage,
+    highlighter: CodeHighlighter,
+    code_theme: ResolvedCodeTheme,
+    theme: &aura_theme::Theme,
+    block: bool,
+) -> Vec<TextRun> {
+    let key = HighlightCacheKey::new(text, language, highlighter, code_theme, block, theme);
+    let cache = highlight_cache();
+    if let Some(runs) = cache
+        .lock()
+        .expect("highlight cache lock poisoned")
+        .get(&key)
+        .cloned()
+    {
+        return runs;
+    }
+
+    let runs = highlight_runs(text, language, highlighter, code_theme, theme, block);
+    let mut cache = cache.lock().expect("highlight cache lock poisoned");
+    if cache.len() > 256 {
+        cache.clear();
+    }
+    cache.insert(key, runs.clone());
+    runs
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct HighlightCacheKey {
+    text_hash: u64,
+    text_len: usize,
+    language: CodeLanguage,
+    highlighter: CodeHighlighter,
+    theme: CodeTheme,
+    block: bool,
+    font_size_bits: u32,
+}
+
+impl HighlightCacheKey {
+    fn new(
+        text: &str,
+        language: CodeLanguage,
+        highlighter: CodeHighlighter,
+        code_theme: ResolvedCodeTheme,
+        block: bool,
+        theme: &aura_theme::Theme,
+    ) -> Self {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        text.hash(&mut hasher);
+        Self {
+            text_hash: hasher.finish(),
+            text_len: text.len(),
+            language,
+            highlighter,
+            theme: code_theme.theme,
+            block,
+            font_size_bits: if block {
+                theme.font_size.sm
+            } else {
+                theme.font_size.md
+            }
+            .to_bits(),
+        }
+    }
+}
+
+fn highlight_cache() -> &'static Mutex<HashMap<HighlightCacheKey, Vec<TextRun>>> {
+    static CACHE: OnceLock<Mutex<HashMap<HighlightCacheKey, Vec<TextRun>>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 fn highlight_runs(
@@ -687,6 +826,509 @@ fn code_accent(theme: &aura_theme::Theme, code_theme: ResolvedCodeTheme) -> Hsla
     }
 }
 
+struct SelectableCodeText {
+    id: ElementId,
+    focus_handle: FocusHandle,
+    code: SharedString,
+    runs: Vec<TextRun>,
+    selected_range: Range<usize>,
+    selection_reversed: bool,
+    selecting: bool,
+    last_lines: Vec<(ShapedLine, Pixels, usize)>,
+    last_bounds: Option<Bounds<Pixels>>,
+    theme: aura_theme::Theme,
+}
+
+impl SelectableCodeText {
+    fn new(
+        cx: &mut Context<Self>,
+        id: ElementId,
+        code: SharedString,
+        runs: Vec<TextRun>,
+        _code_theme: ResolvedCodeTheme,
+        theme: &aura_theme::Theme,
+    ) -> Self {
+        Self {
+            id,
+            focus_handle: cx.focus_handle(),
+            code,
+            runs,
+            selected_range: 0..0,
+            selection_reversed: false,
+            selecting: false,
+            last_lines: Vec::new(),
+            last_bounds: None,
+            theme: theme.clone(),
+        }
+    }
+
+    fn move_to(&mut self, offset: usize, cx: &mut Context<Self>) {
+        let offset = self.clamp_boundary(offset);
+        self.selected_range = offset..offset;
+        self.selection_reversed = false;
+        cx.notify();
+    }
+
+    fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
+        let offset = self.clamp_boundary(offset);
+        if self.selection_reversed {
+            self.selected_range.start = offset;
+        } else {
+            self.selected_range.end = offset;
+        }
+        if self.selected_range.end < self.selected_range.start {
+            self.selection_reversed = !self.selection_reversed;
+            self.selected_range = self.selected_range.end..self.selected_range.start;
+        }
+        cx.notify();
+    }
+
+    fn clamp_boundary(&self, mut offset: usize) -> usize {
+        offset = offset.min(self.code.len());
+        while offset > 0 && !self.code.is_char_boundary(offset) {
+            offset -= 1;
+        }
+        offset
+    }
+
+    fn offset_from_utf16(&self, target: usize) -> usize {
+        let mut utf8 = 0;
+        let mut utf16 = 0;
+        for ch in self.code.chars() {
+            if utf16 >= target {
+                break;
+            }
+            utf16 += ch.len_utf16();
+            utf8 += ch.len_utf8();
+        }
+        utf8
+    }
+
+    fn offset_to_utf16(&self, offset: usize) -> usize {
+        self.code[..offset.min(self.code.len())]
+            .chars()
+            .map(|ch| ch.len_utf16())
+            .sum()
+    }
+
+    fn index_for_point(&self, pt: Point<Pixels>) -> usize {
+        let Some(bounds) = self.last_bounds.as_ref() else {
+            return self.code.len();
+        };
+        if self.last_lines.is_empty() {
+            return 0;
+        }
+
+        let mut chosen = 0;
+        for (ix, (_line, y, _start)) in self.last_lines.iter().enumerate() {
+            let line_height = self.line_height();
+            if pt.y >= *y && pt.y < *y + line_height {
+                chosen = ix;
+                break;
+            }
+            if pt.y >= *y {
+                chosen = ix;
+            }
+        }
+
+        let (line, _y, start) = &self.last_lines[chosen];
+        let x = pt.x - bounds.left();
+        let line_index = line.index_for_x(x).unwrap_or(line.len());
+        self.clamp_boundary(*start + line_index)
+    }
+
+    fn select_all(&mut self, _: &CodeSelectAll, _: &mut Window, cx: &mut Context<Self>) {
+        self.selected_range = 0..self.code.len();
+        self.selection_reversed = false;
+        cx.notify();
+    }
+
+    fn copy(&mut self, _: &CodeCopy, _: &mut Window, cx: &mut Context<Self>) {
+        if !self.selected_range.is_empty() {
+            cx.write_to_clipboard(ClipboardItem::new_string(
+                self.code[self.selected_range.clone()].to_string(),
+            ));
+        }
+    }
+
+    fn on_mouse_down(
+        &mut self,
+        event: &MouseDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        window.focus(&self.focus_handle, cx);
+        let idx = self.index_for_point(event.position);
+        self.selecting = true;
+        if event.modifiers.shift {
+            self.select_to(idx, cx);
+        } else if event.click_count >= 3 {
+            self.selected_range = 0..self.code.len();
+            self.selection_reversed = false;
+            cx.notify();
+        } else if event.click_count == 2 {
+            self.selected_range = self.word_range_at(idx);
+            self.selection_reversed = false;
+            cx.notify();
+        } else {
+            self.move_to(idx, cx);
+        }
+    }
+
+    fn on_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selecting || event.pressed_button == Some(MouseButton::Left) {
+            self.select_to(self.index_for_point(event.position), cx);
+        }
+    }
+
+    fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.selecting = false;
+        cx.notify();
+    }
+
+    fn word_range_at(&self, idx: usize) -> Range<usize> {
+        let text = self.code.as_ref();
+        if text.is_empty() {
+            return 0..0;
+        }
+        let idx = self.clamp_boundary(idx);
+        let mut start = idx;
+        while start > 0 {
+            let prev = self.prev_char(start);
+            let ch = text[prev..start].chars().next().unwrap_or(' ');
+            if !ch.is_alphanumeric() && ch != '_' {
+                break;
+            }
+            start = prev;
+        }
+        let mut end = idx;
+        while end < text.len() {
+            let next = self.next_char(end);
+            let ch = text[end..next].chars().next().unwrap_or(' ');
+            if !ch.is_alphanumeric() && ch != '_' {
+                break;
+            }
+            end = next;
+        }
+        start..end
+    }
+
+    fn prev_char(&self, offset: usize) -> usize {
+        if offset == 0 {
+            return 0;
+        }
+        let mut prev = offset - 1;
+        while prev > 0 && !self.code.is_char_boundary(prev) {
+            prev -= 1;
+        }
+        prev
+    }
+
+    fn next_char(&self, offset: usize) -> usize {
+        if offset >= self.code.len() {
+            return self.code.len();
+        }
+        let mut next = offset + 1;
+        while next < self.code.len() && !self.code.is_char_boundary(next) {
+            next += 1;
+        }
+        next
+    }
+
+    fn line_height(&self) -> Pixels {
+        px(self.theme.font_size.md * 1.7)
+    }
+}
+
+impl Focusable for SelectableCodeText {
+    fn focus_handle(&self, _cx: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl EntityInputHandler for SelectableCodeText {
+    fn text_for_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        actual_range: &mut Option<Range<usize>>,
+        _: &mut Window,
+        _: &mut Context<Self>,
+    ) -> Option<String> {
+        let start = self.offset_from_utf16(range_utf16.start);
+        let end = self.offset_from_utf16(range_utf16.end);
+        actual_range.replace(self.offset_to_utf16(start)..self.offset_to_utf16(end));
+        Some(self.code[start.min(self.code.len())..end.min(self.code.len())].to_string())
+    }
+
+    fn selected_text_range(
+        &mut self,
+        _: bool,
+        _: &mut Window,
+        _: &mut Context<Self>,
+    ) -> Option<UTF16Selection> {
+        Some(UTF16Selection {
+            range: self.offset_to_utf16(self.selected_range.start)
+                ..self.offset_to_utf16(self.selected_range.end),
+            reversed: self.selection_reversed,
+        })
+    }
+
+    fn marked_text_range(&self, _: &mut Window, _: &mut Context<Self>) -> Option<Range<usize>> {
+        None
+    }
+
+    fn unmark_text(&mut self, _: &mut Window, _: &mut Context<Self>) {}
+
+    fn replace_text_in_range(
+        &mut self,
+        _: Option<Range<usize>>,
+        _: &str,
+        _: &mut Window,
+        _: &mut Context<Self>,
+    ) {
+    }
+
+    fn replace_and_mark_text_in_range(
+        &mut self,
+        _: Option<Range<usize>>,
+        _: &str,
+        _: Option<Range<usize>>,
+        _: &mut Window,
+        _: &mut Context<Self>,
+    ) {
+    }
+
+    fn bounds_for_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        bounds: Bounds<Pixels>,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<Bounds<Pixels>> {
+        let start = self.offset_from_utf16(range_utf16.start);
+        let end = self.offset_from_utf16(range_utf16.end);
+        let line_height = self.line_height();
+        for (line, y, line_start) in &self.last_lines {
+            let line_end = line_start + line.len();
+            if start >= *line_start && start <= line_end {
+                let x_start = line.x_for_index(start - *line_start);
+                let x_end = line.x_for_index(end.min(line_end) - *line_start);
+                return Some(Bounds::from_corners(
+                    point(bounds.left() + x_start, *y),
+                    point(bounds.left() + x_end, *y + line_height),
+                ));
+            }
+        }
+        None
+    }
+
+    fn character_index_for_point(
+        &mut self,
+        pt: Point<Pixels>,
+        _window: &mut Window,
+        _: &mut Context<Self>,
+    ) -> Option<usize> {
+        Some(self.offset_to_utf16(self.index_for_point(pt)))
+    }
+}
+
+struct SelectableCodeElement {
+    input: Entity<SelectableCodeText>,
+}
+
+struct SelectableCodePrepaint {
+    lines: Vec<(ShapedLine, Pixels, usize)>,
+    selection: Vec<PaintQuad>,
+}
+
+impl IntoElement for SelectableCodeElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for SelectableCodeElement {
+    type RequestLayoutState = ();
+    type PrepaintState = SelectableCodePrepaint;
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        let input = self.input.read(cx);
+        let line_count = code_lines(input.code.as_ref()).count().max(1) as f32;
+        let mut style = Style::default();
+        style.size.width = gpui::relative(1.).into();
+        style.size.height = (input.line_height() * line_count).into();
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut (),
+        window: &mut Window,
+        cx: &mut App,
+    ) -> SelectableCodePrepaint {
+        let input = self.input.read(cx);
+        let font_size = px(input.theme.font_size.sm);
+        let line_height = input.line_height();
+        let mut lines = Vec::new();
+        let mut selection_quads = Vec::new();
+        let mut y = bounds.top();
+        let mut offset = 0;
+
+        for line in code_lines(input.code.as_ref()) {
+            let line_len = line.len();
+            let line_runs = slice_runs(&input.runs, offset, offset + line_len);
+            let shaped = window.text_system().shape_line(
+                SharedString::from(line.to_string()),
+                font_size,
+                &line_runs,
+                None,
+            );
+
+            if !input.selected_range.is_empty() {
+                let start = input.selected_range.start.max(offset);
+                let end = input.selected_range.end.min(offset + line_len);
+                if start < end {
+                    let x_start = shaped.x_for_index(start - offset);
+                    let x_end = shaped.x_for_index(end - offset);
+                    selection_quads.push(fill(
+                        Bounds::new(
+                            point(bounds.left() + x_start, y),
+                            size(x_end - x_start, line_height),
+                        ),
+                        input.theme.primary.base.opacity(0.28),
+                    ));
+                }
+            }
+
+            lines.push((shaped, y, offset));
+            y += line_height;
+            offset += line_len + 1;
+        }
+
+        SelectableCodePrepaint {
+            lines,
+            selection: selection_quads,
+        }
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut (),
+        prepaint: &mut SelectableCodePrepaint,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let focus_handle = self.input.read(cx).focus_handle.clone();
+        window.handle_input(
+            &focus_handle,
+            ElementInputHandler::new(bounds, self.input.clone()),
+            cx,
+        );
+
+        for selection in prepaint.selection.drain(..) {
+            window.paint_quad(selection);
+        }
+
+        for (line, y, _) in &prepaint.lines {
+            line.paint(
+                point(bounds.left(), *y),
+                self.input.read(cx).line_height(),
+                gpui::TextAlign::Left,
+                None,
+                window,
+                cx,
+            )
+            .unwrap();
+        }
+
+        let lines = prepaint.lines.clone();
+        self.input.update(cx, |input, _| {
+            input.last_lines = lines;
+            input.last_bounds = Some(bounds);
+        });
+    }
+}
+
+impl Render for SelectableCodeText {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .id(format!("{}-selectable", self.id))
+            .key_context("CodeBlock")
+            .track_focus(&self.focus_handle(cx))
+            .cursor_text()
+            .on_action(cx.listener(Self::select_all))
+            .on_action(cx.listener(Self::copy))
+            .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
+            .on_mouse_move(cx.listener(Self::on_mouse_move))
+            .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
+            .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
+            .child(SelectableCodeElement { input: cx.entity() })
+    }
+}
+
+fn code_lines(text: &str) -> impl Iterator<Item = &str> {
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    if text.ends_with('\n') {
+        lines.pop();
+    }
+    if lines.is_empty() {
+        lines.push("");
+    }
+    lines.into_iter()
+}
+
+fn slice_runs(runs: &[TextRun], start: usize, end: usize) -> Vec<TextRun> {
+    let mut sliced = Vec::new();
+    let mut offset = 0;
+    for run in runs {
+        let run_start = offset;
+        let run_end = offset + run.len;
+        let overlap_start = start.max(run_start);
+        let overlap_end = end.min(run_end);
+        if overlap_start < overlap_end {
+            sliced.push(TextRun {
+                len: overlap_end - overlap_start,
+                ..run.clone()
+            });
+        }
+        offset = run_end;
+        if offset >= end {
+            break;
+        }
+    }
+    if sliced.is_empty() && start == end {
+        return sliced;
+    }
+    sliced
+}
+
 fn rgb(hex: u32) -> Hsla {
     Rgba {
         r: ((hex >> 16) & 0xff) as f32 / 255.0,
@@ -772,6 +1414,30 @@ mod tests {
     }
 
     #[test]
+    fn cached_highlight_runs_reuses_render_runs_for_same_code_and_theme() {
+        let theme = aura_theme::Theme::light();
+        let code_theme = resolve_code_theme(CodeTheme::Auto, &theme);
+        let first = cached_highlight_runs(
+            "let cached = true;",
+            CodeLanguage::Rust,
+            CodeHighlighter::Syntect,
+            code_theme,
+            &theme,
+            true,
+        );
+        let second = cached_highlight_runs(
+            "let cached = true;",
+            CodeLanguage::Rust,
+            CodeHighlighter::Syntect,
+            code_theme,
+            &theme,
+            true,
+        );
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
     fn component_uses_syntect_and_supports_copyable_block_and_inline_format() {
         let source = include_str!("code_block.rs");
 
@@ -780,6 +1446,10 @@ mod tests {
         assert!(source.contains("ThemeSet::load_defaults"));
         assert!(source.contains("ClipboardItem::new_string"));
         assert!(source.contains("CodeFormat::Inline"));
+        assert!(source.contains("selectable"));
+        assert!(source.contains("SelectableCodeText"));
+        assert!(source.contains("cached_highlight_runs"));
+        assert!(source.contains("HighlightCacheKey"));
         assert!(source.contains("CodeHighlighter::Syntect"));
         assert!(source.contains("CodeTheme::Auto"));
         assert!(source.contains("light_theme"));
