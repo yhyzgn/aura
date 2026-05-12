@@ -648,23 +648,11 @@ impl Render for LiveDemoHost {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
 
-        div()
-            .rounded(px(theme.radius.md))
-            .border_1()
-            .border_color(theme.primary.base.opacity(0.35))
-            .bg(theme.primary.light_9)
-            .p_3()
-            .child(
-                Card::new(
-                    Space::new()
-                        .vertical()
-                        .gap_sm()
-                        .child(Text::new(self.component.clone()).size(px(theme.font_size.sm)))
-                        .child(self.demo.clone()),
-                )
-                .no_shadow()
-                .no_shrink(),
-            )
+        Space::new()
+            .vertical()
+            .gap_sm()
+            .child(Text::new(self.component.clone()).size(px(theme.font_size.sm)))
+            .child(self.demo.clone())
     }
 }
 
