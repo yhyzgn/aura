@@ -1793,6 +1793,52 @@ mod tests {
     }
 
     #[test]
+    fn component_effect_sections_keep_code_next_to_effect() {
+        let gallery_keys = aura_gallery::demos::registry()
+            .into_iter()
+            .map(|entry| entry.name.split_whitespace().next().unwrap())
+            .collect::<Vec<_>>();
+
+        for page in DOC_PAGES {
+            if !gallery_keys.contains(&page.title) || !page.markdown.contains("::AuraDemo") {
+                continue;
+            }
+
+            assert!(
+                !page.markdown.contains("\n## 效果\n"),
+                "{} should place effects under a named example section",
+                page.title
+            );
+            assert!(
+                !page.markdown.contains("\n## 代码\n"),
+                "{} should place code under the same named example section",
+                page.title
+            );
+
+            let mut remaining = page.markdown;
+            while let Some(effect_start) = remaining.find("::AuraDemo") {
+                let after_effect = &remaining[effect_start..];
+                let next_section = after_effect.find("\n## ").unwrap_or(after_effect.len());
+                let current_example = &after_effect[..next_section];
+                assert!(
+                    current_example.contains("\n### 代码\n"),
+                    "{} has an effect without adjacent code",
+                    page.title
+                );
+                assert!(
+                    current_example.contains("```rust src="),
+                    "{} adjacent code should be sourced from an authored file",
+                    page.title
+                );
+                remaining = &after_effect[next_section..];
+                if remaining.is_empty() {
+                    break;
+                }
+            }
+        }
+    }
+
+    #[test]
     fn render_markdown_entrypoint_returns_native_element() {
         let _ = render_markdown("# Aura\n\nNative docs");
     }
