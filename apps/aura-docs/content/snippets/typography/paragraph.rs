@@ -1,4 +1,16 @@
-Paragraph::new()
-    .child(Text::new("Normal "))
-    .child(Text::new("Bold").bold())
-    .child(Text::new(" code ").code_style(theme));
+//! Rich inline text rendered by Aura Paragraph.
+
+use aura_components::{Paragraph, Text};
+use aura_theme::Theme;
+
+fn rich_paragraph(theme: &Theme) -> Paragraph {
+    Paragraph::new()
+        .child(Text::new("Normal "))
+        .child(Text::new("Bold").bold())
+        .child(Text::new(" code ").code_style(theme))
+}
+
+fn main() {
+    let theme = Theme::light();
+    let _ = rich_paragraph(&theme);
+}

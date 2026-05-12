@@ -89,6 +89,7 @@ const DOC_PAGES: &[DocPage] = &[
     },
 ];
 
+#[allow(dead_code)]
 pub fn render_markdown(md_text: &str) -> AnyElement {
     Component::new(MarkdownDocument::parse(md_text)).into_any_element()
 }
@@ -519,7 +520,7 @@ fn parse_block_attr(attrs: &str, key: &str) -> Option<SharedString> {
 
 fn load_code_snippet(path: &str) -> Option<&'static str> {
     match path {
-        "quick_start/run.rs" => Some(include_str!("../content/snippets/quick_start/run.rs")),
+        "quick_start/run.sh" => Some(include_str!("../content/snippets/quick_start/run.sh")),
         "quick_start/init.rs" => Some(include_str!("../content/snippets/quick_start/init.rs")),
         "quick_start/components.rs" => Some(include_str!(
             "../content/snippets/quick_start/components.rs"
@@ -616,7 +617,11 @@ impl Block {
                 source,
                 code,
             } => render_code_block(language, source, code, theme),
-            Self::LiveDemo { component } => render_live_demo(component, theme, cx),
+            Self::LiveDemo { component } => Paragraph::with_text(format!(
+                "Live demo `{}` requires DocsPageView for persistent state.",
+                component.as_ref()
+            ))
+            .into_any_element(),
             Self::Rule => div()
                 .h(px(1.0))
                 .w_full()
@@ -626,194 +631,240 @@ impl Block {
     }
 }
 
-fn render_live_demo(
+struct LiveDemoHost {
     component: SharedString,
-    theme: &aura_theme::Theme,
-    cx: &mut App,
-) -> AnyElement {
-    let demo = match component.as_ref() {
-        "Button" => Space::new()
-            .vertical()
-            .gap_sm()
-            .child(Text::new("Live Button demo").bold())
-            .child(Button::new("Native Button").primary().on_click(|_, _, _| {
-                toast_success!("Live demo clicked: {}", "Button");
-            }))
-            .into_any_element(),
-        "ButtonTypes" => demo_row(vec![
-            Button::new("Default").into_any_element(),
-            Button::new("Tertiary").tertiary().into_any_element(),
-            Button::new("Primary").primary().into_any_element(),
-            Button::new("Info").info().into_any_element(),
-            Button::new("Success").success().into_any_element(),
-            Button::new("Warning").warning().into_any_element(),
-            Button::new("Danger").danger().into_any_element(),
-        ]),
-        "ButtonSecondary" => demo_row(vec![
-            Button::new("Default").secondary().into_any_element(),
-            Button::new("Primary")
-                .primary()
-                .secondary()
-                .into_any_element(),
-            Button::new("Info").info().secondary().into_any_element(),
-            Button::new("Success")
-                .success()
-                .secondary()
-                .into_any_element(),
-            Button::new("Warning")
-                .warning()
-                .secondary()
-                .into_any_element(),
-            Button::new("Danger")
-                .danger()
-                .secondary()
-                .into_any_element(),
-        ]),
-        "ButtonText" => demo_row(vec![
-            Button::new("Default").text().into_any_element(),
-            Button::new("Primary").primary().text().into_any_element(),
-            Button::new("Info").info().text().into_any_element(),
-            Button::new("Success").success().text().into_any_element(),
-            Button::new("Warning").warning().text().into_any_element(),
-            Button::new("Danger").danger().text().into_any_element(),
-        ]),
-        "ButtonSizes" => demo_row(vec![
-            Button::new("Small").primary().small().into_any_element(),
-            Button::new("Default").primary().into_any_element(),
-            Button::new("Large").primary().large().into_any_element(),
-        ]),
-        "ButtonStates" => demo_row(vec![
-            Button::new("Disabled")
-                .primary()
-                .disabled(true)
-                .into_any_element(),
-            Button::new("Loading")
-                .primary()
-                .loading(true)
-                .into_any_element(),
-            Button::new("Saving")
-                .success()
-                .loading(true)
-                .into_any_element(),
-        ]),
-        "ButtonRounded" => demo_row(vec![
-            Button::new("4px").primary().rounded_sm().into_any_element(),
-            Button::new("12px")
-                .primary()
-                .rounded_md()
-                .into_any_element(),
-            Button::new("20px")
-                .primary()
-                .rounded_lg()
-                .into_any_element(),
-            Button::new("Pill").primary().pill().into_any_element(),
-        ]),
-        "InputBasic" => {
-            let plain = cx.new(|cx| Input::new("", cx));
-            let placeholder = cx.new(|cx| Input::new("", cx).placeholder("Type something..."));
-            demo_stack(vec![
-                plain.into_any_element(),
-                placeholder.into_any_element(),
-            ])
-        }
-        "InputPassword" => {
-            let password = cx.new(|cx| Input::new("", cx).password().placeholder("Password"));
-            let custom = cx.new(|cx| Input::new("secret", cx).password().mask_char('*'));
-            demo_stack(vec![password.into_any_element(), custom.into_any_element()])
-        }
-        "InputAffix" => {
-            let prepend = cx.new(|cx| Input::new("", cx).prepend_text("http://"));
-            let append = cx.new(|cx| Input::new("", cx).append_text(".com"));
-            let composite = cx.new(|cx| {
-                Input::new("", cx)
-                    .prepend_icon(IconName::User)
-                    .append_text("Admin")
-            });
-            demo_stack(vec![
-                prepend.into_any_element(),
-                append.into_any_element(),
-                composite.into_any_element(),
-            ])
-        }
-        "InputStates" => {
-            let clearable = cx.new(|cx| Input::new("Clear me", cx).clearable(true));
-            let disabled = cx.new(|cx| Input::new("Disabled", cx).disabled(true));
-            demo_stack(vec![
-                clearable.into_any_element(),
-                disabled.into_any_element(),
-            ])
-        }
-        "SwitchBasic" => {
-            let on = cx.new(|cx| Switch::new(true, cx));
-            let off = cx.new(|cx| Switch::new(false, cx));
-            demo_row(vec![on.into_any_element(), off.into_any_element()])
-        }
-        "SwitchDisabled" => {
-            let off = cx.new(|cx| Switch::new(false, cx).disabled(true));
-            let on = cx.new(|cx| Switch::new(true, cx).disabled(true));
-            demo_row(vec![off.into_any_element(), on.into_any_element()])
-        }
-        "SwitchCallback" => {
-            let switch = cx.new(|cx| {
-                Switch::new(false, cx).on_change(|checked, _window, _cx| {
-                    if checked {
-                        toast_success!("Switch is on");
-                    } else {
-                        toast_info!("Switch is off");
-                    }
-                })
-            });
-            demo_row(vec![switch.into_any_element()])
-        }
-        "MessageTypes" => demo_row(vec![
-            Button::new("toast_info!")
-                .on_click(|_, _, _| toast_info!("This is an info toast"))
-                .into_any_element(),
-            Button::new("toast_success!")
-                .primary()
-                .on_click(|_, _, _| toast_success!("Operation completed"))
-                .into_any_element(),
-            Button::new("toast_warning!")
-                .warning()
-                .on_click(|_, _, _| toast_warning!("Please check the input"))
-                .into_any_element(),
-            Button::new("toast_error!")
-                .danger()
-                .on_click(|_, _, _| toast_error!("Operation failed"))
-                .into_any_element(),
-        ]),
-        "MessageFormatting" => demo_row(vec![
-            Button::new("位置参数")
-                .on_click(|_, _, _| {
-                    let name = "Aura";
-                    let count = 4;
-                    toast_info!("{}, you have {} toast variants.", name, count);
-                })
-                .into_any_element(),
-            Button::new("命名参数")
-                .primary()
-                .on_click(|_, _, _| {
-                    let component = "Message";
-                    let api = "toast_success!";
-                    toast_success!("{component} macro {api} works.");
-                })
-                .into_any_element(),
-        ]),
-        _ => Paragraph::with_text(format!(
-            "Unsupported Aura demo component: {}",
-            component.as_ref()
-        ))
-        .into_any_element(),
-    };
+    demo: Entity<LiveDemoContent>,
+}
 
-    div()
-        .rounded(px(theme.radius.md))
-        .border_1()
-        .border_color(theme.primary.base.opacity(0.35))
-        .bg(theme.primary.light_9)
-        .p_3()
-        .child(Card::new(demo).no_shadow().no_shrink())
-        .into_any_element()
+impl LiveDemoHost {
+    fn new(component: SharedString, cx: &mut Context<Self>) -> Self {
+        let demo_component = component.clone();
+        let demo = cx.new(|cx| LiveDemoContent::new(demo_component, cx));
+        Self { component, demo }
+    }
+}
+
+impl Render for LiveDemoHost {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.global::<Config>().theme.clone();
+
+        div()
+            .rounded(px(theme.radius.md))
+            .border_1()
+            .border_color(theme.primary.base.opacity(0.35))
+            .bg(theme.primary.light_9)
+            .p_3()
+            .child(
+                Card::new(
+                    Space::new()
+                        .vertical()
+                        .gap_sm()
+                        .child(Text::new(self.component.clone()).size(px(theme.font_size.sm)))
+                        .child(self.demo.clone()),
+                )
+                .no_shadow()
+                .no_shrink(),
+            )
+    }
+}
+
+struct LiveDemoContent {
+    component: SharedString,
+    inputs: Vec<Entity<Input>>,
+    switches: Vec<Entity<Switch>>,
+}
+
+impl LiveDemoContent {
+    fn new(component: SharedString, cx: &mut Context<Self>) -> Self {
+        let mut inputs = Vec::new();
+        let mut switches = Vec::new();
+
+        match component.as_ref() {
+            "InputBasic" => {
+                inputs.push(cx.new(|cx| Input::new("", cx)));
+                inputs.push(cx.new(|cx| Input::new("", cx).placeholder("Type something...")));
+            }
+            "InputPassword" => {
+                inputs.push(cx.new(|cx| Input::new("", cx).password().placeholder("Password")));
+                inputs.push(cx.new(|cx| Input::new("secret", cx).password().mask_char('*')));
+            }
+            "InputAffix" => {
+                inputs.push(cx.new(|cx| Input::new("", cx).prepend_text("http://")));
+                inputs.push(cx.new(|cx| Input::new("", cx).append_text(".com")));
+                inputs.push(cx.new(|cx| {
+                    Input::new("", cx)
+                        .prepend_icon(IconName::User)
+                        .append_text("Admin")
+                }));
+            }
+            "InputStates" => {
+                inputs.push(cx.new(|cx| Input::new("Clear me", cx).clearable(true)));
+                inputs.push(cx.new(|cx| Input::new("Disabled", cx).disabled(true)));
+            }
+            "SwitchBasic" => {
+                switches.push(cx.new(|cx| Switch::new(true, cx)));
+                switches.push(cx.new(|cx| Switch::new(false, cx)));
+            }
+            "SwitchDisabled" => {
+                switches.push(cx.new(|cx| Switch::new(false, cx).disabled(true)));
+                switches.push(cx.new(|cx| Switch::new(true, cx).disabled(true)));
+            }
+            "SwitchCallback" => {
+                switches.push(cx.new(|cx| {
+                    Switch::new(false, cx).on_change(|checked, _window, _cx| {
+                        if checked {
+                            toast_success!("Switch is on");
+                        } else {
+                            toast_info!("Switch is off");
+                        }
+                    })
+                }));
+            }
+            _ => {}
+        }
+
+        Self {
+            component,
+            inputs,
+            switches,
+        }
+    }
+}
+
+impl Render for LiveDemoContent {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        match self.component.as_ref() {
+            "Button" => Space::new()
+                .vertical()
+                .gap_sm()
+                .child(Text::new("Live Button demo").bold())
+                .child(Button::new("Native Button").primary().on_click(|_, _, _| {
+                    toast_success!("Live demo clicked: {}", "Button");
+                }))
+                .into_any_element(),
+            "ButtonTypes" => demo_row(vec![
+                Button::new("Default").into_any_element(),
+                Button::new("Tertiary").tertiary().into_any_element(),
+                Button::new("Primary").primary().into_any_element(),
+                Button::new("Info").info().into_any_element(),
+                Button::new("Success").success().into_any_element(),
+                Button::new("Warning").warning().into_any_element(),
+                Button::new("Danger").danger().into_any_element(),
+            ]),
+            "ButtonSecondary" => demo_row(vec![
+                Button::new("Default").secondary().into_any_element(),
+                Button::new("Primary")
+                    .primary()
+                    .secondary()
+                    .into_any_element(),
+                Button::new("Info").info().secondary().into_any_element(),
+                Button::new("Success")
+                    .success()
+                    .secondary()
+                    .into_any_element(),
+                Button::new("Warning")
+                    .warning()
+                    .secondary()
+                    .into_any_element(),
+                Button::new("Danger")
+                    .danger()
+                    .secondary()
+                    .into_any_element(),
+            ]),
+            "ButtonText" => demo_row(vec![
+                Button::new("Default").text().into_any_element(),
+                Button::new("Primary").primary().text().into_any_element(),
+                Button::new("Info").info().text().into_any_element(),
+                Button::new("Success").success().text().into_any_element(),
+                Button::new("Warning").warning().text().into_any_element(),
+                Button::new("Danger").danger().text().into_any_element(),
+            ]),
+            "ButtonSizes" => demo_row(vec![
+                Button::new("Small").primary().small().into_any_element(),
+                Button::new("Default").primary().into_any_element(),
+                Button::new("Large").primary().large().into_any_element(),
+            ]),
+            "ButtonStates" => demo_row(vec![
+                Button::new("Disabled")
+                    .primary()
+                    .disabled(true)
+                    .into_any_element(),
+                Button::new("Loading")
+                    .primary()
+                    .loading(true)
+                    .into_any_element(),
+                Button::new("Saving")
+                    .success()
+                    .loading(true)
+                    .into_any_element(),
+            ]),
+            "ButtonRounded" => demo_row(vec![
+                Button::new("4px").primary().rounded_sm().into_any_element(),
+                Button::new("12px")
+                    .primary()
+                    .rounded_md()
+                    .into_any_element(),
+                Button::new("20px")
+                    .primary()
+                    .rounded_lg()
+                    .into_any_element(),
+                Button::new("Pill").primary().pill().into_any_element(),
+            ]),
+            "InputBasic" | "InputPassword" | "InputAffix" | "InputStates" => demo_stack(
+                self.inputs
+                    .iter()
+                    .cloned()
+                    .map(Entity::into_any_element)
+                    .collect(),
+            ),
+            "SwitchBasic" | "SwitchDisabled" | "SwitchCallback" => demo_row(
+                self.switches
+                    .iter()
+                    .cloned()
+                    .map(Entity::into_any_element)
+                    .collect(),
+            ),
+            "MessageTypes" => demo_row(vec![
+                Button::new("toast_info!")
+                    .on_click(|_, _, _| toast_info!("This is an info toast"))
+                    .into_any_element(),
+                Button::new("toast_success!")
+                    .primary()
+                    .on_click(|_, _, _| toast_success!("Operation completed"))
+                    .into_any_element(),
+                Button::new("toast_warning!")
+                    .warning()
+                    .on_click(|_, _, _| toast_warning!("Please check the input"))
+                    .into_any_element(),
+                Button::new("toast_error!")
+                    .danger()
+                    .on_click(|_, _, _| toast_error!("Operation failed"))
+                    .into_any_element(),
+            ]),
+            "MessageFormatting" => demo_row(vec![
+                Button::new("位置参数")
+                    .on_click(|_, _, _| {
+                        let name = "Aura";
+                        let count = 4;
+                        toast_info!("{}, you have {} toast variants.", name, count);
+                    })
+                    .into_any_element(),
+                Button::new("命名参数")
+                    .primary()
+                    .on_click(|_, _, _| {
+                        let component = "Message";
+                        let api = "toast_success!";
+                        toast_success!("{component} macro {api} works.");
+                    })
+                    .into_any_element(),
+            ]),
+            _ => Paragraph::with_text(format!(
+                "Unsupported Aura demo component: {}",
+                self.component.as_ref()
+            ))
+            .into_any_element(),
+        }
+    }
 }
 
 fn demo_row(children: Vec<AnyElement>) -> AnyElement {
@@ -854,6 +905,131 @@ fn render_code_block(
     code_block.into_any_element()
 }
 
+fn collect_live_demo_components(blocks: &[Block], components: &mut Vec<SharedString>) {
+    for block in blocks {
+        match block {
+            Block::LiveDemo { component } => components.push(component.clone()),
+            Block::BlockQuote(children) => collect_live_demo_components(children, components),
+            Block::List { items, .. } => {
+                for item in items {
+                    collect_live_demo_components(item, components);
+                }
+            }
+            Block::Paragraph(_) | Block::Heading { .. } | Block::CodeBlock { .. } | Block::Rule => {
+            }
+        }
+    }
+}
+
+fn render_persistent_block(
+    block: &Block,
+    theme: &aura_theme::Theme,
+    live_demos: &[Entity<LiveDemoHost>],
+    demo_index: &mut usize,
+) -> AnyElement {
+    match block {
+        Block::Paragraph(segments) => render_paragraph(segments.clone(), theme),
+        Block::Heading { level, content } => {
+            let heading = Title::new(inline_plain_text(content));
+            match level {
+                HeadingLevel::H1 => heading.h1(),
+                HeadingLevel::H2 => heading.h2(),
+                HeadingLevel::H3 => heading.h3(),
+                HeadingLevel::H4 => heading.h4(),
+                HeadingLevel::H5 => heading.h5(),
+                HeadingLevel::H6 => heading.h6(),
+            }
+            .into_any_element()
+        }
+        Block::BlockQuote(blocks) => div()
+            .border_l_1()
+            .border_color(theme.primary.base)
+            .pl_4()
+            .text_color(theme.neutral.text_2)
+            .child(
+                Space::new().vertical().gap_md().children(
+                    blocks
+                        .iter()
+                        .map(|block| render_persistent_block(block, theme, live_demos, demo_index))
+                        .collect::<Vec<_>>(),
+                ),
+            )
+            .into_any_element(),
+        Block::List {
+            ordered,
+            start,
+            items,
+        } => render_persistent_list(*ordered, *start, items, theme, live_demos, demo_index),
+        Block::CodeBlock {
+            language,
+            source,
+            code,
+        } => render_code_block(language.clone(), source.clone(), code.clone(), theme),
+        Block::LiveDemo { .. } => {
+            let demo = live_demos.get(*demo_index).cloned();
+            *demo_index += 1;
+            demo.map_or_else(
+                || Paragraph::with_text("Missing Aura demo host").into_any_element(),
+                |demo| demo.into_any_element(),
+            )
+        }
+        Block::Rule => div()
+            .h(px(1.0))
+            .w_full()
+            .bg(theme.neutral.divider)
+            .into_any_element(),
+    }
+}
+
+fn render_persistent_list(
+    ordered: bool,
+    start: u64,
+    items: &[Vec<Block>],
+    theme: &aura_theme::Theme,
+    live_demos: &[Entity<LiveDemoHost>],
+    demo_index: &mut usize,
+) -> AnyElement {
+    let mut rows = Vec::new();
+
+    for (index, item_blocks) in items.iter().enumerate() {
+        let marker = if ordered {
+            format!("{}.", start + index as u64)
+        } else {
+            "•".to_string()
+        };
+        let item_children = item_blocks
+            .iter()
+            .map(|block| render_persistent_block(block, theme, live_demos, demo_index))
+            .collect::<Vec<_>>();
+
+        rows.push(
+            div()
+                .flex()
+                .flex_row()
+                .items_start()
+                .gap_2()
+                .child(
+                    div()
+                        .w(px(24.0))
+                        .text_color(theme.neutral.text_3)
+                        .child(marker),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .child(Space::new().vertical().gap_sm().children(item_children)),
+                ),
+        );
+    }
+
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .children(rows)
+        .into_any_element()
+}
+
 fn render_paragraph(segments: Vec<InlineSegment>, theme: &aura_theme::Theme) -> AnyElement {
     Paragraph::new()
         .children(segments.into_iter().map(|segment| segment.into_text(theme)))
@@ -861,15 +1037,22 @@ fn render_paragraph(segments: Vec<InlineSegment>, theme: &aura_theme::Theme) -> 
 }
 
 pub fn render_docs_shell(cx: &mut App) -> Entity<DocsShell> {
+    let page_views = DOC_PAGES
+        .iter()
+        .map(|page| cx.new(|cx| DocsPageView::new(page.markdown, cx)))
+        .collect();
+
     cx.new(|_| DocsShell {
         selected: 0,
         nav_menu: None,
+        page_views,
     })
 }
 
 pub struct DocsShell {
     selected: usize,
     nav_menu: Option<Entity<Menu>>,
+    page_views: Vec<Entity<DocsPageView>>,
 }
 
 impl Render for DocsShell {
@@ -879,6 +1062,7 @@ impl Render for DocsShell {
 
         let nav_menu = self.nav_menu(selected, cx);
         let page = &DOC_PAGES[selected];
+        let page_view = self.page_views[selected].clone();
 
         Container::new()
             .header(
@@ -900,16 +1084,51 @@ impl Render for DocsShell {
                 Card::new(
                     Space::new()
                         .vertical()
-                        .gap_lg()
-                        .child(render_markdown(page.markdown))
-                        .child(Button::new("Native action").primary().on_click(|_, _, _| {
-                            toast_success!("Docs action triggered: {}", page.title);
-                        })),
+                        .gap_xs()
+                        .child(Title::new(page.title).h3())
+                        .child(page_view),
                 )
                 .no_shadow()
                 .no_shrink(),
             )
             .overlay(DocsPortalLayer)
+    }
+}
+
+struct DocsPageView {
+    document: MarkdownDocument,
+    live_demos: Vec<Entity<LiveDemoHost>>,
+}
+
+impl DocsPageView {
+    fn new(markdown: &'static str, cx: &mut Context<Self>) -> Self {
+        let document = MarkdownDocument::parse(markdown);
+        let mut demo_components = Vec::new();
+        collect_live_demo_components(&document.blocks, &mut demo_components);
+        let live_demos = demo_components
+            .into_iter()
+            .map(|component| cx.new(|cx| LiveDemoHost::new(component, cx)))
+            .collect();
+
+        Self {
+            document,
+            live_demos,
+        }
+    }
+}
+
+impl Render for DocsPageView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.global::<Config>().theme.clone();
+        let mut demo_index = 0;
+        let children = self
+            .document
+            .blocks
+            .iter()
+            .map(|block| render_persistent_block(block, &theme, &self.live_demos, &mut demo_index))
+            .collect::<Vec<_>>();
+
+        Space::new().vertical().gap_lg().children(children)
     }
 }
 
@@ -1125,6 +1344,24 @@ mod tests {
     }
 
     #[test]
+    fn docs_shell_does_not_append_extra_smoke_button() {
+        let source = include_str!("markdown.rs");
+
+        assert_eq!(source.matches(r#"Button::new("Native action")"#).count(), 1);
+        assert!(source.contains("DocsPageView"));
+    }
+
+    #[test]
+    fn interactive_live_demos_are_persistent_entities() {
+        let source = include_str!("markdown.rs");
+
+        assert!(source.contains("struct LiveDemoHost"));
+        assert!(source.contains("Entity<LiveDemoContent>"));
+        assert!(source.contains("inputs: Vec<Entity<Input>>"));
+        assert!(source.contains("switches: Vec<Entity<Switch>>"));
+    }
+
+    #[test]
     fn parses_heading_and_mixed_inline_paragraph_segments() {
         let document =
             MarkdownDocument::parse("# Aura\n\nHello **bold** and *italic* with `code`.");
@@ -1209,7 +1446,25 @@ mod tests {
     fn loads_external_code_snippets_by_path() {
         assert!(load_code_snippet("button/types.rs").is_some());
         assert!(load_code_snippet("code_block/theme.rs").is_some());
+        assert!(load_code_snippet("quick_start/run.sh").is_some());
         assert!(load_code_snippet("missing.rs").is_none());
+    }
+
+    #[test]
+    fn rust_snippets_are_imported_by_compile_check_harness() {
+        let harness = include_str!("bin/check_snippets.rs");
+
+        for snippet in [
+            "button/types.rs",
+            "input/basic.rs",
+            "switch/callback.rs",
+            "message/types.rs",
+            "typography/paragraph.rs",
+        ] {
+            assert!(harness.contains(&format!("../../content/snippets/{snippet}")));
+            assert!(load_code_snippet(snippet).is_some());
+        }
+        assert!(!harness.contains("quick_start/run.sh"));
     }
 
     #[test]

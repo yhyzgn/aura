@@ -7,6 +7,10 @@ edition = "2024"
 name = "aura-docs"
 path = "src/main.rs"
 
+[[bin]]
+name = "check_snippets"
+path = "src/bin/check_snippets.rs"
+
 [dependencies]
 gpui = { workspace = true, features = ["wayland", "x11", "font-kit"] }
 gpui_platform = { workspace = true, features = ["wayland", "x11"] }

@@ -1,6 +1,6 @@
 mod markdown;
 
-use aura_components::{CodeBlock, MessageManager};
+use aura_components::{CodeBlock, Input, MessageManager, Switch};
 use aura_core::init_aura;
 use aura_theme::Theme;
 use gpui::{App, Bounds, WindowBounds, WindowOptions, px, size};
@@ -10,6 +10,8 @@ fn run_docs() {
         init_aura(cx, Theme::light());
         MessageManager::init(cx);
         CodeBlock::register_key_bindings(cx);
+        Input::register_key_bindings(cx);
+        Switch::register_key_bindings(cx);
 
         let _ = cx.open_window(
             WindowOptions {
