@@ -4,9 +4,12 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     AnyElement, App, Bounds, Context, Element, ElementId, Entity, FocusHandle, Focusable,
-    IntoElement, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
+    IntoElement, KeyBinding, MouseButton, Pixels, Render, SharedString, Window, actions, div,
+    prelude::*, px,
 };
 use std::sync::Arc;
+
+actions!(cascader, [CascaderClose]);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CascaderOption {
@@ -34,6 +37,7 @@ pub struct Cascader {
     focus_handle: FocusHandle,
     last_bounds: Option<Bounds<Pixels>>,
     lazy: bool,
+    close_on_escape: bool,
     on_change: Option<Arc<dyn Fn(Vec<SharedString>, &mut Window, &mut App) + 'static>>,
     on_lazy_load: Option<
         Arc<
@@ -102,6 +106,7 @@ impl Cascader {
             focus_handle: cx.focus_handle(),
             last_bounds: None,
             lazy: false,
+            close_on_escape: true,
             on_change: None,
             on_lazy_load: None,
         }
@@ -173,6 +178,27 @@ impl Cascader {
     pub fn lazy(mut self, lazy: bool) -> Self {
         self.lazy = lazy;
         self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([KeyBinding::new("escape", CascaderClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &CascaderClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.is_open = false;
+            cx.notify();
+        }
     }
 
     pub fn on_change(
@@ -635,6 +661,7 @@ impl Render for Cascader {
                     this.toggle_open(window, cx);
                 }),
             )
+            .on_action(cx.listener(Self::close_on_escape_action))
     }
 }
 

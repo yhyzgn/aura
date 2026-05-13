@@ -1699,17 +1699,15 @@ impl Element for SelectableCodeElement {
         });
 
         let input = self.input.clone();
-        let hitbox = prepaint.hitbox.clone();
-        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
-            if phase.capture() && hitbox.is_hovered(window) {
+        window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
+            if phase.capture() {
                 input.update(cx, |input, cx| input.on_mouse_move(event, cx));
             }
         });
 
         let input = self.input.clone();
-        let hitbox = prepaint.hitbox.clone();
         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
-            if phase.capture() && event.button == MouseButton::Left && hitbox.is_hovered(window) {
+            if phase.capture() && event.button == MouseButton::Left {
                 input.update(cx, |input, cx| input.on_mouse_up(event, window, cx));
             }
         });

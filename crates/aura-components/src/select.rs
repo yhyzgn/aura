@@ -4,8 +4,10 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, ElementId, Entity, FocusHandle, Focusable, Hsla, MouseButton, Pixels,
-    Render, SharedString, Window, prelude::*,
+    Render, SharedString, Window, actions, prelude::*,
 };
+
+actions!(select, [SelectClose]);
 
 pub struct Select {
     options: Vec<SharedString>,
@@ -22,6 +24,7 @@ pub struct Select {
     text_size: Option<Pixels>,
     text_color: Option<Hsla>,
     padding_x: Option<Pixels>,
+    close_on_escape: bool,
 }
 
 impl Select {
@@ -45,6 +48,7 @@ impl Select {
             text_size: None,
             text_color: None,
             padding_x: None,
+            close_on_escape: true,
         }
     }
 
@@ -180,6 +184,22 @@ impl Select {
         }
         self.selected_idx = idx;
         cx.notify();
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", SelectClose, None)]);
+    }
+
+    fn close_on_escape_action(&mut self, _: &SelectClose, _: &mut Window, cx: &mut Context<Self>) {
+        if self.close_on_escape && self.is_open {
+            self.is_open = false;
+            cx.notify();
+        }
     }
 
     pub fn on_change(mut self, cb: impl Fn(usize, &mut Window, &mut App) + 'static) -> Self {
@@ -450,5 +470,6 @@ impl Render for Select {
                 this.is_open = false;
                 cx.notify();
             }))
+            .on_action(cx.listener(Self::close_on_escape_action))
     }
 }

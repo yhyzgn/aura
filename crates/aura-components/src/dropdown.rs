@@ -14,6 +14,7 @@ pub struct Dropdown {
     trigger: AnyElement,
     items: Vec<DropdownItem>,
     placement: Placement,
+    close_on_escape: bool,
     id: Option<SharedString>,
 }
 
@@ -23,6 +24,7 @@ impl Dropdown {
             trigger: trigger.into_any_element(),
             items: vec![],
             placement: Placement::BottomStart,
+            close_on_escape: true,
             id: None,
         }
     }
@@ -48,12 +50,18 @@ impl Dropdown {
         self.id = Some(id.into());
         self
     }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
 }
 
 impl RenderOnce for Dropdown {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let items = self.items;
+        let close_on_escape = self.close_on_escape;
         let dropdown_id = self.id.clone().unwrap_or_else(|| {
             stable_unique_id(format!("dropdown:{}", items.len()), "dropdown", _window, cx)
         });
@@ -62,6 +70,7 @@ impl RenderOnce for Dropdown {
             .id(dropdown_id.clone())
             .placement(self.placement)
             .offset(px(4.0))
+            .close_on_escape(close_on_escape)
             .content(move |_window, _cx| {
                 let theme = theme.clone();
                 div()

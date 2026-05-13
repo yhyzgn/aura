@@ -4,8 +4,10 @@ use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, FocusHandle, Focusable, GlobalElementId,
     InspectorElementId, IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Style,
-    Window, prelude::*, px, relative,
+    Window, actions, prelude::*, px, relative,
 };
+
+actions!(autocomplete, [AutocompleteClose]);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AutocompleteItem {
@@ -44,6 +46,7 @@ pub struct Autocomplete {
     last_bounds: Option<Bounds<Pixels>>,
     focus_handle: FocusHandle,
     on_select: Option<Box<dyn Fn(AutocompleteItem, &mut Window, &mut App) + 'static>>,
+    close_on_escape: bool,
 }
 
 impl Autocomplete {
@@ -66,6 +69,7 @@ impl Autocomplete {
             last_bounds: None,
             focus_handle: cx.focus_handle(),
             on_select: None,
+            close_on_escape: true,
         }
     }
 
@@ -119,6 +123,27 @@ impl Autocomplete {
     pub fn trigger_on_focus(mut self, trigger: bool) -> Self {
         self.trigger_on_focus = trigger;
         self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", AutocompleteClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &AutocompleteClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.is_open = false;
+            cx.notify();
+        }
     }
 
     pub fn on_select(
@@ -374,6 +399,6 @@ impl Render for Autocomplete {
             )
             .child(self.input.clone());
 
-        frame
+        frame.on_action(cx.listener(Self::close_on_escape_action))
     }
 }

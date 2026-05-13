@@ -4,8 +4,11 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, GlobalElementId, Hsla, InspectorElementId,
-    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
+    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, actions, div,
+    prelude::*, px,
 };
+
+actions!(date_time_picker, [DateTimePickerClose]);
 
 use crate::{DateValue, TimeValue};
 
@@ -58,6 +61,7 @@ pub struct DateTimePicker {
     second_step: u32,
     show_seconds: bool,
     last_bounds: Option<Bounds<Pixels>>,
+    close_on_escape: bool,
     on_change: Option<Box<dyn Fn(Option<DateTimeValue>, &mut Window, &mut App) + 'static>>,
     on_range_change: Option<
         Box<dyn Fn(Option<DateTimeValue>, Option<DateTimeValue>, &mut Window, &mut App) + 'static>,
@@ -115,6 +119,7 @@ impl DateTimePicker {
             second_step: 1,
             show_seconds: true,
             last_bounds: None,
+            close_on_escape: true,
             on_change: None,
             on_range_change: None,
             on_selection_change: None,
@@ -211,6 +216,26 @@ impl DateTimePicker {
         self.show_seconds = false;
         self.display_format = "YYYY-MM-DD HH:mm".into();
         self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", DateTimePickerClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &DateTimePickerClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.close(cx);
+        }
     }
 
     pub fn on_change(
@@ -544,6 +569,7 @@ impl Render for DateTimePicker {
                     this.toggle_open(cx);
                 }),
             )
+            .on_action(cx.listener(Self::close_on_escape_action))
     }
 }
 

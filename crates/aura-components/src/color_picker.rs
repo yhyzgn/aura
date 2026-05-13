@@ -4,10 +4,12 @@ use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Corners, Element, ElementId, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, LayoutId, MouseButton, Pixels, Point, Render, RenderImage, Rgba, SharedString,
-    Style, Window, div, fill, point, prelude::*, px, size,
+    Style, Window, actions, div, fill, point, prelude::*, px, size,
 };
 use image::{ImageBuffer, Rgba as ImageRgba};
 use std::sync::Arc;
+
+actions!(color_picker, [ColorPickerClose]);
 
 pub struct ColorPicker {
     id: SharedString,
@@ -27,6 +29,7 @@ pub struct ColorPicker {
     hue_image: Option<Arc<RenderImage>>,
     alpha_image: Option<(SharedString, Arc<RenderImage>)>,
     on_change: Option<Arc<dyn Fn(SharedString, &mut Window, &mut App) + 'static>>,
+    close_on_escape: bool,
 }
 
 impl ColorPicker {
@@ -50,6 +53,7 @@ impl ColorPicker {
             hue_image: None,
             alpha_image: None,
             on_change: None,
+            close_on_escape: true,
         }
     }
 
@@ -103,6 +107,27 @@ impl ColorPicker {
 
     pub fn width_md(self) -> Self {
         self.width(px(360.0))
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", ColorPickerClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &ColorPickerClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.is_open = false;
+            cx.notify();
+        }
     }
 
     pub fn on_change(mut self, f: impl Fn(SharedString, &mut Window, &mut App) + 'static) -> Self {
@@ -413,7 +438,8 @@ impl Render for ColorPicker {
                                 cx.notify();
                             }
                         }),
-                    ),
+                    )
+                    .on_action(cx.listener(Self::close_on_escape_action)),
             )
             .when(self.show_label, |s| {
                 s.child(

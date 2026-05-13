@@ -4,8 +4,11 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, GlobalElementId, InspectorElementId,
-    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
+    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, actions, div,
+    prelude::*, px,
 };
+
+actions!(time_picker, [TimePickerClose]);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeValue {
@@ -26,6 +29,7 @@ pub struct TimePicker {
     second_step: u32,
     show_seconds: bool,
     last_bounds: Option<Bounds<Pixels>>,
+    close_on_escape: bool,
     on_change: Option<Box<dyn Fn(Option<TimeValue>, &mut Window, &mut App) + 'static>>,
 }
 
@@ -60,6 +64,7 @@ impl TimePicker {
             second_step: 1,
             show_seconds: true,
             last_bounds: None,
+            close_on_escape: true,
             on_change: None,
         }
     }
@@ -116,6 +121,26 @@ impl TimePicker {
         self.show_seconds = false;
         self.display_format = "HH:mm".into();
         self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", TimePickerClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &TimePickerClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.close(cx);
+        }
     }
 
     pub fn on_change(
@@ -280,6 +305,7 @@ impl Render for TimePicker {
                     this.toggle_open(cx);
                 }),
             )
+            .on_action(cx.listener(Self::close_on_escape_action))
     }
 }
 

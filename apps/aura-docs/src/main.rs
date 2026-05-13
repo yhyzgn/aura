@@ -1,7 +1,8 @@
 mod markdown;
 
 use aura_components::{
-    Checkbox, CodeBlock, Dialog, Drawer, Input, MessageManager, Preview, Radio, RadioGroup, Switch,
+    Autocomplete, Cascader, Checkbox, CodeBlock, ColorPicker, DatePicker, DateTimePicker, Dialog,
+    Drawer, Input, MessageManager, Popover, Preview, Radio, RadioGroup, Select, Switch, TimePicker,
 };
 use aura_core::init_aura;
 use aura_theme::Theme;
@@ -20,6 +21,14 @@ fn run_docs() {
         Dialog::register_key_bindings(cx);
         Drawer::register_key_bindings(cx);
         Preview::register_key_bindings(cx);
+        Autocomplete::register_key_bindings(cx);
+        Cascader::register_key_bindings(cx);
+        ColorPicker::register_key_bindings(cx);
+        DatePicker::register_key_bindings(cx);
+        DateTimePicker::register_key_bindings(cx);
+        Popover::register_key_bindings(cx);
+        Select::register_key_bindings(cx);
+        TimePicker::register_key_bindings(cx);
 
         let _ = cx.open_window(
             WindowOptions {

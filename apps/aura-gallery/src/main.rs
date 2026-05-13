@@ -1,6 +1,7 @@
 use aura_components::{
-    Card, Checkbox, CodeBlock, Container, Dialog, Drawer, Input, Menu, MenuMode, MessageManager,
-    Paragraph, Preview, Radio, RadioGroup, Space, Switch, Text, Title,
+    Autocomplete, Card, Cascader, Checkbox, CodeBlock, ColorPicker, Container, DatePicker,
+    DateTimePicker, Dialog, Drawer, Input, Menu, MenuMode, MessageManager, Paragraph, Popover,
+    Preview, Radio, RadioGroup, Select, Space, Switch, Text, TimePicker, Title,
 };
 use aura_core::{PassivePortal, Portal, init_aura};
 use aura_gallery::demos;
@@ -32,6 +33,14 @@ fn run_gallery() {
         Dialog::register_key_bindings(cx);
         Drawer::register_key_bindings(cx);
         Preview::register_key_bindings(cx);
+        Autocomplete::register_key_bindings(cx);
+        Cascader::register_key_bindings(cx);
+        ColorPicker::register_key_bindings(cx);
+        DatePicker::register_key_bindings(cx);
+        DateTimePicker::register_key_bindings(cx);
+        Popover::register_key_bindings(cx);
+        Select::register_key_bindings(cx);
+        TimePicker::register_key_bindings(cx);
 
         let _ = cx.open_window(
             WindowOptions {

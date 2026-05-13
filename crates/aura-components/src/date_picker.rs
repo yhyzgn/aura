@@ -4,8 +4,11 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, GlobalElementId, Hsla, InspectorElementId,
-    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, div, prelude::*, px,
+    IntoElement, LayoutId, MouseButton, Pixels, Render, SharedString, Window, actions, div,
+    prelude::*, px,
 };
+
+actions!(date_picker, [DatePickerClose]);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DateValue {
@@ -49,6 +52,7 @@ pub struct DatePicker {
     width: Option<Pixels>,
     disabled: bool,
     last_bounds: Option<Bounds<Pixels>>,
+    close_on_escape: bool,
     on_change: Option<Box<dyn Fn(Option<DateValue>, &mut Window, &mut App) + 'static>>,
     on_range_change:
         Option<Box<dyn Fn(Option<DateValue>, Option<DateValue>, &mut Window, &mut App) + 'static>>,
@@ -85,6 +89,7 @@ impl DatePicker {
             width: None,
             disabled: false,
             last_bounds: None,
+            close_on_escape: true,
             on_change: None,
             on_range_change: None,
             on_selection_change: None,
@@ -178,6 +183,26 @@ impl DatePicker {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([gpui::KeyBinding::new("escape", DatePickerClose, None)]);
+    }
+
+    fn close_on_escape_action(
+        &mut self,
+        _: &DatePickerClose,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.close_on_escape && self.is_open {
+            self.close(cx);
+        }
     }
 
     pub fn on_change(
@@ -508,6 +533,7 @@ impl Render for DatePicker {
                     this.toggle_open(cx);
                 }),
             )
+            .on_action(cx.listener(Self::close_on_escape_action))
     }
 }
 

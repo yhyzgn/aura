@@ -46,6 +46,7 @@ pub struct Menu {
     opened_submenus: HashSet<SharedString>,
     items: Vec<MenuNode>,
     on_select: Option<Box<dyn Fn(SharedString, &mut Window, &mut App) + 'static>>,
+    close_on_escape: bool,
 }
 
 impl Menu {
@@ -58,6 +59,7 @@ impl Menu {
             opened_submenus: HashSet::new(),
             items: vec![],
             on_select: None,
+            close_on_escape: true,
         }
     }
 
@@ -83,6 +85,11 @@ impl Menu {
 
     pub fn on_select(mut self, f: impl Fn(SharedString, &mut Window, &mut App) + 'static) -> Self {
         self.on_select = Some(Box::new(f));
+        self
+    }
+
+    pub fn close_on_escape(mut self, close: bool) -> Self {
+        self.close_on_escape = close;
         self
     }
 
@@ -280,6 +287,7 @@ impl Menu {
                     }),
             )
             .id(format!("{}-collapsed-popover-{}", self.id, id))
+            .close_on_escape(self.close_on_escape)
             .placement(Placement::RightStart)
             .content({
                 let popover_id: SharedString =
@@ -545,6 +553,7 @@ impl Menu {
                 ),
         )
         .id(format!("{}-horizontal-popover-{}", self.id, id))
+        .close_on_escape(self.close_on_escape)
         .placement(Placement::BottomStart)
         .content({
             let popover_id: SharedString = format!("{}-horizontal-popover-{}", self.id, id).into();

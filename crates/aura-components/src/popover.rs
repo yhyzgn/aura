@@ -4,12 +4,14 @@ use aura_core::{
 };
 use gpui::{
     AnyElement, App, Bounds, Component, Context, ElementId, GlobalElementId, InspectorElementId,
-    IntoElement, LayoutId, MouseButton, Pixels, Render, RenderOnce, SharedString, Window, div,
-    point, prelude::*, px,
+    IntoElement, KeyBinding, LayoutId, MouseButton, Pixels, Render, RenderOnce, SharedString,
+    Window, actions, div, point, prelude::*, px,
 };
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
+
+actions!(popover, [PopoverClose]);
 
 pub struct Popover {
     trigger: AnyElement,
@@ -17,6 +19,7 @@ pub struct Popover {
     placement: Placement,
     offset: Pixels,
     close_on_click_outside: bool,
+    close_on_escape: bool,
     trigger_id: Option<ElementId>,
 }
 
@@ -26,6 +29,7 @@ pub struct PopoverView {
     placement: Placement,
     offset: Pixels,
     close_on_click_outside: bool,
+    close_on_escape: bool,
     id: SharedString,
     on_close: Arc<dyn Fn(&mut Window, &mut App) + 'static>,
 }
@@ -37,6 +41,7 @@ impl PopoverView {
         placement: Placement,
         offset: Pixels,
         close_on_click_outside: bool,
+        close_on_escape: bool,
         id: SharedString,
         on_close: impl Fn(&mut Window, &mut App) + 'static,
     ) -> Self {
@@ -46,6 +51,7 @@ impl PopoverView {
             placement,
             offset,
             close_on_click_outside,
+            close_on_escape,
             id,
             on_close: Arc::new(on_close),
         }
@@ -60,6 +66,7 @@ impl Render for PopoverView {
         let offset = self.offset;
         let on_close = self.on_close.clone();
         let close_on_click_outside = self.close_on_click_outside;
+        let close_on_escape = self.close_on_escape;
         let id = self.id.clone();
 
         let content = (self.content)(_window, cx);
@@ -83,6 +90,12 @@ impl Render for PopoverView {
             })
             .on_mouse_move(|_, _, cx| {
                 cx.stop_propagation();
+            })
+            .when(close_on_escape, |s| {
+                let on_close = on_close.clone();
+                s.on_action(move |_: &PopoverClose, window, cx| {
+                    on_close(window, cx);
+                })
             })
             .when(close_on_click_outside, |s| {
                 s.on_mouse_down(
@@ -184,6 +197,7 @@ impl Popover {
             placement: Placement::Bottom,
             offset: px(8.0),
             close_on_click_outside: true,
+            close_on_escape: true,
             trigger_id: None,
         }
     }
@@ -216,6 +230,15 @@ impl Popover {
         self
     }
 
+    pub fn close_on_escape(mut self, c: bool) -> Self {
+        self.close_on_escape = c;
+        self
+    }
+
+    pub fn register_key_bindings(cx: &mut App) {
+        cx.bind_keys([KeyBinding::new("escape", PopoverClose, None)]);
+    }
+
     pub fn id(mut self, id: impl Into<SharedString>) -> Self {
         self.trigger_id = Some(ElementId::from(id.into()));
         self
@@ -227,6 +250,7 @@ impl RenderOnce for Popover {
         let placement = self.placement;
         let offset = self.offset;
         let close_on_click_outside = self.close_on_click_outside;
+        let close_on_escape = self.close_on_escape;
         let content = self.content.clone();
         let trigger_id = self.trigger_id.unwrap_or_else(|| {
             stable_unique_id("popover-trigger", "popover-trigger", _window, _cx).into()
@@ -262,6 +286,7 @@ impl RenderOnce for Popover {
                             placement,
                             offset,
                             close_on_click_outside,
+                            close_on_escape,
                             popover_id_for_view,
                             move |_window, _cx| {
                                 clear_popover(&popover_id_for_close, _cx);

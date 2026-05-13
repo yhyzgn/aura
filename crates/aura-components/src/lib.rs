@@ -187,3 +187,68 @@ mod motion_coverage_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod overlay_escape_coverage_tests {
+    #[test]
+    fn overlay_like_components_expose_configurable_escape_close() {
+        let components = [
+            ("dialog", include_str!("dialog.rs")),
+            ("drawer", include_str!("drawer.rs")),
+            ("message_box", include_str!("message_box.rs")),
+            ("preview", include_str!("preview.rs")),
+            ("popover", include_str!("popover.rs")),
+            ("dropdown", include_str!("dropdown.rs")),
+            ("popconfirm", include_str!("popconfirm.rs")),
+            ("menu", include_str!("menu.rs")),
+            ("select", include_str!("select.rs")),
+            ("cascader", include_str!("cascader.rs")),
+            ("date_picker", include_str!("date_picker.rs")),
+            ("date_time_picker", include_str!("date_time_picker.rs")),
+            ("time_picker", include_str!("time_picker.rs")),
+            ("color_picker", include_str!("color_picker.rs")),
+            ("autocomplete", include_str!("autocomplete.rs")),
+        ];
+
+        for (name, source) in components {
+            assert!(
+                source.contains("close_on_escape"),
+                "{name} should expose/forward close_on_escape"
+            );
+            assert!(
+                source.contains("close_on_escape: true")
+                    || source.contains("close_on_escape = true")
+                    || source.contains(".close_on_escape(")
+                    || source.contains("close_on_escape: true,")
+                    || name == "message_box",
+                "{name} should default or forward Escape close behavior"
+            );
+        }
+    }
+
+    #[test]
+    fn popup_key_bindings_are_registered_by_apps() {
+        let docs = include_str!("../../../apps/aura-docs/src/main.rs");
+        let gallery = include_str!("../../../apps/aura-gallery/src/main.rs");
+        for component in [
+            "Autocomplete",
+            "Cascader",
+            "ColorPicker",
+            "DatePicker",
+            "DateTimePicker",
+            "Dialog",
+            "Drawer",
+            "Popover",
+            "Preview",
+            "Select",
+            "TimePicker",
+        ] {
+            let registration = format!("{component}::register_key_bindings(cx)");
+            assert!(docs.contains(&registration), "docs missing {registration}");
+            assert!(
+                gallery.contains(&registration),
+                "gallery missing {registration}"
+            );
+        }
+    }
+}
