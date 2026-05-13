@@ -1,6 +1,6 @@
 use aura_components::{
-    Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Card,
-    Checkbox, CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Input, InputNumber,
+    Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Checkbox,
+    CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Input, InputNumber,
     InputNumberControlsPosition, Menu, MenuMode, Paragraph, Radio, RadioGroup, Rate, Select,
     Slider, Space, Switch, Tag as AuraTag, Text, Textarea, Title, VirtualScrollbar, toast_error,
     toast_info, toast_success, toast_warning,
@@ -1929,6 +1929,7 @@ impl Render for DocsShell {
         let nav_menu = self.nav_menu(selected, cx);
         let page = &DOC_PAGES[selected];
         let page_view = self.page_view(selected, cx);
+        let theme = cx.global::<Config>().theme.clone();
 
         Container::new()
             .header(
@@ -1946,19 +1947,19 @@ impl Render for DocsShell {
             .aside_scroll()
             .main_padding_xl()
             .child(
-                div().size_full().child(
-                    Card::new(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .size_full()
-                            .gap_3()
-                            .child(Title::new(page.title).h3())
-                            .child(div().flex_1().min_h_0().child(page_view)),
-                    )
-                    .no_shadow()
-                    .no_shrink(),
-                ),
+                div()
+                    .size_full()
+                    .flex()
+                    .flex_col()
+                    .gap_3()
+                    .p_4()
+                    .rounded(px(theme.radius.md))
+                    .border_1()
+                    .border_color(theme.neutral.border)
+                    .bg(theme.neutral.card)
+                    .overflow_hidden()
+                    .child(Title::new(page.title).h3())
+                    .child(div().flex_1().min_h_0().child(page_view)),
             )
             .overlay(DocsPortalLayer)
     }
@@ -2525,6 +2526,7 @@ mod tests {
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains("list(self.list_state.clone()"));
         assert!(source.contains("VirtualScrollbar::new"));
+        assert!(source.contains(".flex_1().min_h_0().child(page_view)"));
         let docs_shell_render = &source[source
             .find("impl Render for DocsShell")
             .expect("DocsShell render should exist")
