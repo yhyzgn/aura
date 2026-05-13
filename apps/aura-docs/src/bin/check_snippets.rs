@@ -159,6 +159,14 @@ mod statistic_basic;
 mod statistic_icons;
 #[path = "../../content/snippets/statistic/layout.rs"]
 mod statistic_layout;
+#[path = "../../content/snippets/steps/basic.rs"]
+mod steps_basic;
+#[path = "../../content/snippets/steps/description.rs"]
+mod steps_description;
+#[path = "../../content/snippets/steps/status.rs"]
+mod steps_status;
+#[path = "../../content/snippets/steps/vertical.rs"]
+mod steps_vertical;
 #[path = "../../content/snippets/switch/basic.rs"]
 mod switch_basic;
 #[path = "../../content/snippets/switch/callback.rs"]
@@ -179,6 +187,14 @@ mod tag_types;
 mod textarea_basic;
 #[path = "../../content/snippets/textarea/limit.rs"]
 mod textarea_limit;
+#[path = "../../content/snippets/timeline/basic.rs"]
+mod timeline_basic;
+#[path = "../../content/snippets/timeline/custom.rs"]
+mod timeline_custom;
+#[path = "../../content/snippets/timeline/placement.rs"]
+mod timeline_placement;
+#[path = "../../content/snippets/timeline/reverse.rs"]
+mod timeline_reverse;
 #[path = "../../content/snippets/typography/paragraph.rs"]
 mod typography_paragraph;
 #[path = "../../content/snippets/virtualized_list/basic.rs"]

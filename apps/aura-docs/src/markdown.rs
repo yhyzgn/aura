@@ -953,6 +953,14 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "empty/description.rs" => Some(include_str!("../content/snippets/empty/description.rs")),
         "empty/image.rs" => Some(include_str!("../content/snippets/empty/image.rs")),
         "empty/extra.rs" => Some(include_str!("../content/snippets/empty/extra.rs")),
+        "steps/basic.rs" => Some(include_str!("../content/snippets/steps/basic.rs")),
+        "steps/description.rs" => Some(include_str!("../content/snippets/steps/description.rs")),
+        "steps/status.rs" => Some(include_str!("../content/snippets/steps/status.rs")),
+        "steps/vertical.rs" => Some(include_str!("../content/snippets/steps/vertical.rs")),
+        "timeline/basic.rs" => Some(include_str!("../content/snippets/timeline/basic.rs")),
+        "timeline/custom.rs" => Some(include_str!("../content/snippets/timeline/custom.rs")),
+        "timeline/placement.rs" => Some(include_str!("../content/snippets/timeline/placement.rs")),
+        "timeline/reverse.rs" => Some(include_str!("../content/snippets/timeline/reverse.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1980,6 +1988,138 @@ impl Render for LiveDemoContent {
                 Button::new("去添加").primary().into_any_element()
             }))
             .width_md()
+            .into_any_element(),
+            "StepsBasic" => aura_components::Steps::new()
+                .active(1)
+                .step(aura_components::StepItem::new("步骤 1"))
+                .step(aura_components::StepItem::new("步骤 2"))
+                .step(aura_components::StepItem::new("步骤 3"))
+                .into_any_element(),
+            "StepsDescription" => aura_components::Steps::new()
+                .active(1)
+                .step(
+                    aura_components::StepItem::new("步骤 1")
+                        .description("这是一段描述性文字")
+                        .icon(IconName::User),
+                )
+                .step(
+                    aura_components::StepItem::new("步骤 2")
+                        .description("这是一段描述性文字")
+                        .icon(IconName::Settings),
+                )
+                .step(
+                    aura_components::StepItem::new("步骤 3")
+                        .description("这是一段描述性文字")
+                        .icon(IconName::Check),
+                )
+                .into_any_element(),
+            "StepsStatus" => aura_components::Steps::new()
+                .active(1)
+                .step(
+                    aura_components::StepItem::new("已完成")
+                        .status(aura_components::StepStatus::Finish),
+                )
+                .step(
+                    aura_components::StepItem::new("发生错误")
+                        .status(aura_components::StepStatus::Error),
+                )
+                .step(aura_components::StepItem::new("等待中"))
+                .into_any_element(),
+            "StepsVertical" => aura_components::Steps::new()
+                .active(1)
+                .direction(aura_components::StepsDirection::Vertical)
+                .step(
+                    aura_components::StepItem::new("步骤 1")
+                        .description("这是一段很长很长很长的描述性文字"),
+                )
+                .step(aura_components::StepItem::new("步骤 2"))
+                .step(aura_components::StepItem::new("步骤 3"))
+                .into_any_element(),
+            "TimelineBasic" => Card::new(
+                aura_components::Timeline::new()
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-01")
+                            .content("创建成功"),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-02")
+                            .content("通过审核"),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-03")
+                            .content("项目发布"),
+                    ),
+            )
+            .into_any_element(),
+            "TimelineCustom" => Card::new(
+                aura_components::Timeline::new()
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-01")
+                            .content("成功状态")
+                            .success(),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-02")
+                            .content("警告状态")
+                            .warning()
+                            .hollow(true),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-03")
+                            .content("错误状态")
+                            .danger()
+                            .icon(IconName::CircleX),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-04")
+                            .content("自定义图标")
+                            .primary()
+                            .icon(IconName::Star),
+                    ),
+            )
+            .into_any_element(),
+            "TimelinePlacement" => Card::new(
+                aura_components::Timeline::new()
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-01")
+                            .content("时间戳在顶部")
+                            .placement(aura_components::TimelinePlacement::Top),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-02")
+                            .content("时间戳在底部")
+                            .placement(aura_components::TimelinePlacement::Bottom),
+                    ),
+            )
+            .into_any_element(),
+            "TimelineReverse" => Card::new(
+                aura_components::Timeline::new()
+                    .reverse(true)
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-01")
+                            .content("事件 1"),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-02")
+                            .content("事件 2"),
+                    )
+                    .item(
+                        aura_components::TimelineItem::new()
+                            .timestamp("2026-05-03")
+                            .content("事件 3"),
+                    ),
+            )
             .into_any_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
@@ -3061,6 +3201,26 @@ mod tests {
                     "empty/description.rs",
                     "empty/image.rs",
                     "empty/extra.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/steps.md"),
+                "StepsBasic",
+                &[
+                    "steps/basic.rs",
+                    "steps/description.rs",
+                    "steps/status.rs",
+                    "steps/vertical.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/timeline.md"),
+                "TimelineBasic",
+                &[
+                    "timeline/basic.rs",
+                    "timeline/custom.rs",
+                    "timeline/placement.rs",
+                    "timeline/reverse.rs",
                 ][..],
             ),
         ] {
