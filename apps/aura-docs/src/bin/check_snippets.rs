@@ -105,6 +105,20 @@ mod empty_description;
 mod empty_extra;
 #[path = "../../content/snippets/empty/image.rs"]
 mod empty_image;
+#[path = "../../content/snippets/icon/colors.rs"]
+mod icon_colors;
+#[path = "../../content/snippets/icon/lucide.rs"]
+mod icon_lucide;
+#[path = "../../content/snippets/icon/sizes.rs"]
+mod icon_sizes;
+#[path = "../../content/snippets/image/basic.rs"]
+mod image_basic;
+#[path = "../../content/snippets/image/fit.rs"]
+mod image_fit;
+#[path = "../../content/snippets/image/preview.rs"]
+mod image_preview;
+#[path = "../../content/snippets/image/states.rs"]
+mod image_states;
 #[path = "../../content/snippets/input/affix.rs"]
 mod input_affix;
 #[path = "../../content/snippets/input/basic.rs"]

@@ -1039,6 +1039,13 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "time_picker/disabled.rs" => {
             Some(include_str!("../content/snippets/time_picker/disabled.rs"))
         }
+        "icon/lucide.rs" => Some(include_str!("../content/snippets/icon/lucide.rs")),
+        "icon/colors.rs" => Some(include_str!("../content/snippets/icon/colors.rs")),
+        "icon/sizes.rs" => Some(include_str!("../content/snippets/icon/sizes.rs")),
+        "image/basic.rs" => Some(include_str!("../content/snippets/image/basic.rs")),
+        "image/fit.rs" => Some(include_str!("../content/snippets/image/fit.rs")),
+        "image/states.rs" => Some(include_str!("../content/snippets/image/states.rs")),
+        "image/preview.rs" => Some(include_str!("../content/snippets/image/preview.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -2591,6 +2598,17 @@ impl Render for LiveDemoContent {
             "TableFixedHeader" => table_fixed_header_demo(),
             "TableLoading" => table_basic_table().loading(true).into_any_element(),
             "TableEmpty" => table_basic_table().empty_text("暂无订单数据").into_any_element(),
+            "IconLucide" => icon_lucide_demo(_cx),
+            "IconColors" => icon_colors_demo(_cx),
+            "IconSizes" => icon_sizes_demo(),
+            "ImageBasic" => image_basic_demo(),
+            "ImageFit" => image_fit_demo(),
+            "ImageStates" => image_states_demo(),
+            "ImagePreview" => aura_components::Image::new(REMOTE_DEMO_IMAGE)
+                .thumbnail()
+                .cover()
+                .preview(true)
+                .into_any_element(),
             "ColorPickerBasic" => demo_stack(vec![
                 self.color_picker_element(),
                 Text::new("点击颜色方块打开 popup；在大色板中选择颜色，右侧切换 hue，下方选择 alpha。")
@@ -2838,6 +2856,189 @@ impl LiveDemoContent {
             .map(|value| value.format())
             .unwrap_or_else(|| "尚未选择".to_string())
     }
+}
+
+const REMOTE_DEMO_IMAGE: &str =
+    "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
+
+fn local_demo_image() -> String {
+    format!("file://{}/assets/local.jpeg", env!("CARGO_MANIFEST_DIR"))
+}
+
+fn icon_labeled(icon: aura_icons::Icon, label: &'static str) -> impl IntoElement {
+    Space::new()
+        .vertical()
+        .align_center()
+        .gap_xs()
+        .child(icon)
+        .child(Text::new(label).nowrap())
+}
+
+fn icon_lucide_demo(cx: &mut Context<LiveDemoContent>) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+    demo_row(
+        [
+            (IconName::House, "Home"),
+            (IconName::User, "User"),
+            (IconName::Search, "Search"),
+            (IconName::Check, "Check"),
+            (IconName::ChevronDown, "ChevronDown"),
+            (IconName::Settings, "Settings"),
+        ]
+        .into_iter()
+        .map(|(icon, label)| {
+            icon_labeled(
+                aura_icons::Icon::new(icon)
+                    .size_lg()
+                    .color(theme.primary.base),
+                label,
+            )
+            .into_any_element()
+        })
+        .collect(),
+    )
+}
+
+fn icon_colors_demo(cx: &mut Context<LiveDemoContent>) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+    demo_row(vec![
+        icon_labeled(
+            aura_icons::Icon::new(IconName::Star)
+                .size_lg()
+                .color(theme.primary.base),
+            "Primary",
+        )
+        .into_any_element(),
+        icon_labeled(
+            aura_icons::Icon::new(IconName::Star)
+                .size_lg()
+                .color(theme.success.base),
+            "Success",
+        )
+        .into_any_element(),
+        icon_labeled(
+            aura_icons::Icon::new(IconName::Star)
+                .size_lg()
+                .color(theme.warning.base),
+            "Warning",
+        )
+        .into_any_element(),
+        icon_labeled(
+            aura_icons::Icon::new(IconName::Star)
+                .size_lg()
+                .color(theme.danger.base),
+            "Danger",
+        )
+        .into_any_element(),
+    ])
+}
+
+fn icon_sizes_demo() -> AnyElement {
+    demo_row(vec![
+        icon_labeled(aura_icons::Icon::new(IconName::House).size_xs(), "12px").into_any_element(),
+        icon_labeled(aura_icons::Icon::new(IconName::House).size_md(), "18px").into_any_element(),
+        icon_labeled(aura_icons::Icon::new(IconName::House).size_lg(), "24px").into_any_element(),
+        icon_labeled(aura_icons::Icon::new(IconName::House).size_xl(), "32px").into_any_element(),
+    ])
+}
+
+fn image_basic_demo() -> AnyElement {
+    let local = local_demo_image();
+    demo_row(vec![
+        aura_components::Image::new(REMOTE_DEMO_IMAGE)
+            .thumbnail()
+            .cover()
+            .into_any_element(),
+        aura_components::Image::new(local.clone())
+            .thumbnail()
+            .cover()
+            .into_any_element(),
+        aura_components::Image::new(local)
+            .thumbnail()
+            .contain()
+            .into_any_element(),
+    ])
+}
+
+fn image_fit_demo() -> AnyElement {
+    let local = local_demo_image();
+    demo_row(
+        [
+            ("Fill", aura_components::ImageFit::Fill),
+            ("Contain", aura_components::ImageFit::Contain),
+            ("Cover", aura_components::ImageFit::Cover),
+            ("ScaleDown", aura_components::ImageFit::ScaleDown),
+        ]
+        .into_iter()
+        .map(|(label, fit)| {
+            Card::new(
+                Space::new()
+                    .vertical()
+                    .gap_sm()
+                    .child(
+                        aura_components::Image::new(local.clone())
+                            .thumbnail_sm()
+                            .fit(fit),
+                    )
+                    .child(Text::new(label).nowrap()),
+            )
+            .no_shadow()
+            .into_any_element()
+        })
+        .collect(),
+    )
+}
+
+fn image_states_demo() -> AnyElement {
+    let local = local_demo_image();
+    demo_row(vec![
+        labeled_image(
+            aura_components::Image::new(local.clone())
+                .square_lg()
+                .cover()
+                .round(),
+            "Circle",
+        ),
+        labeled_image(
+            aura_components::Image::new(local.clone())
+                .thumbnail_sm()
+                .cover()
+                .round_options(aura_components::ImageRoundOptions::without_square_crop()),
+            "Round bounds",
+        ),
+        labeled_image(
+            aura_components::Image::new(local.clone())
+                .square_lg()
+                .cover()
+                .round_sleeve(),
+            "Ring sleeve",
+        ),
+        labeled_image(
+            aura_components::Image::new(local)
+                .thumbnail()
+                .cover()
+                .radius(aura_components::ImageRadius::Large)
+                .shadow(true),
+            "Shadow",
+        ),
+        labeled_image(
+            aura_components::Image::new("aura://missing-image.png")
+                .thumbnail()
+                .alt("加载失败"),
+            "Fallback",
+        ),
+        labeled_image(aura_components::Image::empty().thumbnail(), "Empty"),
+    ])
+}
+
+fn labeled_image(image: aura_components::Image, label: &'static str) -> AnyElement {
+    Space::new()
+        .vertical()
+        .align_center()
+        .gap_sm()
+        .child(image)
+        .child(Text::new(label).nowrap())
+        .into_any_element()
 }
 
 fn descriptions_basic_demo() -> AnyElement {
@@ -4271,6 +4472,21 @@ mod tests {
                     "time_picker/stepped.rs",
                     "time_picker/no_seconds.rs",
                     "time_picker/disabled.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/icon.md"),
+                "IconLucide",
+                &["icon/lucide.rs", "icon/colors.rs", "icon/sizes.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/image.md"),
+                "ImageBasic",
+                &[
+                    "image/basic.rs",
+                    "image/fit.rs",
+                    "image/states.rs",
+                    "image/preview.rs",
                 ][..],
             ),
         ] {
