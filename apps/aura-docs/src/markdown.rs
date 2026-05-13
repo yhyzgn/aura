@@ -993,6 +993,12 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "tabs/border_card.rs" => Some(include_str!("../content/snippets/tabs/border_card.rs")),
         "tabs/position.rs" => Some(include_str!("../content/snippets/tabs/position.rs")),
         "tabs/editable.rs" => Some(include_str!("../content/snippets/tabs/editable.rs")),
+        "layout/divider.rs" => Some(include_str!("../content/snippets/layout/divider.rs")),
+        "layout/space.rs" => Some(include_str!("../content/snippets/layout/space.rs")),
+        "layout/grid.rs" => Some(include_str!("../content/snippets/layout/grid.rs")),
+        "container/space.rs" => Some(include_str!("../content/snippets/container/space.rs")),
+        "container/divider.rs" => Some(include_str!("../content/snippets/container/divider.rs")),
+        "container/layout.rs" => Some(include_str!("../content/snippets/container/layout.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -2421,6 +2427,12 @@ impl Render for LiveDemoContent {
                     .map(Entity::into_any_element)
                     .collect(),
             ),
+            "LayoutDivider" => layout_divider_demo(),
+            "LayoutSpace" => layout_space_demo(),
+            "LayoutGrid" => layout_grid_demo(_cx),
+            "ContainerSpace" => container_space_demo(),
+            "ContainerDivider" => container_divider_demo(),
+            "ContainerLayout" => container_layout_demo(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -2433,6 +2445,173 @@ impl Render for LiveDemoContent {
             ),
         }
     }
+}
+
+fn layout_divider_demo() -> AnyElement {
+    Space::new()
+        .vertical()
+        .gap_sm()
+        .child(Text::new("Horizontal (default)"))
+        .child(aura_components::Divider::new())
+        .child(Text::new("With label"))
+        .child(aura_components::Divider::new().label("Center Text"))
+        .child(Text::new("Vertical"))
+        .child(
+            aura_components::Flex::new()
+                .row()
+                .height_units(60.0)
+                .gap_lg()
+                .align_center()
+                .child(Text::new("Left"))
+                .child(aura_components::Divider::new().vertical())
+                .child(Text::new("Right")),
+        )
+        .into_any_element()
+}
+
+fn layout_space_demo() -> AnyElement {
+    Space::new()
+        .vertical()
+        .gap_sm()
+        .child(Text::new("Horizontal gap (default 8px):"))
+        .child(
+            Space::new()
+                .child(Button::new("Button 1"))
+                .child(Button::new("Button 2"))
+                .child(Button::new("Button 3")),
+        )
+        .child(Text::new("Vertical gap:"))
+        .child(
+            Space::new()
+                .vertical()
+                .gap_xl()
+                .child(Button::new("Vertical 1").primary())
+                .child(Button::new("Vertical 2").primary()),
+        )
+        .into_any_element()
+}
+
+fn layout_grid_demo(cx: &mut Context<LiveDemoContent>) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+    Space::new()
+        .vertical()
+        .gap_sm()
+        .child(
+            aura_components::Row::new().column(aura_components::Col::new(24).child(grid_box(
+                &theme,
+                "span 24",
+                gpui::blue(),
+            ))),
+        )
+        .child(
+            aura_components::Row::new()
+                .column(aura_components::Col::new(12).child(grid_box(
+                    &theme,
+                    "span 12",
+                    gpui::red(),
+                )))
+                .column(aura_components::Col::new(12).child(grid_box(
+                    &theme,
+                    "span 12",
+                    gpui::green(),
+                ))),
+        )
+        .child(
+            aura_components::Row::new()
+                .column(aura_components::Col::new(8).child(grid_box(
+                    &theme,
+                    "span 8",
+                    gpui::blue(),
+                )))
+                .column(aura_components::Col::new(8).child(grid_box(&theme, "span 8", gpui::red())))
+                .column(aura_components::Col::new(8).child(grid_box(
+                    &theme,
+                    "span 8",
+                    gpui::green(),
+                ))),
+        )
+        .into_any_element()
+}
+
+fn container_space_demo() -> AnyElement {
+    Space::new()
+        .vertical()
+        .gap_sm()
+        .child(
+            Space::new()
+                .child(Button::new("Button 1"))
+                .child(Button::new("Button 2"))
+                .child(Button::new("Button 3")),
+        )
+        .child(
+            Space::new()
+                .vertical()
+                .child(Button::new("Vertical 1").primary())
+                .child(Button::new("Vertical 2").primary()),
+        )
+        .into_any_element()
+}
+
+fn container_divider_demo() -> AnyElement {
+    Space::new()
+        .vertical()
+        .gap_sm()
+        .child(
+            Space::new()
+                .vertical()
+                .child(Text::new("Above divider"))
+                .child(aura_components::Divider::new())
+                .child(Text::new("Below divider")),
+        )
+        .child(aura_components::Divider::new().label("Center Label"))
+        .child(
+            aura_components::Flex::new()
+                .row()
+                .align_center()
+                .gap_lg()
+                .height_units(48.0)
+                .child(Text::new("Section 1"))
+                .child(aura_components::Divider::new().vertical())
+                .child(Text::new("Section 2"))
+                .child(aura_components::Divider::new().vertical())
+                .child(Text::new("Section 3")),
+        )
+        .into_any_element()
+}
+
+fn container_layout_demo() -> AnyElement {
+    aura_components::Flex::new()
+        .height_units(300.0)
+        .w_full()
+        .border()
+        .child(
+            aura_components::Container::new()
+                .header(Title::new("Header").h5())
+                .aside(
+                    aura_components::Flex::new()
+                        .padding_md()
+                        .child(Text::new("Aside Sidebar")),
+                )
+                .footer(Text::new("Footer"))
+                .child(
+                    aura_components::Flex::new()
+                        .padding_md()
+                        .child(Text::new("Main Content Area")),
+                ),
+        )
+        .into_any_element()
+}
+
+fn grid_box(theme: &aura_theme::Theme, text: &str, color: gpui::Hsla) -> impl IntoElement {
+    aura_components::Flex::new()
+        .row()
+        .bg(color.opacity(0.5))
+        .height_units(36.0)
+        .rounded_units(4.0)
+        .center()
+        .text_color(theme.neutral.text_1)
+        .text_xs()
+        .child(text.to_string())
 }
 
 fn demo_row(children: Vec<AnyElement>) -> AnyElement {
@@ -3592,6 +3771,20 @@ mod tests {
                     "tabs/border_card.rs",
                     "tabs/position.rs",
                     "tabs/editable.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/layout.md"),
+                "LayoutDivider",
+                &["layout/divider.rs", "layout/space.rs", "layout/grid.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/container.md"),
+                "ContainerSpace",
+                &[
+                    "container/space.rs",
+                    "container/divider.rs",
+                    "container/layout.rs",
                 ][..],
             ),
         ] {

@@ -77,6 +77,12 @@ mod code_block_inline;
 mod code_block_language;
 #[path = "../../content/snippets/code_block/theme.rs"]
 mod code_block_theme;
+#[path = "../../content/snippets/container/divider.rs"]
+mod container_divider;
+#[path = "../../content/snippets/container/layout.rs"]
+mod container_layout;
+#[path = "../../content/snippets/container/space.rs"]
+mod container_space;
 #[path = "../../content/snippets/empty/basic.rs"]
 mod empty_basic;
 #[path = "../../content/snippets/empty/description.rs"]
@@ -99,6 +105,12 @@ mod input_number_vertical;
 mod input_password;
 #[path = "../../content/snippets/input/states.rs"]
 mod input_states;
+#[path = "../../content/snippets/layout/divider.rs"]
+mod layout_divider;
+#[path = "../../content/snippets/layout/grid.rs"]
+mod layout_grid;
+#[path = "../../content/snippets/layout/space.rs"]
+mod layout_space;
 #[path = "../../content/snippets/link/icons.rs"]
 mod link_icons;
 #[path = "../../content/snippets/link/states.rs"]
