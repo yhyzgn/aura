@@ -47,19 +47,96 @@ impl Paragraph {
     fn styled_text_parts(self, theme: &aura_theme::Theme) -> (SharedString, Vec<TextRun>) {
         let default_style = Self::default_text_style(theme);
         let mut full_text = String::new();
-        let mut runs = Vec::new();
+        let mut runs: Vec<TextRun> = Vec::new();
 
         for segment in self.children {
             if segment.content.is_empty() {
                 continue;
             }
 
-            full_text.push_str(segment.content.as_ref());
-            runs.push(segment.to_text_run(&default_style));
+            let segment_text = segment.content.clone();
+            let text = segment_text.as_ref();
+            let leading_glue_len = if runs.is_empty() {
+                0
+            } else {
+                leading_no_line_start_len(text)
+            };
+
+            if leading_glue_len > 0 {
+                full_text.push_str(&text[..leading_glue_len]);
+                if let Some(previous_run) = runs.last_mut() {
+                    previous_run.len += leading_glue_len;
+                }
+            }
+
+            let remaining = &text[leading_glue_len..];
+            if !remaining.is_empty() {
+                full_text.push_str(remaining);
+                let mut run = segment.to_text_run(&default_style);
+                run.len = remaining.len();
+                runs.push(run);
+            }
         }
 
         (full_text.into(), runs)
     }
+}
+
+fn leading_no_line_start_len(text: &str) -> usize {
+    let Some(first) = text.chars().next() else {
+        return 0;
+    };
+
+    if !is_no_line_start_punctuation(first) {
+        return 0;
+    }
+
+    let mut end = 0;
+    let mut saw_punctuation = false;
+    for (index, ch) in text.char_indices() {
+        if is_no_line_start_punctuation(ch) {
+            saw_punctuation = true;
+            end = index + ch.len_utf8();
+            continue;
+        }
+
+        if saw_punctuation && ch.is_whitespace() {
+            end = index + ch.len_utf8();
+            continue;
+        }
+
+        break;
+    }
+
+    end
+}
+
+fn is_no_line_start_punctuation(ch: char) -> bool {
+    matches!(
+        ch,
+        ':' | '：'
+            | ','
+            | '，'
+            | '.'
+            | '。'
+            | ';'
+            | '；'
+            | '!'
+            | '！'
+            | '?'
+            | '？'
+            | '、'
+            | ')'
+            | '）'
+            | ']'
+            | '】'
+            | '}'
+            | '》'
+            | '」'
+            | '』'
+            | '”'
+            | '’'
+    )
 }
 
 impl RenderOnce for Paragraph {
@@ -104,6 +181,27 @@ mod tests {
         assert_eq!(runs[1].len, "世界".len());
         assert_eq!(runs[0].font.weight, FontWeight::BOLD);
         assert_eq!(runs[1].font.style, FontStyle::Italic);
+    }
+
+    #[test]
+    fn paragraph_glues_line_start_forbidden_punctuation_to_previous_run() {
+        let theme = aura_theme::Theme::light();
+        let (text, runs) = Paragraph::new()
+            .child(Text::new("crates/aura-components").code_style(&theme))
+            .child(Text::new("：所有可复用组件，例如 "))
+            .child(Text::new("Button").code_style(&theme))
+            .child(Text::new("、"))
+            .child(Text::new("Input").code_style(&theme))
+            .child(Text::new("。"))
+            .styled_text_parts(&theme);
+
+        assert_eq!(
+            text.as_ref(),
+            "crates/aura-components：所有可复用组件，例如 Button、Input。"
+        );
+        assert_eq!(runs[0].len, "crates/aura-components：".len());
+        assert_eq!(runs[2].len, "Button、".len());
+        assert_eq!(runs[3].len, "Input。".len());
     }
 
     #[test]

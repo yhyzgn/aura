@@ -663,6 +663,7 @@ impl ParserState {
             Some(Frame::Paragraph(segments)) => segments.push(segment),
             Some(Frame::Heading { content, .. }) => content.push(segment),
             Some(Frame::CodeBlock { code, .. }) => code.push_str(text),
+            Some(Frame::Item(blocks)) => push_inline_segment_into_blocks(blocks, segment),
             _ => self.push_block(Block::Paragraph(vec![segment])),
         }
     }
@@ -714,6 +715,14 @@ fn push_block_into_frame(frame: &mut Frame, block: Block) {
         }
         Frame::List { items, .. } => items.push(vec![block]),
         Frame::Paragraph(_) | Frame::Heading { .. } | Frame::CodeBlock { .. } => {}
+    }
+}
+
+fn push_inline_segment_into_blocks(blocks: &mut Vec<Block>, segment: InlineSegment) {
+    if let Some(Block::Paragraph(segments)) = blocks.last_mut() {
+        segments.push(segment);
+    } else {
+        blocks.push(Block::Paragraph(vec![segment]));
     }
 }
 
@@ -2481,6 +2490,30 @@ mod tests {
                 "list rows should not use flex-row layout because it narrows StyledText measurement and forces inline punctuation onto new lines"
             );
         }
+    }
+
+    #[test]
+    fn markdown_inline_code_keeps_following_punctuation_in_same_paragraph() {
+        let document = MarkdownDocument::parse(
+            "- `crates/aura-components`：所有可复用组件，例如 `Button`、`Input`。",
+        );
+
+        let [Block::List { items, .. }] = document.blocks() else {
+            panic!("expected list");
+        };
+        let [Block::Paragraph(segments)] = &items[0][..] else {
+            panic!("expected list paragraph");
+        };
+
+        assert_eq!(segments[0].text.as_ref(), "crates/aura-components");
+        assert!(segments[0].style.code);
+        assert_eq!(segments[1].text.as_ref(), "：所有可复用组件，例如 ");
+        assert_eq!(segments[2].text.as_ref(), "Button");
+        assert!(segments[2].style.code);
+        assert_eq!(segments[3].text.as_ref(), "、");
+        assert_eq!(segments[4].text.as_ref(), "Input");
+        assert!(segments[4].style.code);
+        assert_eq!(segments[5].text.as_ref(), "。");
     }
 
     #[test]
