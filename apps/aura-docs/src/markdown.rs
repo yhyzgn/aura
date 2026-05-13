@@ -1001,6 +1001,21 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "container/layout.rs" => Some(include_str!("../content/snippets/container/layout.rs")),
         "splitter/basic.rs" => Some(include_str!("../content/snippets/splitter/basic.rs")),
         "scrollbar/basic.rs" => Some(include_str!("../content/snippets/scrollbar/basic.rs")),
+        "descriptions/basic.rs" => Some(include_str!("../content/snippets/descriptions/basic.rs")),
+        "descriptions/border.rs" => {
+            Some(include_str!("../content/snippets/descriptions/border.rs"))
+        }
+        "descriptions/vertical.rs" => {
+            Some(include_str!("../content/snippets/descriptions/vertical.rs"))
+        }
+        "table/sortable.rs" => Some(include_str!("../content/snippets/table/sortable.rs")),
+        "table/basic.rs" => Some(include_str!("../content/snippets/table/basic.rs")),
+        "table/stripe_border.rs" => {
+            Some(include_str!("../content/snippets/table/stripe_border.rs"))
+        }
+        "table/fixed_header.rs" => Some(include_str!("../content/snippets/table/fixed_header.rs")),
+        "table/loading.rs" => Some(include_str!("../content/snippets/table/loading.rs")),
+        "table/empty.rs" => Some(include_str!("../content/snippets/table/empty.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1263,6 +1278,8 @@ struct LiveDemoContent {
     paginations: Vec<Entity<aura_components::Pagination>>,
     tabs: Vec<Entity<aura_components::Tabs>>,
     scrollbars: Vec<Entity<aura_components::Scrollbar>>,
+    table_sort_key: Option<SharedString>,
+    table_sort_order: Option<aura_components::TableSortOrder>,
 }
 
 impl LiveDemoContent {
@@ -1577,6 +1594,8 @@ impl LiveDemoContent {
             paginations,
             tabs,
             scrollbars,
+            table_sort_key: None,
+            table_sort_order: None,
         }
     }
 }
@@ -2459,6 +2478,15 @@ impl Render for LiveDemoContent {
                 .cloned()
                 .map(Entity::into_any_element)
                 .unwrap_or_else(|| Paragraph::with_text("Missing Scrollbar demo").into_any_element()),
+            "DescriptionsBasic" => descriptions_basic_demo(),
+            "DescriptionsBorder" => descriptions_border_demo(),
+            "DescriptionsVertical" => descriptions_vertical_demo(),
+            "TableSortable" => self.sortable_table_demo(_cx),
+            "TableBasic" => table_basic_demo(),
+            "TableStripeBorder" => table_basic_table().stripe(true).border(true).into_any_element(),
+            "TableFixedHeader" => table_fixed_header_demo(),
+            "TableLoading" => table_basic_table().loading(true).into_any_element(),
+            "TableEmpty" => table_basic_table().empty_text("暂无订单数据").into_any_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -2638,6 +2666,241 @@ fn grid_box(theme: &aura_theme::Theme, text: &str, color: gpui::Hsla) -> impl In
         .text_color(theme.neutral.text_1)
         .text_xs()
         .child(text.to_string())
+}
+
+impl LiveDemoContent {
+    fn sortable_table_demo(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.global::<Config>().theme.clone();
+        let view = cx.entity().clone();
+        let sort_key = self.table_sort_key.clone();
+        let sort_order = self.table_sort_order;
+
+        let mut table = aura_components::Table::new(table_sortable_columns(&theme))
+            .rows(table_sorted_rows(sort_key.as_ref(), sort_order))
+            .stripe(true)
+            .border(true)
+            .on_sort_change(move |state, _, cx| {
+                view.update(cx, |this, cx| {
+                    this.table_sort_key = state.order.map(|_| state.key.clone());
+                    this.table_sort_order = state.order;
+                    cx.notify();
+                });
+            });
+
+        if let Some(key) = sort_key {
+            table = table.sort(key, sort_order);
+        }
+
+        table.into_any_element()
+    }
+}
+
+fn descriptions_basic_demo() -> AnyElement {
+    aura_components::Descriptions::new()
+        .title("用户信息")
+        .item("用户名", "kooriookami", 1)
+        .item("手机号", "18100000000", 1)
+        .item("居住地", "苏州市", 1)
+        .item("备注", Text::new("学校").bg(gpui::blue().opacity(0.1)), 1)
+        .item("联系地址", "江苏省苏州市吴中区越溪街道月苑路", 2)
+        .into_any_element()
+}
+
+fn descriptions_border_demo() -> AnyElement {
+    aura_components::Descriptions::new()
+        .title("用户信息")
+        .border(true)
+        .extra(Button::new("操作").primary().small())
+        .item("用户名", "kooriookami", 1)
+        .item("手机号", "18100000000", 1)
+        .item("居住地", "苏州市", 1)
+        .item("备注", "学校", 1)
+        .item("联系地址", "江苏省苏州市吴中区越溪街道月苑路", 2)
+        .into_any_element()
+}
+
+fn descriptions_vertical_demo() -> AnyElement {
+    aura_components::Descriptions::new()
+        .title("垂直布局")
+        .border(true)
+        .direction(aura_components::DescriptionsDirection::Vertical)
+        .item("用户名", "kooriookami", 1)
+        .item("手机号", "18100000000", 1)
+        .item("居住地", "苏州市", 1)
+        .item("备注", "学校", 1)
+        .item("联系地址", "江苏省苏州市吴中区越溪街道月苑路", 2)
+        .into_any_element()
+}
+
+#[derive(Clone)]
+struct DocsOrderRecord {
+    date: &'static str,
+    name: &'static str,
+    address: &'static str,
+    status: &'static str,
+}
+
+fn table_records() -> Vec<DocsOrderRecord> {
+    vec![
+        DocsOrderRecord {
+            date: "2016-05-03",
+            name: "Tom",
+            address: "上海市普陀区金沙江路 1518 弄",
+            status: "已完成",
+        },
+        DocsOrderRecord {
+            date: "2016-05-02",
+            name: "Jack",
+            address: "上海市普陀区金沙江路 1517 弄",
+            status: "进行中",
+        },
+        DocsOrderRecord {
+            date: "2016-05-04",
+            name: "Alice",
+            address: "上海市普陀区金沙江路 1519 弄",
+            status: "已完成",
+        },
+        DocsOrderRecord {
+            date: "2016-05-01",
+            name: "Bob",
+            address: "上海市普陀区金沙江路 1516 弄",
+            status: "待处理",
+        },
+    ]
+}
+
+fn table_basic_columns() -> Vec<aura_components::TableColumn> {
+    vec![
+        aura_components::TableColumn::new("date", "日期").width_sm(),
+        aura_components::TableColumn::new("name", "姓名").width_sm(),
+        aura_components::TableColumn::new("address", "地址").min_width_lg(),
+        aura_components::TableColumn::new("status", "状态")
+            .width_sm()
+            .align(aura_components::TableAlign::Center),
+        aura_components::TableColumn::new("action", "操作")
+            .width_sm()
+            .align(aura_components::TableAlign::Right),
+    ]
+}
+
+fn table_sortable_columns(theme: &aura_theme::Theme) -> Vec<aura_components::TableColumn> {
+    vec![
+        aura_components::TableColumn::new("date", "日期")
+            .width_sm()
+            .sortable(),
+        aura_components::TableColumn::new("name", "姓名")
+            .header(
+                Text::new("客户")
+                    .bold()
+                    .text_color(theme.primary.base)
+                    .nowrap(),
+            )
+            .width_sm()
+            .sortable(),
+        aura_components::TableColumn::new("address", "地址").min_width_lg(),
+        aura_components::TableColumn::new("status", "状态")
+            .width_sm()
+            .align(aura_components::TableAlign::Center)
+            .sortable(),
+        aura_components::TableColumn::new("action", "操作")
+            .width_sm()
+            .align(aura_components::TableAlign::Right),
+    ]
+}
+
+fn table_basic_table() -> aura_components::Table {
+    aura_components::Table::new(table_basic_columns()).rows(table_basic_rows())
+}
+
+fn table_basic_demo() -> AnyElement {
+    table_basic_table().into_any_element()
+}
+
+fn table_fixed_header_demo() -> AnyElement {
+    aura_components::Table::new(table_basic_columns())
+        .rows(table_long_rows())
+        .stripe(true)
+        .fixed_header(true)
+        .height_md()
+        .into_any_element()
+}
+
+fn table_basic_rows() -> Vec<aura_components::TableRow> {
+    table_records().into_iter().map(table_record_row).collect()
+}
+
+fn table_sorted_rows(
+    sort_key: Option<&SharedString>,
+    sort_order: Option<aura_components::TableSortOrder>,
+) -> Vec<aura_components::TableRow> {
+    let mut records = table_records();
+    if let (Some(key), Some(order)) = (sort_key, sort_order) {
+        records.sort_by(|a, b| table_field_value(a, key).cmp(table_field_value(b, key)));
+        if order == aura_components::TableSortOrder::Descending {
+            records.reverse();
+        }
+    }
+    records.into_iter().map(table_record_row).collect()
+}
+
+fn table_field_value<'a>(record: &'a DocsOrderRecord, key: &SharedString) -> &'a str {
+    match key.as_ref() {
+        "date" => record.date,
+        "name" => record.name,
+        "status" => record.status,
+        "address" => record.address,
+        _ => "",
+    }
+}
+
+fn table_long_rows() -> Vec<aura_components::TableRow> {
+    (1..=16)
+        .map(|i| {
+            table_row(
+                match i % 4 {
+                    0 => "2016-05-04",
+                    1 => "2016-05-01",
+                    2 => "2016-05-02",
+                    _ => "2016-05-03",
+                },
+                match i % 4 {
+                    0 => "Tom",
+                    1 => "Jack",
+                    2 => "Alice",
+                    _ => "Bob",
+                },
+                "上海市普陀区金沙江路 1518 弄",
+                if i % 3 == 0 { "待处理" } else { "已完成" },
+            )
+        })
+        .collect()
+}
+
+fn table_record_row(record: DocsOrderRecord) -> aura_components::TableRow {
+    table_row(record.date, record.name, record.address, record.status)
+}
+
+fn table_row(
+    date: &'static str,
+    name: &'static str,
+    address: &'static str,
+    status: &'static str,
+) -> aura_components::TableRow {
+    aura_components::TableRow::new()
+        .cell("date", date)
+        .cell("name", name)
+        .cell("address", address)
+        .cell("status", table_status_tag(status))
+        .cell("action", Button::new("查看").primary().small())
+}
+
+fn table_status_tag(status: &'static str) -> aura_components::Tag {
+    let tag = aura_components::Tag::new(status).round(true).small();
+    match status {
+        "已完成" => tag.success(),
+        "进行中" => tag.info(),
+        _ => tag.warning(),
+    }
 }
 
 fn demo_row(children: Vec<AnyElement>) -> AnyElement {
@@ -3822,6 +4085,27 @@ mod tests {
                 include_str!("../content/pages/scrollbar.md"),
                 "ScrollbarBasic",
                 &["scrollbar/basic.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/descriptions.md"),
+                "DescriptionsBasic",
+                &[
+                    "descriptions/basic.rs",
+                    "descriptions/border.rs",
+                    "descriptions/vertical.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/table.md"),
+                "TableSortable",
+                &[
+                    "table/sortable.rs",
+                    "table/basic.rs",
+                    "table/stripe_border.rs",
+                    "table/fixed_header.rs",
+                    "table/loading.rs",
+                    "table/empty.rs",
+                ][..],
             ),
         ] {
             assert!(!page.contains("## 完整示例"));

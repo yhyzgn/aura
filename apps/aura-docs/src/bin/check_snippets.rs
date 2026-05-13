@@ -83,6 +83,12 @@ mod container_divider;
 mod container_layout;
 #[path = "../../content/snippets/container/space.rs"]
 mod container_space;
+#[path = "../../content/snippets/descriptions/basic.rs"]
+mod descriptions_basic;
+#[path = "../../content/snippets/descriptions/border.rs"]
+mod descriptions_border;
+#[path = "../../content/snippets/descriptions/vertical.rs"]
+mod descriptions_vertical;
 #[path = "../../content/snippets/empty/basic.rs"]
 mod empty_basic;
 #[path = "../../content/snippets/empty/description.rs"]
@@ -217,6 +223,18 @@ mod switch_basic;
 mod switch_callback;
 #[path = "../../content/snippets/switch/disabled.rs"]
 mod switch_disabled;
+#[path = "../../content/snippets/table/basic.rs"]
+mod table_basic;
+#[path = "../../content/snippets/table/empty.rs"]
+mod table_empty;
+#[path = "../../content/snippets/table/fixed_header.rs"]
+mod table_fixed_header;
+#[path = "../../content/snippets/table/loading.rs"]
+mod table_loading;
+#[path = "../../content/snippets/table/sortable.rs"]
+mod table_sortable;
+#[path = "../../content/snippets/table/stripe_border.rs"]
+mod table_stripe_border;
 #[path = "../../content/snippets/tabs/basic.rs"]
 mod tabs_basic;
 #[path = "../../content/snippets/tabs/border_card.rs"]
