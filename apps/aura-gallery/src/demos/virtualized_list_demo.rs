@@ -9,6 +9,7 @@ pub fn render(cx: &mut App) -> Entity<VirtualizedListDemo> {
                 VirtualizedList::new(1_000, cx, |index, _window, _cx| virtualized_row(index));
             list.set_height(Some(320.0.into()));
             list.set_item_spacing(12.0);
+            list.measure_all_items_for_scrollbar();
             list
         }),
     })

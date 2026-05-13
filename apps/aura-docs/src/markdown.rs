@@ -2000,6 +2000,7 @@ impl DocsPageView {
                     render_persistent_block(block, &theme, &virtual_live_demos, &mut demo_index)
                 });
             list.set_item_spacing(px(20.0));
+            list.measure_all_items_for_scrollbar();
             list
         });
 
@@ -2533,6 +2534,7 @@ mod tests {
         assert!(source.contains(".aside_scroll()"));
         assert!(source.contains("VirtualizedList::new"));
         assert!(source.contains("virtual_list: Entity<VirtualizedList>"));
+        assert!(source.contains("measure_all_items_for_scrollbar"));
         assert!(source.contains(".flex_1().min_h_0().child(page_view)"));
         let docs_shell_render = &source[source
             .find("impl Render for DocsShell")

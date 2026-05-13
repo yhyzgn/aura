@@ -18,6 +18,7 @@ pub struct VirtualizedList {
     overdraw: Pixels,
     item_spacing: Pixels,
     height: Option<Pixels>,
+    measure_all_items: bool,
 }
 
 impl VirtualizedList {
@@ -34,6 +35,7 @@ impl VirtualizedList {
             overdraw,
             item_spacing: px(0.0),
             height: None,
+            measure_all_items: false,
         }
     }
 
@@ -54,7 +56,7 @@ impl VirtualizedList {
             return;
         }
         self.item_count = item_count;
-        self.list_state = ListState::new(item_count, ListAlignment::Top, self.overdraw);
+        self.list_state = Self::new_list_state(item_count, self.overdraw, self.measure_all_items);
     }
 
     pub fn set_render_item(
@@ -79,7 +81,7 @@ impl VirtualizedList {
             return;
         }
         self.overdraw = overdraw;
-        self.list_state = ListState::new(self.item_count, ListAlignment::Top, overdraw);
+        self.list_state = Self::new_list_state(self.item_count, overdraw, self.measure_all_items);
     }
 
     pub fn set_height(&mut self, height: Option<Pixels>) {
@@ -88,6 +90,29 @@ impl VirtualizedList {
         }
         self.height = height;
         self.list_state.remeasure();
+    }
+
+    /// Measure every item once so GPUI's scrollbar math has a stable total height.
+    ///
+    /// GPUI's virtual list reports scrollbar extents from measured rows only; for
+    /// long variable-height documents this can otherwise make the thumb jump or
+    /// reach the ends before the content does. Use this when scrollbar accuracy is
+    /// more important than the first-frame cost of measuring every row.
+    pub fn measure_all_items_for_scrollbar(&mut self) {
+        if self.measure_all_items {
+            return;
+        }
+        self.measure_all_items = true;
+        self.list_state = self.list_state.clone().measure_all();
+    }
+
+    fn new_list_state(item_count: usize, overdraw: Pixels, measure_all_items: bool) -> ListState {
+        let state = ListState::new(item_count, ListAlignment::Top, overdraw);
+        if measure_all_items {
+            state.measure_all()
+        } else {
+            state
+        }
     }
 
     /// Mark every item for remeasurement while preserving proportional scroll.
@@ -140,6 +165,7 @@ mod tests {
         assert!(source.contains("VirtualScrollbar::new"));
         assert!(source.contains("set_item_spacing"));
         assert!(source.contains("set_render_item"));
+        assert!(source.contains("measure_all_items_for_scrollbar"));
     }
 
     #[test]
@@ -148,7 +174,7 @@ mod tests {
 
         assert!(source.contains("set_item_count"));
         assert!(source.contains("set_overdraw"));
-        assert!(source.contains("self.list_state = ListState::new"));
+        assert!(source.contains("Self::new_list_state"));
         assert!(source.contains("pub fn remeasure(&self)"));
         assert!(source.contains("pub fn remeasure_items"));
     }

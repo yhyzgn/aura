@@ -29,6 +29,7 @@ pub fn build_virtualized_list(cx: &mut App) -> Entity<VirtualizedList> {
         // Give the virtual viewport a bounded height and comfortable item gaps.
         list.set_height(Some(px(320.0)));
         list.set_item_spacing(px(12.0));
+        list.measure_all_items_for_scrollbar();
         list
     })
 }

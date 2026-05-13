@@ -5,7 +5,7 @@ use gpui::{
     MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, ScrollHandle,
     Size, Style, Window, div, point, prelude::*, px, relative, size,
 };
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 const SCROLLBAR_THUMB_WIDTH: Pixels = px(4.0);
 const SCROLLBAR_THUMB_HOVER_WIDTH: Pixels = px(8.0);
@@ -63,6 +63,7 @@ impl IntoElement for VirtualScrollbar {
 
 pub struct VirtualScrollbarPrepaint {
     painted_bounds: Option<Bounds<Pixels>>,
+    hover_bounds: Bounds<Pixels>,
     hitbox: Hitbox,
     active: bool,
 }
@@ -117,7 +118,9 @@ impl Element for VirtualScrollbar {
             },
         });
         let hitbox = window.insert_hitbox(hitbox_bounds, HitboxBehavior::Normal);
-        let active = hitbox.is_hovered(window) || window.captured_hitbox() == Some(hitbox.id);
+        let active = hitbox.is_hovered(window)
+            || window.captured_hitbox() == Some(hitbox.id)
+            || hitbox_bounds.contains(&window.mouse_position());
         let painted_bounds = thumb.map(|thumb| {
             let target_width = if active {
                 SCROLLBAR_THUMB_HOVER_WIDTH
@@ -134,6 +137,7 @@ impl Element for VirtualScrollbar {
         });
         VirtualScrollbarPrepaint {
             painted_bounds,
+            hover_bounds: hitbox_bounds,
             hitbox,
             active,
         }
@@ -166,6 +170,21 @@ impl Element for VirtualScrollbar {
         if prepaint.active {
             window.request_animation_frame();
         }
+
+        let was_active = prepaint.active;
+        let hover_bounds = prepaint.hover_bounds;
+        let hitbox_id = prepaint.hitbox.id;
+        let current_view = window.current_view();
+        window.on_mouse_event(move |_: &MouseMoveEvent, phase, window, cx| {
+            if phase == DispatchPhase::Capture {
+                let active = window.captured_hitbox() == Some(hitbox_id)
+                    || hover_bounds.contains(&window.mouse_position());
+                if active != was_active {
+                    cx.notify(current_view);
+                    window.refresh();
+                }
+            }
+        });
 
         let list_state = self.list_state.clone();
         let hitbox = prepaint.hitbox.clone();
@@ -440,15 +459,25 @@ impl gpui::Element for ScrollbarThumb {
             SCROLLBAR_THUMB_WIDTH
         };
         let thumb_bounds = apply_scrollbar_hover_width(
-            ElementId::NamedChild(
-                Arc::new(ElementId::Name("scrollbar-thumb-visual".into())),
-                format!("{:p}", self).into(),
-            ),
+            ElementId::Name("scrollbar-thumb-visual".into()),
             raw_thumb_bounds,
             target_width,
             window,
             cx,
         );
+
+        let was_active = active;
+        let hover_bounds = expand_scrollbar_hitbox(raw_thumb_bounds);
+        let current_view = window.current_view();
+        window.on_mouse_event(move |_: &MouseMoveEvent, phase, window, cx| {
+            if phase == DispatchPhase::Capture {
+                let active = hover_bounds.contains(&window.mouse_position());
+                if active != was_active {
+                    cx.notify(current_view);
+                    window.refresh();
+                }
+            }
+        });
 
         window.paint_quad(gpui::PaintQuad {
             bounds: thumb_bounds,
@@ -488,6 +517,8 @@ mod tests {
         assert!(source.contains("SCROLLBAR_HIT_WIDTH"));
         assert!(source.contains("apply_scrollbar_hover_width"));
         assert!(source.contains("lerp_pixels"));
+        assert!(source.contains("hover_bounds.contains(&window.mouse_position())"));
+        assert!(source.contains("cx.notify(current_view)"));
         assert!(source.contains("window.request_animation_frame()"));
         assert!(!source.contains("state.top = lerp_pixels"));
         assert!(!source.contains("state.height = lerp_pixels"));
