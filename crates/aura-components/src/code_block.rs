@@ -346,9 +346,10 @@ impl RenderOnce for CodeBlock {
         let id = self.id.clone().unwrap_or_else(|| {
             stable_unique_id(
                 format!(
-                    "aura-code-block:{}:{}:{:?}:{:?}:{:?}:copyable={}:selectable={}",
+                    "aura-code-block:{}:{:016x}:{}:{:?}:{:?}:{:?}:copyable={}:selectable={}",
                     self.language.label(),
-                    self.code.as_ref(),
+                    hash_code_text(self.code.as_ref()),
+                    self.code.len(),
                     self.format,
                     self.highlighter,
                     self.theme,
@@ -706,7 +707,20 @@ fn render_code_content(
         });
         SelectableCodeTextView { input }.into_any_element()
     } else {
-        StyledText::new(code).with_runs(runs).into_any_element()
+        let state_key = ElementId::NamedChild(
+            Arc::new(id.clone()),
+            SharedString::from("read-only-code-text"),
+        );
+        let initial_code = code.clone();
+        let initial_runs = runs.clone();
+        let initial_theme = theme.clone();
+        let input = window.use_keyed_state(state_key, cx, move |_, _| {
+            ReadOnlyCodeText::new(initial_code, initial_runs, &initial_theme)
+        });
+        input.update(cx, |text, cx| {
+            text.update_content(code, runs, theme, cx);
+        });
+        ReadOnlyCodeTextView { input }.into_any_element()
     }
 }
 
@@ -723,6 +737,24 @@ impl IntoElement for SelectableCodeTextView {
 }
 
 impl RenderOnce for SelectableCodeTextView {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        self.input.into_any_element()
+    }
+}
+
+struct ReadOnlyCodeTextView {
+    input: Entity<ReadOnlyCodeText>,
+}
+
+impl IntoElement for ReadOnlyCodeTextView {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
+    }
+}
+
+impl RenderOnce for ReadOnlyCodeTextView {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         self.input.into_any_element()
     }
@@ -1011,6 +1043,165 @@ fn code_accent(theme: &aura_theme::Theme, code_theme: ResolvedCodeTheme) -> Hsla
     match code_theme.mode {
         CodeThemeMode::Light => theme.info.base,
         CodeThemeMode::Dark => rgb(0x96b5b4),
+    }
+}
+
+struct ReadOnlyCodeText {
+    code: SharedString,
+    runs: Vec<TextRun>,
+    theme: aura_theme::Theme,
+    layout: Option<Arc<SelectableCodeLayout>>,
+}
+
+impl ReadOnlyCodeText {
+    fn new(code: SharedString, runs: Vec<TextRun>, theme: &aura_theme::Theme) -> Self {
+        Self {
+            code,
+            runs,
+            theme: theme.clone(),
+            layout: None,
+        }
+    }
+
+    fn update_content(
+        &mut self,
+        code: SharedString,
+        runs: Vec<TextRun>,
+        theme: &aura_theme::Theme,
+        cx: &mut Context<Self>,
+    ) {
+        let changed = self.code != code
+            || self.runs != runs
+            || self.theme.name != theme.name
+            || self.theme.font_size.sm != theme.font_size.sm
+            || self.theme.font_size.md != theme.font_size.md
+            || self.theme.primary.base != theme.primary.base;
+        if !changed {
+            return;
+        }
+
+        self.code = code;
+        self.runs = runs;
+        self.theme = theme.clone();
+        self.layout = None;
+        cx.notify();
+    }
+
+    fn font_size(&self) -> Pixels {
+        px(self.theme.font_size.md)
+    }
+
+    fn line_height(&self) -> Pixels {
+        px(self.theme.font_size.md * 1.7)
+    }
+
+    fn ensure_layout(&mut self, window: &mut Window) -> Arc<SelectableCodeLayout> {
+        if let Some(layout) = self.layout.as_ref() {
+            return layout.clone();
+        }
+
+        let layout = Arc::new(build_code_layout(
+            self.code.as_ref(),
+            &self.runs,
+            self.font_size(),
+            self.line_height(),
+            window,
+        ));
+        self.layout = Some(layout.clone());
+        layout
+    }
+}
+
+impl Render for ReadOnlyCodeText {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .id("read-only-code-text")
+            .child(ReadOnlyCodeElement { input: cx.entity() })
+    }
+}
+
+struct ReadOnlyCodeElement {
+    input: Entity<ReadOnlyCodeText>,
+}
+
+struct ReadOnlyCodePrepaint {
+    layout: Arc<SelectableCodeLayout>,
+}
+
+impl IntoElement for ReadOnlyCodeElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for ReadOnlyCodeElement {
+    type RequestLayoutState = Arc<SelectableCodeLayout>;
+    type PrepaintState = ReadOnlyCodePrepaint;
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Arc<SelectableCodeLayout>) {
+        let layout = self
+            .input
+            .update(cx, |input, _| input.ensure_layout(window));
+        let mut style = Style::default();
+        style.size.width = layout.width.into();
+        style.min_size.width = relative(1.).into();
+        style.size.height = layout.height.into();
+        (window.request_layout(style, [], cx), layout)
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        layout: &mut Arc<SelectableCodeLayout>,
+        _window: &mut Window,
+        _cx: &mut App,
+    ) -> ReadOnlyCodePrepaint {
+        ReadOnlyCodePrepaint {
+            layout: layout.clone(),
+        }
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut Arc<SelectableCodeLayout>,
+        prepaint: &mut ReadOnlyCodePrepaint,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let line_height = self.input.read(cx).line_height();
+        for line in &prepaint.layout.lines {
+            line.shaped
+                .paint(
+                    point(bounds.left(), bounds.top() + line.y),
+                    line_height,
+                    gpui::TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                )
+                .unwrap();
+        }
     }
 }
 
@@ -1369,35 +1560,13 @@ impl SelectableCodeText {
             return layout.clone();
         }
 
-        let mut max_width = px(1.0);
-        let line_height = self.line_height();
-        let mut offset = 0;
-        let mut y = px(0.0);
-        let mut lines = Vec::new();
-        for line in code_lines(self.code.as_ref()) {
-            let line_len = line.len();
-            let line_runs = slice_runs(&self.runs, offset, offset + line_len);
-            let shaped = window.text_system().shape_line(
-                SharedString::from(line.to_string()),
-                self.font_size(),
-                &line_runs,
-                None,
-            );
-            max_width = max_width.max(shaped.width());
-            lines.push(SelectableCodeLine {
-                shaped,
-                start: offset,
-                y,
-            });
-            offset += line_len + 1;
-            y += line_height;
-        }
-
-        let layout = Arc::new(SelectableCodeLayout {
-            height: line_height * lines.len() as f32,
-            lines,
-            width: max_width,
-        });
+        let layout = Arc::new(build_code_layout(
+            self.code.as_ref(),
+            &self.runs,
+            self.font_size(),
+            self.line_height(),
+            window,
+        ));
         self.layout = Some(layout.clone());
         layout
     }
@@ -1580,6 +1749,49 @@ impl Render for SelectableCodeText {
     }
 }
 
+fn build_code_layout(
+    code: &str,
+    runs: &[TextRun],
+    font_size: Pixels,
+    line_height: Pixels,
+    window: &mut Window,
+) -> SelectableCodeLayout {
+    let mut max_width = px(1.0);
+    let mut offset = 0;
+    let mut y = px(0.0);
+    let mut lines = Vec::new();
+    for line in code_lines(code) {
+        let line_len = line.len();
+        let line_runs = slice_runs(runs, offset, offset + line_len);
+        let shaped = window.text_system().shape_line(
+            SharedString::from(line.to_string()),
+            font_size,
+            &line_runs,
+            None,
+        );
+        max_width = max_width.max(shaped.width());
+        lines.push(SelectableCodeLine {
+            shaped,
+            start: offset,
+            y,
+        });
+        offset += line_len + 1;
+        y += line_height;
+    }
+
+    SelectableCodeLayout {
+        height: line_height * lines.len() as f32,
+        lines,
+        width: max_width,
+    }
+}
+
+fn hash_code_text(text: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    hasher.finish()
+}
+
 fn code_lines(text: &str) -> impl Iterator<Item = &str> {
     text.strip_suffix('\n').unwrap_or(text).split('\n')
 }
@@ -1749,6 +1961,8 @@ mod tests {
         assert!(source.contains("with_selectable_state(&self.id"));
         assert!(source.contains("prewarm_highlighter"));
         assert!(source.contains("SelectableCodeLayout"));
+        assert!(source.contains("ReadOnlyCodeText"));
+        assert!(source.contains("build_code_layout"));
         assert!(source.contains("set_selectable_layout_state"));
         assert!(source.contains("fn id(&self) -> Option<ElementId>"));
         assert!(source.contains("fn font_size(&self) -> Pixels"));

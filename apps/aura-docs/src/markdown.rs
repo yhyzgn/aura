@@ -1768,6 +1768,7 @@ fn render_code_block(
     };
 
     let mut code_block = AuraCodeBlock::new(rendered_code);
+    code_block = code_block.selectable(false);
     if let Some(language) = language {
         code_block = code_block.language(language.as_ref());
     }
@@ -2459,6 +2460,19 @@ mod tests {
         assert!(source.contains("src=\"code_block/basic.rs\""));
         assert!(source.contains("src=\"code_block/theme.rs\""));
         assert!(load_code_snippet("code_block/basic.rs").is_some());
+    }
+
+    #[test]
+    fn docs_markdown_code_blocks_disable_selectable_text_for_scroll_performance() {
+        let source = include_str!("markdown.rs");
+        let render_code_block = &source[source
+            .find("fn render_code_block(")
+            .expect("render_code_block should exist")
+            ..source
+                .find("fn collect_live_demo_components(")
+                .expect("collect_live_demo_components should follow")];
+
+        assert!(render_code_block.contains("selectable(false)"));
     }
 
     #[test]
