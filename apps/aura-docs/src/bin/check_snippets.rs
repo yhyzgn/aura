@@ -77,14 +77,34 @@ mod input_number_vertical;
 mod input_password;
 #[path = "../../content/snippets/input/states.rs"]
 mod input_states;
+#[path = "../../content/snippets/link/icons.rs"]
+mod link_icons;
+#[path = "../../content/snippets/link/states.rs"]
+mod link_states;
+#[path = "../../content/snippets/link/underline.rs"]
+mod link_underline;
+#[path = "../../content/snippets/link/variants.rs"]
+mod link_variants;
 #[path = "../../content/snippets/live_demo/button.rs"]
 mod live_demo_button;
+#[path = "../../content/snippets/loading/basic.rs"]
+mod loading_basic;
+#[path = "../../content/snippets/loading/fullscreen.rs"]
+mod loading_fullscreen;
 #[path = "../../content/snippets/markdown/state_machine.rs"]
 mod markdown_state_machine;
 #[path = "../../content/snippets/message/formatting.rs"]
 mod message_formatting;
 #[path = "../../content/snippets/message/types.rs"]
 mod message_types;
+#[path = "../../content/snippets/progress/basic.rs"]
+mod progress_basic;
+#[path = "../../content/snippets/progress/color.rs"]
+mod progress_color;
+#[path = "../../content/snippets/progress/inside.rs"]
+mod progress_inside;
+#[path = "../../content/snippets/progress/status.rs"]
+mod progress_status;
 #[path = "../../content/snippets/quick_start/component_view.rs"]
 mod quick_start_component_view;
 #[path = "../../content/snippets/quick_start/components.rs"]

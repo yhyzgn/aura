@@ -1,16 +1,47 @@
 # Link
 
-文字超链接。
+`Link` 是文本型跳转入口，支持语义颜色、禁用状态、下划线控制和图标。
 
-## 完整示例
-
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+## 类型
 
 ### 效果
 
-::AuraDemo{component="Link"}::
+::AuraDemo{component="LinkVariants"}::
 
 ### 代码
 
-```rust src="gallery/link_demo.rs"
+```rust src="link/variants.rs"
+```
+
+## 下划线
+
+### 效果
+
+::AuraDemo{component="LinkUnderline"}::
+
+### 代码
+
+```rust src="link/underline.rs"
+```
+
+## 禁用状态
+
+### 效果
+
+::AuraDemo{component="LinkStates"}::
+
+### 代码
+
+```rust src="link/states.rs"
+```
+
+## 图标
+
+### 效果
+
+::AuraDemo{component="LinkIcons"}::
+
+### 代码
+
+```rust src="link/icons.rs"
 ```

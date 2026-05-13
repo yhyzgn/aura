@@ -1,16 +1,25 @@
 # Loading
 
-加载数据时显示。
+`Loading` 用于展示局部或全屏加载状态，内置旋转和淡入动效。
 
-## 完整示例
-
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+## 基础用法
 
 ### 效果
 
-::AuraDemo{component="Loading"}::
+::AuraDemo{component="LoadingBasic"}::
 
 ### 代码
 
-```rust src="gallery/loading_demo.rs"
+```rust src="loading/basic.rs"
+```
+
+## 全屏配置
+
+### 效果
+
+::AuraDemo{component="LoadingFullscreen"}::
+
+### 代码
+
+```rust src="loading/fullscreen.rs"
 ```

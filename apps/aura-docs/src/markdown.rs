@@ -1,9 +1,9 @@
 use aura_components::{
     Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Checkbox,
     CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Input, InputNumber,
-    InputNumberControlsPosition, Menu, MenuMode, Paragraph, Radio, RadioGroup, Rate, Select,
-    Slider, Space, Switch, Tag as AuraTag, Text, Textarea, Title, VirtualizedList, toast_error,
-    toast_info, toast_success, toast_warning,
+    InputNumberControlsPosition, Link, Loading, Menu, MenuMode, Paragraph, Progress,
+    ProgressStatus, Radio, RadioGroup, Rate, Select, Slider, Space, Switch, Tag as AuraTag, Text,
+    Textarea, Title, VirtualizedList, toast_error, toast_info, toast_success, toast_warning,
 };
 use aura_core::{Config, PassivePortal, Portal};
 use aura_icons_lucide::IconName;
@@ -927,6 +927,16 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "switch/callback.rs" => Some(include_str!("../content/snippets/switch/callback.rs")),
         "message/types.rs" => Some(include_str!("../content/snippets/message/types.rs")),
         "message/formatting.rs" => Some(include_str!("../content/snippets/message/formatting.rs")),
+        "progress/basic.rs" => Some(include_str!("../content/snippets/progress/basic.rs")),
+        "progress/inside.rs" => Some(include_str!("../content/snippets/progress/inside.rs")),
+        "progress/status.rs" => Some(include_str!("../content/snippets/progress/status.rs")),
+        "progress/color.rs" => Some(include_str!("../content/snippets/progress/color.rs")),
+        "loading/basic.rs" => Some(include_str!("../content/snippets/loading/basic.rs")),
+        "loading/fullscreen.rs" => Some(include_str!("../content/snippets/loading/fullscreen.rs")),
+        "link/variants.rs" => Some(include_str!("../content/snippets/link/variants.rs")),
+        "link/underline.rs" => Some(include_str!("../content/snippets/link/underline.rs")),
+        "link/states.rs" => Some(include_str!("../content/snippets/link/states.rs")),
+        "link/icons.rs" => Some(include_str!("../content/snippets/link/icons.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1700,6 +1710,101 @@ impl Render for LiveDemoContent {
                         let api = "toast_success!";
                         toast_success!("{component} macro {api} works.");
                     })
+                    .into_any_element(),
+            ]),
+            "ProgressBasic" => demo_stack(vec![
+                Progress::new(0.0).into_any_element(),
+                Progress::new(30.0).into_any_element(),
+                Progress::new(50.0).into_any_element(),
+                Progress::new(100.0)
+                    .status(ProgressStatus::Success)
+                    .into_any_element(),
+            ]),
+            "ProgressInside" => demo_stack(vec![
+                Progress::new(15.0)
+                    .thick()
+                    .text_inside(true)
+                    .into_any_element(),
+                Progress::new(70.0)
+                    .thick()
+                    .text_inside(true)
+                    .into_any_element(),
+                Progress::new(70.0)
+                    .thick()
+                    .text_inside_centered()
+                    .into_any_element(),
+                Progress::new(100.0)
+                    .thick()
+                    .text_inside(true)
+                    .status(ProgressStatus::Success)
+                    .into_any_element(),
+            ]),
+            "ProgressStatus" => demo_stack(vec![
+                Progress::new(30.0).into_any_element(),
+                Progress::new(50.0)
+                    .status(ProgressStatus::Warning)
+                    .into_any_element(),
+                Progress::new(70.0)
+                    .status(ProgressStatus::Exception)
+                    .into_any_element(),
+                Progress::new(100.0)
+                    .status(ProgressStatus::Success)
+                    .into_any_element(),
+            ]),
+            "ProgressColor" => {
+                let theme = _cx.global::<Config>().theme.clone();
+                demo_stack(vec![
+                    Progress::new(50.0).primary().into_any_element(),
+                    Progress::new(75.0)
+                        .gradient(vec![
+                            theme.success.base,
+                            theme.warning.base,
+                            theme.danger.base,
+                            theme.primary.base,
+                        ])
+                        .into_any_element(),
+                ])
+            }
+            "LoadingBasic" => demo_row(vec![
+                Loading::new().into_any_element(),
+                Loading::new().text("Loading...").into_any_element(),
+            ]),
+            "LoadingFullscreen" => demo_stack(vec![
+                Text::new("通常由页面或弹层容器按需渲染全屏 Loading。下面展示同一配置的局部形态，避免遮挡文档页。")
+                    .into_any_element(),
+                Loading::new()
+                    .text("Preparing workspace...")
+                    .into_any_element(),
+            ]),
+            "LinkVariants" => demo_row(vec![
+                Link::new("Default").href("https://github.com").into_any_element(),
+                Link::new("Primary").primary().href("https://github.com").into_any_element(),
+                Link::new("Success").success().href("https://github.com").into_any_element(),
+                Link::new("Warning").warning().href("https://github.com").into_any_element(),
+                Link::new("Danger").danger().href("https://github.com").into_any_element(),
+                Link::new("Info").info().href("https://github.com").into_any_element(),
+            ]),
+            "LinkUnderline" => demo_row(vec![
+                Link::new("With underline").href("https://github.com").into_any_element(),
+                Link::new("No underline")
+                    .underline(false)
+                    .href("https://github.com")
+                    .into_any_element(),
+            ]),
+            "LinkStates" => demo_row(vec![
+                Link::new("Disabled")
+                    .disabled(true)
+                    .href("https://github.com")
+                    .into_any_element(),
+            ]),
+            "LinkIcons" => demo_row(vec![
+                Link::new("GitHub")
+                    .icon_start(IconName::ExternalLink)
+                    .href("https://github.com")
+                    .into_any_element(),
+                Link::new("Home")
+                    .icon_start(IconName::House)
+                    .href("https://example.com")
                     .into_any_element(),
             ]),
             _ => self.gallery_demo.clone().map_or_else(
@@ -2719,6 +2824,31 @@ mod tests {
                 include_str!("../content/pages/rate.md"),
                 "RateBasic",
                 &["rate/basic.rs", "rate/custom.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/progress.md"),
+                "ProgressBasic",
+                &[
+                    "progress/basic.rs",
+                    "progress/inside.rs",
+                    "progress/status.rs",
+                    "progress/color.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/loading.md"),
+                "LoadingBasic",
+                &["loading/basic.rs", "loading/fullscreen.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/link.md"),
+                "LinkVariants",
+                &[
+                    "link/variants.rs",
+                    "link/underline.rs",
+                    "link/states.rs",
+                    "link/icons.rs",
+                ][..],
             ),
         ] {
             assert!(!page.contains("## 完整示例"));
