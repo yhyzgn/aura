@@ -2,14 +2,14 @@ use aura_components::{
     Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Checkbox,
     CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Input, InputNumber,
     InputNumberControlsPosition, Menu, MenuMode, Paragraph, Radio, RadioGroup, Rate, Select,
-    Slider, Space, Switch, Tag as AuraTag, Text, Textarea, Title, VirtualScrollbar, toast_error,
+    Slider, Space, Switch, Tag as AuraTag, Text, Textarea, Title, VirtualizedList, toast_error,
     toast_info, toast_success, toast_warning,
 };
 use aura_core::{Config, PassivePortal, Portal};
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnyElement, AnyView, App, Component, Context, Entity, IntoElement, ListAlignment, ListState,
-    Render, RenderOnce, SharedString, WeakEntity, Window, div, list, prelude::*, px,
+    AnyElement, AnyView, App, Component, Context, Entity, IntoElement, Render, RenderOnce,
+    SharedString, WeakEntity, Window, div, prelude::*, px,
 };
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
@@ -82,6 +82,7 @@ const TRANSFER_DOC: &str = include_str!("../content/pages/transfer.md");
 const TREE_DOC: &str = include_str!("../content/pages/tree.md");
 const TYPOGRAPHY_DOC: &str = include_str!("../content/pages/typography.md");
 const UPLOAD_DOC: &str = include_str!("../content/pages/upload.md");
+const VIRTUALIZED_LIST_DOC: &str = include_str!("../content/pages/virtualized_list.md");
 
 const MARKDOWN_DOC: &str = include_str!("../content/pages/markdown.md");
 const LIVE_DEMO_DOC: &str = include_str!("../content/pages/live_demo.md");
@@ -359,6 +360,10 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "Upload",
         markdown: UPLOAD_DOC,
+    },
+    DocPage {
+        title: "VirtualizedList",
+        markdown: VIRTUALIZED_LIST_DOC,
     },
     DocPage {
         title: "Markdown",
@@ -855,6 +860,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "typography/paragraph.rs" => {
             Some(include_str!("../content/snippets/typography/paragraph.rs"))
         }
+        "virtualized_list/basic.rs" => Some(include_str!(
+            "../content/snippets/virtualized_list/basic.rs"
+        )),
         "button/types.rs" => Some(include_str!("../content/snippets/button/types.rs")),
         "button/secondary.rs" => Some(include_str!("../content/snippets/button/secondary.rs")),
         "button/text.rs" => Some(include_str!("../content/snippets/button/text.rs")),
@@ -1968,7 +1976,7 @@ impl Render for DocsShell {
 struct DocsPageView {
     document: MarkdownDocument,
     live_demos: Vec<Entity<LiveDemoHost>>,
-    list_state: ListState,
+    virtual_list: Entity<VirtualizedList>,
 }
 
 impl DocsPageView {
@@ -1981,12 +1989,16 @@ impl DocsPageView {
             .map(|component| cx.new(|cx| LiveDemoHost::new(component, cx)))
             .collect();
 
-        let list_state = ListState::new(document.blocks.len(), ListAlignment::Top, px(640.0));
+        let virtual_list = cx.new(|cx| {
+            VirtualizedList::new(document.blocks.len(), cx, |_, _, _| {
+                div().into_any_element()
+            })
+        });
 
         Self {
             document,
             live_demos,
-            list_state,
+            virtual_list,
         }
     }
 }
@@ -1997,28 +2009,19 @@ impl Render for DocsPageView {
         let live_demos = self.live_demos.clone();
         let theme = cx.global::<Config>().theme.clone();
 
-        div()
-            .relative()
-            .size_full()
-            .child(
-                list(self.list_state.clone(), move |index, _window, _cx| {
-                    let Some(block) = blocks.get(index) else {
-                        return div().into_any_element();
-                    };
-                    let mut demo_index = live_demo_index_before(&blocks, index);
-                    div()
-                        .pb_5()
-                        .child(render_persistent_block(
-                            block,
-                            &theme,
-                            &live_demos,
-                            &mut demo_index,
-                        ))
-                        .into_any_element()
-                })
-                .size_full(),
-            )
-            .child(VirtualScrollbar::new(self.list_state.clone()))
+        self.virtual_list.update(cx, |list, _cx| {
+            list.set_item_count(blocks.len());
+            list.set_item_spacing(px(20.0));
+            list.set_render_item(move |index, _window, _cx| {
+                let Some(block) = blocks.get(index) else {
+                    return div().into_any_element();
+                };
+                let mut demo_index = live_demo_index_before(&blocks, index);
+                render_persistent_block(block, &theme, &live_demos, &mut demo_index)
+            });
+        });
+
+        self.virtual_list.clone()
     }
 }
 
@@ -2487,6 +2490,7 @@ mod tests {
             "switch/callback.rs",
             "message/types.rs",
             "typography/paragraph.rs",
+            "virtualized_list/basic.rs",
         ] {
             assert!(harness.contains(&format!("../../content/snippets/{snippet}")));
             assert!(load_code_snippet(snippet).is_some());
@@ -2520,10 +2524,10 @@ mod tests {
     fn docs_page_uses_gpui_virtual_list_for_visible_area_rendering() {
         let source = include_str!("markdown.rs");
 
-        assert!(source.contains("ListState::new(document.blocks.len()"));
-        assert!(source.contains("list(self.list_state.clone()"));
+        assert!(source.contains("VirtualizedList::new(document.blocks.len()"));
+        assert!(source.contains("list.set_item_spacing(px(20.0))"));
+        assert!(source.contains("list.set_render_item"));
         assert!(source.contains("live_demo_index_before"));
-        assert!(source.contains(".pb_5()"));
     }
 
     #[test]
@@ -2533,8 +2537,8 @@ mod tests {
         assert!(source.contains("Container::new()"));
         assert!(source.contains("Menu::new()"));
         assert!(source.contains(".aside_scroll()"));
-        assert!(source.contains("list(self.list_state.clone()"));
-        assert!(source.contains("VirtualScrollbar::new"));
+        assert!(source.contains("VirtualizedList::new"));
+        assert!(source.contains("virtual_list: Entity<VirtualizedList>"));
         assert!(source.contains(".flex_1().min_h_0().child(page_view)"));
         let docs_shell_render = &source[source
             .find("impl Render for DocsShell")

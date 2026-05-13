@@ -72,6 +72,7 @@ pub mod tooltip;
 pub mod transfer;
 pub mod tree;
 pub mod upload;
+pub mod virtualized_list;
 
 pub use affix::*;
 pub use alert::*;
@@ -147,6 +148,7 @@ pub use tooltip::*;
 pub use transfer::*;
 pub use tree::*;
 pub use upload::*;
+pub use virtualized_list::*;
 
 #[cfg(test)]
 mod motion_coverage_tests {

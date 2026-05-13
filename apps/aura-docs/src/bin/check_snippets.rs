@@ -131,5 +131,7 @@ mod textarea_basic;
 mod textarea_limit;
 #[path = "../../content/snippets/typography/paragraph.rs"]
 mod typography_paragraph;
+#[path = "../../content/snippets/virtualized_list/basic.rs"]
+mod virtualized_list_basic;
 
 fn main() {}

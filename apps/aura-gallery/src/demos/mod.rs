@@ -54,6 +54,7 @@ pub mod transfer_demo;
 pub mod tree_demo;
 pub mod typography_demo;
 pub mod upload_demo;
+pub mod virtualized_list_demo;
 
 use gpui::{AnyView, App};
 
@@ -372,6 +373,11 @@ pub fn registry() -> Vec<DemoEntry> {
             render: |cx| container_demo::render(cx).into(),
         },
         DemoEntry {
+            name: "VirtualizedList 虚拟列表",
+            description: "可见区渲染长列表",
+            render: |cx| virtualized_list_demo::render(cx).into(),
+        },
+        DemoEntry {
             name: "Scrollbar 滚动条",
             description: "原生滚动容器",
             render: |cx| scrollbar_demo::render(cx).into(),
@@ -459,6 +465,7 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
         "Tree" => Some(tree_demo::render(cx).into()),
         "Typography" => Some(typography_demo::render(cx).into()),
         "Upload" => Some(upload_demo::render(cx).into()),
+        "VirtualizedList" => Some(virtualized_list_demo::render(cx).into()),
         _ => None,
     }
 }
@@ -647,6 +654,10 @@ mod tests {
             ("layout_demo.rs", include_str!("layout_demo.rs")),
             ("scrollbar_demo.rs", include_str!("scrollbar_demo.rs")),
             ("splitter_demo.rs", include_str!("splitter_demo.rs")),
+            (
+                "virtualized_list_demo.rs",
+                include_str!("virtualized_list_demo.rs"),
+            ),
         ] {
             assert_demo_uses_aura_layout_primitives(file_name, source);
         }
