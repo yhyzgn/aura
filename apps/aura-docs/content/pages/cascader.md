@@ -1,16 +1,68 @@
 # Cascader
 
-多级联动选择。
+`Cascader` 用于从层级数据中逐级选择，适合地区、组织、产品目录等强父子关系的数据。
 
-## 完整示例
+## 基础用法
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+点击含子级的选项展开下一列，点击叶子节点完成选择。
 
 ### 效果
 
-::AuraDemo{component="Cascader"}::
+::AuraDemo{component="CascaderBasic"}::
 
 ### 代码
 
-```rust src="gallery/cascader_demo.rs"
+```rust src="cascader/basic.rs"
+```
+
+## 默认选中
+
+使用 `selected_path` 预置已选择的路径。
+
+### 效果
+
+::AuraDemo{component="CascaderSelected"}::
+
+### 代码
+
+```rust src="cascader/selected.rs"
+```
+
+## 禁用状态
+
+通过 `disabled(true)` 禁用整个级联选择器。
+
+### 效果
+
+::AuraDemo{component="CascaderDisabled"}::
+
+### 代码
+
+```rust src="cascader/disabled.rs"
+```
+
+## 可搜索
+
+开启 `filterable(true)` 后可按路径叶子节点搜索；示例预置 `search_query("hang")` 展示匹配状态。
+
+### 效果
+
+::AuraDemo{component="CascaderFilterable"}::
+
+### 代码
+
+```rust src="cascader/filterable.rs"
+```
+
+## 懒加载
+
+开启 `lazy(true)` 后，点击空子级分支时通过 `on_lazy_load` 写回远程子节点。
+
+### 效果
+
+::AuraDemo{component="CascaderLazy"}::
+
+### 代码
+
+```rust src="cascader/lazy.rs"
 ```

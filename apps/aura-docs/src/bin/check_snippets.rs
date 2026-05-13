@@ -63,6 +63,16 @@ mod button_types;
 mod card_basic;
 #[path = "../../content/snippets/card/footer.rs"]
 mod card_footer;
+#[path = "../../content/snippets/cascader/basic.rs"]
+mod cascader_basic;
+#[path = "../../content/snippets/cascader/disabled.rs"]
+mod cascader_disabled;
+#[path = "../../content/snippets/cascader/filterable.rs"]
+mod cascader_filterable;
+#[path = "../../content/snippets/cascader/lazy.rs"]
+mod cascader_lazy;
+#[path = "../../content/snippets/cascader/selected.rs"]
+mod cascader_selected;
 #[path = "../../content/snippets/checkbox/basic.rs"]
 mod checkbox_basic;
 #[path = "../../content/snippets/checkbox/buttons.rs"]
@@ -77,6 +87,10 @@ mod code_block_inline;
 mod code_block_language;
 #[path = "../../content/snippets/code_block/theme.rs"]
 mod code_block_theme;
+#[path = "../../content/snippets/collapse/accordion.rs"]
+mod collapse_accordion;
+#[path = "../../content/snippets/collapse/basic.rs"]
+mod collapse_basic;
 #[path = "../../content/snippets/color_picker/basic.rs"]
 mod color_picker_basic;
 #[path = "../../content/snippets/color_picker/compact.rs"]

@@ -1046,6 +1046,15 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "image/fit.rs" => Some(include_str!("../content/snippets/image/fit.rs")),
         "image/states.rs" => Some(include_str!("../content/snippets/image/states.rs")),
         "image/preview.rs" => Some(include_str!("../content/snippets/image/preview.rs")),
+        "cascader/basic.rs" => Some(include_str!("../content/snippets/cascader/basic.rs")),
+        "cascader/selected.rs" => Some(include_str!("../content/snippets/cascader/selected.rs")),
+        "cascader/disabled.rs" => Some(include_str!("../content/snippets/cascader/disabled.rs")),
+        "cascader/filterable.rs" => {
+            Some(include_str!("../content/snippets/cascader/filterable.rs"))
+        }
+        "cascader/lazy.rs" => Some(include_str!("../content/snippets/cascader/lazy.rs")),
+        "collapse/basic.rs" => Some(include_str!("../content/snippets/collapse/basic.rs")),
+        "collapse/accordion.rs" => Some(include_str!("../content/snippets/collapse/accordion.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1312,6 +1321,8 @@ struct LiveDemoContent {
     table_sort_order: Option<aura_components::TableSortOrder>,
     color_pickers: Vec<Entity<aura_components::ColorPicker>>,
     time_pickers: Vec<Entity<aura_components::TimePicker>>,
+    cascaders: Vec<Entity<aura_components::Cascader>>,
+    collapses: Vec<Entity<aura_components::Collapse>>,
 }
 
 impl LiveDemoContent {
@@ -1335,6 +1346,8 @@ impl LiveDemoContent {
         let mut scrollbars = Vec::new();
         let mut color_pickers = Vec::new();
         let mut time_pickers = Vec::new();
+        let mut cascaders = Vec::new();
+        let mut collapses = Vec::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -1681,6 +1694,56 @@ impl LiveDemoContent {
                         .width_md()
                 }));
             }
+            "CascaderBasic" => {
+                cascaders.push(cx.new(|cx| {
+                    aura_components::Cascader::new(docs_region_options(), cx)
+                        .placeholder("请选择地区")
+                        .clearable(true)
+                        .width_md()
+                }));
+            }
+            "CascaderSelected" => {
+                cascaders.push(cx.new(|cx| {
+                    aura_components::Cascader::new(docs_product_options(), cx)
+                        .selected_path(["cloud", "compute", "ecs"])
+                        .placeholder("请选择产品")
+                        .width_md()
+                }));
+            }
+            "CascaderDisabled" => {
+                cascaders.push(cx.new(|cx| {
+                    aura_components::Cascader::new(docs_region_options(), cx)
+                        .disabled(true)
+                        .selected_path(["zhejiang", "hangzhou", "xihu"])
+                        .width_md()
+                }));
+            }
+            "CascaderFilterable" => {
+                cascaders.push(cx.new(|cx| {
+                    aura_components::Cascader::new(docs_region_options(), cx)
+                        .filterable(true)
+                        .search_query("hang")
+                        .placeholder("搜索 hang")
+                        .width_md()
+                }));
+            }
+            "CascaderLazy" => {
+                cascaders.push(cx.new(|cx| {
+                    aura_components::Cascader::new(docs_lazy_options(), cx)
+                        .lazy(true)
+                        .placeholder("请选择远程节点")
+                        .width_md()
+                        .on_lazy_load(|cascader, path, _, cx| {
+                            cascader.set_children_at_path(&path, docs_lazy_children_for(&path), cx);
+                        })
+                }));
+            }
+            "CollapseBasic" => {
+                collapses.push(cx.new(|_| docs_collapse("docs-collapse-basic", false)));
+            }
+            "CollapseAccordion" => {
+                collapses.push(cx.new(|_| docs_collapse("docs-collapse-accordion", true)));
+            }
             _ => {}
         }
 
@@ -1707,6 +1770,8 @@ impl LiveDemoContent {
             table_sort_order: None,
             color_pickers,
             time_pickers,
+            cascaders,
+            collapses,
         }
     }
 }
@@ -2626,6 +2691,23 @@ impl Render for LiveDemoContent {
             | "TimePickerStepped"
             | "TimePickerNoSeconds"
             | "TimePickerDisabled" => self.time_picker_element(),
+            "CascaderBasic" => demo_stack(vec![
+                self.cascader_element(),
+                Text::new("点击含子级的选项会展开下一列，点击叶子节点完成选择。")
+                    .into_any_element(),
+            ]),
+            "CascaderFilterable" => demo_stack(vec![
+                self.cascader_element(),
+                Text::new(r#"示例预置 search_query="hang"，展开后可查看路径匹配结果。"#)
+                    .into_any_element(),
+            ]),
+            "CascaderLazy" => demo_stack(vec![
+                self.cascader_element(),
+                Text::new("点击空子级分支时触发 on_lazy_load，并通过 set_children_at_path 写回子节点。")
+                    .into_any_element(),
+            ]),
+            "CascaderSelected" | "CascaderDisabled" => self.cascader_element(),
+            "CollapseBasic" | "CollapseAccordion" => self.collapse_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -2855,6 +2937,22 @@ impl LiveDemoContent {
             .and_then(|picker| picker.read(cx).value_ref())
             .map(|value| value.format())
             .unwrap_or_else(|| "尚未选择".to_string())
+    }
+
+    fn cascader_element(&self) -> AnyElement {
+        self.cascaders
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| Paragraph::with_text("Missing Cascader demo").into_any_element())
+    }
+
+    fn collapse_element(&self) -> AnyElement {
+        self.collapses
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| Paragraph::with_text("Missing Collapse demo").into_any_element())
     }
 }
 
@@ -3255,6 +3353,106 @@ fn demo_row(children: Vec<AnyElement>) -> AnyElement {
         .gap_sm()
         .children(children)
         .into_any_element()
+}
+
+fn docs_region_options() -> Vec<aura_components::CascaderOption> {
+    vec![
+        aura_components::CascaderOption::new("zhejiang", "浙江")
+            .child(
+                aura_components::CascaderOption::new("hangzhou", "杭州")
+                    .child(aura_components::CascaderOption::new("xihu", "西湖区"))
+                    .child(aura_components::CascaderOption::new("yuhang", "余杭区")),
+            )
+            .child(
+                aura_components::CascaderOption::new("ningbo", "宁波")
+                    .child(aura_components::CascaderOption::new("haishu", "海曙区"))
+                    .child(aura_components::CascaderOption::new("jiangbei", "江北区")),
+            ),
+        aura_components::CascaderOption::new("jiangsu", "江苏")
+            .child(
+                aura_components::CascaderOption::new("nanjing", "南京")
+                    .child(aura_components::CascaderOption::new("xuanwu", "玄武区"))
+                    .child(aura_components::CascaderOption::new("gulou", "鼓楼区")),
+            )
+            .child(
+                aura_components::CascaderOption::new("suzhou", "苏州")
+                    .child(aura_components::CascaderOption::new("gusu", "姑苏区"))
+                    .child(
+                        aura_components::CascaderOption::new("wuzhong", "吴中区").disabled(true),
+                    ),
+            ),
+    ]
+}
+
+fn docs_product_options() -> Vec<aura_components::CascaderOption> {
+    vec![
+        aura_components::CascaderOption::new("cloud", "云产品")
+            .child(
+                aura_components::CascaderOption::new("compute", "计算")
+                    .child(aura_components::CascaderOption::new("ecs", "云服务器 ECS"))
+                    .child(aura_components::CascaderOption::new("fc", "函数计算")),
+            )
+            .child(
+                aura_components::CascaderOption::new("storage", "存储")
+                    .child(aura_components::CascaderOption::new("oss", "对象存储 OSS"))
+                    .child(aura_components::CascaderOption::new("nas", "文件存储 NAS")),
+            ),
+        aura_components::CascaderOption::new("data", "数据服务").child(
+            aura_components::CascaderOption::new("database", "数据库")
+                .child(aura_components::CascaderOption::new(
+                    "mysql",
+                    "云数据库 MySQL",
+                ))
+                .child(aura_components::CascaderOption::new("redis", "Redis")),
+        ),
+    ]
+}
+
+fn docs_lazy_options() -> Vec<aura_components::CascaderOption> {
+    vec![
+        aura_components::CascaderOption::new("remote-a", "远程分组 A"),
+        aura_components::CascaderOption::new("remote-b", "远程分组 B"),
+        aura_components::CascaderOption::new("ready", "本地叶子").leaf(true),
+    ]
+}
+
+fn docs_lazy_children_for(path: &[SharedString]) -> Vec<aura_components::CascaderOption> {
+    let key = path
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("/");
+
+    match key.as_str() {
+        "remote-a" => vec![
+            aura_components::CascaderOption::new("team", "团队")
+                .child(aura_components::CascaderOption::new("design", "设计组").leaf(true)),
+            aura_components::CascaderOption::new("project", "项目")
+                .child(aura_components::CascaderOption::new("aura", "Aura UI").leaf(true)),
+        ],
+        "remote-b" => vec![
+            aura_components::CascaderOption::new("north", "华北").leaf(true),
+            aura_components::CascaderOption::new("south", "华南").leaf(true),
+        ],
+        _ => vec![aura_components::CascaderOption::new("loaded", "加载结果").leaf(true)],
+    }
+}
+
+fn docs_collapse(id: &'static str, accordion: bool) -> aura_components::Collapse {
+    let collapse = aura_components::Collapse::new()
+        .id(id)
+        .item("consistency", "Consistency", |_, _| {
+            Text::new("Consistent with real life: in line with process and intuition.")
+        })
+        .item("feedback", "Feedback", |_, _| {
+            Text::new("Operation feedback: users clearly perceive style updates.")
+        });
+
+    if accordion {
+        collapse.accordion()
+    } else {
+        collapse
+    }
 }
 
 fn basic_tabs(id: &'static str) -> aura_components::Tabs {
@@ -4488,6 +4686,22 @@ mod tests {
                     "image/states.rs",
                     "image/preview.rs",
                 ][..],
+            ),
+            (
+                include_str!("../content/pages/cascader.md"),
+                "CascaderBasic",
+                &[
+                    "cascader/basic.rs",
+                    "cascader/selected.rs",
+                    "cascader/disabled.rs",
+                    "cascader/filterable.rs",
+                    "cascader/lazy.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/collapse.md"),
+                "CollapseBasic",
+                &["collapse/basic.rs", "collapse/accordion.rs"][..],
             ),
         ] {
             assert!(!page.contains("## 完整示例"));

@@ -1,16 +1,29 @@
 # Collapse
 
-内容收纳容器。
+`Collapse` 用于将多段内容收纳在折叠面板中，降低长页面的信息密度。
 
-## 完整示例
+## 基础用法
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+多个面板可以独立展开与收起。
 
 ### 效果
 
-::AuraDemo{component="Collapse"}::
+::AuraDemo{component="CollapseBasic"}::
 
 ### 代码
 
-```rust src="gallery/collapse_demo.rs"
+```rust src="collapse/basic.rs"
+```
+
+## 手风琴模式
+
+调用 `accordion()` 后，同一时间只保留一个面板展开。
+
+### 效果
+
+::AuraDemo{component="CollapseAccordion"}::
+
+### 代码
+
+```rust src="collapse/accordion.rs"
 ```
