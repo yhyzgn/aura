@@ -173,6 +173,8 @@ mod rate_custom;
 mod result_statuses;
 #[path = "../../content/snippets/result/success.rs"]
 mod result_success;
+#[path = "../../content/snippets/scrollbar/basic.rs"]
+mod scrollbar_basic;
 #[path = "../../content/snippets/segmented/basic.rs"]
 mod segmented_basic;
 #[path = "../../content/snippets/segmented/block.rs"]
@@ -191,6 +193,8 @@ mod skeleton_variants;
 mod slider_basic;
 #[path = "../../content/snippets/slider/step.rs"]
 mod slider_step;
+#[path = "../../content/snippets/splitter/basic.rs"]
+mod splitter_basic;
 #[path = "../../content/snippets/statistic/affix.rs"]
 mod statistic_affix;
 #[path = "../../content/snippets/statistic/basic.rs"]

@@ -999,6 +999,8 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "container/space.rs" => Some(include_str!("../content/snippets/container/space.rs")),
         "container/divider.rs" => Some(include_str!("../content/snippets/container/divider.rs")),
         "container/layout.rs" => Some(include_str!("../content/snippets/container/layout.rs")),
+        "splitter/basic.rs" => Some(include_str!("../content/snippets/splitter/basic.rs")),
+        "scrollbar/basic.rs" => Some(include_str!("../content/snippets/scrollbar/basic.rs")),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1260,6 +1262,7 @@ struct LiveDemoContent {
     segmenteds: Vec<Entity<aura_components::Segmented>>,
     paginations: Vec<Entity<aura_components::Pagination>>,
     tabs: Vec<Entity<aura_components::Tabs>>,
+    scrollbars: Vec<Entity<aura_components::Scrollbar>>,
 }
 
 impl LiveDemoContent {
@@ -1280,6 +1283,7 @@ impl LiveDemoContent {
         let mut segmenteds = Vec::new();
         let mut paginations = Vec::new();
         let mut tabs = Vec::new();
+        let mut scrollbars = Vec::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -1542,6 +1546,15 @@ impl LiveDemoContent {
                         .on_tab_remove(|name, _, _| toast_info!("Remove Tab: {}", name))
                 }));
             }
+            "ScrollbarBasic" => {
+                scrollbars.push(cx.new(|cx| {
+                    aura_components::Scrollbar::new(cx, |_, _| {
+                        let items = (1..=20).map(|i| Text::new(format!("Scrollable line {}", i)));
+                        Space::new().vertical().gap_lg().children(items)
+                    })
+                    .height(150.0)
+                }));
+            }
             _ => {}
         }
 
@@ -1563,6 +1576,7 @@ impl LiveDemoContent {
             segmenteds,
             paginations,
             tabs,
+            scrollbars,
         }
     }
 }
@@ -2433,6 +2447,18 @@ impl Render for LiveDemoContent {
             "ContainerSpace" => container_space_demo(),
             "ContainerDivider" => container_divider_demo(),
             "ContainerLayout" => container_layout_demo(),
+            "SplitterBasic" => aura_components::Splitter::new()
+                .height_md()
+                .bordered()
+                .left(Card::new(Text::new("Left panel")).no_shadow())
+                .right(Card::new(Text::new("Right panel")).no_shadow())
+                .into_any_element(),
+            "ScrollbarBasic" => self
+                .scrollbars
+                .first()
+                .cloned()
+                .map(Entity::into_any_element)
+                .unwrap_or_else(|| Paragraph::with_text("Missing Scrollbar demo").into_any_element()),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -3786,6 +3812,16 @@ mod tests {
                     "container/divider.rs",
                     "container/layout.rs",
                 ][..],
+            ),
+            (
+                include_str!("../content/pages/splitter.md"),
+                "SplitterBasic",
+                &["splitter/basic.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/scrollbar.md"),
+                "ScrollbarBasic",
+                &["scrollbar/basic.rs"][..],
             ),
         ] {
             assert!(!page.contains("## 完整示例"));

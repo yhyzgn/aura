@@ -1,16 +1,16 @@
 # Scrollbar
 
-原生滚动容器。
+`Scrollbar` 是 Aura 自举滚动容器，用于在原生 GPUI 视图中展示可滚动内容和可拖拽滚动条。
 
-## 完整示例
+## 基础用法
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+通过 `Scrollbar::new` 提供内容渲染闭包，并用 `height` 限制可视区域高度。
 
 ### 效果
 
-::AuraDemo{component="Scrollbar"}::
+::AuraDemo{component="ScrollbarBasic"}::
 
 ### 代码
 
-```rust src="gallery/scrollbar_demo.rs"
+```rust src="scrollbar/basic.rs"
 ```
