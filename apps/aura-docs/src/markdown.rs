@@ -2006,7 +2006,15 @@ impl Render for DocsPageView {
                         return div().into_any_element();
                     };
                     let mut demo_index = live_demo_index_before(&blocks, index);
-                    render_persistent_block(block, &theme, &live_demos, &mut demo_index)
+                    div()
+                        .pb_5()
+                        .child(render_persistent_block(
+                            block,
+                            &theme,
+                            &live_demos,
+                            &mut demo_index,
+                        ))
+                        .into_any_element()
                 })
                 .size_full(),
             )
@@ -2515,6 +2523,7 @@ mod tests {
         assert!(source.contains("ListState::new(document.blocks.len()"));
         assert!(source.contains("list(self.list_state.clone()"));
         assert!(source.contains("live_demo_index_before"));
+        assert!(source.contains(".pb_5()"));
     }
 
     #[test]
