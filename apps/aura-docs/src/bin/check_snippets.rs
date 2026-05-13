@@ -105,6 +105,34 @@ mod container_divider;
 mod container_layout;
 #[path = "../../content/snippets/container/space.rs"]
 mod container_space;
+#[path = "../../content/snippets/date_picker/basic.rs"]
+mod date_picker_basic;
+#[path = "../../content/snippets/date_picker/disabled.rs"]
+mod date_picker_disabled;
+#[path = "../../content/snippets/date_picker/formatted.rs"]
+mod date_picker_formatted;
+#[path = "../../content/snippets/date_picker/month.rs"]
+mod date_picker_month;
+#[path = "../../content/snippets/date_picker/month_range.rs"]
+mod date_picker_month_range;
+#[path = "../../content/snippets/date_picker/range.rs"]
+mod date_picker_range;
+#[path = "../../content/snippets/date_picker/year.rs"]
+mod date_picker_year;
+#[path = "../../content/snippets/date_picker/year_range.rs"]
+mod date_picker_year_range;
+#[path = "../../content/snippets/date_time_picker/basic.rs"]
+mod date_time_picker_basic;
+#[path = "../../content/snippets/date_time_picker/disabled.rs"]
+mod date_time_picker_disabled;
+#[path = "../../content/snippets/date_time_picker/formatted.rs"]
+mod date_time_picker_formatted;
+#[path = "../../content/snippets/date_time_picker/no_seconds.rs"]
+mod date_time_picker_no_seconds;
+#[path = "../../content/snippets/date_time_picker/range.rs"]
+mod date_time_picker_range;
+#[path = "../../content/snippets/date_time_picker/stepped.rs"]
+mod date_time_picker_stepped;
 #[path = "../../content/snippets/descriptions/basic.rs"]
 mod descriptions_basic;
 #[path = "../../content/snippets/descriptions/border.rs"]

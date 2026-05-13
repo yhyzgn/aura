@@ -1055,6 +1055,40 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "cascader/lazy.rs" => Some(include_str!("../content/snippets/cascader/lazy.rs")),
         "collapse/basic.rs" => Some(include_str!("../content/snippets/collapse/basic.rs")),
         "collapse/accordion.rs" => Some(include_str!("../content/snippets/collapse/accordion.rs")),
+        "date_picker/basic.rs" => Some(include_str!("../content/snippets/date_picker/basic.rs")),
+        "date_picker/formatted.rs" => {
+            Some(include_str!("../content/snippets/date_picker/formatted.rs"))
+        }
+        "date_picker/range.rs" => Some(include_str!("../content/snippets/date_picker/range.rs")),
+        "date_picker/month.rs" => Some(include_str!("../content/snippets/date_picker/month.rs")),
+        "date_picker/month_range.rs" => Some(include_str!(
+            "../content/snippets/date_picker/month_range.rs"
+        )),
+        "date_picker/year.rs" => Some(include_str!("../content/snippets/date_picker/year.rs")),
+        "date_picker/year_range.rs" => Some(include_str!(
+            "../content/snippets/date_picker/year_range.rs"
+        )),
+        "date_picker/disabled.rs" => {
+            Some(include_str!("../content/snippets/date_picker/disabled.rs"))
+        }
+        "date_time_picker/basic.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/basic.rs"
+        )),
+        "date_time_picker/formatted.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/formatted.rs"
+        )),
+        "date_time_picker/stepped.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/stepped.rs"
+        )),
+        "date_time_picker/no_seconds.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/no_seconds.rs"
+        )),
+        "date_time_picker/range.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/range.rs"
+        )),
+        "date_time_picker/disabled.rs" => Some(include_str!(
+            "../content/snippets/date_time_picker/disabled.rs"
+        )),
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1323,6 +1357,8 @@ struct LiveDemoContent {
     time_pickers: Vec<Entity<aura_components::TimePicker>>,
     cascaders: Vec<Entity<aura_components::Cascader>>,
     collapses: Vec<Entity<aura_components::Collapse>>,
+    date_pickers: Vec<Entity<aura_components::DatePicker>>,
+    date_time_pickers: Vec<Entity<aura_components::DateTimePicker>>,
 }
 
 impl LiveDemoContent {
@@ -1348,6 +1384,8 @@ impl LiveDemoContent {
         let mut time_pickers = Vec::new();
         let mut cascaders = Vec::new();
         let mut collapses = Vec::new();
+        let mut date_pickers = Vec::new();
+        let mut date_time_pickers = Vec::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -1744,6 +1782,151 @@ impl LiveDemoContent {
             "CollapseAccordion" => {
                 collapses.push(cx.new(|_| docs_collapse("docs-collapse-accordion", true)));
             }
+            "DatePickerBasic" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-basic")
+                        .width_md()
+                }));
+            }
+            "DatePickerFormatted" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-formatted")
+                        .value(aura_components::DateValue::new(2026, 5, 8).expect("valid date"))
+                        .format("YYYY年M月D日")
+                        .width_md()
+                }));
+            }
+            "DatePickerRange" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-range")
+                        .date_range()
+                        .range(
+                            aura_components::DateValue::new(2026, 5, 8).expect("valid date"),
+                            aura_components::DateValue::new(2026, 5, 18).expect("valid date"),
+                        )
+                        .width_lg()
+                }));
+            }
+            "DatePickerMonth" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-month")
+                        .month()
+                        .value(aura_components::DateValue::new(2026, 5, 1).expect("valid date"))
+                        .width_md()
+                }));
+            }
+            "DatePickerMonthRange" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-month-range")
+                        .month_range()
+                        .range(
+                            aura_components::DateValue::new(2026, 3, 1).expect("valid date"),
+                            aura_components::DateValue::new(2026, 9, 1).expect("valid date"),
+                        )
+                        .width_lg()
+                }));
+            }
+            "DatePickerYear" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-year")
+                        .year()
+                        .value(aura_components::DateValue::new(2026, 1, 1).expect("valid date"))
+                        .width_md()
+                }));
+            }
+            "DatePickerYearRange" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-year-range")
+                        .year_range()
+                        .range(
+                            aura_components::DateValue::new(2024, 1, 1).expect("valid date"),
+                            aura_components::DateValue::new(2028, 1, 1).expect("valid date"),
+                        )
+                        .format("YYYY年")
+                        .width_lg()
+                }));
+            }
+            "DatePickerDisabled" => {
+                date_pickers.push(cx.new(|_| {
+                    aura_components::DatePicker::new()
+                        .id("docs-date-picker-disabled")
+                        .disabled(true)
+                        .width_md()
+                }));
+            }
+            "DateTimePickerBasic" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-basic")
+                        .width_md()
+                }));
+            }
+            "DateTimePickerFormatted" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-formatted")
+                        .value(
+                            aura_components::DateTimeValue::new(2026, 5, 8, 9, 30, 15)
+                                .expect("valid datetime"),
+                        )
+                        .format("YYYY年M月D日 HH:mm:ss")
+                        .width_md()
+                }));
+            }
+            "DateTimePickerStepped" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-stepped")
+                        .value(
+                            aura_components::DateTimeValue::new(2026, 5, 8, 14, 30, 0)
+                                .expect("valid datetime"),
+                        )
+                        .minute_step(15)
+                        .second_step(30)
+                        .width_md()
+                }));
+            }
+            "DateTimePickerNoSeconds" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-no-seconds")
+                        .without_seconds()
+                        .value(
+                            aura_components::DateTimeValue::new(2026, 5, 8, 18, 45, 0)
+                                .expect("valid datetime"),
+                        )
+                        .width_md()
+                }));
+            }
+            "DateTimePickerRange" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-range")
+                        .date_time_range()
+                        .range(
+                            aura_components::DateTimeValue::new(2026, 5, 8, 9, 0, 0)
+                                .expect("valid datetime"),
+                            aura_components::DateTimeValue::new(2026, 5, 18, 18, 30, 0)
+                                .expect("valid datetime"),
+                        )
+                        .width_lg()
+                }));
+            }
+            "DateTimePickerDisabled" => {
+                date_time_pickers.push(cx.new(|_| {
+                    aura_components::DateTimePicker::new()
+                        .id("docs-date-time-picker-disabled")
+                        .disabled(true)
+                        .width_md()
+                }));
+            }
             _ => {}
         }
 
@@ -1772,6 +1955,8 @@ impl LiveDemoContent {
             time_pickers,
             cascaders,
             collapses,
+            date_pickers,
+            date_time_pickers,
         }
     }
 }
@@ -2708,6 +2893,34 @@ impl Render for LiveDemoContent {
             ]),
             "CascaderSelected" | "CascaderDisabled" => self.cascader_element(),
             "CollapseBasic" | "CollapseAccordion" => self.collapse_element(),
+            "DatePickerBasic" => demo_stack(vec![
+                self.date_picker_element(),
+                Text::new(format!(
+                    "当前选择：{}",
+                    self.date_picker_selected_text(_cx)
+                ))
+                .into_any_element(),
+            ]),
+            "DatePickerFormatted"
+            | "DatePickerRange"
+            | "DatePickerMonth"
+            | "DatePickerMonthRange"
+            | "DatePickerYear"
+            | "DatePickerYearRange"
+            | "DatePickerDisabled" => self.date_picker_element(),
+            "DateTimePickerBasic" => demo_stack(vec![
+                self.date_time_picker_element(),
+                Text::new(format!(
+                    "当前选择：{}",
+                    self.date_time_picker_selected_text(_cx)
+                ))
+                .into_any_element(),
+            ]),
+            "DateTimePickerFormatted"
+            | "DateTimePickerStepped"
+            | "DateTimePickerNoSeconds"
+            | "DateTimePickerRange"
+            | "DateTimePickerDisabled" => self.date_time_picker_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -2953,6 +3166,40 @@ impl LiveDemoContent {
             .cloned()
             .map(Entity::into_any_element)
             .unwrap_or_else(|| Paragraph::with_text("Missing Collapse demo").into_any_element())
+    }
+
+    fn date_picker_element(&self) -> AnyElement {
+        self.date_pickers
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| Paragraph::with_text("Missing DatePicker demo").into_any_element())
+    }
+
+    fn date_time_picker_element(&self) -> AnyElement {
+        self.date_time_pickers
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| {
+                Paragraph::with_text("Missing DateTimePicker demo").into_any_element()
+            })
+    }
+
+    fn date_picker_selected_text(&self, cx: &Context<Self>) -> String {
+        self.date_pickers
+            .first()
+            .and_then(|picker| picker.read(cx).value_ref())
+            .map(|value| value.format())
+            .unwrap_or_else(|| "尚未选择".to_string())
+    }
+
+    fn date_time_picker_selected_text(&self, cx: &Context<Self>) -> String {
+        self.date_time_pickers
+            .first()
+            .and_then(|picker| picker.read(cx).value_ref())
+            .map(|value| value.format())
+            .unwrap_or_else(|| "尚未选择".to_string())
     }
 }
 
@@ -4702,6 +4949,32 @@ mod tests {
                 include_str!("../content/pages/collapse.md"),
                 "CollapseBasic",
                 &["collapse/basic.rs", "collapse/accordion.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/date_picker.md"),
+                "DatePickerBasic",
+                &[
+                    "date_picker/basic.rs",
+                    "date_picker/formatted.rs",
+                    "date_picker/range.rs",
+                    "date_picker/month.rs",
+                    "date_picker/month_range.rs",
+                    "date_picker/year.rs",
+                    "date_picker/year_range.rs",
+                    "date_picker/disabled.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/date_time_picker.md"),
+                "DateTimePickerBasic",
+                &[
+                    "date_time_picker/basic.rs",
+                    "date_time_picker/formatted.rs",
+                    "date_time_picker/stepped.rs",
+                    "date_time_picker/no_seconds.rs",
+                    "date_time_picker/range.rs",
+                    "date_time_picker/disabled.rs",
+                ][..],
             ),
         ] {
             assert!(!page.contains("## 完整示例"));
