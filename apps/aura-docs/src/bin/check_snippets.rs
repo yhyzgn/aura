@@ -77,6 +77,14 @@ mod code_block_inline;
 mod code_block_language;
 #[path = "../../content/snippets/code_block/theme.rs"]
 mod code_block_theme;
+#[path = "../../content/snippets/color_picker/basic.rs"]
+mod color_picker_basic;
+#[path = "../../content/snippets/color_picker/compact.rs"]
+mod color_picker_compact;
+#[path = "../../content/snippets/color_picker/disabled.rs"]
+mod color_picker_disabled;
+#[path = "../../content/snippets/color_picker/presets.rs"]
+mod color_picker_presets;
 #[path = "../../content/snippets/container/divider.rs"]
 mod container_divider;
 #[path = "../../content/snippets/container/layout.rs"]
@@ -261,6 +269,16 @@ mod tag_types;
 mod textarea_basic;
 #[path = "../../content/snippets/textarea/limit.rs"]
 mod textarea_limit;
+#[path = "../../content/snippets/time_picker/basic.rs"]
+mod time_picker_basic;
+#[path = "../../content/snippets/time_picker/disabled.rs"]
+mod time_picker_disabled;
+#[path = "../../content/snippets/time_picker/formatted.rs"]
+mod time_picker_formatted;
+#[path = "../../content/snippets/time_picker/no_seconds.rs"]
+mod time_picker_no_seconds;
+#[path = "../../content/snippets/time_picker/stepped.rs"]
+mod time_picker_stepped;
 #[path = "../../content/snippets/timeline/basic.rs"]
 mod timeline_basic;
 #[path = "../../content/snippets/timeline/custom.rs"]

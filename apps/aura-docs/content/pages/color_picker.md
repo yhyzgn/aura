@@ -1,16 +1,55 @@
 # ColorPicker
 
-从预设色板中选择颜色。
+`ColorPicker` 用于选择颜色值，支持取色弹层、预设色、透明度和禁用状态。
 
-## 完整示例
+## 基础用法
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+默认展示颜色方块和当前颜色文本，点击后打开原生取色弹层。
 
 ### 效果
 
-::AuraDemo{component="ColorPicker"}::
+::AuraDemo{component="ColorPickerBasic"}::
 
 ### 代码
 
-```rust src="gallery/color_picker_demo.rs"
+```rust src="color_picker/basic.rs"
+```
+
+## 自定义预设色
+
+通过 `presets` 替换底部快捷色板。
+
+### 效果
+
+::AuraDemo{component="ColorPickerPresets"}::
+
+### 代码
+
+```rust src="color_picker/presets.rs"
+```
+
+## 隐藏文本标签
+
+`show_label(false)` 仅展示颜色方块触发器。
+
+### 效果
+
+::AuraDemo{component="ColorPickerCompact"}::
+
+### 代码
+
+```rust src="color_picker/compact.rs"
+```
+
+## 禁用状态
+
+禁用后不可打开弹层。
+
+### 效果
+
+::AuraDemo{component="ColorPickerDisabled"}::
+
+### 代码
+
+```rust src="color_picker/disabled.rs"
 ```

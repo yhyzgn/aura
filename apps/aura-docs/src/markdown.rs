@@ -1016,6 +1016,29 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "table/fixed_header.rs" => Some(include_str!("../content/snippets/table/fixed_header.rs")),
         "table/loading.rs" => Some(include_str!("../content/snippets/table/loading.rs")),
         "table/empty.rs" => Some(include_str!("../content/snippets/table/empty.rs")),
+        "color_picker/basic.rs" => Some(include_str!("../content/snippets/color_picker/basic.rs")),
+        "color_picker/presets.rs" => {
+            Some(include_str!("../content/snippets/color_picker/presets.rs"))
+        }
+        "color_picker/compact.rs" => {
+            Some(include_str!("../content/snippets/color_picker/compact.rs"))
+        }
+        "color_picker/disabled.rs" => {
+            Some(include_str!("../content/snippets/color_picker/disabled.rs"))
+        }
+        "time_picker/basic.rs" => Some(include_str!("../content/snippets/time_picker/basic.rs")),
+        "time_picker/formatted.rs" => {
+            Some(include_str!("../content/snippets/time_picker/formatted.rs"))
+        }
+        "time_picker/stepped.rs" => {
+            Some(include_str!("../content/snippets/time_picker/stepped.rs"))
+        }
+        "time_picker/no_seconds.rs" => Some(include_str!(
+            "../content/snippets/time_picker/no_seconds.rs"
+        )),
+        "time_picker/disabled.rs" => {
+            Some(include_str!("../content/snippets/time_picker/disabled.rs"))
+        }
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -1280,6 +1303,8 @@ struct LiveDemoContent {
     scrollbars: Vec<Entity<aura_components::Scrollbar>>,
     table_sort_key: Option<SharedString>,
     table_sort_order: Option<aura_components::TableSortOrder>,
+    color_pickers: Vec<Entity<aura_components::ColorPicker>>,
+    time_pickers: Vec<Entity<aura_components::TimePicker>>,
 }
 
 impl LiveDemoContent {
@@ -1301,6 +1326,8 @@ impl LiveDemoContent {
         let mut paginations = Vec::new();
         let mut tabs = Vec::new();
         let mut scrollbars = Vec::new();
+        let mut color_pickers = Vec::new();
+        let mut time_pickers = Vec::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -1572,6 +1599,81 @@ impl LiveDemoContent {
                     .height(150.0)
                 }));
             }
+            "ColorPickerBasic" => {
+                color_pickers.push(cx.new(|_| {
+                    aura_components::ColorPicker::new("#409eff")
+                        .id("docs-color-picker-basic")
+                        .width_md()
+                }));
+            }
+            "ColorPickerPresets" => {
+                color_pickers.push(cx.new(|_| {
+                    aura_components::ColorPicker::new("#13c2c2")
+                        .id("docs-color-picker-presets")
+                        .width_md()
+                        .presets([
+                            "#13C2C2", "#52C41A", "#FAAD14", "#F5222D", "#722ED1", "#EB2F96",
+                        ])
+                }));
+            }
+            "ColorPickerCompact" => {
+                color_pickers.push(cx.new(|_| {
+                    aura_components::ColorPicker::new("#F56C6C")
+                        .id("docs-color-picker-compact")
+                        .show_label(false)
+                }));
+            }
+            "ColorPickerDisabled" => {
+                color_pickers.push(cx.new(|_| {
+                    aura_components::ColorPicker::new("#909399")
+                        .id("docs-color-picker-disabled")
+                        .disabled(true)
+                        .width_md()
+                }));
+            }
+            "TimePickerBasic" => {
+                time_pickers.push(cx.new(|_| {
+                    aura_components::TimePicker::new()
+                        .id("docs-time-picker-basic")
+                        .width_md()
+                }));
+            }
+            "TimePickerFormatted" => {
+                time_pickers.push(cx.new(|_| {
+                    aura_components::TimePicker::new()
+                        .id("docs-time-picker-formatted")
+                        .value(aura_components::TimeValue::new(9, 30, 15).expect("valid time"))
+                        .format("HH时mm分ss秒")
+                        .width_md()
+                }));
+            }
+            "TimePickerStepped" => {
+                time_pickers.push(cx.new(|_| {
+                    aura_components::TimePicker::new()
+                        .id("docs-time-picker-stepped")
+                        .value(aura_components::TimeValue::new(14, 30, 0).expect("valid time"))
+                        .minute_step(15)
+                        .second_step(30)
+                        .width_md()
+                }));
+            }
+            "TimePickerNoSeconds" => {
+                time_pickers.push(cx.new(|_| {
+                    aura_components::TimePicker::new()
+                        .id("docs-time-picker-no-seconds")
+                        .without_seconds()
+                        .value(aura_components::TimeValue::new(18, 45, 0).expect("valid time"))
+                        .width_md()
+                }));
+            }
+            "TimePickerDisabled" => {
+                time_pickers.push(cx.new(|_| {
+                    aura_components::TimePicker::new()
+                        .id("docs-time-picker-disabled")
+                        .disabled(true)
+                        .width_md()
+                }));
+            }
             _ => {}
         }
 
@@ -1596,6 +1698,8 @@ impl LiveDemoContent {
             scrollbars,
             table_sort_key: None,
             table_sort_order: None,
+            color_pickers,
+            time_pickers,
         }
     }
 }
@@ -2487,6 +2591,23 @@ impl Render for LiveDemoContent {
             "TableFixedHeader" => table_fixed_header_demo(),
             "TableLoading" => table_basic_table().loading(true).into_any_element(),
             "TableEmpty" => table_basic_table().empty_text("暂无订单数据").into_any_element(),
+            "ColorPickerBasic" => demo_stack(vec![
+                self.color_picker_element(),
+                Text::new("点击颜色方块打开 popup；在大色板中选择颜色，右侧切换 hue，下方选择 alpha。")
+                    .into_any_element(),
+            ]),
+            "ColorPickerPresets" | "ColorPickerCompact" | "ColorPickerDisabled" => {
+                self.color_picker_element()
+            }
+            "TimePickerBasic" => demo_stack(vec![
+                self.time_picker_element(),
+                Text::new(format!("当前选择：{}", self.time_picker_selected_text(_cx)))
+                    .into_any_element(),
+            ]),
+            "TimePickerFormatted"
+            | "TimePickerStepped"
+            | "TimePickerNoSeconds"
+            | "TimePickerDisabled" => self.time_picker_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -2692,6 +2813,30 @@ impl LiveDemoContent {
         }
 
         table.into_any_element()
+    }
+
+    fn color_picker_element(&self) -> AnyElement {
+        self.color_pickers
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| Paragraph::with_text("Missing ColorPicker demo").into_any_element())
+    }
+
+    fn time_picker_element(&self) -> AnyElement {
+        self.time_pickers
+            .first()
+            .cloned()
+            .map(Entity::into_any_element)
+            .unwrap_or_else(|| Paragraph::with_text("Missing TimePicker demo").into_any_element())
+    }
+
+    fn time_picker_selected_text(&self, cx: &Context<Self>) -> String {
+        self.time_pickers
+            .first()
+            .and_then(|picker| picker.read(cx).value_ref())
+            .map(|value| value.format())
+            .unwrap_or_else(|| "尚未选择".to_string())
     }
 }
 
@@ -4105,6 +4250,27 @@ mod tests {
                     "table/fixed_header.rs",
                     "table/loading.rs",
                     "table/empty.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/color_picker.md"),
+                "ColorPickerBasic",
+                &[
+                    "color_picker/basic.rs",
+                    "color_picker/presets.rs",
+                    "color_picker/compact.rs",
+                    "color_picker/disabled.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/time_picker.md"),
+                "TimePickerBasic",
+                &[
+                    "time_picker/basic.rs",
+                    "time_picker/formatted.rs",
+                    "time_picker/stepped.rs",
+                    "time_picker/no_seconds.rs",
+                    "time_picker/disabled.rs",
                 ][..],
             ),
         ] {
