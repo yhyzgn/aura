@@ -139,6 +139,18 @@ mod descriptions_basic;
 mod descriptions_border;
 #[path = "../../content/snippets/descriptions/vertical.rs"]
 mod descriptions_vertical;
+#[path = "../../content/snippets/dialog/basic.rs"]
+mod dialog_basic;
+#[path = "../../content/snippets/dialog/custom_content.rs"]
+mod dialog_custom_content;
+#[path = "../../content/snippets/dialog/manual_close.rs"]
+mod dialog_manual_close;
+#[path = "../../content/snippets/drawer/manual_close.rs"]
+mod drawer_manual_close;
+#[path = "../../content/snippets/drawer/placements.rs"]
+mod drawer_placements;
+#[path = "../../content/snippets/drawer/sizes.rs"]
+mod drawer_sizes;
 #[path = "../../content/snippets/empty/basic.rs"]
 mod empty_basic;
 #[path = "../../content/snippets/empty/description.rs"]

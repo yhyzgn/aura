@@ -1089,6 +1089,18 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "date_time_picker/disabled.rs" => Some(include_str!(
             "../content/snippets/date_time_picker/disabled.rs"
         )),
+        "dialog/basic.rs" => Some(include_str!("../content/snippets/dialog/basic.rs")),
+        "dialog/manual_close.rs" => {
+            Some(include_str!("../content/snippets/dialog/manual_close.rs"))
+        }
+        "dialog/custom_content.rs" => {
+            Some(include_str!("../content/snippets/dialog/custom_content.rs"))
+        }
+        "drawer/placements.rs" => Some(include_str!("../content/snippets/drawer/placements.rs")),
+        "drawer/sizes.rs" => Some(include_str!("../content/snippets/drawer/sizes.rs")),
+        "drawer/manual_close.rs" => {
+            Some(include_str!("../content/snippets/drawer/manual_close.rs"))
+        }
         "markdown/state_machine.rs" => Some(include_str!(
             "../content/snippets/markdown/state_machine.rs"
         )),
@@ -2921,6 +2933,106 @@ impl Render for LiveDemoContent {
             | "DateTimePickerNoSeconds"
             | "DateTimePickerRange"
             | "DateTimePickerDisabled" => self.date_time_picker_element(),
+            "DialogBasic" => Button::new("Open Dialog")
+                .primary()
+                .on_click(|_, _, cx| {
+                    aura_components::Dialog::new()
+                        .title("Tips")
+                        .content(|_, _| dialog_body("This is a message from the dialog."))
+                        .show(cx);
+                })
+                .into_any_element(),
+            "DialogManualClose" => Button::new("Manual Close Only")
+                .warning()
+                .on_click(|_, _, cx| {
+                    aura_components::Dialog::new()
+                        .title("Manual close dialog")
+                        .close_on_click_outside(false)
+                        .close_on_escape(false)
+                        .content(|_, _| {
+                            Space::new()
+                                .vertical()
+                                .gap_lg()
+                                .child(Text::new(
+                                    "点击遮罩和按 ESC 都不会关闭，只能点击按钮手动关闭。",
+                                ))
+                                .child(
+                                    aura_components::Row::new()
+                                        .justify(aura_components::RowJustify::End)
+                                        .child(Button::new("I understand").primary().on_click(
+                                            |_, _, cx| aura_components::Dialog::close(cx),
+                                        )),
+                                )
+                        })
+                        .show(cx);
+                })
+                .into_any_element(),
+            "DialogCustomContent" => Button::new("Form-like Content")
+                .on_click(|_, _, cx| {
+                    aura_components::Dialog::new()
+                        .title("Edit profile")
+                        .content(|_, _| {
+                            Space::new()
+                                .vertical()
+                                .gap_md()
+                                .child(Text::new("Name: Aura User"))
+                                .child(Text::new("Role: Designer"))
+                                .child(
+                                    aura_components::Row::new()
+                                        .justify(aura_components::RowJustify::End)
+                                        .child(Button::new("Cancel").on_click(|_, _, cx| {
+                                            aura_components::Dialog::close(cx)
+                                        }))
+                                        .child(Button::new("Save").primary().on_click(
+                                            |_, _, cx| aura_components::Dialog::close(cx),
+                                        )),
+                                )
+                        })
+                        .show(cx);
+                })
+                .into_any_element(),
+            "DrawerPlacements" => demo_row(vec![
+                Button::new("Right Drawer")
+                    .primary()
+                    .on_click(|_, _, cx| docs_drawer("Right Drawer", aura_components::DrawerPlacement::Right).show(cx))
+                    .into_any_element(),
+                Button::new("Left Drawer")
+                    .on_click(|_, _, cx| docs_drawer("Left Drawer", aura_components::DrawerPlacement::Left).show(cx))
+                    .into_any_element(),
+                Button::new("Top Drawer")
+                    .on_click(|_, _, cx| docs_drawer("Top Drawer", aura_components::DrawerPlacement::Top).height_sm().show(cx))
+                    .into_any_element(),
+                Button::new("Bottom Drawer")
+                    .on_click(|_, _, cx| docs_drawer("Bottom Drawer", aura_components::DrawerPlacement::Bottom).height_sm().show(cx))
+                    .into_any_element(),
+            ]),
+            "DrawerSizes" => demo_row(vec![
+                Button::new("Wide Drawer")
+                    .on_click(|_, _, cx| docs_drawer("Wide Drawer", aura_components::DrawerPlacement::Right).width_lg().show(cx))
+                    .into_any_element(),
+                Button::new("Tall Top Drawer")
+                    .on_click(|_, _, cx| docs_drawer("Tall Top Drawer", aura_components::DrawerPlacement::Top).height_lg().show(cx))
+                    .into_any_element(),
+            ]),
+            "DrawerManualClose" => Button::new("Manual Close Only")
+                .warning()
+                .on_click(|_, _, cx| {
+                    aura_components::Drawer::new()
+                        .title("Manual close drawer")
+                        .close_on_click_outside(false)
+                        .close_on_escape(false)
+                        .content(|_, _| {
+                            Space::new()
+                                .vertical()
+                                .gap_lg()
+                                .child(Text::new("点击遮罩和按 ESC 都不会关闭。"))
+                                .child(Button::new("Close Drawer").primary().on_click(
+                                    |_, _, cx| aura_components::Drawer::close(cx),
+                                ))
+                        })
+                        .show(cx);
+                })
+                .into_any_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -3600,6 +3712,42 @@ fn demo_row(children: Vec<AnyElement>) -> AnyElement {
         .gap_sm()
         .children(children)
         .into_any_element()
+}
+
+fn dialog_body(message: &'static str) -> impl IntoElement {
+    Space::new()
+        .vertical()
+        .gap_lg()
+        .child(Text::new(message))
+        .child(
+            aura_components::Row::new()
+                .justify(aura_components::RowJustify::End)
+                .child(
+                    Button::new("Close")
+                        .primary()
+                        .on_click(|_, _, cx| aura_components::Dialog::close(cx)),
+                ),
+        )
+}
+
+fn docs_drawer(
+    title: &'static str,
+    placement: aura_components::DrawerPlacement,
+) -> aura_components::Drawer {
+    aura_components::Drawer::new()
+        .title(title)
+        .placement(placement)
+        .content(move |_, _| {
+            Space::new()
+                .vertical()
+                .gap_lg()
+                .child(Text::new(format!("This is a {:?} drawer.", placement)))
+                .child(
+                    Button::new("Close")
+                        .primary()
+                        .on_click(|_, _, cx| aura_components::Drawer::close(cx)),
+                )
+        })
 }
 
 fn docs_region_options() -> Vec<aura_components::CascaderOption> {
@@ -4974,6 +5122,24 @@ mod tests {
                     "date_time_picker/no_seconds.rs",
                     "date_time_picker/range.rs",
                     "date_time_picker/disabled.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/dialog.md"),
+                "DialogBasic",
+                &[
+                    "dialog/basic.rs",
+                    "dialog/manual_close.rs",
+                    "dialog/custom_content.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/drawer.md"),
+                "DrawerPlacements",
+                &[
+                    "drawer/placements.rs",
+                    "drawer/sizes.rs",
+                    "drawer/manual_close.rs",
                 ][..],
             ),
         ] {
