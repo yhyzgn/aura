@@ -1,16 +1,16 @@
 # Notification
 
-悬浮在页面角落的通知。
+悬浮在窗口角落的全局通知，用于展示较长的系统反馈、异步任务结果或需要保留几秒的信息。
 
-## 完整示例
+## 通知类型
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+内置 `Info`、`Success`、`Warning`、`Error` 四种类型。标题适合表达结论，描述适合补充下一步行动。
 
 ### 效果
 
-::AuraDemo{component="Notification"}::
+::AuraDemo{component="NotificationTypes"}::
 
 ### 代码
 
-```rust src="gallery/notification_demo.rs"
+```rust src="notification/types.rs"
 ```

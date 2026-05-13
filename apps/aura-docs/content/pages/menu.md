@@ -1,16 +1,42 @@
 # Menu
 
-为网站提供导航轮廓。
+导航菜单用于表达页面结构与当前业务位置。Aura Menu 支持水平、垂直和折叠模式，并可配置 ESC 关闭子菜单浮层。
 
-## 完整示例
+## 水平模式
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+适合窗口顶部导航。`on_select` 会返回当前激活的菜单项 id，业务可据此切换内容区域。
 
 ### 效果
 
-::AuraDemo{component="Menu"}::
+::AuraDemo{component="MenuHorizontal"}::
 
 ### 代码
 
-```rust src="gallery/menu_demo.rs"
+```rust src="menu/horizontal.rs"
+```
+
+## 垂直模式
+
+适合左侧导航。子菜单和分组可表达更深的业务层级。
+
+### 效果
+
+::AuraDemo{component="MenuVertical"}::
+
+### 代码
+
+```rust src="menu/vertical.rs"
+```
+
+## 折叠模式
+
+适合紧凑侧栏，只保留图标宽度，子菜单仍通过原生浮层展开。
+
+### 效果
+
+::AuraDemo{component="MenuCollapsed"}::
+
+### 代码
+
+```rust src="menu/collapsed.rs"
 ```

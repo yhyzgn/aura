@@ -1,12 +1,14 @@
 use aura_components::{
     Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Card,
-    Checkbox, CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Input, InputNumber,
-    InputNumberControlsPosition, Link, Loading, Menu, MenuMode, Paragraph, Progress,
-    ProgressStatus, Radio, RadioGroup, Rate, Result as AuraResult, ResultStatus, Select, Skeleton,
-    SkeletonItem, SkeletonVariant, Slider, Space, Statistic, Switch, Tag as AuraTag, Text,
-    Textarea, Title, VirtualizedList, toast_error, toast_info, toast_success, toast_warning,
+    Checkbox, CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Dropdown, Input, InputNumber,
+    InputNumberControlsPosition, Link, Loading, Menu, MenuMode, NotificationType, Paragraph,
+    Popconfirm, Popover, Progress, ProgressStatus, Radio, RadioGroup, Rate, Result as AuraResult,
+    ResultStatus, Select, Skeleton, SkeletonItem, SkeletonVariant, Slider, Space, Statistic,
+    Switch, Tag as AuraTag, Text, Textarea, Title, Transfer, TransferItem, Tree, TreeNode, Upload,
+    UploadFile, UploadStatus, VirtualizedList, show_notification, toast_error, toast_info,
+    toast_success, toast_warning,
 };
-use aura_core::{Config, PassivePortal, Portal};
+use aura_core::{Config, PassivePortal, Placement, Portal, clear_popover};
 use aura_icons_lucide::IconName;
 use gpui::{
     AnyElement, AnyView, App, Component, Context, Entity, IntoElement, Render, RenderOnce,
@@ -980,6 +982,43 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "segmented/block.rs" => Some(include_str!("../content/snippets/segmented/block.rs")),
         "tooltip/basic.rs" => Some(include_str!("../content/snippets/tooltip/basic.rs")),
         "tooltip/more.rs" => Some(include_str!("../content/snippets/tooltip/more.rs")),
+        "popover/basic.rs" => Some(include_str!("../content/snippets/popover/basic.rs")),
+        "popover/placements.rs" => Some(include_str!("../content/snippets/popover/placements.rs")),
+        "popover/close_strategy.rs" => Some(include_str!(
+            "../content/snippets/popover/close_strategy.rs"
+        )),
+        "popconfirm/basic.rs" => Some(include_str!("../content/snippets/popconfirm/basic.rs")),
+        "popconfirm/placements.rs" => {
+            Some(include_str!("../content/snippets/popconfirm/placements.rs"))
+        }
+        "popconfirm/custom_text.rs" => Some(include_str!(
+            "../content/snippets/popconfirm/custom_text.rs"
+        )),
+        "dropdown/basic.rs" => Some(include_str!("../content/snippets/dropdown/basic.rs")),
+        "dropdown/placements.rs" => {
+            Some(include_str!("../content/snippets/dropdown/placements.rs"))
+        }
+        "message_box/basic.rs" => Some(include_str!("../content/snippets/message_box/basic.rs")),
+        "message_box/manual_close.rs" => Some(include_str!(
+            "../content/snippets/message_box/manual_close.rs"
+        )),
+        "notification/types.rs" => Some(include_str!("../content/snippets/notification/types.rs")),
+        "upload/basic.rs" => Some(include_str!("../content/snippets/upload/basic.rs")),
+        "upload/drag.rs" => Some(include_str!("../content/snippets/upload/drag.rs")),
+        "upload/picture_card.rs" => {
+            Some(include_str!("../content/snippets/upload/picture_card.rs"))
+        }
+        "upload/limits.rs" => Some(include_str!("../content/snippets/upload/limits.rs")),
+        "transfer/basic.rs" => Some(include_str!("../content/snippets/transfer/basic.rs")),
+        "transfer/filterable.rs" => {
+            Some(include_str!("../content/snippets/transfer/filterable.rs"))
+        }
+        "transfer/disabled.rs" => Some(include_str!("../content/snippets/transfer/disabled.rs")),
+        "tree/basic.rs" => Some(include_str!("../content/snippets/tree/basic.rs")),
+        "tree/checkable.rs" => Some(include_str!("../content/snippets/tree/checkable.rs")),
+        "menu/horizontal.rs" => Some(include_str!("../content/snippets/menu/horizontal.rs")),
+        "menu/vertical.rs" => Some(include_str!("../content/snippets/menu/vertical.rs")),
+        "menu/collapsed.rs" => Some(include_str!("../content/snippets/menu/collapsed.rs")),
         "pagination/basic.rs" => Some(include_str!("../content/snippets/pagination/basic.rs")),
         "pagination/background.rs" => {
             Some(include_str!("../content/snippets/pagination/background.rs"))
@@ -1371,6 +1410,10 @@ struct LiveDemoContent {
     collapses: Vec<Entity<aura_components::Collapse>>,
     date_pickers: Vec<Entity<aura_components::DatePicker>>,
     date_time_pickers: Vec<Entity<aura_components::DateTimePicker>>,
+    uploads: Vec<Entity<Upload>>,
+    transfers: Vec<Entity<Transfer>>,
+    trees: Vec<Entity<Tree>>,
+    menus: Vec<Entity<Menu>>,
 }
 
 impl LiveDemoContent {
@@ -1398,6 +1441,10 @@ impl LiveDemoContent {
         let mut collapses = Vec::new();
         let mut date_pickers = Vec::new();
         let mut date_time_pickers = Vec::new();
+        let mut uploads = Vec::new();
+        let mut transfers = Vec::new();
+        let mut trees = Vec::new();
+        let mut menus = Vec::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -1939,6 +1986,21 @@ impl LiveDemoContent {
                         .width_md()
                 }));
             }
+            "UploadBasic" => uploads.push(cx.new(|_| docs_upload_basic())),
+            "UploadDrag" => uploads.push(cx.new(|_| docs_upload_drag())),
+            "UploadPictureCard" => uploads.push(cx.new(|_| docs_upload_picture_card())),
+            "UploadLimits" => {
+                uploads.push(cx.new(|_| docs_upload_limited()));
+                uploads.push(cx.new(|_| docs_upload_disabled()));
+            }
+            "TransferBasic" => transfers.push(cx.new(|_| docs_transfer_basic())),
+            "TransferFilterable" => transfers.push(cx.new(|_| docs_transfer_filterable())),
+            "TransferDisabled" => transfers.push(cx.new(|_| docs_transfer_disabled())),
+            "TreeBasic" => trees.push(cx.new(|_| docs_tree_basic())),
+            "TreeCheckable" => trees.push(cx.new(|_| docs_tree_checkable())),
+            "MenuHorizontal" => menus.push(cx.new(|_| docs_menu_horizontal())),
+            "MenuVertical" => menus.push(cx.new(|_| docs_menu_vertical())),
+            "MenuCollapsed" => menus.push(cx.new(|_| docs_menu_collapsed())),
             _ => {}
         }
 
@@ -1969,6 +2031,10 @@ impl LiveDemoContent {
             collapses,
             date_pickers,
             date_time_pickers,
+            uploads,
+            transfers,
+            trees,
+            menus,
         }
     }
 }
@@ -3033,6 +3099,48 @@ impl Render for LiveDemoContent {
                         .show(cx);
                 })
                 .into_any_element(),
+            "PopoverBasic" => docs_popover_basic().into_any_element(),
+            "PopoverPlacements" => docs_popover_placements().into_any_element(),
+            "PopoverCloseStrategy" => docs_popover_close_strategy().into_any_element(),
+            "PopconfirmBasic" => docs_popconfirm_basic().into_any_element(),
+            "PopconfirmPlacements" => docs_popconfirm_placements().into_any_element(),
+            "PopconfirmCustomText" => docs_popconfirm_custom_text().into_any_element(),
+            "DropdownBasic" => docs_dropdown_basic().into_any_element(),
+            "DropdownPlacements" => docs_dropdown_placements().into_any_element(),
+            "MessageBoxBasic" => docs_message_box_basic().into_any_element(),
+            "MessageBoxManualClose" => docs_message_box_manual_close().into_any_element(),
+            "NotificationTypes" => docs_notification_types().into_any_element(),
+            "UploadBasic" | "UploadDrag" | "UploadPictureCard" => self
+                .uploads
+                .first()
+                .cloned()
+                .map(Entity::into_any_element)
+                .unwrap_or_else(|| Paragraph::with_text("Upload demo is not initialized.").into_any_element()),
+            "UploadLimits" => demo_stack(
+                self.uploads
+                    .iter()
+                    .cloned()
+                    .map(Entity::into_any_element)
+                    .collect(),
+            ),
+            "TransferBasic" | "TransferFilterable" | "TransferDisabled" => self
+                .transfers
+                .first()
+                .cloned()
+                .map(Entity::into_any_element)
+                .unwrap_or_else(|| Paragraph::with_text("Transfer demo is not initialized.").into_any_element()),
+            "TreeBasic" | "TreeCheckable" => self
+                .trees
+                .first()
+                .cloned()
+                .map(Entity::into_any_element)
+                .unwrap_or_else(|| Paragraph::with_text("Tree demo is not initialized.").into_any_element()),
+            "MenuHorizontal" | "MenuVertical" | "MenuCollapsed" => self
+                .menus
+                .first()
+                .cloned()
+                .map(Entity::into_any_element)
+                .unwrap_or_else(|| Paragraph::with_text("Menu demo is not initialized.").into_any_element()),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -3728,6 +3836,436 @@ fn dialog_body(message: &'static str) -> impl IntoElement {
                         .on_click(|_, _, cx| aura_components::Dialog::close(cx)),
                 ),
         )
+}
+
+fn docs_popover_basic() -> Popover {
+    Popover::new(Button::new("Bottom Center").primary())
+        .id("docs-popover-basic")
+        .placement(Placement::Bottom)
+        .content(|_, _| {
+            Space::new()
+                .vertical()
+                .gap_sm()
+                .child(Text::new("Title").bold())
+                .child(Text::new("This is native GPUI popover content."))
+                .child(Button::new("Confirm").primary().small())
+        })
+}
+
+fn docs_popover_placements() -> impl IntoElement {
+    Space::new().wrap().gap_sm().children([
+        docs_popover_at("TopStart", Placement::TopStart),
+        docs_popover_at("Top", Placement::Top),
+        docs_popover_at("TopEnd", Placement::TopEnd),
+        docs_popover_at("Left", Placement::Left),
+        docs_popover_at("Right", Placement::Right),
+        docs_popover_at("BottomStart", Placement::BottomStart),
+        docs_popover_at("Bottom", Placement::Bottom),
+        docs_popover_at("BottomEnd", Placement::BottomEnd),
+    ])
+}
+
+fn docs_popover_at(label: &'static str, placement: Placement) -> Popover {
+    Popover::new(Button::new(label).small())
+        .id(format!("docs-popover-placement-{label}"))
+        .placement(placement)
+        .content(move |_, _| Text::new(format!("Placement: {placement:?}")))
+}
+
+fn docs_popover_close_strategy() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_lg()
+        .child(
+            Popover::new(Button::new("Manual Close Only").warning())
+                .id("docs-popover-manual-close")
+                .placement(Placement::Bottom)
+                .close_on_click_outside(false)
+                .close_on_escape(false)
+                .content(|_, _| {
+                    Space::new()
+                        .vertical()
+                        .gap_md()
+                        .child(Text::new("Manual close").bold())
+                        .child(Text::new("Backdrop and ESC are disabled for this popover."))
+                        .child(Button::new("Close Popover").primary().small().on_click(
+                            |_, _, cx| {
+                                clear_popover(&"docs-popover-manual-close".into(), cx);
+                            },
+                        ))
+                }),
+        )
+        .child(
+            Popover::new(Button::new("Custom Offset"))
+                .id("docs-popover-custom-offset")
+                .placement(Placement::Bottom)
+                .offset_lg()
+                .content(|_, _| Text::new("Offset = 20px")),
+        )
+}
+
+fn docs_popconfirm_basic() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(
+            Popconfirm::new(Button::new("Delete").danger())
+                .id("docs-popconfirm-delete")
+                .title("Are you sure to delete this task?")
+                .on_confirm(|_, _| toast_success!("Deleted"))
+                .on_cancel(|_, _| toast_warning!("Cancelled")),
+        )
+        .child(
+            Popconfirm::new(Button::new("Archive"))
+                .id("docs-popconfirm-archive")
+                .title("Archive this item?")
+                .confirm_text("Yes")
+                .cancel_text("No"),
+        )
+}
+
+fn docs_popconfirm_placements() -> impl IntoElement {
+    Space::new().wrap().gap_md().children([
+        docs_popconfirm_at("Top", Placement::Top),
+        docs_popconfirm_at("Bottom", Placement::Bottom),
+        docs_popconfirm_at("Left", Placement::Left),
+        docs_popconfirm_at("Right", Placement::Right),
+        docs_popconfirm_at("BottomEnd", Placement::BottomEnd),
+    ])
+}
+
+fn docs_popconfirm_at(label: &'static str, placement: Placement) -> Popconfirm {
+    Popconfirm::new(Button::new(label).small())
+        .id(format!("docs-popconfirm-placement-{label}"))
+        .title(format!("Confirm at {placement:?}?"))
+        .placement(placement)
+}
+
+fn docs_popconfirm_custom_text() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(
+            Popconfirm::new(Button::new("Publish").success())
+                .id("docs-popconfirm-publish")
+                .title("Publish current draft?")
+                .confirm_text("Publish")
+                .cancel_text("Keep editing")
+                .placement(Placement::Top),
+        )
+        .child(
+            Popconfirm::new(Button::new("Danger action").danger())
+                .id("docs-popconfirm-danger")
+                .title("This action cannot be undone.")
+                .confirm_text("I understand")
+                .cancel_text("Abort")
+                .close_on_escape(false)
+                .placement(Placement::BottomStart),
+        )
+}
+
+fn docs_dropdown_basic() -> Dropdown {
+    Dropdown::new(Button::new("Actions"))
+        .id("docs-dropdown-actions")
+        .placement(Placement::BottomStart)
+        .item("Create", |_, _| toast_info!("Create clicked"))
+        .item("Duplicate", |_, _| toast_info!("Duplicate clicked"))
+        .item("Archive", |_, _| toast_info!("Archive clicked"))
+}
+
+fn docs_dropdown_placements() -> impl IntoElement {
+    Space::new().wrap().gap_md().children([
+        docs_dropdown_at("docs-dropdown-top", "Top", Placement::Top),
+        docs_dropdown_at("docs-dropdown-bottom", "Bottom", Placement::Bottom),
+        docs_dropdown_at("docs-dropdown-left", "Left", Placement::Left),
+        docs_dropdown_at("docs-dropdown-right", "Right", Placement::Right),
+    ])
+}
+
+fn docs_dropdown_at(id: &'static str, label: &'static str, placement: Placement) -> Dropdown {
+    Dropdown::new(Button::new(label))
+        .id(id)
+        .placement(placement)
+        .item("Action 1", |_, _| toast_info!("Action 1"))
+        .item("Action 2", |_, _| toast_info!("Action 2"))
+}
+
+fn docs_message_box_basic() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(Button::new("Open Alert").on_click(|_, _, cx| {
+            aura_components::alert("Alert Title", "This is an alert message.", cx);
+        }))
+        .child(Button::new("Open Confirm").primary().on_click(|_, _, cx| {
+            aura_components::confirm(
+                "Confirm Title",
+                "Are you sure you want to proceed?",
+                |_, _| toast_success!("Confirmed"),
+                cx,
+            );
+        }))
+}
+
+fn docs_message_box_manual_close() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(Button::new("Manual Alert").warning().on_click(|_, _, cx| {
+            aura_components::MessageBox::new(
+                "Manual Alert",
+                "Only the OK button can close this message box.",
+            )
+            .close_on_click_outside(false)
+            .close_on_escape(false)
+            .alert(cx);
+        }))
+        .child(Button::new("Manual Confirm").danger().on_click(|_, _, cx| {
+            aura_components::MessageBox::new(
+                "Manual Confirm",
+                "Only Cancel or Confirm can close this message box.",
+            )
+            .close_on_click_outside(false)
+            .close_on_escape(false)
+            .confirm(|_, _| toast_success!("Manual confirm accepted"), cx);
+        }))
+}
+
+fn docs_notification_types() -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(
+            Button::new("Success Notification")
+                .primary()
+                .on_click(|_, _, cx| {
+                    show_notification(
+                        "Success",
+                        Some("This is a success description".into()),
+                        NotificationType::Success,
+                        cx,
+                    );
+                }),
+        )
+        .child(Button::new("Info Notification").on_click(|_, _, cx| {
+            show_notification(
+                "Notification Title",
+                Some("This is the content".into()),
+                NotificationType::Info,
+                cx,
+            );
+        }))
+        .child(
+            Button::new("Warning Notification")
+                .warning()
+                .on_click(|_, _, cx| {
+                    show_notification("Warning", None, NotificationType::Warning, cx);
+                }),
+        )
+        .child(
+            Button::new("Error Notification")
+                .danger()
+                .on_click(|_, _, cx| {
+                    show_notification(
+                        "Error",
+                        Some("Detailed error message goes here".into()),
+                        NotificationType::Error,
+                        cx,
+                    );
+                }),
+        )
+}
+
+fn docs_upload_basic() -> Upload {
+    Upload::new()
+        .button_text("选择文件")
+        .accept(".pdf,.fig,.txt")
+        .max_size(5 * 1024 * 1024)
+        .tip("仅接受 pdf/fig/txt，单文件 ≤ 5MB。")
+        .width_lg()
+        .add_file(
+            UploadFile::new("spec", "产品需求说明.pdf")
+                .size(428_000)
+                .status(UploadStatus::Success),
+        )
+        .add_file(
+            UploadFile::new("draft", "设计稿-v2.fig")
+                .size(2_480_000)
+                .status(UploadStatus::Uploading)
+                .progress(68),
+        )
+}
+
+fn docs_upload_drag() -> Upload {
+    Upload::new()
+        .drag(true)
+        .multiple(true)
+        .accept(".png,.jpg,.jpeg,.pdf")
+        .max_size(2 * 1024 * 1024)
+        .button_text("拖拽文件到这里上传")
+        .tip("真实拖放接入可由宿主扩展；组件提供原生拖拽区域样式。")
+        .width_lg()
+        .add_file(
+            UploadFile::new("error", "合同扫描件.jpg")
+                .size(820_000)
+                .status(UploadStatus::Error)
+                .description("网络中断"),
+        )
+}
+
+fn docs_upload_picture_card() -> Upload {
+    Upload::new()
+        .picture_card()
+        .button_text("上传图片")
+        .multiple(true)
+        .accept("image/*")
+        .max_size(2 * 1024 * 1024)
+        .width_lg()
+        .files([
+            UploadFile::new("cover", "cover.png")
+                .size(512_000)
+                .status(UploadStatus::Success),
+            UploadFile::new("banner", "banner.jpg")
+                .size(1_240_000)
+                .status(UploadStatus::Uploading)
+                .progress(42),
+        ])
+}
+
+fn docs_upload_limited() -> Upload {
+    Upload::new()
+        .limit(1)
+        .accept(".zip,.txt")
+        .max_size(10 * 1024 * 1024)
+        .button_text("达到数量限制")
+        .tip("limit=1 时已有文件，入口自动禁用。")
+        .width_lg()
+        .add_file(
+            UploadFile::new("only", "唯一附件.zip")
+                .size(5_120_000)
+                .status(UploadStatus::Ready),
+        )
+}
+
+fn docs_upload_disabled() -> Upload {
+    Upload::new()
+        .disabled(true)
+        .button_text("禁用上传")
+        .tip("禁用状态下入口不可用。")
+        .width_lg()
+}
+
+fn docs_transfer_basic() -> Transfer {
+    Transfer::new(docs_city_items())
+        .titles("待选城市", "已选城市")
+        .target_keys(["shanghai"])
+        .checked_source_keys(["beijing", "shenzhen"])
+}
+
+fn docs_transfer_filterable() -> Transfer {
+    Transfer::new(docs_role_items())
+        .titles("全部角色", "已授权")
+        .filterable(true)
+        .source_filter("admin")
+        .target_filter("ops")
+        .target_keys(["ops"])
+        .checked_source_keys(["admin"])
+        .width_lg()
+}
+
+fn docs_transfer_disabled() -> Transfer {
+    Transfer::new(vec![
+        TransferItem::new("beijing", "北京"),
+        TransferItem::new("shanghai", "上海"),
+        TransferItem::new("disabled", "成都（禁用）")
+            .description("不可移动")
+            .disabled(true),
+    ])
+    .titles("源列表", "目标列表")
+    .target_keys(["disabled"])
+    .checked_target_keys(["disabled"])
+}
+
+fn docs_city_items() -> Vec<TransferItem> {
+    vec![
+        TransferItem::new("beijing", "北京").description("华北区域"),
+        TransferItem::new("shanghai", "上海").description("华东区域"),
+        TransferItem::new("shenzhen", "深圳").description("华南区域"),
+        TransferItem::new("guangzhou", "广州").description("华南区域"),
+    ]
+}
+
+fn docs_role_items() -> Vec<TransferItem> {
+    vec![
+        TransferItem::new("admin", "Admin 管理员").description("admin / full access"),
+        TransferItem::new("editor", "Editor 编辑").description("content write"),
+        TransferItem::new("viewer", "Viewer 只读").description("read only"),
+        TransferItem::new("ops", "Ops 运维").description("ops / deploy"),
+        TransferItem::new("auditor", "Auditor 审计").description("compliance"),
+    ]
+}
+
+fn docs_tree_basic() -> Tree {
+    Tree::new(vec![
+        TreeNode::new("1", "一级 1")
+            .child(TreeNode::new("1-1", "二级 1-1").child(TreeNode::new("1-1-1", "三级 1-1-1")))
+            .child(TreeNode::new("1-2", "二级 1-2")),
+        TreeNode::new("2", "一级 2").child(TreeNode::new("2-1", "二级 2-1")),
+    ])
+}
+
+fn docs_tree_checkable() -> Tree {
+    Tree::new(vec![
+        TreeNode::new("docs", "docs").child(TreeNode::new("quick-start", "quick_start.md")),
+        TreeNode::new("src", "src").child(TreeNode::new("components", "aura-components")),
+    ])
+    .show_checkbox(true)
+    .multiple(true)
+    .on_node_click(|id, _, _| toast_info!("selected node: {}", id))
+}
+
+fn docs_menu_horizontal() -> Menu {
+    Menu::new()
+        .id("docs-menu-horizontal")
+        .mode(MenuMode::Horizontal)
+        .default_active("1")
+        .on_select(|id, _, _| toast_info!("active menu: {}", id))
+        .item("1", "处理中心", Some(IconName::List))
+        .submenu("2", "我的工作台", Some(IconName::Briefcase), |s| {
+            s.item("2-1", "选项1", None).item("2-2", "选项2", None)
+        })
+        .item("3", "消息中心", Some(IconName::Bell))
+}
+
+fn docs_menu_vertical() -> Menu {
+    Menu::new()
+        .id("docs-menu-vertical")
+        .mode(MenuMode::Vertical)
+        .default_active("1")
+        .on_select(|id, _, _| toast_info!("active menu: {}", id))
+        .item("1", "导航一", Some(IconName::House))
+        .submenu("2", "导航二", Some(IconName::Settings), |s| {
+            s.item("2-1", "选项1", None)
+                .item("2-2", "选项2", None)
+                .group("分组一", |g| {
+                    g.item("2-3", "选项3", None).item("2-4", "选项4", None)
+                })
+        })
+        .item("3", "导航三", Some(IconName::MessageSquare))
+}
+
+fn docs_menu_collapsed() -> Menu {
+    Menu::new()
+        .id("docs-menu-collapsed")
+        .mode(MenuMode::Vertical)
+        .collapse(true)
+        .default_active("1")
+        .on_select(|id, _, _| toast_info!("active menu: {}", id))
+        .item("1", "导航一", Some(IconName::House))
+        .submenu("2", "导航二", Some(IconName::Settings), |s| {
+            s.item("2-1", "选项1", None).item("2-2", "选项2", None)
+        })
+        .item("3", "导航三", Some(IconName::MessageSquare))
 }
 
 fn docs_drawer(
@@ -5140,6 +5678,72 @@ mod tests {
                     "drawer/placements.rs",
                     "drawer/sizes.rs",
                     "drawer/manual_close.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/popover.md"),
+                "PopoverBasic",
+                &[
+                    "popover/basic.rs",
+                    "popover/placements.rs",
+                    "popover/close_strategy.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/popconfirm.md"),
+                "PopconfirmBasic",
+                &[
+                    "popconfirm/basic.rs",
+                    "popconfirm/placements.rs",
+                    "popconfirm/custom_text.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/dropdown.md"),
+                "DropdownBasic",
+                &["dropdown/basic.rs", "dropdown/placements.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/message_box.md"),
+                "MessageBoxBasic",
+                &["message_box/basic.rs", "message_box/manual_close.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/notification.md"),
+                "NotificationTypes",
+                &["notification/types.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/upload.md"),
+                "UploadBasic",
+                &[
+                    "upload/basic.rs",
+                    "upload/drag.rs",
+                    "upload/picture_card.rs",
+                    "upload/limits.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/transfer.md"),
+                "TransferBasic",
+                &[
+                    "transfer/basic.rs",
+                    "transfer/filterable.rs",
+                    "transfer/disabled.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/tree.md"),
+                "TreeBasic",
+                &["tree/basic.rs", "tree/checkable.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/menu.md"),
+                "MenuHorizontal",
+                &[
+                    "menu/horizontal.rs",
+                    "menu/vertical.rs",
+                    "menu/collapsed.rs",
                 ][..],
             ),
         ] {

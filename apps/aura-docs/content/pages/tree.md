@@ -1,16 +1,29 @@
 # Tree
 
-分层展示数据。
+树形控件用于展示层级数据，支持展开/折叠、节点选择、多选和勾选样式。
 
-## 完整示例
+## 基础层级
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+用 `TreeNode::child` 构建嵌套节点，点击有子节点的行可展开或折叠。
 
 ### 效果
 
-::AuraDemo{component="Tree"}::
+::AuraDemo{component="TreeBasic"}::
 
 ### 代码
 
-```rust src="gallery/tree_demo.rs"
+```rust src="tree/basic.rs"
+```
+
+## 勾选与多选
+
+`show_checkbox(true)` 展示复选框，`multiple(true)` 允许多个节点同时选中，节点点击回调可同步业务状态。
+
+### 效果
+
+::AuraDemo{component="TreeCheckable"}::
+
+### 代码
+
+```rust src="tree/checkable.rs"
 ```

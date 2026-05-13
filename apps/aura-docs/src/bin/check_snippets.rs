@@ -151,6 +151,10 @@ mod drawer_manual_close;
 mod drawer_placements;
 #[path = "../../content/snippets/drawer/sizes.rs"]
 mod drawer_sizes;
+#[path = "../../content/snippets/dropdown/basic.rs"]
+mod dropdown_basic;
+#[path = "../../content/snippets/dropdown/placements.rs"]
+mod dropdown_placements;
 #[path = "../../content/snippets/empty/basic.rs"]
 mod empty_basic;
 #[path = "../../content/snippets/empty/description.rs"]
@@ -209,10 +213,22 @@ mod loading_basic;
 mod loading_fullscreen;
 #[path = "../../content/snippets/markdown/state_machine.rs"]
 mod markdown_state_machine;
+#[path = "../../content/snippets/menu/collapsed.rs"]
+mod menu_collapsed;
+#[path = "../../content/snippets/menu/horizontal.rs"]
+mod menu_horizontal;
+#[path = "../../content/snippets/menu/vertical.rs"]
+mod menu_vertical;
+#[path = "../../content/snippets/message_box/basic.rs"]
+mod message_box_basic;
+#[path = "../../content/snippets/message_box/manual_close.rs"]
+mod message_box_manual_close;
 #[path = "../../content/snippets/message/formatting.rs"]
 mod message_formatting;
 #[path = "../../content/snippets/message/types.rs"]
 mod message_types;
+#[path = "../../content/snippets/notification/types.rs"]
+mod notification_types;
 #[path = "../../content/snippets/page_header/basic.rs"]
 mod page_header_basic;
 #[path = "../../content/snippets/page_header/extra.rs"]
@@ -225,6 +241,18 @@ mod pagination_advanced;
 mod pagination_background;
 #[path = "../../content/snippets/pagination/basic.rs"]
 mod pagination_basic;
+#[path = "../../content/snippets/popconfirm/basic.rs"]
+mod popconfirm_basic;
+#[path = "../../content/snippets/popconfirm/custom_text.rs"]
+mod popconfirm_custom_text;
+#[path = "../../content/snippets/popconfirm/placements.rs"]
+mod popconfirm_placements;
+#[path = "../../content/snippets/popover/basic.rs"]
+mod popover_basic;
+#[path = "../../content/snippets/popover/close_strategy.rs"]
+mod popover_close_strategy;
+#[path = "../../content/snippets/popover/placements.rs"]
+mod popover_placements;
 #[path = "../../content/snippets/progress/basic.rs"]
 mod progress_basic;
 #[path = "../../content/snippets/progress/color.rs"]
@@ -359,8 +387,26 @@ mod timeline_reverse;
 mod tooltip_basic;
 #[path = "../../content/snippets/tooltip/more.rs"]
 mod tooltip_more;
+#[path = "../../content/snippets/transfer/basic.rs"]
+mod transfer_basic;
+#[path = "../../content/snippets/transfer/disabled.rs"]
+mod transfer_disabled;
+#[path = "../../content/snippets/transfer/filterable.rs"]
+mod transfer_filterable;
+#[path = "../../content/snippets/tree/basic.rs"]
+mod tree_basic;
+#[path = "../../content/snippets/tree/checkable.rs"]
+mod tree_checkable;
 #[path = "../../content/snippets/typography/paragraph.rs"]
 mod typography_paragraph;
+#[path = "../../content/snippets/upload/basic.rs"]
+mod upload_basic;
+#[path = "../../content/snippets/upload/drag.rs"]
+mod upload_drag;
+#[path = "../../content/snippets/upload/limits.rs"]
+mod upload_limits;
+#[path = "../../content/snippets/upload/picture_card.rs"]
+mod upload_picture_card;
 #[path = "../../content/snippets/virtualized_list/basic.rs"]
 mod virtualized_list_basic;
 
