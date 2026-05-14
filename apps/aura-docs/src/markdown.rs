@@ -25,11 +25,13 @@ const ABOUT_DOC: &str = include_str!("../content/pages/about.md");
 
 const AFFIX_DOC: &str = include_str!("../content/pages/affix.md");
 const ALERT_DOC: &str = include_str!("../content/pages/alert.md");
+const AREA_CHART_DOC: &str = include_str!("../content/pages/area_chart.md");
 const ANCHOR_DOC: &str = include_str!("../content/pages/anchor.md");
 const AUTOCOMPLETE_DOC: &str = include_str!("../content/pages/autocomplete.md");
 const AVATAR_DOC: &str = include_str!("../content/pages/avatar.md");
 const BACKTOP_DOC: &str = include_str!("../content/pages/backtop.md");
 const BADGE_DOC: &str = include_str!("../content/pages/badge.md");
+const BAR_CHART_DOC: &str = include_str!("../content/pages/bar_chart.md");
 const BREADCRUMB_DOC: &str = include_str!("../content/pages/breadcrumb.md");
 const BUTTON_DOC: &str = include_str!("../content/pages/button.md");
 const CARD_DOC: &str = include_str!("../content/pages/card.md");
@@ -124,6 +126,10 @@ const DOC_PAGES: &[DocPage] = &[
         markdown: ANCHOR_DOC,
     },
     DocPage {
+        title: "AreaChart",
+        markdown: AREA_CHART_DOC,
+    },
+    DocPage {
         title: "Autocomplete",
         markdown: AUTOCOMPLETE_DOC,
     },
@@ -138,6 +144,10 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "Badge",
         markdown: BADGE_DOC,
+    },
+    DocPage {
+        title: "BarChart",
+        markdown: BAR_CHART_DOC,
     },
     DocPage {
         title: "Breadcrumb",
@@ -918,10 +928,16 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "avatar/shapes.rs" => Some(include_str!("../content/snippets/avatar/shapes.rs")),
         "avatar/sizes.rs" => Some(include_str!("../content/snippets/avatar/sizes.rs")),
         "avatar/content.rs" => Some(include_str!("../content/snippets/avatar/content.rs")),
+        "area_chart/basic.rs" => Some(include_str!("../content/snippets/area_chart/basic.rs")),
+        "area_chart/overlay.rs" => Some(include_str!("../content/snippets/area_chart/overlay.rs")),
+        "area_chart/stacked.rs" => Some(include_str!("../content/snippets/area_chart/stacked.rs")),
         "badge/basic.rs" => Some(include_str!("../content/snippets/badge/basic.rs")),
         "badge/max.rs" => Some(include_str!("../content/snippets/badge/max.rs")),
         "badge/dot.rs" => Some(include_str!("../content/snippets/badge/dot.rs")),
         "input_number/basic.rs" => Some(include_str!("../content/snippets/input_number/basic.rs")),
+        "bar_chart/basic.rs" => Some(include_str!("../content/snippets/bar_chart/basic.rs")),
+        "bar_chart/grouped.rs" => Some(include_str!("../content/snippets/bar_chart/grouped.rs")),
+        "bar_chart/stacked.rs" => Some(include_str!("../content/snippets/bar_chart/stacked.rs")),
         "input_number/vertical.rs" => {
             Some(include_str!("../content/snippets/input_number/vertical.rs"))
         }
@@ -1182,6 +1198,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "gallery/anchor_demo.rs" => {
             Some(include_str!("../../aura-gallery/src/demos/anchor_demo.rs"))
         }
+        "gallery/area_chart_demo.rs" => Some(include_str!(
+            "../../aura-gallery/src/demos/area_chart_demo.rs"
+        )),
         "gallery/autocomplete_demo.rs" => Some(include_str!(
             "../../aura-gallery/src/demos/autocomplete_demo.rs"
         )),
@@ -1192,6 +1211,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
             Some(include_str!("../../aura-gallery/src/demos/backtop_demo.rs"))
         }
         "gallery/badge_demo.rs" => Some(include_str!("../../aura-gallery/src/demos/badge_demo.rs")),
+        "gallery/bar_chart_demo.rs" => Some(include_str!(
+            "../../aura-gallery/src/demos/bar_chart_demo.rs"
+        )),
         "gallery/breadcrumb_demo.rs" => Some(include_str!(
             "../../aura-gallery/src/demos/breadcrumb_demo.rs"
         )),
@@ -1536,6 +1558,7 @@ impl LiveDemoContent {
                 inputs.push(cx.new(|cx| Input::new("", cx)));
                 inputs.push(cx.new(|cx| Input::new("", cx).placeholder("Type something...")));
             }
+
             "InputNumberBasic" => {
                 input_numbers.push(cx.new(|cx| InputNumber::new(10.0, cx).min(0.0).max(10.0)));
             }
@@ -2355,6 +2378,80 @@ impl Render for LiveDemoContent {
                     .map(Entity::into_any_element)
                     .collect(),
             ),
+
+            "AreaChartBasic" => demo_row(vec![
+                aura_components::AreaChart::new([aura_components::ChartSeries::new(
+                    "Visitors",
+                    [
+                        aura_components::ChartPoint::new("Mon", 24.0),
+                        aura_components::ChartPoint::new("Tue", 32.0),
+                        aura_components::ChartPoint::new("Wed", 45.0),
+                        aura_components::ChartPoint::new("Thu", 52.0),
+                        aura_components::ChartPoint::new("Fri", 61.0),
+                        aura_components::ChartPoint::new("Sat", 72.0),
+                        aura_components::ChartPoint::new("Sun", 68.0),
+                    ],
+                )])
+                .id("docs-area-chart-basic")
+                .height(px(260.0))
+                .into_any_element(),
+            ]),
+            "AreaChartOverlay" => demo_row(vec![
+                aura_components::AreaChart::new([
+                    aura_components::ChartSeries::new(
+                        "Desktop",
+                        [
+                            aura_components::ChartPoint::new("Mon", 28.0),
+                            aura_components::ChartPoint::new("Tue", 34.0),
+                            aura_components::ChartPoint::new("Wed", 38.0),
+                            aura_components::ChartPoint::new("Thu", 44.0),
+                            aura_components::ChartPoint::new("Fri", 50.0),
+                        ],
+                    ),
+                    aura_components::ChartSeries::new(
+                        "Mobile",
+                        [
+                            aura_components::ChartPoint::new("Mon", 18.0),
+                            aura_components::ChartPoint::new("Tue", 25.0),
+                            aura_components::ChartPoint::new("Wed", 32.0),
+                            aura_components::ChartPoint::new("Thu", 39.0),
+                            aura_components::ChartPoint::new("Fri", 48.0),
+                        ],
+                    ),
+                ])
+                .id("docs-area-chart-overlay")
+                .height(px(300.0))
+                .y_domain(0.0, 100.0)
+                .into_any_element(),
+            ]),
+            "AreaChartStacked" => demo_row(vec![
+                aura_components::AreaChart::new([
+                    aura_components::ChartSeries::new(
+                        "Desktop",
+                        [
+                            aura_components::ChartPoint::new("Mon", 28.0),
+                            aura_components::ChartPoint::new("Tue", 34.0),
+                            aura_components::ChartPoint::new("Wed", 38.0),
+                            aura_components::ChartPoint::new("Thu", 44.0),
+                            aura_components::ChartPoint::new("Fri", 50.0),
+                        ],
+                    ),
+                    aura_components::ChartSeries::new(
+                        "Mobile",
+                        [
+                            aura_components::ChartPoint::new("Mon", 18.0),
+                            aura_components::ChartPoint::new("Tue", 25.0),
+                            aura_components::ChartPoint::new("Wed", 32.0),
+                            aura_components::ChartPoint::new("Thu", 39.0),
+                            aura_components::ChartPoint::new("Fri", 48.0),
+                        ],
+                    ),
+                ])
+                .id("docs-area-chart-stacked")
+                .height(px(300.0))
+                .stacked()
+                .into_any_element(),
+            ]),
             "AvatarShapes" => demo_row(vec![
                 Avatar::new().into_any_element(),
                 Avatar::new().square().into_any_element(),
@@ -2658,6 +2755,72 @@ impl Render for LiveDemoContent {
                         .horizontal_between(),
                 )
                 .width_lg()
+                .into_any_element(),
+            ]),
+            "BarChartBasic" => demo_row(vec![
+                aura_components::BarChart::new([aura_components::ChartSeries::new(
+                    "Revenue",
+                    [
+                        aura_components::ChartPoint::new("Q1", 42.0),
+                        aura_components::ChartPoint::new("Q2", 58.0),
+                        aura_components::ChartPoint::new("Q3", 73.0),
+                        aura_components::ChartPoint::new("Q4", 96.0),
+                    ],
+                )])
+                .id("docs-bar-chart-basic")
+                .height(px(260.0))
+                .into_any_element(),
+            ]),
+            "BarChartGrouped" => demo_row(vec![
+                aura_components::BarChart::new([
+                    aura_components::ChartSeries::new(
+                        "Online",
+                        [
+                            aura_components::ChartPoint::new("Jan", 42.0),
+                            aura_components::ChartPoint::new("Feb", 58.0),
+                            aura_components::ChartPoint::new("Mar", 64.0),
+                            aura_components::ChartPoint::new("Apr", 72.0),
+                        ],
+                    ),
+                    aura_components::ChartSeries::new(
+                        "Retail",
+                        [
+                            aura_components::ChartPoint::new("Jan", 28.0),
+                            aura_components::ChartPoint::new("Feb", 34.0),
+                            aura_components::ChartPoint::new("Mar", 39.0),
+                            aura_components::ChartPoint::new("Apr", 45.0),
+                        ],
+                    ),
+                ])
+                .id("docs-bar-chart-grouped")
+                .height(px(300.0))
+                .y_domain(0.0, 120.0)
+                .into_any_element(),
+            ]),
+            "BarChartStacked" => demo_row(vec![
+                aura_components::BarChart::new([
+                    aura_components::ChartSeries::new(
+                        "Online",
+                        [
+                            aura_components::ChartPoint::new("Jan", 42.0),
+                            aura_components::ChartPoint::new("Feb", 58.0),
+                            aura_components::ChartPoint::new("Mar", 64.0),
+                            aura_components::ChartPoint::new("Apr", 72.0),
+                        ],
+                    ),
+                    aura_components::ChartSeries::new(
+                        "Retail",
+                        [
+                            aura_components::ChartPoint::new("Jan", 28.0),
+                            aura_components::ChartPoint::new("Feb", 34.0),
+                            aura_components::ChartPoint::new("Mar", 39.0),
+                            aura_components::ChartPoint::new("Apr", 45.0),
+                        ],
+                    ),
+                ])
+                .id("docs-bar-chart-stacked")
+                .height(px(300.0))
+                .stacked()
                 .into_any_element(),
             ]),
             "LineChartBasic" => demo_row(vec![

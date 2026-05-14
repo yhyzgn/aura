@@ -165,12 +165,20 @@ pub fn finite_domain(series: &[ChartSeries]) -> Option<(f64, f64)> {
 }
 
 pub fn normalized_domain(domain: Option<(f64, f64)>, series: &[ChartSeries]) -> (f64, f64) {
+    normalized_domain_with_baseline(domain, series, true)
+}
+
+pub fn normalized_domain_with_baseline(
+    domain: Option<(f64, f64)>,
+    series: &[ChartSeries],
+    include_zero: bool,
+) -> (f64, f64) {
     let (mut min, mut max) = domain
         .filter(|(min, max)| min.is_finite() && max.is_finite())
         .or_else(|| finite_domain(series))
         .unwrap_or((0.0, 1.0));
 
-    if min > 0.0 {
+    if include_zero && min > 0.0 {
         min = 0.0;
     }
     if (max - min).abs() < f64::EPSILON {
@@ -183,6 +191,40 @@ pub fn normalized_domain(domain: Option<(f64, f64)>, series: &[ChartSeries]) -> 
         max += pad;
     }
     (min, max)
+}
+
+pub fn stacked_domain(series: &[ChartSeries]) -> Option<(f64, f64)> {
+    let labels = collect_labels(series);
+    if labels.is_empty() {
+        return finite_domain(series);
+    }
+
+    let mut max_total = 0.0_f64;
+    let mut min_total = 0.0_f64;
+    let mut seen = false;
+    for index in 0..labels.len() {
+        let mut positive = 0.0_f64;
+        let mut negative = 0.0_f64;
+        for point in series.iter().filter_map(|series| series.points.get(index)) {
+            if !point.is_finite() {
+                continue;
+            }
+            seen = true;
+            if point.value >= 0.0 {
+                positive += point.value;
+            } else {
+                negative += point.value;
+            }
+        }
+        max_total = max_total.max(positive);
+        min_total = min_total.min(negative);
+    }
+
+    if seen {
+        Some((min_total, max_total))
+    } else {
+        None
+    }
 }
 
 pub fn collect_labels(series: &[ChartSeries]) -> Vec<SharedString> {
@@ -233,6 +275,21 @@ mod tests {
 
         let negative = [ChartSeries::new("negative", [ChartPoint::new("a", -4.0)])];
         assert_eq!(normalized_domain(None, &negative), (-4.4, -3.6));
+    }
+
+    #[test]
+    fn stacked_domain_sums_same_index_values() {
+        let series = [
+            ChartSeries::new(
+                "a",
+                [ChartPoint::new("Q1", 2.0), ChartPoint::new("Q2", -1.0)],
+            ),
+            ChartSeries::new(
+                "b",
+                [ChartPoint::new("Q1", 3.0), ChartPoint::new("Q2", -4.0)],
+            ),
+        ];
+        assert_eq!(stacked_domain(&series), Some((-5.0, 5.0)));
     }
 
     #[test]

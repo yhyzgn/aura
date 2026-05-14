@@ -162,14 +162,14 @@
 | 8 | VirtualizedTable | — | — | ⏸️ Deferred from P5; implement later when requested |
 | 9 | VirtualizedTree | — | — | ⏸️ Deferred from P5; implement later when requested |
 
-## P10 Native Charts 🔄 (0/6+ — current phase)
+## P10 Native Charts 🔄 (3/6+ — current phase)
 
 | # | Component | File | Demo | Docs | Status |
 |---|-----------|------|------|------|--------|
-| 1 | Chart infrastructure | `crates/aura-components/src/chart*.rs` | — | — | 🔄 Planned: scale/axis/grid/shape/legend/tooltip |
-| 2 | LineChart | `crates/aura-components/src/line_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
-| 3 | AreaChart | `crates/aura-components/src/area_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
-| 4 | BarChart | `crates/aura-components/src/bar_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
+| 1 | Chart infrastructure | `crates/aura-components/src/chart*.rs` | — | — | ✅ Scale/domain/shape/frame/legend foundation; tooltip pending |
+| 2 | LineChart | `crates/aura-components/src/line_chart.rs` | ✅ | ✅ | ✅ MVP: multi-series, axis/grid, legend, point markers, empty state |
+| 3 | AreaChart | `crates/aura-components/src/area_chart.rs` | ✅ | ✅ | ✅ MVP: overlay/stacked area, axis/grid, legend |
+| 4 | BarChart | `crates/aura-components/src/bar_chart.rs` | ✅ | ✅ | ✅ MVP: grouped/stacked vertical bars, axis/grid, legend |
 | 5 | PieChart | `crates/aura-components/src/pie_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
 | 6 | RingChart | `crates/aura-components/src/pie_chart.rs` or `ring_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
 | 7 | Sparkline | `crates/aura-components/src/sparkline.rs` | ⏳ | ⏳ | 🔄 Planned |

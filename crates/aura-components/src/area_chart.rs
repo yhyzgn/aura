@@ -1,0 +1,408 @@
+use crate::chart::{
+    ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data,
+    normalized_domain_with_baseline, stacked_domain,
+};
+use crate::chart_frame::paint_chart_frame;
+use crate::chart_scale::{ScaleLinear, ScalePoint};
+use crate::chart_shape::{area_path, finite_line_points, line_path};
+use crate::{Empty, Space, Text};
+use aura_core::{Config, unique_id};
+use gpui::{
+    App, Component, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels, RenderOnce,
+    SharedString, Styled, Window, canvas, div, px,
+};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AreaChartMode {
+    Overlay,
+    Stacked,
+}
+
+#[derive(Clone)]
+pub struct AreaChart {
+    series: Vec<ChartSeries>,
+    options: ChartOptions,
+    mode: AreaChartMode,
+    line_stroke: bool,
+}
+
+impl AreaChart {
+    pub fn new(series: impl IntoIterator<Item = ChartSeries>) -> Self {
+        Self {
+            series: series.into_iter().collect(),
+            options: ChartOptions {
+                id: unique_id("area-chart"),
+                ..ChartOptions::default()
+            },
+            mode: AreaChartMode::Overlay,
+            line_stroke: true,
+        }
+    }
+
+    pub fn id(mut self, id: impl Into<SharedString>) -> Self {
+        self.options.id = id.into();
+        self
+    }
+
+    pub fn height(mut self, height: Pixels) -> Self {
+        self.options.height = height;
+        self
+    }
+
+    pub fn show_grid(mut self, show: bool) -> Self {
+        self.options.show_grid = show;
+        self
+    }
+
+    pub fn show_axis(mut self, show: bool) -> Self {
+        self.options.show_axis = show;
+        self
+    }
+
+    pub fn show_legend(mut self, show: bool) -> Self {
+        self.options.show_legend = show;
+        self
+    }
+
+    pub fn y_domain(mut self, min: f64, max: f64) -> Self {
+        self.options.y_domain = Some((min, max));
+        self
+    }
+
+    pub fn y_format(mut self, formatter: fn(f64) -> SharedString) -> Self {
+        self.options.y_format = Some(formatter);
+        self
+    }
+
+    pub fn overlay(mut self) -> Self {
+        self.mode = AreaChartMode::Overlay;
+        self
+    }
+
+    pub fn stacked(mut self) -> Self {
+        self.mode = AreaChartMode::Stacked;
+        self
+    }
+
+    pub fn mode(mut self, mode: AreaChartMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    pub fn line_stroke(mut self, enabled: bool) -> Self {
+        self.line_stroke = enabled;
+        self
+    }
+
+    pub fn series(&self) -> &[ChartSeries] {
+        &self.series
+    }
+
+    pub fn options(&self) -> &ChartOptions {
+        &self.options
+    }
+
+    pub fn area_mode(&self) -> AreaChartMode {
+        self.mode
+    }
+}
+
+impl IntoElement for AreaChart {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
+    }
+}
+
+impl RenderOnce for AreaChart {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = cx.global::<Config>().theme.clone();
+        let palette = ChartPalette::from_config(cx.global::<Config>());
+        let has_data = has_chart_data(&self.series);
+        let height = self.options.height;
+        let id = self.options.id.clone();
+
+        let mut shell = div()
+            .id(ElementId::from(id.clone()))
+            .flex()
+            .flex_col()
+            .gap_2()
+            .w_full()
+            .p_3()
+            .rounded_md()
+            .border_1()
+            .border_color(theme.neutral.border)
+            .bg(theme.neutral.card);
+
+        if !has_data {
+            return shell
+                .h(height)
+                .items_center()
+                .justify_center()
+                .child(Empty::new().description("暂无图表数据"))
+                .into_any_element();
+        }
+
+        if self.options.show_legend {
+            shell = shell.child(render_legend(&self.series, &palette));
+        }
+
+        shell
+            .child(render_area_canvas(
+                self.series,
+                self.options,
+                palette,
+                self.mode,
+                self.line_stroke,
+            ))
+            .into_any_element()
+    }
+}
+
+fn render_legend(series: &[ChartSeries], palette: &ChartPalette) -> impl IntoElement {
+    Space::new()
+        .wrap()
+        .gap_md()
+        .children(series.iter().enumerate().map(|(index, series)| {
+            let color = series.color.unwrap_or_else(|| palette.series_color(index));
+            Space::new()
+                .gap_xs()
+                .align_center()
+                .child(
+                    div()
+                        .w(px(10.0))
+                        .h(px(10.0))
+                        .rounded_sm()
+                        .bg(color.opacity(0.72)),
+                )
+                .child(Text::new(series.name.clone()).size(px(12.0)))
+        }))
+}
+
+fn render_area_canvas(
+    series: Vec<ChartSeries>,
+    options: ChartOptions,
+    palette: ChartPalette,
+    mode: AreaChartMode,
+    line_stroke: bool,
+) -> impl IntoElement {
+    let height = options.height;
+    canvas(
+        |_, _, _| (),
+        move |bounds, _, window, _cx| {
+            let labels = collect_labels(&series);
+            if labels.is_empty() {
+                return;
+            }
+
+            let padding = options.padding;
+            let left = bounds.left() + padding.left;
+            let right = bounds.right() - padding.right;
+            let top = bounds.top() + padding.top;
+            let bottom = bounds.bottom() - padding.bottom;
+            let width = (right - left).max(px(1.0));
+            let plot_height = (bottom - top).max(px(1.0));
+
+            let x = ScalePoint::new(labels.clone(), (0.0, width.as_f32()));
+            let domain = if mode == AreaChartMode::Stacked {
+                options
+                    .y_domain
+                    .or_else(|| stacked_domain(&series))
+                    .map(|domain| normalized_domain_with_baseline(Some(domain), &[], true))
+                    .unwrap_or_else(|| normalized_domain_with_baseline(None, &series, true))
+            } else {
+                normalized_domain_with_baseline(options.y_domain, &series, true)
+            };
+            let y = ScaleLinear::new(domain, (plot_height.as_f32(), 0.0));
+            if options.show_grid || options.show_axis {
+                paint_chart_frame(
+                    left,
+                    top,
+                    width,
+                    plot_height,
+                    &labels,
+                    &x,
+                    &y,
+                    &palette,
+                    &options,
+                    window,
+                    _cx,
+                );
+            }
+
+            match mode {
+                AreaChartMode::Overlay => paint_overlay_areas(
+                    left,
+                    top,
+                    plot_height,
+                    &series,
+                    &x,
+                    &y,
+                    &palette,
+                    line_stroke,
+                    window,
+                ),
+                AreaChartMode::Stacked => {
+                    paint_stacked_areas(left, top, &series, &x, &y, &palette, line_stroke, window)
+                }
+            }
+        },
+    )
+    .w_full()
+    .h(height)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn paint_overlay_areas(
+    left: Pixels,
+    top: Pixels,
+    plot_height: Pixels,
+    series: &[ChartSeries],
+    x: &ScalePoint,
+    y: &ScaleLinear,
+    palette: &ChartPalette,
+    line_stroke: bool,
+    window: &mut Window,
+) {
+    let baseline = y.tick(0.0).clamp(0.0, plot_height.as_f32());
+    for (series_index, current) in series.iter().enumerate() {
+        let color = current
+            .color
+            .unwrap_or_else(|| palette.series_color(series_index));
+        let points = current
+            .points
+            .iter()
+            .enumerate()
+            .filter(|(_, chart_point)| chart_point.is_finite())
+            .filter_map(|(index, chart_point)| {
+                let x_pos = x.tick_index(index)?;
+                Some((
+                    left.as_f32() + x_pos,
+                    top.as_f32() + y.tick(chart_point.value),
+                ))
+            });
+        let points = finite_line_points(points);
+        if let Some(path) = area_path(&points, top + px(baseline)) {
+            window.paint_path(path, color.opacity(0.26));
+        }
+        if line_stroke {
+            if let Some(path) = line_path(&points, px(2.0)) {
+                window.paint_path(path, color);
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn paint_stacked_areas(
+    left: Pixels,
+    top: Pixels,
+    series: &[ChartSeries],
+    x: &ScalePoint,
+    y: &ScaleLinear,
+    palette: &ChartPalette,
+    line_stroke: bool,
+    window: &mut Window,
+) {
+    let labels_len = series
+        .iter()
+        .map(|series| series.points.len())
+        .max()
+        .unwrap_or(0);
+    let mut previous = vec![0.0_f64; labels_len];
+    for (series_index, current) in series.iter().enumerate() {
+        let color = current
+            .color
+            .unwrap_or_else(|| palette.series_color(series_index));
+        let mut lower = Vec::new();
+        let mut upper = Vec::new();
+        for point_index in 0..labels_len {
+            let value = current
+                .points
+                .get(point_index)
+                .filter(|point| point.is_finite())
+                .map(|point| point.value)
+                .unwrap_or(0.0);
+            let from = previous[point_index];
+            let to = from + value;
+            previous[point_index] = to;
+            if let Some(x_pos) = x.tick_index(point_index) {
+                lower.push((left.as_f32() + x_pos, top.as_f32() + y.tick(from)));
+                upper.push((left.as_f32() + x_pos, top.as_f32() + y.tick(to)));
+            }
+        }
+        let lower = finite_line_points(lower);
+        let upper = finite_line_points(upper);
+        if let Some(path) = stacked_area_path(&lower, &upper) {
+            window.paint_path(path, color.opacity(0.32));
+        }
+        if line_stroke {
+            if let Some(path) = line_path(&upper, px(2.0)) {
+                window.paint_path(path, color);
+            }
+        }
+    }
+}
+
+fn stacked_area_path(
+    lower: &[gpui::Point<Pixels>],
+    upper: &[gpui::Point<Pixels>],
+) -> Option<gpui::Path<Pixels>> {
+    let first = *upper.first()?;
+    if lower.is_empty() || upper.len() != lower.len() {
+        return None;
+    }
+    let mut builder = gpui::PathBuilder::fill();
+    builder.move_to(first);
+    for point in upper.iter().skip(1) {
+        builder.line_to(*point);
+    }
+    for point in lower.iter().rev() {
+        builder.line_to(*point);
+    }
+    builder.close();
+    builder.build().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::chart::ChartPoint;
+
+    fn sample_series() -> Vec<ChartSeries> {
+        vec![ChartSeries::new(
+            "Visitors",
+            [ChartPoint::new("Mon", 120.0), ChartPoint::new("Tue", 180.0)],
+        )]
+    }
+
+    #[test]
+    fn area_chart_builder_tracks_options_and_mode() {
+        let chart = AreaChart::new(sample_series())
+            .id("traffic-area")
+            .height(px(320.0))
+            .show_grid(false)
+            .show_axis(false)
+            .show_legend(false)
+            .y_domain(0.0, 500.0)
+            .line_stroke(false)
+            .stacked();
+
+        assert_eq!(chart.options().id, SharedString::from("traffic-area"));
+        assert_eq!(chart.options().height, px(320.0));
+        assert!(!chart.options().show_grid);
+        assert!(!chart.options().show_axis);
+        assert!(!chart.options().show_legend);
+        assert_eq!(chart.options().y_domain, Some((0.0, 500.0)));
+        assert_eq!(chart.area_mode(), AreaChartMode::Stacked);
+        assert!(!chart.line_stroke);
+    }
+
+    #[test]
+    fn area_chart_keeps_series_data() {
+        let chart = AreaChart::new(sample_series());
+        assert_eq!(chart.series().len(), 1);
+        assert_eq!(chart.series()[0].name, SharedString::from("Visitors"));
+    }
+}

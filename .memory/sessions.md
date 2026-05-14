@@ -3046,3 +3046,25 @@
 
 ### Verification
 - Documentation/planning update only; run `cargo fmt` / `cargo check` after implementation changes begin.
+
+## Session 54 — 2026-05-14 (P10 Charts Implementation Slice)
+
+### Actions
+- Added native chart foundation in `aura-components`: `ChartPoint`, `ChartSeries`, `ChartOptions`, palette/domain helpers, `ScaleLinear`, `ScalePoint`, `ScaleBand`, shared chart frame painting, and shape helpers.
+- Implemented `LineChart`, `AreaChart`, and `BarChart` as pure GPUI components using `canvas`, `PathBuilder`, `paint_path`, and `paint_quad`.
+- Added Gallery demos and Docs pages/snippets for LineChart, AreaChart, and BarChart.
+
+### Key Decisions
+- Shared axis/grid/label rendering now lives in `chart_frame.rs` to keep chart components thin.
+- Area and Bar charts support both overlay/grouped and stacked modes before adding hover tooltip complexity.
+- Docs snippets remain complete Rust files imported by the snippet check harness.
+
+### Verification
+- `cargo fmt`
+- `cargo check -p aura-components`
+- `cargo check -p aura-docs --bin check_snippets`
+- `cargo check -p aura-docs`
+- `cargo check -p aura-gallery`
+- `cargo test --workspace`
+- `timeout 8s cargo run -p aura-docs` (124 expected GUI timeout)
+- `timeout 8s cargo run -p aura-gallery` (124 expected GUI timeout)

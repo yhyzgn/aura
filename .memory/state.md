@@ -54,5 +54,5 @@ Initial technical direction:
 
 Expected P10 deliverables:
 - Shared chart infrastructure: scale, axis/grid, shapes, legend, tooltip/hover.
-- Components: LineChart, AreaChart, BarChart, PieChart, RingChart, Sparkline.
-- Gallery demos and Aura Docs pages/snippets for each chart.
+- Completed so far: LineChart, AreaChart, BarChart MVPs with Gallery demos, Docs pages, external snippets, and tests.
+- Remaining P10 components: PieChart, RingChart, Sparkline, plus tooltip/hover and larger-data performance work.

@@ -1,10 +1,12 @@
 pub mod affix_demo;
 pub mod alert_demo;
 pub mod anchor_demo;
+pub mod area_chart_demo;
 pub mod autocomplete_demo;
 pub mod avatar_demo;
 pub mod backtop_demo;
 pub mod badge_demo;
+pub mod bar_chart_demo;
 pub mod breadcrumb_demo;
 pub mod button_demo;
 pub mod card_demo;
@@ -329,6 +331,16 @@ pub fn registry() -> Vec<DemoEntry> {
             render: |cx| segmented_demo::render(cx).into(),
         },
         DemoEntry {
+            name: "AreaChart 面积图",
+            description: "原生 GPUI 绘制的趋势面积图",
+            render: |cx| area_chart_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "BarChart 柱状图",
+            description: "原生 GPUI 绘制的分类柱状图",
+            render: |cx| bar_chart_demo::render(cx).into(),
+        },
+        DemoEntry {
             name: "LineChart 折线图",
             description: "原生 GPUI 绘制的趋势折线图",
             render: |cx| line_chart_demo::render(cx).into(),
@@ -409,9 +421,11 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
     match component {
         "Affix" => Some(affix_demo::render(cx).into()),
         "Alert" => Some(alert_demo::render(cx).into()),
+        "AreaChart" => Some(area_chart_demo::render(cx).into()),
         "Anchor" => Some(anchor_demo::render(cx).into()),
         "Autocomplete" => Some(autocomplete_demo::render(cx).into()),
         "Avatar" => Some(avatar_demo::render(cx).into()),
+        "BarChart" => Some(bar_chart_demo::render(cx).into()),
         "Backtop" => Some(backtop_demo::render(cx).into()),
         "Badge" => Some(badge_demo::render(cx).into()),
         "Breadcrumb" => Some(breadcrumb_demo::render(cx).into()),

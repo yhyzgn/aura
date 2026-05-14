@@ -1,14 +1,14 @@
 use crate::chart::{
-    ChartOptions, ChartPalette, ChartSeries, collect_labels, default_y_format, has_chart_data,
-    normalized_domain,
+    ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data, normalized_domain,
 };
+use crate::chart_frame::paint_chart_frame;
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::chart_shape::{finite_line_points, line_path};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
 use gpui::{
-    App, Background, Component, ElementId, Hsla, InteractiveElement, IntoElement, ParentElement,
-    Pixels, RenderOnce, SharedString, Styled, TextRun, Window, canvas, div, fill, point, px, size,
+    App, Background, Component, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels,
+    RenderOnce, SharedString, Styled, Window, canvas, div, fill, point, px, size,
 };
 
 #[derive(Clone)]
@@ -171,10 +171,8 @@ fn render_line_canvas(
             let x = ScalePoint::new(labels.clone(), (0.0, width.as_f32()));
             let domain = normalized_domain(options.y_domain, &series);
             let y = ScaleLinear::new(domain, (plot_height.as_f32(), 0.0));
-            let y_format = options.y_format.unwrap_or(default_y_format);
-
             if options.show_grid || options.show_axis {
-                paint_frame(
+                paint_chart_frame(
                     left,
                     top,
                     width,
@@ -183,10 +181,7 @@ fn render_line_canvas(
                     &x,
                     &y,
                     &palette,
-                    options.y_tick_count,
-                    y_format,
-                    options.show_grid,
-                    options.show_axis,
+                    &options,
                     window,
                     _cx,
                 );
@@ -225,91 +220,6 @@ fn render_line_canvas(
     )
     .w_full()
     .h(height)
-}
-
-#[allow(clippy::too_many_arguments)]
-fn paint_frame(
-    left: Pixels,
-    top: Pixels,
-    width: Pixels,
-    height: Pixels,
-    labels: &[SharedString],
-    x: &ScalePoint,
-    y: &ScaleLinear,
-    palette: &ChartPalette,
-    tick_count: usize,
-    y_format: fn(f64) -> SharedString,
-    show_grid: bool,
-    show_axis: bool,
-    window: &mut Window,
-    cx: &mut App,
-) {
-    for (value, y_pos) in y.ticks(tick_count) {
-        let y_abs = top + px(y_pos);
-        if show_grid {
-            window.paint_quad(fill(
-                gpui::Bounds::new(point(left, y_abs), size(width, px(1.0))),
-                Background::from(palette.grid),
-            ));
-        }
-        if show_axis {
-            paint_label(
-                y_format(value),
-                point(left - px(38.0), y_abs - px(7.0)),
-                palette.label,
-                window,
-                cx,
-            );
-        }
-    }
-
-    if show_axis {
-        window.paint_quad(fill(
-            gpui::Bounds::new(point(left, top + height), size(width, px(1.0))),
-            Background::from(palette.axis),
-        ));
-        window.paint_quad(fill(
-            gpui::Bounds::new(point(left, top), size(px(1.0), height)),
-            Background::from(palette.axis),
-        ));
-
-        let last = labels.len().saturating_sub(1);
-        for (index, label) in labels.iter().enumerate() {
-            if labels.len() > 6 && index != 0 && index != last && index % 2 != 0 {
-                continue;
-            }
-            if let Some(x_pos) = x.tick_index(index) {
-                paint_label(
-                    label.clone(),
-                    point(left + px(x_pos) - px(14.0), top + height + px(8.0)),
-                    palette.label,
-                    window,
-                    cx,
-                );
-            }
-        }
-    }
-}
-
-fn paint_label(
-    text: SharedString,
-    origin: gpui::Point<Pixels>,
-    color: Hsla,
-    window: &mut Window,
-    cx: &mut App,
-) {
-    let run = TextRun {
-        len: text.len(),
-        font: window.text_style().font(),
-        color,
-        background_color: None,
-        underline: None,
-        strikethrough: None,
-    };
-    let line = window
-        .text_system()
-        .shape_line(text, px(11.0), &[run], None);
-    let _ = line.paint(origin, px(14.0), gpui::TextAlign::Left, None, window, cx);
 }
 
 #[cfg(test)]

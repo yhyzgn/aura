@@ -27,6 +27,12 @@ mod anchor_nested;
 mod anchor_targets;
 #[path = "../../content/snippets/architecture/render_pipeline.rs"]
 mod architecture_render_pipeline;
+#[path = "../../content/snippets/area_chart/basic.rs"]
+mod area_chart_basic;
+#[path = "../../content/snippets/area_chart/overlay.rs"]
+mod area_chart_overlay;
+#[path = "../../content/snippets/area_chart/stacked.rs"]
+mod area_chart_stacked;
 #[path = "../../content/snippets/authoring/code_block.rs"]
 mod authoring_code_block;
 #[path = "../../content/snippets/autocomplete/basic.rs"]
@@ -55,6 +61,12 @@ mod badge_basic;
 mod badge_dot;
 #[path = "../../content/snippets/badge/max.rs"]
 mod badge_max;
+#[path = "../../content/snippets/bar_chart/basic.rs"]
+mod bar_chart_basic;
+#[path = "../../content/snippets/bar_chart/grouped.rs"]
+mod bar_chart_grouped;
+#[path = "../../content/snippets/bar_chart/stacked.rs"]
+mod bar_chart_stacked;
 #[path = "../../content/snippets/breadcrumb/basic.rs"]
 mod breadcrumb_basic;
 #[path = "../../content/snippets/breadcrumb/clickable.rs"]
