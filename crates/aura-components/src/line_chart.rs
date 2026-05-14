@@ -1,11 +1,9 @@
 use crate::chart::{
     ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data, normalized_domain,
 };
-use crate::chart_frame::paint_chart_frame;
+use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
-use crate::chart_shape::{
-    area_path, finite_line_points, line_path, smooth_area_path, smooth_line_path,
-};
+use crate::chart_shape::{area_path, line_path, smooth_area_path, smooth_line_path};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
 use gpui::{
@@ -83,6 +81,11 @@ impl LineChart {
 
     pub fn area_fill(mut self, enabled: bool) -> Self {
         self.area_fill = enabled;
+        self
+    }
+
+    pub fn show_value_labels(mut self, show: bool) -> Self {
+        self.options.show_value_labels = show;
         self
     }
 
@@ -184,7 +187,7 @@ fn render_line_canvas(
     let height = options.height;
     canvas(
         |_, _, _| (),
-        move |bounds, _, window, _cx| {
+        move |bounds, _, window, cx| {
             let labels = collect_labels(&series);
             if labels.is_empty() {
                 return;
@@ -213,7 +216,7 @@ fn render_line_canvas(
                     &palette,
                     &options,
                     window,
-                    _cx,
+                    cx,
                 );
             }
 
@@ -221,16 +224,24 @@ fn render_line_canvas(
                 let color = current
                     .color
                     .unwrap_or_else(|| palette.series_color(series_index));
-                let points = current
+                let point_data = current
                     .points
                     .iter()
                     .enumerate()
-                    .filter(|(_, point)| point.is_finite())
-                    .filter_map(|(index, point)| {
+                    .filter(|(_, chart_point)| chart_point.is_finite())
+                    .filter_map(|(index, chart_point)| {
                         let x_pos = x.tick_index(index)?;
-                        Some((left.as_f32() + x_pos, top.as_f32() + y.tick(point.value)))
-                    });
-                let points = finite_line_points(points);
+                        let position = point(
+                            left + px(x_pos),
+                            top + px(y.tick(chart_point.value).clamp(0.0, plot_height.as_f32())),
+                        );
+                        Some((position, chart_point.value))
+                    })
+                    .collect::<Vec<_>>();
+                let points = point_data
+                    .iter()
+                    .map(|(position, _)| *position)
+                    .collect::<Vec<_>>();
                 if area_fill {
                     let baseline_y = top + px(plot_height.as_f32());
                     let area = if smooth {
@@ -251,7 +262,7 @@ fn render_line_canvas(
                     window.paint_path(path, color);
                 }
                 if point_markers {
-                    for point_pos in points {
+                    for (point_pos, _) in &point_data {
                         window.paint_quad(fill(
                             gpui::Bounds::new(
                                 point(point_pos.x - px(3.0), point_pos.y - px(3.0)),
@@ -259,6 +270,19 @@ fn render_line_canvas(
                             ),
                             Background::from(color),
                         ));
+                    }
+                }
+                if options.show_value_labels {
+                    for (point_pos, value) in &point_data {
+                        paint_chart_label_aligned(
+                            format_chart_value(*value, options.y_format),
+                            point(point_pos.x - px(18.0), point_pos.y - px(20.0)),
+                            palette.label,
+                            gpui::TextAlign::Center,
+                            Some(px(36.0)),
+                            window,
+                            cx,
+                        );
                     }
                 }
             }
@@ -294,7 +318,8 @@ mod tests {
             .show_axis(false)
             .show_legend(false)
             .y_domain(0.0, 100.0)
-            .point_markers(false);
+            .point_markers(false)
+            .show_value_labels(false);
 
         assert_eq!(chart.options().id, SharedString::from("cpu-line"));
         assert_eq!(chart.options().height, px(320.0));
@@ -303,6 +328,7 @@ mod tests {
         assert!(!chart.options().show_legend);
         assert_eq!(chart.options().y_domain, Some((0.0, 100.0)));
         assert!(!chart.point_markers);
+        assert!(!chart.options().show_value_labels);
     }
 
     #[test]

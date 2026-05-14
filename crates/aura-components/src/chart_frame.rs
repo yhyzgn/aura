@@ -1,6 +1,8 @@
 use crate::chart::{ChartOptions, ChartPalette, default_y_format};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
-use gpui::{App, Background, Hsla, Pixels, SharedString, TextRun, Window, fill, point, px, size};
+use gpui::{
+    App, Background, Hsla, Pixels, SharedString, TextAlign, TextRun, Window, fill, point, px, size,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn paint_chart_frame(
@@ -71,6 +73,18 @@ pub fn paint_chart_label(
     window: &mut Window,
     cx: &mut App,
 ) {
+    paint_chart_label_aligned(text, origin, color, TextAlign::Left, None, window, cx);
+}
+
+pub fn paint_chart_label_aligned(
+    text: SharedString,
+    origin: gpui::Point<Pixels>,
+    color: Hsla,
+    align: TextAlign,
+    align_width: Option<Pixels>,
+    window: &mut Window,
+    cx: &mut App,
+) {
     let run = TextRun {
         len: text.len(),
         font: window.text_style().font(),
@@ -82,5 +96,9 @@ pub fn paint_chart_label(
     let line = window
         .text_system()
         .shape_line(text, px(11.0), &[run], None);
-    let _ = line.paint(origin, px(14.0), gpui::TextAlign::Left, None, window, cx);
+    let _ = line.paint(origin, px(14.0), align, align_width, window, cx);
+}
+
+pub fn format_chart_value(value: f64, formatter: Option<fn(f64) -> SharedString>) -> SharedString {
+    formatter.unwrap_or(default_y_format)(value)
 }

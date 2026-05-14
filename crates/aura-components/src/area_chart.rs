@@ -2,7 +2,7 @@ use crate::chart::{
     ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data,
     normalized_domain_with_baseline, stacked_domain,
 };
-use crate::chart_frame::paint_chart_frame;
+use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::chart_shape::{area_path, finite_line_points, line_path};
 use crate::{Empty, Space, Text};
@@ -71,6 +71,11 @@ impl AreaChart {
 
     pub fn y_format(mut self, formatter: fn(f64) -> SharedString) -> Self {
         self.options.y_format = Some(formatter);
+        self
+    }
+
+    pub fn show_value_labels(mut self, show: bool) -> Self {
+        self.options.show_value_labels = show;
         self
     }
 
@@ -190,7 +195,7 @@ fn render_area_canvas(
     let height = options.height;
     canvas(
         |_, _, _| (),
-        move |bounds, _, window, _cx| {
+        move |bounds, _, window, cx| {
             let labels = collect_labels(&series);
             if labels.is_empty() {
                 return;
@@ -227,7 +232,7 @@ fn render_area_canvas(
                     &palette,
                     &options,
                     window,
-                    _cx,
+                    cx,
                 );
             }
 
@@ -240,12 +245,23 @@ fn render_area_canvas(
                     &x,
                     &y,
                     &palette,
+                    &options,
                     line_stroke,
                     window,
+                    cx,
                 ),
-                AreaChartMode::Stacked => {
-                    paint_stacked_areas(left, top, &series, &x, &y, &palette, line_stroke, window)
-                }
+                AreaChartMode::Stacked => paint_stacked_areas(
+                    left,
+                    top,
+                    &series,
+                    &x,
+                    &y,
+                    &palette,
+                    &options,
+                    line_stroke,
+                    window,
+                    cx,
+                ),
             }
         },
     )
@@ -262,15 +278,17 @@ fn paint_overlay_areas(
     x: &ScalePoint,
     y: &ScaleLinear,
     palette: &ChartPalette,
+    options: &ChartOptions,
     line_stroke: bool,
     window: &mut Window,
+    cx: &mut App,
 ) {
     let baseline = y.tick(0.0).clamp(0.0, plot_height.as_f32());
     for (series_index, current) in series.iter().enumerate() {
         let color = current
             .color
             .unwrap_or_else(|| palette.series_color(series_index));
-        let points = current
+        let point_data = current
             .points
             .iter()
             .enumerate()
@@ -278,17 +296,34 @@ fn paint_overlay_areas(
             .filter_map(|(index, chart_point)| {
                 let x_pos = x.tick_index(index)?;
                 Some((
-                    left.as_f32() + x_pos,
-                    top.as_f32() + y.tick(chart_point.value),
+                    gpui::point(left + px(x_pos), top + px(y.tick(chart_point.value))),
+                    chart_point.value,
                 ))
-            });
-        let points = finite_line_points(points);
+            })
+            .collect::<Vec<_>>();
+        let points = point_data
+            .iter()
+            .map(|(position, _)| *position)
+            .collect::<Vec<_>>();
         if let Some(path) = area_path(&points, top + px(baseline)) {
             window.paint_path(path, color.opacity(0.26));
         }
         if line_stroke {
             if let Some(path) = line_path(&points, px(2.0)) {
                 window.paint_path(path, color);
+            }
+        }
+        if options.show_value_labels {
+            for (position, value) in &point_data {
+                paint_chart_label_aligned(
+                    format_chart_value(*value, options.y_format),
+                    gpui::point(position.x - px(18.0), position.y - px(20.0)),
+                    palette.label,
+                    gpui::TextAlign::Center,
+                    Some(px(36.0)),
+                    window,
+                    cx,
+                );
             }
         }
     }
@@ -302,8 +337,10 @@ fn paint_stacked_areas(
     x: &ScalePoint,
     y: &ScaleLinear,
     palette: &ChartPalette,
+    options: &ChartOptions,
     line_stroke: bool,
     window: &mut Window,
+    cx: &mut App,
 ) {
     let labels_len = series
         .iter()
@@ -340,6 +377,25 @@ fn paint_stacked_areas(
         if line_stroke {
             if let Some(path) = line_path(&upper, px(2.0)) {
                 window.paint_path(path, color);
+            }
+        }
+        if options.show_value_labels {
+            for (point_index, position) in upper.iter().enumerate() {
+                let value = current
+                    .points
+                    .get(point_index)
+                    .filter(|point| point.is_finite())
+                    .map(|point| point.value)
+                    .unwrap_or(0.0);
+                paint_chart_label_aligned(
+                    format_chart_value(value, options.y_format),
+                    gpui::point(position.x - px(18.0), position.y - px(20.0)),
+                    palette.label,
+                    gpui::TextAlign::Center,
+                    Some(px(36.0)),
+                    window,
+                    cx,
+                );
             }
         }
     }
@@ -387,6 +443,7 @@ mod tests {
             .show_legend(false)
             .y_domain(0.0, 500.0)
             .line_stroke(false)
+            .show_value_labels(false)
             .stacked();
 
         assert_eq!(chart.options().id, SharedString::from("traffic-area"));
@@ -395,6 +452,7 @@ mod tests {
         assert!(!chart.options().show_axis);
         assert!(!chart.options().show_legend);
         assert_eq!(chart.options().y_domain, Some((0.0, 500.0)));
+        assert!(!chart.options().show_value_labels);
         assert_eq!(chart.area_mode(), AreaChartMode::Stacked);
         assert!(!chart.line_stroke);
     }

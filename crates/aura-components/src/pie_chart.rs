@@ -1,4 +1,5 @@
-use crate::chart::{ChartPalette, ChartSeries, has_chart_data};
+use crate::chart::{ChartPalette, ChartSeries, default_y_format, has_chart_data};
+use crate::chart_frame::paint_chart_label_aligned;
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
 use gpui::{
@@ -12,6 +13,7 @@ pub struct PieChart {
     id: SharedString,
     height: Pixels,
     show_legend: bool,
+    show_value_labels: bool,
 }
 
 #[derive(Clone)]
@@ -20,6 +22,7 @@ pub struct RingChart {
     id: SharedString,
     height: Pixels,
     show_legend: bool,
+    show_value_labels: bool,
     inner_ratio: f32,
 }
 
@@ -30,6 +33,7 @@ impl PieChart {
             id: unique_id("pie-chart"),
             height: px(280.0),
             show_legend: true,
+            show_value_labels: true,
         }
     }
 
@@ -48,6 +52,11 @@ impl PieChart {
         self
     }
 
+    pub fn show_value_labels(mut self, show: bool) -> Self {
+        self.show_value_labels = show;
+        self
+    }
+
     pub fn slices(&self) -> &[ChartSeries] {
         &self.slices
     }
@@ -60,6 +69,7 @@ impl RingChart {
             id: unique_id("ring-chart"),
             height: px(280.0),
             show_legend: true,
+            show_value_labels: true,
             inner_ratio: 0.62,
         }
     }
@@ -76,6 +86,11 @@ impl RingChart {
 
     pub fn show_legend(mut self, show: bool) -> Self {
         self.show_legend = show;
+        self
+    }
+
+    pub fn show_value_labels(mut self, show: bool) -> Self {
+        self.show_value_labels = show;
         self
     }
 
@@ -107,7 +122,15 @@ impl IntoElement for RingChart {
 
 impl RenderOnce for PieChart {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        render_shell(self.slices, self.id, self.height, self.show_legend, 0.0, cx)
+        render_shell(
+            self.slices,
+            self.id,
+            self.height,
+            self.show_legend,
+            self.show_value_labels,
+            0.0,
+            cx,
+        )
     }
 }
 
@@ -118,6 +141,7 @@ impl RenderOnce for RingChart {
             self.id,
             self.height,
             self.show_legend,
+            self.show_value_labels,
             self.inner_ratio,
             cx,
         )
@@ -129,6 +153,7 @@ fn render_shell(
     id: SharedString,
     height: Pixels,
     show_legend: bool,
+    show_value_labels: bool,
     inner_ratio: f32,
     cx: &mut App,
 ) -> impl IntoElement {
@@ -167,6 +192,7 @@ fn render_shell(
             palette,
             theme.neutral.card,
             inner_ratio,
+            show_value_labels,
             height,
         ))
         .into_any_element()
@@ -191,11 +217,12 @@ fn render_canvas(
     palette: ChartPalette,
     hole_color: Hsla,
     inner_ratio: f32,
+    show_value_labels: bool,
     height: Pixels,
 ) -> impl IntoElement {
     canvas(
         |_, _, _| (),
-        move |bounds, _, window, _cx| {
+        move |bounds, _, window, cx| {
             let inset = px(18.0);
             let width = (bounds.right() - bounds.left() - inset * 2.0).max(px(1.0));
             let height = (bounds.bottom() - bounds.top() - inset * 2.0).max(px(1.0));
@@ -227,10 +254,24 @@ fn render_canvas(
                 }
                 let sweep = (value / total) as f32 * 360.0;
                 let color = series.color.unwrap_or_else(|| palette.series_color(index));
-                if let Some(path) = pie_slice_path(center, radius, start, start + sweep) {
+                let end = start + sweep;
+                if let Some(path) = pie_slice_path(center, radius, start, end) {
                     window.paint_path(path, color);
                 }
-                start += sweep;
+                if show_value_labels {
+                    paint_slice_value_label(
+                        center,
+                        radius,
+                        inner_ratio,
+                        start,
+                        end,
+                        value,
+                        total,
+                        window,
+                        cx,
+                    );
+                }
+                start = end;
             }
 
             if inner_ratio > 0.0 {
@@ -243,6 +284,46 @@ fn render_canvas(
     )
     .w_full()
     .h(height)
+}
+
+fn paint_slice_value_label(
+    center: Point<Pixels>,
+    radius: f32,
+    inner_ratio: f32,
+    start_deg: f32,
+    end_deg: f32,
+    value: f64,
+    total: f64,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let sweep = (end_deg - start_deg).abs();
+    if sweep < 12.0 {
+        return;
+    }
+
+    let mid_deg = (start_deg + end_deg) * 0.5;
+    let label_radius = if inner_ratio > 0.0 {
+        radius * (inner_ratio + 1.0) * 0.5
+    } else {
+        radius * 0.62
+    };
+    let position = polar_point(center, label_radius, mid_deg);
+    let percent = if total > f64::EPSILON {
+        value / total * 100.0
+    } else {
+        0.0
+    };
+    let text = format!("{} / {:.0}%", default_y_format(value), percent).into();
+    paint_chart_label_aligned(
+        text,
+        point(position.x - px(28.0), position.y - px(7.0)),
+        gpui::white(),
+        gpui::TextAlign::Center,
+        Some(px(56.0)),
+        window,
+        cx,
+    );
 }
 
 fn pie_slice_path(
@@ -331,14 +412,19 @@ mod tests {
         let chart = PieChart::new(slices())
             .id("pie")
             .height(px(240.0))
-            .show_legend(false);
+            .show_legend(false)
+            .show_value_labels(false);
         assert_eq!(chart.slices().len(), 3);
+        assert!(!chart.show_value_labels);
     }
 
     #[test]
     fn ring_chart_tracks_inner_ratio() {
-        let chart = RingChart::new(slices()).inner_ratio(0.5);
+        let chart = RingChart::new(slices())
+            .inner_ratio(0.5)
+            .show_value_labels(false);
         assert_eq!(chart.slices().len(), 3);
         assert!(chart.inner_ratio >= 0.2 && chart.inner_ratio <= 0.9);
+        assert!(!chart.show_value_labels);
     }
 }

@@ -119,6 +119,7 @@ pub struct ChartOptions {
     pub y_domain: Option<(f64, f64)>,
     pub y_tick_count: usize,
     pub y_format: Option<fn(f64) -> SharedString>,
+    pub show_value_labels: bool,
 }
 
 impl Default for ChartOptions {
@@ -133,6 +134,7 @@ impl Default for ChartOptions {
             y_domain: None,
             y_tick_count: 4,
             y_format: None,
+            show_value_labels: true,
         }
     }
 }

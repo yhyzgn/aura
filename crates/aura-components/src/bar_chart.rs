@@ -2,7 +2,7 @@ use crate::chart::{
     ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data, normalized_domain,
     stacked_domain,
 };
-use crate::chart_frame::paint_chart_frame;
+use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleBand, ScaleLinear, ScalePoint};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
@@ -68,6 +68,11 @@ impl BarChart {
 
     pub fn y_format(mut self, formatter: fn(f64) -> SharedString) -> Self {
         self.options.y_format = Some(formatter);
+        self
+    }
+
+    pub fn show_value_labels(mut self, show: bool) -> Self {
+        self.options.show_value_labels = show;
         self
     }
 
@@ -174,7 +179,7 @@ fn render_bar_canvas(
     let height = options.height;
     canvas(
         |_, _, _| (),
-        move |bounds, _, window, _cx| {
+        move |bounds, _, window, cx| {
             let labels = collect_labels(&series);
             if labels.is_empty() {
                 return;
@@ -214,17 +219,35 @@ fn render_bar_canvas(
                     &palette,
                     &options,
                     window,
-                    _cx,
+                    cx,
                 );
             }
 
             match mode {
-                BarChartMode::Grouped => {
-                    paint_grouped_bars(left, top, plot_height, &series, &band, &y, &palette, window)
-                }
-                BarChartMode::Stacked => {
-                    paint_stacked_bars(left, top, plot_height, &series, &band, &y, &palette, window)
-                }
+                BarChartMode::Grouped => paint_grouped_bars(
+                    left,
+                    top,
+                    plot_height,
+                    &series,
+                    &band,
+                    &y,
+                    &palette,
+                    &options,
+                    window,
+                    cx,
+                ),
+                BarChartMode::Stacked => paint_stacked_bars(
+                    left,
+                    top,
+                    plot_height,
+                    &series,
+                    &band,
+                    &y,
+                    &palette,
+                    &options,
+                    window,
+                    cx,
+                ),
             }
         },
     )
@@ -240,7 +263,9 @@ fn paint_grouped_bars(
     band: &ScaleBand,
     y: &ScaleLinear,
     palette: &ChartPalette,
+    options: &ChartOptions,
     window: &mut Window,
+    cx: &mut App,
 ) {
     let baseline = y.tick(0.0).clamp(0.0, plot_height.as_f32());
     let series_count = series.len().max(1) as f32;
@@ -270,6 +295,22 @@ fn paint_grouped_bars(
                 ),
                 Background::from(color),
             ));
+            if options.show_value_labels {
+                let label_y = if chart_point.value >= 0.0 {
+                    top_y - 17.0
+                } else {
+                    top_y + height + 3.0
+                };
+                paint_chart_label_aligned(
+                    format_chart_value(chart_point.value, options.y_format),
+                    point(left + px(x + bar_width * 0.5 - 24.0), top + px(label_y)),
+                    palette.label,
+                    gpui::TextAlign::Center,
+                    Some(px(48.0)),
+                    window,
+                    cx,
+                );
+            }
         }
     }
 }
@@ -282,7 +323,9 @@ fn paint_stacked_bars(
     band: &ScaleBand,
     y: &ScaleLinear,
     palette: &ChartPalette,
+    options: &ChartOptions,
     window: &mut Window,
+    cx: &mut App,
 ) {
     let baseline = y.tick(0.0).clamp(0.0, plot_height.as_f32());
     let labels_len = series
@@ -326,6 +369,20 @@ fn paint_stacked_bars(
                 ),
                 Background::from(color),
             ));
+            if options.show_value_labels {
+                paint_chart_label_aligned(
+                    format_chart_value(chart_point.value, options.y_format),
+                    point(
+                        left + px(group_x + band.band_width().max(1.0) * 0.5 - 24.0),
+                        top + px(top_y + height * 0.5 - 7.0),
+                    ),
+                    gpui::white(),
+                    gpui::TextAlign::Center,
+                    Some(px(48.0)),
+                    window,
+                    cx,
+                );
+            }
         }
     }
 }
@@ -357,6 +414,7 @@ mod tests {
             .show_axis(false)
             .show_legend(false)
             .y_domain(0.0, 100.0)
+            .show_value_labels(false)
             .stacked();
 
         assert_eq!(chart.options().id, SharedString::from("sales-bars"));
@@ -365,6 +423,7 @@ mod tests {
         assert!(!chart.options().show_axis);
         assert!(!chart.options().show_legend);
         assert_eq!(chart.options().y_domain, Some((0.0, 100.0)));
+        assert!(!chart.options().show_value_labels);
         assert_eq!(chart.bar_mode(), BarChartMode::Stacked);
     }
 
