@@ -1,10 +1,10 @@
 use aura_core::Config;
 use gpui::{
     App, Bounds, ClipboardItem, Component, Context, Element, ElementId, Entity, FocusHandle,
-    Focusable, GlobalElementId, InspectorElementId, IntoElement, LayoutId, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, RenderOnce,
-    SharedString, Style, TextRun, TextStyle, WhiteSpace, Window, actions, div, fill, point,
-    prelude::*, px, relative, size,
+    Focusable, GlobalElementId, InspectorElementId, IntoElement, KeyDownEvent, LayoutId,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render,
+    RenderOnce, SharedString, Style, TextRun, TextStyle, WhiteSpace, Window, actions, div, fill,
+    point, prelude::*, px, relative, size,
 };
 use std::{
     collections::HashMap,
@@ -409,7 +409,7 @@ impl SelectableTextState {
         }
     }
 
-    fn select_all(&mut self, _: &SelectableTextSelectAll, _: &mut Window, cx: &mut Context<Self>) {
+    fn set_select_all(&mut self, cx: &mut Context<Self>) {
         let changed = with_selection_state(&self.id, |state| {
             let changed = state.selected_range != (0..self.text.len())
                 || state.selection_reversed
@@ -421,6 +421,22 @@ impl SelectableTextState {
         });
         if changed {
             cx.notify();
+        }
+    }
+
+    fn select_all(&mut self, _: &SelectableTextSelectAll, _: &mut Window, cx: &mut Context<Self>) {
+        self.set_select_all(cx);
+    }
+
+    fn on_key_down(&mut self, event: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if event.keystroke.key.eq_ignore_ascii_case("a")
+            && (event.keystroke.modifiers.control || event.keystroke.modifiers.platform)
+            && !event.keystroke.modifiers.alt
+            && !event.keystroke.modifiers.shift
+            && !event.keystroke.modifiers.function
+        {
+            self.set_select_all(cx);
+            cx.stop_propagation();
         }
     }
 
@@ -501,6 +517,7 @@ impl Render for SelectableTextState {
             .key_context(self.key_context)
             .track_focus(&self.focus_handle(cx))
             .cursor_text()
+            .on_key_down(cx.listener(Self::on_key_down))
             .on_action(cx.listener(Self::select_all))
             .on_action(cx.listener(Self::copy))
             .child(SelectableTextElement {
@@ -814,7 +831,11 @@ mod tests {
         assert!(source.contains("KeyBinding::new(\"cmd-a\""));
         assert!(source.contains("KeyBinding::new(\"ctrl-c\""));
         assert!(source.contains("KeyBinding::new(\"cmd-c\""));
+        assert!(source.contains("fn set_select_all"));
         assert!(source.contains("fn select_all"));
+        assert!(source.contains("fn on_key_down"));
+        assert!(source.contains("event.keystroke.modifiers.control"));
+        assert!(source.contains("event.keystroke.modifiers.platform"));
         assert!(source.contains("event.click_count == 2"));
         assert!(source.contains("window.capture_pointer"));
         assert!(source.contains("phase.capture()"));
