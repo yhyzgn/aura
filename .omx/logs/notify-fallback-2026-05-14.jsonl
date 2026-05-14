@@ -17260,3 +17260,11 @@
 {"timestamp":"2026-05-14T07:23:02.816Z","type":"leader_nudge_tick","leader_only":true,"run_count":16201,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
 {"timestamp":"2026-05-14T07:23:03.082Z","type":"leader_nudge_tick","leader_only":true,"run_count":16202,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
 {"timestamp":"2026-05-14T07:23:03.348Z","type":"leader_nudge_tick","leader_only":true,"run_count":16203,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:03.614Z","type":"leader_nudge_tick","leader_only":true,"run_count":16204,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:03.880Z","type":"leader_nudge_tick","leader_only":true,"run_count":16205,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:04.147Z","type":"leader_nudge_tick","leader_only":true,"run_count":16206,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:04.413Z","type":"leader_nudge_tick","leader_only":true,"run_count":16207,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:04.680Z","type":"leader_nudge_tick","leader_only":true,"run_count":16208,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:04.949Z","type":"leader_nudge_tick","leader_only":true,"run_count":16209,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:05.215Z","type":"leader_nudge_tick","leader_only":true,"run_count":16210,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:23:05.481Z","type":"leader_nudge_tick","leader_only":true,"run_count":16211,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
