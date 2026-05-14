@@ -12,7 +12,10 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-actions!(selectable_text_actions, [SelectableTextCopy]);
+actions!(
+    selectable_text_actions,
+    [SelectableTextSelectAll, SelectableTextCopy]
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SelectableTextWrap {
@@ -63,6 +66,8 @@ pub struct SelectableText;
 impl SelectableText {
     pub fn register_key_bindings(cx: &mut App) {
         cx.bind_keys([
+            gpui::KeyBinding::new("cmd-a", SelectableTextSelectAll, Some("SelectableText")),
+            gpui::KeyBinding::new("ctrl-a", SelectableTextSelectAll, Some("SelectableText")),
             gpui::KeyBinding::new("cmd-c", SelectableTextCopy, Some("SelectableText")),
             gpui::KeyBinding::new("ctrl-c", SelectableTextCopy, Some("SelectableText")),
         ]);
@@ -404,6 +409,21 @@ impl SelectableTextState {
         }
     }
 
+    fn select_all(&mut self, _: &SelectableTextSelectAll, _: &mut Window, cx: &mut Context<Self>) {
+        let changed = with_selection_state(&self.id, |state| {
+            let changed = state.selected_range != (0..self.text.len())
+                || state.selection_reversed
+                || state.selecting;
+            state.selected_range = 0..self.text.len();
+            state.selection_reversed = false;
+            state.selecting = false;
+            changed
+        });
+        if changed {
+            cx.notify();
+        }
+    }
+
     fn copy(&mut self, _: &SelectableTextCopy, _: &mut Window, cx: &mut Context<Self>) {
         let selected_range = selected_range_snapshot(&self.id);
         if !selected_range.is_empty() {
@@ -481,6 +501,7 @@ impl Render for SelectableTextState {
             .key_context(self.key_context)
             .track_focus(&self.focus_handle(cx))
             .cursor_text()
+            .on_action(cx.listener(Self::select_all))
             .on_action(cx.listener(Self::copy))
             .child(SelectableTextElement {
                 id: ElementId::from(format!("{:?}-text", self.id)),
@@ -787,9 +808,13 @@ mod tests {
     #[test]
     fn selectable_text_actions_include_copy_shortcuts() {
         let source = include_str!("selectable_text.rs");
+        assert!(source.contains("SelectableTextSelectAll"));
         assert!(source.contains("SelectableTextCopy"));
+        assert!(source.contains("KeyBinding::new(\"ctrl-a\""));
+        assert!(source.contains("KeyBinding::new(\"cmd-a\""));
         assert!(source.contains("KeyBinding::new(\"ctrl-c\""));
         assert!(source.contains("KeyBinding::new(\"cmd-c\""));
+        assert!(source.contains("fn select_all"));
         assert!(source.contains("event.click_count == 2"));
         assert!(source.contains("window.capture_pointer"));
         assert!(source.contains("phase.capture()"));

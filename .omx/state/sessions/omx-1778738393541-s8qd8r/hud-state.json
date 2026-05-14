@@ -1,6 +1,6 @@
 {
-  "last_turn_at": "2026-05-14T06:31:45.080Z",
-  "last_progress_at": "2026-05-14T06:31:45.080Z",
-  "turn_count": 2,
-  "last_agent_output": "原因找到了：不是 `Text/Paragraph/Title` 没做选中，而是 **docs Markdown 虚拟列表渲染时，Paragraph/Title 每次重绘都会生成新的 `unique_i"
+  "last_turn_at": "2026-05-14T06:39:01.220Z",
+  "last_progress_at": "2026-05-14T06:39:01.220Z",
+  "turn_count": 3,
+  "last_agent_output": "对，之前确实缺了“点其他地方取消选区”。\n\n已补好：\n- `SelectableText` 在焦点离开时会清空选中区域\n- 因为 `Text / Paragraph / Title` 都走同一个 `S"
 }

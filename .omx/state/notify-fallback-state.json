@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 7735,
+    "run_count": 9911,
     "leader_only": true,
-    "last_tick_at": "2026-05-14T06:38:14.703Z",
+    "last_tick_at": "2026-05-14T06:50:03.240Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-14T06:38:14.704Z",
+    "last_tick_at": "2026-05-14T06:50:03.241Z",
     "last_error": null,
-    "run_count": 7735
+    "run_count": 9911
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-14T06:38:14.717Z",
+    "last_state_check_at": "2026-05-14T06:50:03.255Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "blocked_by_current_session",
@@ -57,10 +57,10 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-14T06:38:14.704Z",
-    "last_turn_at": "2026-05-14T06:31:45.080Z",
-    "last_turn_count": 2,
-    "last_message": "原因找到了：不是 `Text/Paragraph/Title` 没做选中，而是 **docs Markdown 虚拟列表渲染时，Paragraph/Title 每次重绘都会生成新的 `unique_i",
+    "last_tick_at": "2026-05-14T06:50:03.241Z",
+    "last_turn_at": "2026-05-14T06:39:01.220Z",
+    "last_turn_count": 3,
+    "last_message": "对，之前确实缺了“点其他地方取消选区”。\n\n已补好：\n- `SelectableText` 在焦点离开时会清空选中区域\n- 因为 `Text / Paragraph / Title` 都走同一个 `S",
     "last_reason": "eligible_but_not_sent",
     "last_error": null,
     "last_nudged_signature": "",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 250,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-14T06:38:14.717Z",
-    "last_activity_at": "2026-05-14T06:38:14.717Z",
+    "last_tick_at": "2026-05-14T06:50:03.256Z",
+    "last_activity_at": "2026-05-14T06:50:03.256Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"
