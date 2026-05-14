@@ -34,3 +34,14 @@
 
 ```rust src="area_chart/stacked.rs"
 ```
+
+## 平滑面积与标签配置
+
+### 效果
+
+::AuraDemo{component="AreaChartCustom"}::
+
+### 代码
+
+```rust src="area_chart/custom.rs"
+```

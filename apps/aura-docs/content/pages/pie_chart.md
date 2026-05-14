@@ -12,3 +12,14 @@
 
 ```rust src="pie_chart/basic.rs"
 ```
+
+## 外部自由标注与百分比
+
+### 效果
+
+::AuraDemo{component="PieChartCustom"}::
+
+### 代码
+
+```rust src="pie_chart/custom.rs"
+```

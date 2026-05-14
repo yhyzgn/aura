@@ -1,6 +1,6 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{ChartPoint, ChartSeries, LineChart, Space};
-use gpui::{AnyView, App, Context, Render, Window, prelude::*, px};
+use aura_components::{ChartPoint, ChartSeries, ChartValueLabelContent, LineChart, Space};
+use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| LineChartDemo).into()
@@ -36,6 +36,17 @@ impl Render for LineChartDemo {
                         .area_fill(true),
                 ))
                 .child(section(
+                    "颜色、线宽、平滑与标签",
+                    "每个序列都能指定颜色、线条粗细与是否平滑，标签内容也可切换为百分比。",
+                    LineChart::new(custom_series())
+                        .id("line-chart-demo-custom")
+                        .height(px(420.0))
+                        .y_domain(0.0, 100.0)
+                        .area_fill(true)
+                        .value_label_content(ChartValueLabelContent::Percentage)
+                        .percentage_decimals(1),
+                ))
+                .child(section(
                     "无数据",
                     "空数据自动降级为空状态。",
                     LineChart::new(Vec::<ChartSeries>::new())
@@ -58,6 +69,39 @@ pub fn cpu_series() -> Vec<ChartSeries> {
             ChartPoint::new("10:25", 64.0),
         ],
     )]
+}
+
+pub fn custom_series() -> Vec<ChartSeries> {
+    vec![
+        ChartSeries::new(
+            "CPU",
+            [
+                ChartPoint::new("Mon", 25.0),
+                ChartPoint::new("Tue", 38.0),
+                ChartPoint::new("Wed", 42.0),
+                ChartPoint::new("Thu", 58.0),
+                ChartPoint::new("Fri", 49.0),
+            ],
+        )
+        .stroke_color(blue())
+        .fill_color(blue().opacity(0.22))
+        .stroke_width(px(3.2))
+        .smooth(true),
+        ChartSeries::new(
+            "Memory",
+            [
+                ChartPoint::new("Mon", 48.0),
+                ChartPoint::new("Tue", 52.0),
+                ChartPoint::new("Wed", 57.0),
+                ChartPoint::new("Thu", 63.0),
+                ChartPoint::new("Fri", 66.0),
+            ],
+        )
+        .stroke_color(green())
+        .fill_color(green().opacity(0.18))
+        .stroke_width(px(2.4))
+        .smooth(false),
+    ]
 }
 
 pub fn multi_series() -> Vec<ChartSeries> {
@@ -99,5 +143,7 @@ mod tests {
         assert!(source.contains("ChartPoint::new"));
         assert!(source.contains("smooth(true)"));
         assert!(source.contains("area_fill(true)"));
+        assert!(source.contains("stroke_color"));
+        assert!(source.contains("value_label_content"));
     }
 }

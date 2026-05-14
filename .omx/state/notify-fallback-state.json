@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 47999,
+    "run_count": 50529,
     "leader_only": true,
-    "last_tick_at": "2026-05-14T10:06:45.597Z",
+    "last_tick_at": "2026-05-14T10:20:14.543Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-14T10:06:45.597Z",
+    "last_tick_at": "2026-05-14T10:20:14.543Z",
     "last_error": null,
-    "run_count": 47999
+    "run_count": 50529
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-14T10:06:45.614Z",
+    "last_state_check_at": "2026-05-14T10:20:14.559Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "blocked_by_current_session",
@@ -57,10 +57,10 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-14T10:06:45.598Z",
-    "last_turn_at": "2026-05-14T09:47:05.358Z",
-    "last_turn_count": 12,
-    "last_message": "已修正并推送。\n\n改动点：\n\n- PieChart / RingChart 标签改为：`值 / 总数`\n- 默认追加百分比：`值 / 总数 (xx.x%)`\n- 新增配置：\n  - `.show_pe",
+    "last_tick_at": "2026-05-14T10:20:14.544Z",
+    "last_turn_at": "2026-05-14T10:08:10.308Z",
+    "last_turn_count": 13,
+    "last_message": "已完成并本地提交，push 因 GitHub 连接超时未成功。\n\n实现内容：\n\n- 新增统一标签配置：\n  - `ChartValueLabelContent`\n    - `Value`\n    -",
     "last_reason": "eligible_but_not_sent",
     "last_error": null,
     "last_nudged_signature": "",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 250,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-14T10:06:45.614Z",
-    "last_activity_at": "2026-05-14T10:06:45.614Z",
+    "last_tick_at": "2026-05-14T10:20:14.559Z",
+    "last_activity_at": "2026-05-14T10:20:14.559Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"

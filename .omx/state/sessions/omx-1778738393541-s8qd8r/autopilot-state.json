@@ -1,9 +1,9 @@
 {
   "active": false,
-  "current_phase": "chart_customization_api",
+  "current_phase": "chart_customization_docs_demos",
   "lifecycle_outcome": "finished",
   "run_outcome": "finish",
-  "target": "Add high customization controls across chart components",
+  "target": "Show all chart customization options in Gallery demos and Docs pages/snippets/live demos",
   "validation": [
     "cargo fmt",
     "cargo check -p aura-components",

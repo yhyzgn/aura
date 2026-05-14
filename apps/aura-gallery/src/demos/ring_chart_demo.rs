@@ -1,6 +1,8 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{ChartPoint, ChartSeries, ChartValueLabelPlacement, RingChart, Space};
-use gpui::{AnyView, App, Context, Render, Window, prelude::*, px};
+use aura_components::{
+    ChartPoint, ChartSeries, ChartValueLabelContent, ChartValueLabelPlacement, RingChart, Space,
+};
+use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px, red, yellow};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| RingChartDemo).into()
@@ -26,6 +28,18 @@ impl Render for RingChartDemo {
                         .value_label_placement(ChartValueLabelPlacement::OutsideAligned),
                 ))
                 .child(section(
+                    "两侧对齐外部标注",
+                    "所有标签统一放在图形两侧并端点对齐，颜色由每个扇区独立定义。",
+                    RingChart::new(colored_slices())
+                        .id("ring-chart-demo-aligned-labels")
+                        .height(px(420.0))
+                        .inner_ratio(0.48)
+                        .value_label_content(ChartValueLabelContent::ValueOverTotalAndPercentage)
+                        .value_label_placement(ChartValueLabelPlacement::OutsideAligned)
+                        .percentage_decimals(1)
+                        .outside_label_threshold_degrees(120),
+                ))
+                .child(section(
                     "更厚圆环",
                     "增强中心空间感。",
                     RingChart::new(slices())
@@ -38,6 +52,15 @@ impl Render for RingChartDemo {
                 )),
         )
     }
+}
+
+fn colored_slices() -> Vec<ChartSeries> {
+    vec![
+        ChartSeries::new("Desktop", [ChartPoint::new("Desktop", 62.0)]).fill_color(blue()),
+        ChartSeries::new("Mobile", [ChartPoint::new("Mobile", 24.0)]).fill_color(green()),
+        ChartSeries::new("Tablet", [ChartPoint::new("Tablet", 9.0)]).fill_color(yellow()),
+        ChartSeries::new("Other", [ChartPoint::new("Other", 5.0)]).fill_color(red()),
+    ]
 }
 
 fn slices() -> Vec<ChartSeries> {
@@ -55,5 +78,7 @@ mod tests {
     fn ring_chart_demo_uses_component_api() {
         let source = include_str!("ring_chart_demo.rs");
         assert!(source.contains("RingChart::new"));
+        assert!(source.contains("OutsideAligned"));
+        assert!(source.contains("fill_color"));
     }
 }

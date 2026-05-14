@@ -2470,6 +2470,45 @@ impl Render for LiveDemoContent {
                 .stacked()
                 .into_any_element(),
             ]),
+            "AreaChartCustom" => demo_row(vec![
+                aura_components::AreaChart::new([
+                    aura_components::ChartSeries::new(
+                        "Desktop",
+                        [
+                            aura_components::ChartPoint::new("Mon", 28.0),
+                            aura_components::ChartPoint::new("Tue", 34.0),
+                            aura_components::ChartPoint::new("Wed", 38.0),
+                            aura_components::ChartPoint::new("Thu", 44.0),
+                            aura_components::ChartPoint::new("Fri", 50.0),
+                        ],
+                    )
+                    .stroke_color(gpui::blue())
+                    .fill_color(gpui::blue().opacity(0.36))
+                    .stroke_width(px(3.0))
+                    .smooth(true),
+                    aura_components::ChartSeries::new(
+                        "Mobile",
+                        [
+                            aura_components::ChartPoint::new("Mon", 18.0),
+                            aura_components::ChartPoint::new("Tue", 25.0),
+                            aura_components::ChartPoint::new("Wed", 32.0),
+                            aura_components::ChartPoint::new("Thu", 39.0),
+                            aura_components::ChartPoint::new("Fri", 48.0),
+                        ],
+                    )
+                    .stroke_color(gpui::green())
+                    .fill_color(gpui::green().opacity(0.24))
+                    .stroke_width(px(2.2))
+                    .smooth(false),
+                ])
+                .id("docs-area-chart-custom")
+                .height(px(340.0))
+                .y_domain(0.0, 100.0)
+                .smooth(true)
+                .value_label_content(aura_components::ChartValueLabelContent::ValueAndPercentage)
+                .percentage_decimals(1)
+                .into_any_element(),
+            ]),
             "AvatarShapes" => demo_row(vec![
                 Avatar::new().into_any_element(),
                 Avatar::new().square().into_any_element(),
@@ -2841,43 +2880,95 @@ impl Render for LiveDemoContent {
                 .stacked()
                 .into_any_element(),
             ]),
+            "BarChartCustom" => demo_row(vec![
+                aura_components::BarChart::new([
+                    aura_components::ChartSeries::new(
+                        "Online",
+                        [
+                            aura_components::ChartPoint::new("Jan", 42.0),
+                            aura_components::ChartPoint::new("Feb", 58.0),
+                            aura_components::ChartPoint::new("Mar", 64.0),
+                            aura_components::ChartPoint::new("Apr", 72.0),
+                        ],
+                    )
+                    .fill_color(gpui::blue()),
+                    aura_components::ChartSeries::new(
+                        "Retail",
+                        [
+                            aura_components::ChartPoint::new("Jan", 28.0),
+                            aura_components::ChartPoint::new("Feb", 34.0),
+                            aura_components::ChartPoint::new("Mar", 39.0),
+                            aura_components::ChartPoint::new("Apr", 45.0),
+                        ],
+                    )
+                    .fill_color(gpui::green()),
+                ])
+                .id("docs-bar-chart-custom")
+                .height(px(340.0))
+                .y_domain(0.0, 120.0)
+                .bar_gap_ratio(0.32)
+                .value_label_content(aura_components::ChartValueLabelContent::ValueAndPercentage)
+                .percentage_decimals(1)
+                .into_any_element(),
+            ]),
             "PieChart" => demo_row(vec![
                 aura_components::PieChart::new([
-                    aura_components::ChartSeries::new(
-                        "A",
-                        [aura_components::ChartPoint::new("A", 30.0)],
-                    ),
-                    aura_components::ChartSeries::new(
-                        "B",
-                        [aura_components::ChartPoint::new("B", 20.0)],
-                    ),
-                    aura_components::ChartSeries::new(
-                        "C",
-                        [aura_components::ChartPoint::new("C", 50.0)],
-                    ),
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]),
                 ])
                 .id("docs-pie-chart")
                 .height(px(340.0))
+                .percentage_decimals(1)
+                .outside_label_threshold_degrees(30)
+                .value_label_placement(aura_components::ChartValueLabelPlacement::OutsideAligned)
+                .into_any_element(),
+            ]),
+            "PieChartCustom" => demo_row(vec![
+                aura_components::PieChart::new([
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]).fill_color(gpui::blue()),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]).fill_color(gpui::green()),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]).fill_color(gpui::yellow()),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]).fill_color(gpui::red()),
+                ])
+                .id("docs-pie-chart-custom")
+                .height(px(360.0))
+                .value_label_content(aura_components::ChartValueLabelContent::Percentage)
+                .value_label_placement(aura_components::ChartValueLabelPlacement::OutsideFree)
+                .percentage_decimals(2)
+                .outside_label_threshold_degrees(120)
                 .into_any_element(),
             ]),
             "RingChart" => demo_row(vec![
                 aura_components::RingChart::new([
-                    aura_components::ChartSeries::new(
-                        "A",
-                        [aura_components::ChartPoint::new("A", 30.0)],
-                    ),
-                    aura_components::ChartSeries::new(
-                        "B",
-                        [aura_components::ChartPoint::new("B", 20.0)],
-                    ),
-                    aura_components::ChartSeries::new(
-                        "C",
-                        [aura_components::ChartPoint::new("C", 50.0)],
-                    ),
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]),
                 ])
                 .id("docs-ring-chart")
                 .height(px(340.0))
                 .inner_ratio(0.5)
+                .percentage_decimals(1)
+                .outside_label_threshold_degrees(30)
+                .value_label_placement(aura_components::ChartValueLabelPlacement::OutsideAligned)
+                .into_any_element(),
+            ]),
+            "RingChartCustom" => demo_row(vec![
+                aura_components::RingChart::new([
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]).fill_color(gpui::blue()),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]).fill_color(gpui::green()),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]).fill_color(gpui::yellow()),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]).fill_color(gpui::red()),
+                ])
+                .id("docs-ring-chart-custom")
+                .height(px(360.0))
+                .inner_ratio(0.48)
+                .value_label_content(aura_components::ChartValueLabelContent::ValueOverTotalAndPercentage)
+                .value_label_placement(aura_components::ChartValueLabelPlacement::OutsideAligned)
+                .percentage_decimals(1)
+                .outside_label_threshold_degrees(120)
                 .into_any_element(),
             ]),
 
@@ -2927,6 +3018,45 @@ impl Render for LiveDemoContent {
                 .id("docs-line-chart-multi")
                 .height(px(300.0))
                 .y_domain(0.0, 100.0)
+                .into_any_element(),
+            ]),
+            "LineChartCustom" => demo_row(vec![
+                aura_components::LineChart::new([
+                    aura_components::ChartSeries::new(
+                        "CPU",
+                        [
+                            aura_components::ChartPoint::new("Mon", 25.0),
+                            aura_components::ChartPoint::new("Tue", 38.0),
+                            aura_components::ChartPoint::new("Wed", 42.0),
+                            aura_components::ChartPoint::new("Thu", 58.0),
+                            aura_components::ChartPoint::new("Fri", 49.0),
+                        ],
+                    )
+                    .stroke_color(gpui::blue())
+                    .fill_color(gpui::blue().opacity(0.22))
+                    .stroke_width(px(3.2))
+                    .smooth(true),
+                    aura_components::ChartSeries::new(
+                        "Memory",
+                        [
+                            aura_components::ChartPoint::new("Mon", 48.0),
+                            aura_components::ChartPoint::new("Tue", 52.0),
+                            aura_components::ChartPoint::new("Wed", 57.0),
+                            aura_components::ChartPoint::new("Thu", 63.0),
+                            aura_components::ChartPoint::new("Fri", 66.0),
+                        ],
+                    )
+                    .stroke_color(gpui::green())
+                    .fill_color(gpui::green().opacity(0.18))
+                    .stroke_width(px(2.4))
+                    .smooth(false),
+                ])
+                .id("docs-line-chart-custom")
+                .height(px(380.0))
+                .y_domain(0.0, 100.0)
+                .area_fill(true)
+                .value_label_content(aura_components::ChartValueLabelContent::Percentage)
+                .percentage_decimals(1)
                 .into_any_element(),
             ]),
             "LineChartEmpty" => demo_row(vec![

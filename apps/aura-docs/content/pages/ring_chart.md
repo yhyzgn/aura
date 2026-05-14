@@ -12,3 +12,14 @@
 
 ```rust src="ring_chart/basic.rs"
 ```
+
+## 两侧对齐外部标注
+
+### 效果
+
+::AuraDemo{component="RingChartCustom"}::
+
+### 代码
+
+```rust src="ring_chart/custom.rs"
+```

@@ -34,3 +34,14 @@
 
 ```rust src="line_chart/empty.rs"
 ```
+
+## 自定义样式与标签
+
+### 效果
+
+::AuraDemo{component="LineChartCustom"}::
+
+### 代码
+
+```rust src="line_chart/custom.rs"
+```

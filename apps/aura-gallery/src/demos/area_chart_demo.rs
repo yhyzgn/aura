@@ -1,6 +1,6 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{AreaChart, ChartPoint, ChartSeries, Space};
-use gpui::{AnyView, App, Context, Render, Window, prelude::*, px};
+use aura_components::{AreaChart, ChartPoint, ChartSeries, ChartValueLabelContent, Space};
+use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| AreaChartDemo).into()
@@ -32,6 +32,17 @@ impl Render for AreaChartDemo {
                         .y_domain(0.0, 100.0),
                 ))
                 .child(section(
+                    "平滑、颜色与百分比标签",
+                    "序列颜色、填充透明度、线条粗细和平滑策略都可单独配置。",
+                    AreaChart::new(custom_series())
+                        .id("area-chart-demo-custom")
+                        .height(px(400.0))
+                        .y_domain(0.0, 100.0)
+                        .smooth(true)
+                        .value_label_content(ChartValueLabelContent::ValueAndPercentage)
+                        .percentage_decimals(1),
+                ))
+                .child(section(
                     "堆叠面积",
                     "展示多个渠道共同组成的总量变化。",
                     AreaChart::new(multi_series())
@@ -56,6 +67,39 @@ pub fn visitor_series() -> Vec<ChartSeries> {
             ChartPoint::new("Sun", 68.0),
         ],
     )]
+}
+
+pub fn custom_series() -> Vec<ChartSeries> {
+    vec![
+        ChartSeries::new(
+            "Desktop",
+            [
+                ChartPoint::new("Mon", 28.0),
+                ChartPoint::new("Tue", 34.0),
+                ChartPoint::new("Wed", 38.0),
+                ChartPoint::new("Thu", 44.0),
+                ChartPoint::new("Fri", 50.0),
+            ],
+        )
+        .stroke_color(blue())
+        .fill_color(blue().opacity(0.36))
+        .stroke_width(px(3.0))
+        .smooth(true),
+        ChartSeries::new(
+            "Mobile",
+            [
+                ChartPoint::new("Mon", 18.0),
+                ChartPoint::new("Tue", 25.0),
+                ChartPoint::new("Wed", 32.0),
+                ChartPoint::new("Thu", 39.0),
+                ChartPoint::new("Fri", 48.0),
+            ],
+        )
+        .stroke_color(green())
+        .fill_color(green().opacity(0.24))
+        .stroke_width(px(2.2))
+        .smooth(false),
+    ]
 }
 
 pub fn multi_series() -> Vec<ChartSeries> {
@@ -91,5 +135,7 @@ mod tests {
         assert!(source.contains("AreaChart::new"));
         assert!(source.contains("ChartSeries::new"));
         assert!(source.contains("stacked()"));
+        assert!(source.contains("stroke_color"));
+        assert!(source.contains("value_label_content"));
     }
 }

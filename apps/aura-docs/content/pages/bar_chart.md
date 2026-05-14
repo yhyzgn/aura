@@ -34,3 +34,14 @@
 
 ```rust src="bar_chart/stacked.rs"
 ```
+
+## 颜色、间距与标签内容
+
+### 效果
+
+::AuraDemo{component="BarChartCustom"}::
+
+### 代码
+
+```rust src="bar_chart/custom.rs"
+```
