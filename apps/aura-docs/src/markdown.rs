@@ -4902,11 +4902,17 @@ fn render_persistent_block(
     theme: &aura_theme::Theme,
     live_demos: &[Entity<LiveDemoHost>],
     demo_index: &mut usize,
+    stable_path: &str,
 ) -> AnyElement {
     match block {
-        Block::Paragraph(segments) => render_paragraph(segments.clone(), theme),
+        Block::Paragraph(segments) => render_paragraph_with_id(
+            segments.clone(),
+            theme,
+            format!("docs-md-{stable_path}-paragraph"),
+        ),
         Block::Heading { level, content } => {
-            let heading = Title::new(inline_plain_text(content));
+            let heading =
+                Title::new(inline_plain_text(content)).id(format!("docs-md-{stable_path}-heading"));
             match level {
                 HeadingLevel::H1 => heading.h1(),
                 HeadingLevel::H2 => heading.h2(),
@@ -4926,7 +4932,16 @@ fn render_persistent_block(
                 Space::new().vertical().gap_md().children(
                     blocks
                         .iter()
-                        .map(|block| render_persistent_block(block, theme, live_demos, demo_index))
+                        .enumerate()
+                        .map(|(index, block)| {
+                            render_persistent_block(
+                                block,
+                                theme,
+                                live_demos,
+                                demo_index,
+                                &format!("{stable_path}-quote-{index}"),
+                            )
+                        })
                         .collect::<Vec<_>>(),
                 ),
             )
@@ -4935,7 +4950,15 @@ fn render_persistent_block(
             ordered,
             start,
             items,
-        } => render_persistent_list(*ordered, *start, items, theme, live_demos, demo_index),
+        } => render_persistent_list(
+            *ordered,
+            *start,
+            items,
+            theme,
+            live_demos,
+            demo_index,
+            stable_path,
+        ),
         Block::CodeBlock {
             language,
             source,
@@ -4964,6 +4987,7 @@ fn render_persistent_list(
     theme: &aura_theme::Theme,
     live_demos: &[Entity<LiveDemoHost>],
     demo_index: &mut usize,
+    stable_path: &str,
 ) -> AnyElement {
     let mut rows = Vec::new();
 
@@ -4975,7 +4999,16 @@ fn render_persistent_list(
         };
         let item_children = item_blocks
             .iter()
-            .map(|block| render_persistent_block(block, theme, live_demos, demo_index))
+            .enumerate()
+            .map(|(block_index, block)| {
+                render_persistent_block(
+                    block,
+                    theme,
+                    live_demos,
+                    demo_index,
+                    &format!("{stable_path}-item-{index}-block-{block_index}"),
+                )
+            })
             .collect::<Vec<_>>();
 
         rows.push(
@@ -5008,7 +5041,16 @@ fn render_persistent_list(
 }
 
 fn render_paragraph(segments: Vec<InlineSegment>, theme: &aura_theme::Theme) -> AnyElement {
+    render_paragraph_with_id(segments, theme, aura_core::unique_id("markdown-paragraph"))
+}
+
+fn render_paragraph_with_id(
+    segments: Vec<InlineSegment>,
+    theme: &aura_theme::Theme,
+    id: impl Into<SharedString>,
+) -> AnyElement {
     Paragraph::new()
+        .id(id)
         .children(segments.into_iter().map(|segment| segment.into_text(theme)))
         .into_any_element()
 }
@@ -5095,7 +5137,13 @@ impl DocsPageView {
                         return div().into_any_element();
                     };
                     let mut demo_index = live_demo_index_before(&virtual_blocks, index);
-                    render_persistent_block(block, &theme, &virtual_live_demos, &mut demo_index)
+                    render_persistent_block(
+                        block,
+                        &theme,
+                        &virtual_live_demos,
+                        &mut demo_index,
+                        &format!("block-{index}"),
+                    )
                 });
             list.set_item_spacing(px(20.0));
             list.measure_all_items_for_scrollbar();
@@ -5605,6 +5653,25 @@ mod tests {
                 .expect("collect_live_demo_components should follow")];
 
         assert!(render_code_block.contains("selectable(true)"));
+    }
+
+    #[test]
+    fn docs_markdown_text_uses_stable_selection_ids() {
+        let source = include_str!("markdown.rs");
+        let persistent_renderer = &source[source
+            .find("fn render_persistent_block(")
+            .expect("render_persistent_block should exist")
+            ..source
+                .find("fn render_persistent_list(")
+                .expect("render_persistent_list should follow")];
+
+        assert!(persistent_renderer.contains("stable_path: &str"));
+        assert!(persistent_renderer.contains("docs-md-{stable_path}-paragraph"));
+        assert!(persistent_renderer.contains("docs-md-{stable_path}-heading"));
+        assert!(
+            !persistent_renderer.contains("render_paragraph(segments.clone(), theme)"),
+            "docs markdown paragraphs need stable ids so selection survives notify/repaint"
+        );
     }
 
     #[test]
