@@ -1,4 +1,5 @@
-use gpui::{PathBuilder, Pixels, Point, point, px};
+use gpui::{PathBuilder, PathStyle, Pixels, Point, StrokeOptions, point, px};
+use lyon_tessellation::{LineCap, LineJoin};
 
 pub fn finite_line_points(points: impl IntoIterator<Item = (f32, f32)>) -> Vec<Point<Pixels>> {
     points
@@ -42,7 +43,7 @@ pub fn smooth_line_path(
     stroke_width: Pixels,
 ) -> Option<gpui::Path<Pixels>> {
     let first = *points.first()?;
-    let mut builder = PathBuilder::stroke(stroke_width);
+    let mut builder = chart_stroke_builder(stroke_width);
     builder.move_to(first);
     if points.len() == 2 {
         builder.line_to(points[1]);
@@ -51,6 +52,16 @@ pub fn smooth_line_path(
 
     append_smooth_segments(&mut builder, points);
     builder.build().ok()
+}
+
+fn chart_stroke_builder(stroke_width: Pixels) -> PathBuilder {
+    let options = StrokeOptions::default()
+        .with_line_width(stroke_width.as_f32())
+        .with_tolerance(0.01)
+        .with_line_join(LineJoin::Round)
+        .with_line_cap(LineCap::Round);
+
+    PathBuilder::stroke(stroke_width).with_style(PathStyle::Stroke(options))
 }
 
 fn append_smooth_segments(builder: &mut PathBuilder, points: &[Point<Pixels>]) {
@@ -97,9 +108,22 @@ fn catmull_rom_controls(
     )
 }
 
+pub fn line_soft_edge_path(
+    points: &[Point<Pixels>],
+    stroke_width: Pixels,
+    smooth: bool,
+) -> Option<gpui::Path<Pixels>> {
+    let soft_width = px((stroke_width.as_f32() + 1.2).max(stroke_width.as_f32()));
+    if smooth {
+        smooth_line_path(points, soft_width)
+    } else {
+        line_path(points, soft_width)
+    }
+}
+
 pub fn line_path(points: &[Point<Pixels>], stroke_width: Pixels) -> Option<gpui::Path<Pixels>> {
     let first = *points.first()?;
-    let mut builder = PathBuilder::stroke(stroke_width);
+    let mut builder = chart_stroke_builder(stroke_width);
     builder.move_to(first);
     for point in points.iter().skip(1) {
         builder.line_to(*point);
@@ -159,5 +183,14 @@ mod tests {
     fn line_path_requires_at_least_one_point() {
         assert!(line_path(&[], px(2.0)).is_none());
         assert!(line_path(&[point(px(0.0), px(0.0)), point(px(1.0), px(1.0))], px(2.0)).is_some());
+    }
+
+    #[test]
+    fn chart_lines_use_high_quality_round_strokes() {
+        let source = include_str!("chart_shape.rs");
+        assert!(source.contains("with_tolerance(0.01)"));
+        assert!(source.contains("LineJoin::Round"));
+        assert!(source.contains("LineCap::Round"));
+        assert!(source.contains("line_soft_edge_path"));
     }
 }

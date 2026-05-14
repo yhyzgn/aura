@@ -4,7 +4,9 @@ use crate::chart::{
 };
 use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
-use crate::chart_shape::{area_path, line_path, smooth_area_path, smooth_line_path};
+use crate::chart_shape::{
+    area_path, line_path, line_soft_edge_path, smooth_area_path, smooth_line_path,
+};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
 use gpui::{
@@ -280,6 +282,11 @@ fn render_line_canvas(
                         let gradient = gradient_for_series(fill_color);
                         window.paint_path(path, gradient);
                     }
+                }
+                if let Some(path) =
+                    line_soft_edge_path(&points, current_stroke_width, current_smooth)
+                {
+                    window.paint_path(path, color.opacity(0.20));
                 }
                 if let Some(path) = if current_smooth {
                     smooth_line_path(&points, current_stroke_width)

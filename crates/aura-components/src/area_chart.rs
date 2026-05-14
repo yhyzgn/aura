@@ -6,7 +6,8 @@ use crate::chart::{
 use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::chart_shape::{
-    area_path, finite_line_points, line_path, smooth_area_path, smooth_line_path,
+    area_path, finite_line_points, line_path, line_soft_edge_path, smooth_area_path,
+    smooth_line_path,
 };
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
@@ -358,6 +359,9 @@ fn paint_overlay_areas(
             window.paint_path(path, fill_color.opacity(0.26));
         }
         if line_stroke {
+            if let Some(path) = line_soft_edge_path(&points, current_stroke_width, current_smooth) {
+                window.paint_path(path, color.opacity(0.20));
+            }
             let line = if current_smooth {
                 smooth_line_path(&points, current_stroke_width)
             } else {
@@ -437,6 +441,9 @@ fn paint_stacked_areas(
             window.paint_path(path, fill_color.opacity(0.32));
         }
         if line_stroke {
+            if let Some(path) = line_soft_edge_path(&upper, current_stroke_width, false) {
+                window.paint_path(path, color.opacity(0.20));
+            }
             if let Some(path) = line_path(&upper, current_stroke_width) {
                 window.paint_path(path, color);
             }

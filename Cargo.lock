@@ -437,6 +437,7 @@ dependencies = [
  "aura-theme",
  "gpui",
  "image",
+ "lyon_tessellation",
  "syntect",
  "two-face",
  "ureq",
