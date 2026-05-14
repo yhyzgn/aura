@@ -99,8 +99,8 @@ impl Render for ProgressDemo {
                             .ring_width(10.0)
                             .ring_color(theme.success.hover.opacity(0.24))
                             .progress_color(theme.success.base)
-                            .inner_color(theme.neutral.body)
-                            .center_text("42 / 100")
+                            .inner_color(theme.success.base.opacity(0.10))
+                            .center_text("Inner BG")
                             .text_size(16.0)
                             .text_weight(FontWeight::NORMAL),
                         Progress::new(68.0)

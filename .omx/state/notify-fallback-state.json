@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 66826,
+    "run_count": 68419,
     "leader_only": true,
-    "last_tick_at": "2026-05-14T11:37:40.905Z",
+    "last_tick_at": "2026-05-14T11:46:59.061Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-14T11:37:40.905Z",
+    "last_tick_at": "2026-05-14T11:46:59.061Z",
     "last_error": null,
-    "run_count": 66826
+    "run_count": 68419
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-14T11:37:40.922Z",
+    "last_state_check_at": "2026-05-14T11:46:59.079Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "blocked_by_current_session",
@@ -57,10 +57,10 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-14T11:37:40.906Z",
-    "last_turn_at": "2026-05-14T11:22:52.888Z",
-    "last_turn_count": 15,
-    "last_message": "已完成并推送。\n\n提交：\n- `b03b276` — Progress 环状进度条、动画、自定义中心文本/样式、demo/docs/snippets\n- `c73804e` — `.omx` 工作日志",
+    "last_tick_at": "2026-05-14T11:46:59.062Z",
+    "last_turn_at": "2026-05-14T11:41:03.481Z",
+    "last_turn_count": 16,
+    "last_message": "已处理并推送：`b8d2c2e Smooth native circular progress rendering`\n\n完成内容：\n- 环形进度条改为 **填充式 annular sector 原生 ",
     "last_reason": "eligible_but_not_sent",
     "last_error": null,
     "last_nudged_signature": "",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 250,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-14T11:37:40.922Z",
-    "last_activity_at": "2026-05-14T11:37:40.922Z",
+    "last_tick_at": "2026-05-14T11:46:59.079Z",
+    "last_activity_at": "2026-05-14T11:46:59.079Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"

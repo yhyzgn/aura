@@ -3,11 +3,10 @@ use aura_core::{Config, stable_unique_id};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
-    AnimationExt, App, FontWeight, Hsla, IntoElement, ParentElement, PathBuilder, Pixels, Point,
-    RenderOnce, SharedString, Styled, Window, canvas, div, linear_color_stop, linear_gradient,
-    point, prelude::*, px,
+    AnimationExt, App, FillOptions, FontWeight, Hsla, IntoElement, ParentElement, PathBuilder,
+    PathStyle, Pixels, Point, RenderOnce, SharedString, Styled, Window, canvas, div,
+    linear_color_stop, linear_gradient, point, prelude::*, px,
 };
-use std::f32::consts::TAU;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ProgressType {
@@ -522,31 +521,35 @@ fn paint_smooth_annular_sector(
         return;
     }
 
-    if let Some(path) = annular_sector_path(center, outer_radius, inner_radius, start, end) {
+    // Use lyon's native arc commands with a tighter tessellation tolerance instead
+    // of a hand-sampled polygon. This keeps the ring boundary curved at the GPU
+    // geometry level and avoids visible segment stair-steps on the circular edge.
+    if let Some(path) = annular_sector_arc_path(center, outer_radius, inner_radius, start, end) {
         window.paint_path(path, color);
     }
 
-    // Feather the outside/inside edges with translucent 1px bands to soften the
-    // native raster boundary without switching away from GPUI path rendering.
-    let feather = 0.75;
-    if let Some(path) = annular_sector_path(
+    // A very thin translucent fringe blends the final raster edge into the
+    // surrounding pixels. It is intentionally tiny so it smooths without making
+    // the ring look blurry or changing the requested ring width.
+    let feather = 0.45;
+    if let Some(path) = annular_sector_arc_path(
         center,
         outer_radius + feather,
         outer_radius.max(inner_radius + 0.1),
         start,
         end,
     ) {
-        window.paint_path(path, color.opacity(0.18));
+        window.paint_path(path, color.opacity(0.16));
     }
     if inner_radius > feather {
-        if let Some(path) = annular_sector_path(
+        if let Some(path) = annular_sector_arc_path(
             center,
             inner_radius,
             (inner_radius - feather).max(0.0),
             start,
             end,
         ) {
-            window.paint_path(path, color.opacity(0.14));
+            window.paint_path(path, color.opacity(0.10));
         }
     }
 }
@@ -555,12 +558,12 @@ fn paint_smooth_circle(window: &mut Window, center: Point<Pixels>, radius: f32, 
     if let Some(path) = circle_fill_path(center, radius) {
         window.paint_path(path, color);
     }
-    if let Some(path) = annular_sector_path(center, radius + 0.75, radius, 0.0, 1.0) {
-        window.paint_path(path, color.opacity(0.34));
+    if let Some(path) = annular_sector_arc_path(center, radius + 0.45, radius, 0.0, 1.0) {
+        window.paint_path(path, color.opacity(0.24));
     }
 }
 
-fn annular_sector_path(
+fn annular_sector_arc_path(
     center: Point<Pixels>,
     outer_radius: f32,
     inner_radius: f32,
@@ -576,32 +579,88 @@ fn annular_sector_path(
         return None;
     }
 
-    let start_angle = -std::f32::consts::FRAC_PI_2 + start_progress * TAU;
-    let end_angle = -std::f32::consts::FRAC_PI_2 + end_progress * TAU;
-    let sweep = (end_angle - start_angle).clamp(0.0, TAU);
-    if sweep <= f32::EPSILON {
+    let start_deg = -90.0 + start_progress.clamp(0.0, 1.0) * 360.0;
+    let end_deg = -90.0 + end_progress.clamp(0.0, 1.0) * 360.0;
+    let sweep_deg = (end_deg - start_deg).clamp(0.0, 360.0);
+    if sweep_deg <= f32::EPSILON {
         return None;
     }
 
-    let segments = ring_segments(outer_radius, sweep);
-    let mut outer_points = Vec::with_capacity(segments + 1);
-    let mut inner_points = Vec::with_capacity(segments + 1);
-
-    for index in 0..=segments {
-        let t = index as f32 / segments as f32;
-        let angle = start_angle + sweep * t;
-        outer_points.push(polar_radians(center, outer_radius, angle));
-        inner_points.push(polar_radians(center, inner_radius, angle));
+    if sweep_deg >= 359.999 {
+        return ring_fill_path(center, outer_radius, inner_radius);
     }
 
-    let mut builder = PathBuilder::fill();
-    builder.move_to(*outer_points.first()?);
-    for point in outer_points.iter().skip(1) {
-        builder.line_to(*point);
+    let outer_start = polar_degrees(center, outer_radius, start_deg);
+    let outer_end = polar_degrees(center, outer_radius, end_deg);
+    let inner_start = polar_degrees(center, inner_radius, start_deg);
+    let inner_end = polar_degrees(center, inner_radius, end_deg);
+    let large_arc = sweep_deg > 180.0;
+    let mut builder = high_quality_fill_builder();
+    builder.move_to(outer_start);
+    builder.arc_to(
+        point(px(outer_radius), px(outer_radius)),
+        px(0.0),
+        large_arc,
+        true,
+        outer_end,
+    );
+    builder.line_to(inner_end);
+    builder.arc_to(
+        point(px(inner_radius), px(inner_radius)),
+        px(0.0),
+        large_arc,
+        false,
+        inner_start,
+    );
+    builder.close();
+    builder.build().ok()
+}
+
+fn ring_fill_path(
+    center: Point<Pixels>,
+    outer_radius: f32,
+    inner_radius: f32,
+) -> Option<gpui::Path<Pixels>> {
+    if outer_radius <= 0.0 || inner_radius < 0.0 || outer_radius <= inner_radius {
+        return None;
     }
-    for point in inner_points.iter().rev() {
-        builder.line_to(*point);
-    }
+
+    let outer_top = polar_degrees(center, outer_radius, -90.0);
+    let outer_bottom = polar_degrees(center, outer_radius, 90.0);
+    let inner_top = polar_degrees(center, inner_radius, -90.0);
+    let inner_bottom = polar_degrees(center, inner_radius, 90.0);
+
+    let mut builder = high_quality_fill_builder();
+    builder.move_to(outer_top);
+    builder.arc_to(
+        point(px(outer_radius), px(outer_radius)),
+        px(0.0),
+        false,
+        true,
+        outer_bottom,
+    );
+    builder.arc_to(
+        point(px(outer_radius), px(outer_radius)),
+        px(0.0),
+        false,
+        true,
+        outer_top,
+    );
+    builder.line_to(inner_top);
+    builder.arc_to(
+        point(px(inner_radius), px(inner_radius)),
+        px(0.0),
+        false,
+        false,
+        inner_bottom,
+    );
+    builder.arc_to(
+        point(px(inner_radius), px(inner_radius)),
+        px(0.0),
+        false,
+        false,
+        inner_top,
+    );
     builder.close();
     builder.build().ok()
 }
@@ -611,27 +670,22 @@ fn circle_fill_path(center: Point<Pixels>, radius: f32) -> Option<gpui::Path<Pix
         return None;
     }
 
-    let segments = ring_segments(radius, TAU);
-    let start = polar_radians(center, radius, -std::f32::consts::FRAC_PI_2);
-    let mut builder = PathBuilder::fill();
-    builder.move_to(start);
-    for index in 1..=segments {
-        let angle = -std::f32::consts::FRAC_PI_2 + TAU * index as f32 / segments as f32;
-        builder.line_to(polar_radians(center, radius, angle));
-    }
+    let top = polar_degrees(center, radius, -90.0);
+    let bottom = polar_degrees(center, radius, 90.0);
+    let mut builder = high_quality_fill_builder();
+    builder.move_to(top);
+    builder.arc_to(point(px(radius), px(radius)), px(0.0), false, true, bottom);
+    builder.arc_to(point(px(radius), px(radius)), px(0.0), false, true, top);
     builder.close();
     builder.build().ok()
 }
 
-fn ring_segments(radius: f32, sweep_radians: f32) -> usize {
-    // Roughly one segment per 0.55px of arc length, bounded to avoid oversized
-    // paths on large charts while keeping small progress rings smooth.
-    ((radius * sweep_radians.abs()) / 0.55)
-        .ceil()
-        .clamp(64.0, 960.0) as usize
+fn high_quality_fill_builder() -> PathBuilder {
+    PathBuilder::fill().with_style(PathStyle::Fill(FillOptions::default().with_tolerance(0.01)))
 }
 
-fn polar_radians(center: Point<Pixels>, radius: f32, radians: f32) -> Point<Pixels> {
+fn polar_degrees(center: Point<Pixels>, radius: f32, degrees: f32) -> Point<Pixels> {
+    let radians = degrees.to_radians();
     point(
         center.x + px(radius * radians.cos()),
         center.y + px(radius * radians.sin()),
@@ -697,6 +751,8 @@ mod tests {
     fn progress_uses_native_paths_and_animation() {
         let source = include_str!("progress.rs");
         assert!(source.contains("PathBuilder::fill"));
+        assert!(source.contains("arc_to("));
+        assert!(source.contains("high_quality_fill_builder"));
         assert!(source.contains("paint_smooth_annular_sector"));
         assert!(source.contains("with_animation("));
         assert!(source.contains("render_circle_canvas"));
