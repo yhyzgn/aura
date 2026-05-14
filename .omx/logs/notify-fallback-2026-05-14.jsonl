@@ -14827,3 +14827,4 @@
 {"timestamp":"2026-05-14T07:08:51.006Z","type":"leader_nudge_tick","leader_only":true,"run_count":13569,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
 {"timestamp":"2026-05-14T07:08:51.273Z","type":"leader_nudge_tick","leader_only":true,"run_count":13570,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
 {"timestamp":"2026-05-14T07:08:51.540Z","type":"leader_nudge_tick","leader_only":true,"run_count":13571,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
+{"timestamp":"2026-05-14T07:08:51.806Z","type":"leader_nudge_tick","leader_only":true,"run_count":13572,"stale_threshold_ms":180000,"precomputed_leader_stale":true,"reason":"leader_nudge_checked"}
