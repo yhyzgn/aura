@@ -1,5 +1,5 @@
-use aura_components::{AreaChart, ChartPoint, ChartSeries};
-use gpui::{IntoElement, px};
+use aura_components::{AreaChart, ChartPoint, ChartSeries, ChartValueLabelContent};
+use gpui::{IntoElement, blue, px};
 
 pub fn area_chart_basic() -> impl IntoElement {
     AreaChart::new([ChartSeries::new(
@@ -13,6 +13,13 @@ pub fn area_chart_basic() -> impl IntoElement {
             ChartPoint::new("Sat", 72.0),
             ChartPoint::new("Sun", 68.0),
         ],
-    )])
+    )
+    .stroke_color(blue())
+    .fill_color(blue().opacity(0.35))
+    .stroke_width(px(2.6))
+    .smooth(true)])
     .height(px(260.0))
+    .smooth(true)
+    .value_label_content(ChartValueLabelContent::Percentage)
+    .percentage_decimals(1)
 }

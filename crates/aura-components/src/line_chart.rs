@@ -1,7 +1,8 @@
 use crate::chart::{
-    ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data, normalized_domain,
+    ChartOptions, ChartPalette, ChartSeries, ChartValueLabelContent, ChartValueLabelPlacement,
+    collect_labels, format_value_label, has_chart_data, normalized_domain, series_total,
 };
-use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
+use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::chart_shape::{area_path, line_path, smooth_area_path, smooth_line_path};
 use crate::{Empty, Space, Text};
@@ -18,6 +19,7 @@ pub struct LineChart {
     point_markers: bool,
     smooth: bool,
     area_fill: bool,
+    stroke_width: Pixels,
 }
 
 impl LineChart {
@@ -31,6 +33,7 @@ impl LineChart {
             point_markers: true,
             smooth: true,
             area_fill: true,
+            stroke_width: px(2.4),
         }
     }
 
@@ -86,6 +89,26 @@ impl LineChart {
 
     pub fn show_value_labels(mut self, show: bool) -> Self {
         self.options.show_value_labels = show;
+        self
+    }
+
+    pub fn value_label_content(mut self, content: ChartValueLabelContent) -> Self {
+        self.options.value_label_options.content = content;
+        self
+    }
+
+    pub fn value_label_placement(mut self, placement: ChartValueLabelPlacement) -> Self {
+        self.options.value_label_options.placement = placement;
+        self
+    }
+
+    pub fn percentage_decimals(mut self, decimals: usize) -> Self {
+        self.options.value_label_options.percentage_decimals = decimals.min(4);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Pixels) -> Self {
+        self.stroke_width = width;
         self
     }
 
@@ -147,6 +170,7 @@ impl RenderOnce for LineChart {
                 self.point_markers,
                 self.smooth,
                 self.area_fill,
+                self.stroke_width,
             ))
             .into_any_element()
     }
@@ -183,6 +207,7 @@ fn render_line_canvas(
     point_markers: bool,
     smooth: bool,
     area_fill: bool,
+    stroke_width: Pixels,
 ) -> impl IntoElement {
     let height = options.height;
     canvas(
@@ -221,9 +246,11 @@ fn render_line_canvas(
             }
 
             for (series_index, current) in series.iter().enumerate() {
-                let color = current
-                    .color
-                    .unwrap_or_else(|| palette.series_color(series_index));
+                let fallback = palette.series_color(series_index);
+                let color = current.resolved_stroke_color(fallback);
+                let fill_color = current.resolved_fill_color(fallback);
+                let current_smooth = current.smooth.unwrap_or(smooth);
+                let current_stroke_width = current.stroke_width.unwrap_or(stroke_width);
                 let point_data = current
                     .points
                     .iter()
@@ -244,20 +271,20 @@ fn render_line_canvas(
                     .collect::<Vec<_>>();
                 if area_fill {
                     let baseline_y = top + px(plot_height.as_f32());
-                    let area = if smooth {
+                    let area = if current_smooth {
                         smooth_area_path(&points, baseline_y)
                     } else {
                         area_path(&points, baseline_y)
                     };
                     if let Some(path) = area {
-                        let gradient = gradient_for_series(color);
+                        let gradient = gradient_for_series(fill_color);
                         window.paint_path(path, gradient);
                     }
                 }
-                if let Some(path) = if smooth {
-                    smooth_line_path(&points, px(2.4))
+                if let Some(path) = if current_smooth {
+                    smooth_line_path(&points, current_stroke_width)
                 } else {
-                    line_path(&points, px(2.0))
+                    line_path(&points, current_stroke_width)
                 } {
                     window.paint_path(path, color);
                 }
@@ -275,7 +302,12 @@ fn render_line_canvas(
                 if options.show_value_labels {
                     for (point_pos, value) in &point_data {
                         paint_chart_label_aligned(
-                            format_chart_value(*value, options.y_format),
+                            format_value_label(
+                                *value,
+                                series_total(current),
+                                options.y_format,
+                                &options.value_label_options,
+                            ),
                             point(point_pos.x - px(18.0), point_pos.y - px(20.0)),
                             palette.label,
                             gpui::TextAlign::Center,
@@ -319,7 +351,11 @@ mod tests {
             .show_legend(false)
             .y_domain(0.0, 100.0)
             .point_markers(false)
-            .show_value_labels(false);
+            .show_value_labels(false)
+            .value_label_content(ChartValueLabelContent::ValueAndPercentage)
+            .value_label_placement(ChartValueLabelPlacement::OutsideFree)
+            .percentage_decimals(2)
+            .stroke_width(px(3.0));
 
         assert_eq!(chart.options().id, SharedString::from("cpu-line"));
         assert_eq!(chart.options().height, px(320.0));
@@ -329,6 +365,16 @@ mod tests {
         assert_eq!(chart.options().y_domain, Some((0.0, 100.0)));
         assert!(!chart.point_markers);
         assert!(!chart.options().show_value_labels);
+        assert_eq!(
+            chart.options().value_label_options.content,
+            ChartValueLabelContent::ValueAndPercentage
+        );
+        assert_eq!(
+            chart.options().value_label_options.placement,
+            ChartValueLabelPlacement::OutsideFree
+        );
+        assert_eq!(chart.options().value_label_options.percentage_decimals, 2);
+        assert_eq!(chart.stroke_width, px(3.0));
     }
 
     #[test]

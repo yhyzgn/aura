@@ -1,5 +1,5 @@
-use aura_components::{ChartPoint, ChartSeries, LineChart};
-use gpui::{IntoElement, px};
+use aura_components::{ChartPoint, ChartSeries, ChartValueLabelContent, LineChart};
+use gpui::{IntoElement, blue, px};
 
 pub fn line_chart_basic() -> impl IntoElement {
     LineChart::new([ChartSeries::new(
@@ -12,8 +12,14 @@ pub fn line_chart_basic() -> impl IntoElement {
             ChartPoint::new("10:20", 46.0),
             ChartPoint::new("10:25", 64.0),
         ],
-    )])
+    )
+    .stroke_color(blue())
+    .fill_color(blue().opacity(0.28))
+    .stroke_width(px(3.0))
+    .smooth(true)])
     .height(px(360.0))
     .smooth(true)
     .area_fill(true)
+    .value_label_content(ChartValueLabelContent::ValueAndPercentage)
+    .percentage_decimals(1)
 }

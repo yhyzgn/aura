@@ -1,5 +1,5 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{ChartPoint, ChartSeries, RingChart, Space};
+use aura_components::{ChartPoint, ChartSeries, ChartValueLabelPlacement, RingChart, Space};
 use gpui::{AnyView, App, Context, Render, Window, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -22,7 +22,8 @@ impl Render for RingChartDemo {
                     RingChart::new(slices())
                         .id("ring-chart-demo-basic")
                         .height(px(420.0))
-                        .percentage_decimals(1),
+                        .percentage_decimals(1)
+                        .value_label_placement(ChartValueLabelPlacement::OutsideAligned),
                 ))
                 .child(section(
                     "更厚圆环",
@@ -32,7 +33,8 @@ impl Render for RingChartDemo {
                         .height(px(420.0))
                         .inner_ratio(0.44)
                         .percentage_decimals(2)
-                        .outside_label_threshold_degrees(34),
+                        .outside_label_threshold_degrees(34)
+                        .value_label_placement(ChartValueLabelPlacement::OutsideAligned),
                 )),
         )
     }

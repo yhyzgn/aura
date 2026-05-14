@@ -1,5 +1,5 @@
-use aura_components::{BarChart, ChartPoint, ChartSeries};
-use gpui::{IntoElement, px};
+use aura_components::{BarChart, ChartPoint, ChartSeries, ChartValueLabelContent};
+use gpui::{IntoElement, green, px};
 
 pub fn bar_chart_basic() -> impl IntoElement {
     BarChart::new([ChartSeries::new(
@@ -10,6 +10,10 @@ pub fn bar_chart_basic() -> impl IntoElement {
             ChartPoint::new("Q3", 73.0),
             ChartPoint::new("Q4", 96.0),
         ],
-    )])
+    )
+    .fill_color(green())])
     .height(px(260.0))
+    .value_label_content(ChartValueLabelContent::ValueAndPercentage)
+    .percentage_decimals(1)
+    .bar_gap_ratio(0.28)
 }

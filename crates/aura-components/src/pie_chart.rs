@@ -1,4 +1,7 @@
-use crate::chart::{ChartPalette, ChartSeries, default_y_format, has_chart_data};
+use crate::chart::{
+    ChartPalette, ChartSeries, ChartValueLabelContent, ChartValueLabelOptions,
+    ChartValueLabelPlacement, format_value_label, has_chart_data,
+};
 use crate::chart_frame::paint_chart_label_aligned;
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
@@ -9,17 +12,18 @@ use gpui::{
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PieChartLabelOptions {
-    pub show_percentage: bool,
-    pub percentage_decimals: usize,
-    pub outside_threshold_degrees: u16,
+    pub value: ChartValueLabelOptions,
 }
 
 impl Default for PieChartLabelOptions {
     fn default() -> Self {
         Self {
-            show_percentage: true,
-            percentage_decimals: 1,
-            outside_threshold_degrees: 28,
+            value: ChartValueLabelOptions {
+                content: ChartValueLabelContent::ValueOverTotalAndPercentage,
+                placement: ChartValueLabelPlacement::Auto,
+                percentage_decimals: 1,
+                outside_threshold_degrees: 28,
+            },
         }
     }
 }
@@ -78,17 +82,31 @@ impl PieChart {
     }
 
     pub fn show_percentage_labels(mut self, show: bool) -> Self {
-        self.label_options.show_percentage = show;
+        self.label_options.value.content = if show {
+            ChartValueLabelContent::ValueOverTotalAndPercentage
+        } else {
+            ChartValueLabelContent::ValueOverTotal
+        };
+        self
+    }
+
+    pub fn value_label_content(mut self, content: ChartValueLabelContent) -> Self {
+        self.label_options.value.content = content;
+        self
+    }
+
+    pub fn value_label_placement(mut self, placement: ChartValueLabelPlacement) -> Self {
+        self.label_options.value.placement = placement;
         self
     }
 
     pub fn percentage_decimals(mut self, decimals: usize) -> Self {
-        self.label_options.percentage_decimals = decimals.min(4);
+        self.label_options.value.percentage_decimals = decimals.min(4);
         self
     }
 
     pub fn outside_label_threshold_degrees(mut self, degrees: u16) -> Self {
-        self.label_options.outside_threshold_degrees = degrees.min(120);
+        self.label_options.value.outside_threshold_degrees = degrees.min(120);
         self
     }
 
@@ -135,17 +153,31 @@ impl RingChart {
     }
 
     pub fn show_percentage_labels(mut self, show: bool) -> Self {
-        self.label_options.show_percentage = show;
+        self.label_options.value.content = if show {
+            ChartValueLabelContent::ValueOverTotalAndPercentage
+        } else {
+            ChartValueLabelContent::ValueOverTotal
+        };
+        self
+    }
+
+    pub fn value_label_content(mut self, content: ChartValueLabelContent) -> Self {
+        self.label_options.value.content = content;
+        self
+    }
+
+    pub fn value_label_placement(mut self, placement: ChartValueLabelPlacement) -> Self {
+        self.label_options.value.placement = placement;
         self
     }
 
     pub fn percentage_decimals(mut self, decimals: usize) -> Self {
-        self.label_options.percentage_decimals = decimals.min(4);
+        self.label_options.value.percentage_decimals = decimals.min(4);
         self
     }
 
     pub fn outside_label_threshold_degrees(mut self, degrees: u16) -> Self {
-        self.label_options.outside_threshold_degrees = degrees.min(120);
+        self.label_options.value.outside_threshold_degrees = degrees.min(120);
         self
     }
 
@@ -390,7 +422,11 @@ fn paint_slice_value_label(
 
     let mid_deg = (label.start_deg + label.end_deg) * 0.5;
     let text = format_slice_label(label.value, label.total, options);
-    if sweep < options.outside_threshold_degrees as f32 {
+    let force_outside = matches!(
+        options.value.placement,
+        ChartValueLabelPlacement::OutsideFree | ChartValueLabelPlacement::OutsideAligned
+    );
+    if force_outside || sweep < options.value.outside_threshold_degrees as f32 {
         paint_outside_slice_label(
             center,
             radius,
@@ -398,6 +434,7 @@ fn paint_slice_value_label(
             text,
             label.color,
             palette,
+            options.value.placement,
             window,
             cx,
         );
@@ -428,16 +465,29 @@ fn paint_outside_slice_label(
     text: SharedString,
     color: Hsla,
     palette: &ChartPalette,
+    placement: ChartValueLabelPlacement,
     window: &mut Window,
     cx: &mut App,
 ) {
     let edge = polar_point(center, radius, mid_deg);
     let elbow = polar_point(center, radius + 14.0, mid_deg);
     let right_side = mid_deg.to_radians().cos() >= 0.0;
-    let label_anchor = point(
-        elbow.x + if right_side { px(34.0) } else { px(-34.0) },
-        elbow.y,
-    );
+    let label_anchor = if placement == ChartValueLabelPlacement::OutsideAligned {
+        point(
+            center.x
+                + if right_side {
+                    px(radius + 62.0)
+                } else {
+                    px(-(radius + 62.0))
+                },
+            elbow.y,
+        )
+    } else {
+        point(
+            elbow.x + if right_side { px(34.0) } else { px(-34.0) },
+            elbow.y,
+        )
+    };
 
     if let Some(path) = leader_line_path(edge, elbow, label_anchor) {
         window.paint_path(path, color.opacity(0.82));
@@ -478,17 +528,7 @@ fn leader_line_path(
 }
 
 fn format_slice_label(value: f64, total: f64, options: &PieChartLabelOptions) -> SharedString {
-    let base = format!("{} / {}", default_y_format(value), default_y_format(total));
-    if options.show_percentage {
-        let percentage = if total > f64::EPSILON {
-            value / total * 100.0
-        } else {
-            0.0
-        };
-        format!("{} ({:.*}%)", base, options.percentage_decimals, percentage).into()
-    } else {
-        base.into()
-    }
+    format_value_label(value, total, None, &options.value)
 }
 
 fn pie_slice_path(
@@ -584,9 +624,12 @@ mod tests {
             .outside_label_threshold_degrees(36);
         assert_eq!(chart.slices().len(), 3);
         assert!(!chart.show_value_labels);
-        assert!(!chart.label_options().show_percentage);
-        assert_eq!(chart.label_options().percentage_decimals, 2);
-        assert_eq!(chart.label_options().outside_threshold_degrees, 36);
+        assert!(!matches!(
+            chart.label_options().value.content,
+            ChartValueLabelContent::ValueOverTotalAndPercentage
+        ));
+        assert_eq!(chart.label_options().value.percentage_decimals, 2);
+        assert_eq!(chart.label_options().value.outside_threshold_degrees, 36);
     }
 
     #[test]
@@ -598,14 +641,16 @@ mod tests {
         assert_eq!(chart.slices().len(), 3);
         assert!(chart.inner_ratio >= 0.2 && chart.inner_ratio <= 0.9);
         assert!(!chart.show_value_labels);
-        assert_eq!(chart.label_options().percentage_decimals, 3);
+        assert_eq!(chart.label_options().value.percentage_decimals, 3);
     }
 
     #[test]
     fn slice_labels_use_value_total_and_configurable_percentage_precision() {
         let options = PieChartLabelOptions {
-            percentage_decimals: 2,
-            ..PieChartLabelOptions::default()
+            value: ChartValueLabelOptions {
+                percentage_decimals: 2,
+                ..PieChartLabelOptions::default().value
+            },
         };
         assert_eq!(
             format_slice_label(1.0, 3.0, &options),
@@ -613,8 +658,10 @@ mod tests {
         );
 
         let options = PieChartLabelOptions {
-            show_percentage: false,
-            ..PieChartLabelOptions::default()
+            value: ChartValueLabelOptions {
+                content: ChartValueLabelContent::ValueOverTotal,
+                ..PieChartLabelOptions::default().value
+            },
         };
         assert_eq!(
             format_slice_label(1.0, 3.0, &options),

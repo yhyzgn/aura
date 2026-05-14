@@ -1,10 +1,13 @@
 use crate::chart::{
-    ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data,
-    normalized_domain_with_baseline, stacked_domain,
+    ChartOptions, ChartPalette, ChartSeries, ChartValueLabelContent, ChartValueLabelPlacement,
+    collect_labels, format_value_label, has_chart_data, normalized_domain_with_baseline,
+    series_total, stacked_domain,
 };
-use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
+use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
-use crate::chart_shape::{area_path, finite_line_points, line_path};
+use crate::chart_shape::{
+    area_path, finite_line_points, line_path, smooth_area_path, smooth_line_path,
+};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
 use gpui::{
@@ -24,6 +27,8 @@ pub struct AreaChart {
     options: ChartOptions,
     mode: AreaChartMode,
     line_stroke: bool,
+    smooth: bool,
+    stroke_width: Pixels,
 }
 
 impl AreaChart {
@@ -36,6 +41,8 @@ impl AreaChart {
             },
             mode: AreaChartMode::Overlay,
             line_stroke: true,
+            smooth: false,
+            stroke_width: px(2.0),
         }
     }
 
@@ -76,6 +83,31 @@ impl AreaChart {
 
     pub fn show_value_labels(mut self, show: bool) -> Self {
         self.options.show_value_labels = show;
+        self
+    }
+
+    pub fn value_label_content(mut self, content: ChartValueLabelContent) -> Self {
+        self.options.value_label_options.content = content;
+        self
+    }
+
+    pub fn value_label_placement(mut self, placement: ChartValueLabelPlacement) -> Self {
+        self.options.value_label_options.placement = placement;
+        self
+    }
+
+    pub fn percentage_decimals(mut self, decimals: usize) -> Self {
+        self.options.value_label_options.percentage_decimals = decimals.min(4);
+        self
+    }
+
+    pub fn smooth(mut self, enabled: bool) -> Self {
+        self.smooth = enabled;
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Pixels) -> Self {
+        self.stroke_width = width;
         self
     }
 
@@ -160,6 +192,8 @@ impl RenderOnce for AreaChart {
                 palette,
                 self.mode,
                 self.line_stroke,
+                self.smooth,
+                self.stroke_width,
             ))
             .into_any_element()
     }
@@ -191,6 +225,8 @@ fn render_area_canvas(
     palette: ChartPalette,
     mode: AreaChartMode,
     line_stroke: bool,
+    smooth: bool,
+    stroke_width: Pixels,
 ) -> impl IntoElement {
     let height = options.height;
     canvas(
@@ -247,6 +283,8 @@ fn render_area_canvas(
                     &palette,
                     &options,
                     line_stroke,
+                    smooth,
+                    stroke_width,
                     window,
                     cx,
                 ),
@@ -259,6 +297,8 @@ fn render_area_canvas(
                     &palette,
                     &options,
                     line_stroke,
+                    smooth,
+                    stroke_width,
                     window,
                     cx,
                 ),
@@ -280,14 +320,18 @@ fn paint_overlay_areas(
     palette: &ChartPalette,
     options: &ChartOptions,
     line_stroke: bool,
+    smooth: bool,
+    stroke_width: Pixels,
     window: &mut Window,
     cx: &mut App,
 ) {
     let baseline = y.tick(0.0).clamp(0.0, plot_height.as_f32());
     for (series_index, current) in series.iter().enumerate() {
-        let color = current
-            .color
-            .unwrap_or_else(|| palette.series_color(series_index));
+        let fallback = palette.series_color(series_index);
+        let color = current.resolved_stroke_color(fallback);
+        let fill_color = current.resolved_fill_color(fallback);
+        let current_smooth = current.smooth.unwrap_or(smooth);
+        let current_stroke_width = current.stroke_width.unwrap_or(stroke_width);
         let point_data = current
             .points
             .iter()
@@ -305,18 +349,33 @@ fn paint_overlay_areas(
             .iter()
             .map(|(position, _)| *position)
             .collect::<Vec<_>>();
-        if let Some(path) = area_path(&points, top + px(baseline)) {
-            window.paint_path(path, color.opacity(0.26));
+        let area = if current_smooth {
+            smooth_area_path(&points, top + px(baseline))
+        } else {
+            area_path(&points, top + px(baseline))
+        };
+        if let Some(path) = area {
+            window.paint_path(path, fill_color.opacity(0.26));
         }
         if line_stroke {
-            if let Some(path) = line_path(&points, px(2.0)) {
+            let line = if current_smooth {
+                smooth_line_path(&points, current_stroke_width)
+            } else {
+                line_path(&points, current_stroke_width)
+            };
+            if let Some(path) = line {
                 window.paint_path(path, color);
             }
         }
         if options.show_value_labels {
             for (position, value) in &point_data {
                 paint_chart_label_aligned(
-                    format_chart_value(*value, options.y_format),
+                    format_value_label(
+                        *value,
+                        series_total(current),
+                        options.y_format,
+                        &options.value_label_options,
+                    ),
                     gpui::point(position.x - px(18.0), position.y - px(20.0)),
                     palette.label,
                     gpui::TextAlign::Center,
@@ -339,6 +398,8 @@ fn paint_stacked_areas(
     palette: &ChartPalette,
     options: &ChartOptions,
     line_stroke: bool,
+    _smooth: bool,
+    stroke_width: Pixels,
     window: &mut Window,
     cx: &mut App,
 ) {
@@ -349,9 +410,10 @@ fn paint_stacked_areas(
         .unwrap_or(0);
     let mut previous = vec![0.0_f64; labels_len];
     for (series_index, current) in series.iter().enumerate() {
-        let color = current
-            .color
-            .unwrap_or_else(|| palette.series_color(series_index));
+        let fallback = palette.series_color(series_index);
+        let color = current.resolved_stroke_color(fallback);
+        let fill_color = current.resolved_fill_color(fallback);
+        let current_stroke_width = current.stroke_width.unwrap_or(stroke_width);
         let mut lower = Vec::new();
         let mut upper = Vec::new();
         for point_index in 0..labels_len {
@@ -372,10 +434,10 @@ fn paint_stacked_areas(
         let lower = finite_line_points(lower);
         let upper = finite_line_points(upper);
         if let Some(path) = stacked_area_path(&lower, &upper) {
-            window.paint_path(path, color.opacity(0.32));
+            window.paint_path(path, fill_color.opacity(0.32));
         }
         if line_stroke {
-            if let Some(path) = line_path(&upper, px(2.0)) {
+            if let Some(path) = line_path(&upper, current_stroke_width) {
                 window.paint_path(path, color);
             }
         }
@@ -388,7 +450,12 @@ fn paint_stacked_areas(
                     .map(|point| point.value)
                     .unwrap_or(0.0);
                 paint_chart_label_aligned(
-                    format_chart_value(value, options.y_format),
+                    format_value_label(
+                        value,
+                        series_total(current),
+                        options.y_format,
+                        &options.value_label_options,
+                    ),
                     gpui::point(position.x - px(18.0), position.y - px(20.0)),
                     palette.label,
                     gpui::TextAlign::Center,
@@ -444,6 +511,11 @@ mod tests {
             .y_domain(0.0, 500.0)
             .line_stroke(false)
             .show_value_labels(false)
+            .value_label_content(ChartValueLabelContent::Percentage)
+            .value_label_placement(ChartValueLabelPlacement::OutsideFree)
+            .percentage_decimals(2)
+            .smooth(true)
+            .stroke_width(px(3.0))
             .stacked();
 
         assert_eq!(chart.options().id, SharedString::from("traffic-area"));
@@ -453,8 +525,19 @@ mod tests {
         assert!(!chart.options().show_legend);
         assert_eq!(chart.options().y_domain, Some((0.0, 500.0)));
         assert!(!chart.options().show_value_labels);
+        assert_eq!(
+            chart.options().value_label_options.content,
+            ChartValueLabelContent::Percentage
+        );
+        assert_eq!(
+            chart.options().value_label_options.placement,
+            ChartValueLabelPlacement::OutsideFree
+        );
+        assert_eq!(chart.options().value_label_options.percentage_decimals, 2);
         assert_eq!(chart.area_mode(), AreaChartMode::Stacked);
         assert!(!chart.line_stroke);
+        assert!(chart.smooth);
+        assert_eq!(chart.stroke_width, px(3.0));
     }
 
     #[test]

@@ -1,6 +1,6 @@
 {
-  "last_turn_at": "2026-05-14T09:30:15.160Z",
-  "last_progress_at": "2026-05-14T09:30:15.160Z",
-  "turn_count": 11,
-  "last_agent_output": "已加上统计图数值指示，并已推送。\n\n覆盖范围：\n\n- `LineChart`：数据点上方显示数值\n- `AreaChart`：面积图节点上方显示数值\n- `BarChart`：柱状图显示柱顶/堆叠段中"
+  "last_turn_at": "2026-05-14T09:47:05.358Z",
+  "last_progress_at": "2026-05-14T09:47:05.358Z",
+  "turn_count": 12,
+  "last_agent_output": "已修正并推送。\n\n改动点：\n\n- PieChart / RingChart 标签改为：`值 / 总数`\n- 默认追加百分比：`值 / 总数 (xx.x%)`\n- 新增配置：\n  - `.show_pe"
 }

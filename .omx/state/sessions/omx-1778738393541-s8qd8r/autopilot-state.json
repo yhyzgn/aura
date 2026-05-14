@@ -1,12 +1,11 @@
 {
   "active": false,
-  "current_phase": "pie_ring_label_semantics",
+  "current_phase": "chart_customization_api",
   "lifecycle_outcome": "finished",
   "run_outcome": "finish",
-  "target": "Correct Pie/Ring labels to value/total, configurable percentage decimals, and external callouts for small sectors",
+  "target": "Add high customization controls across chart components",
   "validation": [
     "cargo fmt",
-    "cargo test -p aura-components pie_chart -- --nocapture",
     "cargo check -p aura-components",
     "cargo check -p aura-docs --bin check_snippets",
     "cargo check -p aura-docs",

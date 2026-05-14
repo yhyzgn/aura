@@ -1,8 +1,9 @@
 use crate::chart::{
-    ChartOptions, ChartPalette, ChartSeries, collect_labels, has_chart_data, normalized_domain,
+    ChartOptions, ChartPalette, ChartSeries, ChartValueLabelContent, ChartValueLabelPlacement,
+    collect_labels, format_value_label, has_chart_data, normalized_domain, series_total,
     stacked_domain,
 };
-use crate::chart_frame::{format_chart_value, paint_chart_frame, paint_chart_label_aligned};
+use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleBand, ScaleLinear, ScalePoint};
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
@@ -22,6 +23,7 @@ pub struct BarChart {
     series: Vec<ChartSeries>,
     options: ChartOptions,
     mode: BarChartMode,
+    bar_gap_ratio: f32,
 }
 
 impl BarChart {
@@ -33,6 +35,7 @@ impl BarChart {
                 ..ChartOptions::default()
             },
             mode: BarChartMode::Grouped,
+            bar_gap_ratio: 0.18,
         }
     }
 
@@ -73,6 +76,26 @@ impl BarChart {
 
     pub fn show_value_labels(mut self, show: bool) -> Self {
         self.options.show_value_labels = show;
+        self
+    }
+
+    pub fn value_label_content(mut self, content: ChartValueLabelContent) -> Self {
+        self.options.value_label_options.content = content;
+        self
+    }
+
+    pub fn value_label_placement(mut self, placement: ChartValueLabelPlacement) -> Self {
+        self.options.value_label_options.placement = placement;
+        self
+    }
+
+    pub fn percentage_decimals(mut self, decimals: usize) -> Self {
+        self.options.value_label_options.percentage_decimals = decimals.min(4);
+        self
+    }
+
+    pub fn bar_gap_ratio(mut self, ratio: f32) -> Self {
+        self.bar_gap_ratio = ratio.clamp(0.0, 0.8);
         self
     }
 
@@ -151,6 +174,7 @@ impl RenderOnce for BarChart {
                 self.options,
                 palette,
                 self.mode,
+                self.bar_gap_ratio,
             ))
             .into_any_element()
     }
@@ -175,6 +199,7 @@ fn render_bar_canvas(
     options: ChartOptions,
     palette: ChartPalette,
     mode: BarChartMode,
+    bar_gap_ratio: f32,
 ) -> impl IntoElement {
     let height = options.height;
     canvas(
@@ -195,8 +220,8 @@ fn render_bar_canvas(
 
             let frame_x = ScalePoint::new(labels.clone(), (0.0, width.as_f32()));
             let band = ScaleBand::new(labels.clone(), (0.0, width.as_f32()))
-                .padding_inner(0.24)
-                .padding_outer(0.14);
+                .padding_inner(bar_gap_ratio)
+                .padding_outer((bar_gap_ratio * 0.58).max(0.02));
             let domain = if mode == BarChartMode::Stacked {
                 options
                     .y_domain
@@ -274,9 +299,7 @@ fn paint_grouped_bars(
     let gap = (group_width / series_count - bar_width).max(0.0);
 
     for (series_index, current) in series.iter().enumerate() {
-        let color = current
-            .color
-            .unwrap_or_else(|| palette.series_color(series_index));
+        let color = current.resolved_fill_color(palette.series_color(series_index));
         for (point_index, chart_point) in current.points.iter().enumerate() {
             if !chart_point.is_finite() {
                 continue;
@@ -302,7 +325,12 @@ fn paint_grouped_bars(
                     top_y + height + 3.0
                 };
                 paint_chart_label_aligned(
-                    format_chart_value(chart_point.value, options.y_format),
+                    format_value_label(
+                        chart_point.value,
+                        series_total(current),
+                        options.y_format,
+                        &options.value_label_options,
+                    ),
                     point(left + px(x + bar_width * 0.5 - 24.0), top + px(label_y)),
                     palette.label,
                     gpui::TextAlign::Center,
@@ -346,9 +374,7 @@ fn paint_stacked_bars(
             if !chart_point.is_finite() {
                 continue;
             }
-            let color = current
-                .color
-                .unwrap_or_else(|| palette.series_color(series_index));
+            let color = current.resolved_fill_color(palette.series_color(series_index));
             let (from, to) = if chart_point.value >= 0.0 {
                 let from = positive_base;
                 positive_base += chart_point.value;
@@ -371,7 +397,12 @@ fn paint_stacked_bars(
             ));
             if options.show_value_labels {
                 paint_chart_label_aligned(
-                    format_chart_value(chart_point.value, options.y_format),
+                    format_value_label(
+                        chart_point.value,
+                        series_total(current),
+                        options.y_format,
+                        &options.value_label_options,
+                    ),
                     point(
                         left + px(group_x + band.band_width().max(1.0) * 0.5 - 24.0),
                         top + px(top_y + height * 0.5 - 7.0),
@@ -415,6 +446,10 @@ mod tests {
             .show_legend(false)
             .y_domain(0.0, 100.0)
             .show_value_labels(false)
+            .value_label_content(ChartValueLabelContent::ValueAndPercentage)
+            .value_label_placement(ChartValueLabelPlacement::Inside)
+            .percentage_decimals(2)
+            .bar_gap_ratio(0.3)
             .stacked();
 
         assert_eq!(chart.options().id, SharedString::from("sales-bars"));
@@ -424,6 +459,16 @@ mod tests {
         assert!(!chart.options().show_legend);
         assert_eq!(chart.options().y_domain, Some((0.0, 100.0)));
         assert!(!chart.options().show_value_labels);
+        assert_eq!(
+            chart.options().value_label_options.content,
+            ChartValueLabelContent::ValueAndPercentage
+        );
+        assert_eq!(
+            chart.options().value_label_options.placement,
+            ChartValueLabelPlacement::Inside
+        );
+        assert_eq!(chart.options().value_label_options.percentage_decimals, 2);
+        assert_eq!(chart.bar_gap_ratio, 0.3);
         assert_eq!(chart.bar_mode(), BarChartMode::Stacked);
     }
 

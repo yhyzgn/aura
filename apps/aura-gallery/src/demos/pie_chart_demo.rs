@@ -1,5 +1,5 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{ChartPoint, ChartSeries, PieChart, Space};
+use aura_components::{ChartPoint, ChartSeries, ChartValueLabelPlacement, PieChart, Space};
 use gpui::{AnyView, App, Context, Render, Window, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -22,7 +22,8 @@ impl Render for PieChartDemo {
                     PieChart::new(slices())
                         .id("pie-chart-demo-basic")
                         .height(px(420.0))
-                        .percentage_decimals(1),
+                        .percentage_decimals(1)
+                        .value_label_placement(ChartValueLabelPlacement::OutsideAligned),
                 ))
                 .child(section(
                     "隐藏图例",

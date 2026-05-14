@@ -98,7 +98,3 @@ pub fn paint_chart_label_aligned(
         .shape_line(text, px(11.0), &[run], None);
     let _ = line.paint(origin, px(14.0), align, align_width, window, cx);
 }
-
-pub fn format_chart_value(value: f64, formatter: Option<fn(f64) -> SharedString>) -> SharedString {
-    formatter.unwrap_or(default_y_format)(value)
-}

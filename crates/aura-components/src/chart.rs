@@ -25,6 +25,10 @@ pub struct ChartSeries {
     pub name: SharedString,
     pub points: Vec<ChartPoint>,
     pub color: Option<Hsla>,
+    pub fill_color: Option<Hsla>,
+    pub stroke_color: Option<Hsla>,
+    pub stroke_width: Option<Pixels>,
+    pub smooth: Option<bool>,
 }
 
 impl ChartSeries {
@@ -36,12 +40,44 @@ impl ChartSeries {
             name: name.into(),
             points: points.into_iter().collect(),
             color: None,
+            fill_color: None,
+            stroke_color: None,
+            stroke_width: None,
+            smooth: None,
         }
     }
 
     pub fn color(mut self, color: Hsla) -> Self {
         self.color = Some(color);
         self
+    }
+
+    pub fn fill_color(mut self, color: Hsla) -> Self {
+        self.fill_color = Some(color);
+        self
+    }
+
+    pub fn stroke_color(mut self, color: Hsla) -> Self {
+        self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Pixels) -> Self {
+        self.stroke_width = Some(width);
+        self
+    }
+
+    pub fn smooth(mut self, enabled: bool) -> Self {
+        self.smooth = Some(enabled);
+        self
+    }
+
+    pub fn resolved_fill_color(&self, fallback: Hsla) -> Hsla {
+        self.fill_color.or(self.color).unwrap_or(fallback)
+    }
+
+    pub fn resolved_stroke_color(&self, fallback: Hsla) -> Hsla {
+        self.stroke_color.or(self.color).unwrap_or(fallback)
     }
 
     pub fn finite_points(&self) -> impl Iterator<Item = &ChartPoint> {
@@ -108,6 +144,42 @@ impl ChartPalette {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChartValueLabelContent {
+    Value,
+    Percentage,
+    ValueAndPercentage,
+    ValueOverTotal,
+    ValueOverTotalAndPercentage,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChartValueLabelPlacement {
+    Auto,
+    Inside,
+    OutsideFree,
+    OutsideAligned,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChartValueLabelOptions {
+    pub content: ChartValueLabelContent,
+    pub placement: ChartValueLabelPlacement,
+    pub percentage_decimals: usize,
+    pub outside_threshold_degrees: u16,
+}
+
+impl Default for ChartValueLabelOptions {
+    fn default() -> Self {
+        Self {
+            content: ChartValueLabelContent::Value,
+            placement: ChartValueLabelPlacement::Auto,
+            percentage_decimals: 1,
+            outside_threshold_degrees: 28,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ChartOptions {
     pub id: SharedString,
@@ -120,6 +192,7 @@ pub struct ChartOptions {
     pub y_tick_count: usize,
     pub y_format: Option<fn(f64) -> SharedString>,
     pub show_value_labels: bool,
+    pub value_label_options: ChartValueLabelOptions,
 }
 
 impl Default for ChartOptions {
@@ -135,6 +208,7 @@ impl Default for ChartOptions {
             y_tick_count: 4,
             y_format: None,
             show_value_labels: true,
+            value_label_options: ChartValueLabelOptions::default(),
         }
     }
 }
@@ -147,6 +221,46 @@ pub fn default_y_format(value: f64) -> SharedString {
     } else {
         format!("{value:.1}").into()
     }
+}
+
+pub fn format_value_label(
+    value: f64,
+    total: f64,
+    formatter: Option<fn(f64) -> SharedString>,
+    options: &ChartValueLabelOptions,
+) -> SharedString {
+    let format_value = formatter.unwrap_or(default_y_format);
+    let value_text = format_value(value);
+    let total_text = format_value(total);
+    let percentage = if total.abs() > f64::EPSILON {
+        value / total * 100.0
+    } else {
+        0.0
+    };
+    match options.content {
+        ChartValueLabelContent::Value => value_text,
+        ChartValueLabelContent::Percentage => {
+            format!("{:.*}%", options.percentage_decimals, percentage).into()
+        }
+        ChartValueLabelContent::ValueAndPercentage => format!(
+            "{} ({:.*}%)",
+            value_text, options.percentage_decimals, percentage
+        )
+        .into(),
+        ChartValueLabelContent::ValueOverTotal => format!("{} / {}", value_text, total_text).into(),
+        ChartValueLabelContent::ValueOverTotalAndPercentage => format!(
+            "{} / {} ({:.*}%)",
+            value_text, total_text, options.percentage_decimals, percentage
+        )
+        .into(),
+    }
+}
+
+pub fn series_total(series: &ChartSeries) -> f64 {
+    series
+        .finite_points()
+        .map(|point| point.value.max(0.0))
+        .sum()
 }
 
 pub fn finite_domain(series: &[ChartSeries]) -> Option<(f64, f64)> {
@@ -250,6 +364,32 @@ pub fn has_chart_data(series: &[ChartSeries]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chart_series_builder_tracks_visual_overrides() {
+        let series = ChartSeries::new("metrics", [ChartPoint::new("a", 1.0)])
+            .fill_color(gpui::red())
+            .stroke_color(gpui::blue())
+            .stroke_width(px(3.0))
+            .smooth(false);
+        assert_eq!(series.fill_color, Some(gpui::red()));
+        assert_eq!(series.stroke_color, Some(gpui::blue()));
+        assert_eq!(series.stroke_width, Some(px(3.0)));
+        assert_eq!(series.smooth, Some(false));
+    }
+
+    #[test]
+    fn value_labels_format_content_variants() {
+        let options = ChartValueLabelOptions {
+            content: ChartValueLabelContent::ValueOverTotalAndPercentage,
+            percentage_decimals: 2,
+            ..ChartValueLabelOptions::default()
+        };
+        assert_eq!(
+            format_value_label(1.0, 4.0, None, &options),
+            SharedString::from("1 / 4 (25.00%)")
+        );
+    }
 
     #[test]
     fn chart_series_filters_non_finite_points() {

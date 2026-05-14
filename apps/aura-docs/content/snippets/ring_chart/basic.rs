@@ -1,4 +1,4 @@
-use aura_components::{ChartPoint, ChartSeries, RingChart};
+use aura_components::{ChartPoint, ChartSeries, ChartValueLabelPlacement, RingChart};
 use gpui::{IntoElement, px};
 
 pub fn ring_chart_basic() -> impl IntoElement {
@@ -11,4 +11,5 @@ pub fn ring_chart_basic() -> impl IntoElement {
     .height(px(340.0))
     .percentage_decimals(1)
     .outside_label_threshold_degrees(30)
+    .value_label_placement(ChartValueLabelPlacement::OutsideAligned)
 }
