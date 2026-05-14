@@ -9,10 +9,22 @@
 
 #[path = "../../content/snippets/about/doc_rule.rs"]
 mod about_doc_rule;
+#[path = "../../content/snippets/affix/bottom.rs"]
+mod affix_bottom;
+#[path = "../../content/snippets/affix/container.rs"]
+mod affix_container;
+#[path = "../../content/snippets/affix/top.rs"]
+mod affix_top;
 #[path = "../../content/snippets/alert/description.rs"]
 mod alert_description;
 #[path = "../../content/snippets/alert/types.rs"]
 mod alert_types;
+#[path = "../../content/snippets/anchor/basic.rs"]
+mod anchor_basic;
+#[path = "../../content/snippets/anchor/nested.rs"]
+mod anchor_nested;
+#[path = "../../content/snippets/anchor/targets.rs"]
+mod anchor_targets;
 #[path = "../../content/snippets/architecture/render_pipeline.rs"]
 mod architecture_render_pipeline;
 #[path = "../../content/snippets/authoring/code_block.rs"]
@@ -31,6 +43,12 @@ mod avatar_content;
 mod avatar_shapes;
 #[path = "../../content/snippets/avatar/sizes.rs"]
 mod avatar_sizes;
+#[path = "../../content/snippets/backtop/basic.rs"]
+mod backtop_basic;
+#[path = "../../content/snippets/backtop/container.rs"]
+mod backtop_container;
+#[path = "../../content/snippets/backtop/custom.rs"]
+mod backtop_custom;
 #[path = "../../content/snippets/badge/basic.rs"]
 mod badge_basic;
 #[path = "../../content/snippets/badge/dot.rs"]
@@ -163,6 +181,12 @@ mod empty_description;
 mod empty_extra;
 #[path = "../../content/snippets/empty/image.rs"]
 mod empty_image;
+#[path = "../../content/snippets/form/basic.rs"]
+mod form_basic;
+#[path = "../../content/snippets/form/inline.rs"]
+mod form_inline;
+#[path = "../../content/snippets/form/validation.rs"]
+mod form_validation;
 #[path = "../../content/snippets/icon/colors.rs"]
 mod icon_colors;
 #[path = "../../content/snippets/icon/lucide.rs"]
@@ -253,6 +277,12 @@ mod popover_basic;
 mod popover_close_strategy;
 #[path = "../../content/snippets/popover/placements.rs"]
 mod popover_placements;
+#[path = "../../content/snippets/preview/custom_trigger.rs"]
+mod preview_custom_trigger;
+#[path = "../../content/snippets/preview/escape.rs"]
+mod preview_escape;
+#[path = "../../content/snippets/preview/image_trigger.rs"]
+mod preview_image_trigger;
 #[path = "../../content/snippets/progress/basic.rs"]
 mod progress_basic;
 #[path = "../../content/snippets/progress/color.rs"]

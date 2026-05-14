@@ -1,9 +1,9 @@
 {
-  "session_id": "omx-1778654158675-z78x5p",
-  "started_at": "2026-05-13T06:35:58.724Z",
+  "session_id": "omx-1778738393541-s8qd8r",
+  "started_at": "2026-05-14T05:59:53.586Z",
   "cwd": "/home/neo/Projects/neo/lib/aura",
-  "pid": 840043,
+  "pid": 245837,
   "platform": "linux",
-  "pid_start_ticks": 1843261,
+  "pid_start_ticks": 1643159,
   "pid_cmdline": "node /home/neo/.bun/bin/omx resume --madmax"
 }

@@ -1,18 +1,20 @@
 use aura_components::{
-    Alert, AlertType, Autocomplete, AutocompleteItem, Avatar, Badge, BadgeType, Button, Card,
-    Checkbox, CheckboxGroup, CodeBlock as AuraCodeBlock, Container, Dropdown, Input, InputNumber,
-    InputNumberControlsPosition, Link, Loading, Menu, MenuMode, NotificationType, Paragraph,
-    Popconfirm, Popover, Progress, ProgressStatus, Radio, RadioGroup, Rate, Result as AuraResult,
-    ResultStatus, Select, Skeleton, SkeletonItem, SkeletonVariant, Slider, Space, Statistic,
-    Switch, Tag as AuraTag, Text, Textarea, Title, Transfer, TransferItem, Tree, TreeNode, Upload,
-    UploadFile, UploadStatus, VirtualizedList, show_notification, toast_error, toast_info,
-    toast_success, toast_warning,
+    Affix, AffixPosition, Alert, AlertType, Anchor, AnchorLink, AnchorTarget, Autocomplete,
+    AutocompleteItem, Avatar, Backtop, Badge, BadgeType, Button, Card, Checkbox, CheckboxGroup,
+    CodeBlock as AuraCodeBlock, Container, Dropdown, Flex, Form, FormItem, Image, Input,
+    InputNumber, InputNumberControlsPosition, Link, Loading, Menu, MenuMode, NotificationType,
+    Paragraph, Popconfirm, Popover, Preview, Progress, ProgressStatus, Radio, RadioGroup, Rate,
+    Result as AuraResult, ResultStatus, Select, Skeleton, SkeletonItem, SkeletonVariant, Slider,
+    Space, Statistic, Switch, Tag as AuraTag, Text, Textarea, Title, Transfer, TransferItem, Tree,
+    TreeNode, Upload, UploadFile, UploadStatus, VirtualizedList, show_notification, toast_error,
+    toast_info, toast_success, toast_warning,
 };
 use aura_core::{Config, PassivePortal, Placement, Portal, clear_popover};
+use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     AnyElement, AnyView, App, Component, Context, Entity, IntoElement, Render, RenderOnce,
-    SharedString, WeakEntity, Window, div, prelude::*, px,
+    ScrollHandle, SharedString, WeakEntity, Window, div, prelude::*, px,
 };
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
@@ -866,6 +868,25 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "virtualized_list/basic.rs" => Some(include_str!(
             "../content/snippets/virtualized_list/basic.rs"
         )),
+        "affix/top.rs" => Some(include_str!("../content/snippets/affix/top.rs")),
+        "affix/bottom.rs" => Some(include_str!("../content/snippets/affix/bottom.rs")),
+        "affix/container.rs" => Some(include_str!("../content/snippets/affix/container.rs")),
+        "anchor/basic.rs" => Some(include_str!("../content/snippets/anchor/basic.rs")),
+        "anchor/nested.rs" => Some(include_str!("../content/snippets/anchor/nested.rs")),
+        "anchor/targets.rs" => Some(include_str!("../content/snippets/anchor/targets.rs")),
+        "backtop/basic.rs" => Some(include_str!("../content/snippets/backtop/basic.rs")),
+        "backtop/custom.rs" => Some(include_str!("../content/snippets/backtop/custom.rs")),
+        "backtop/container.rs" => Some(include_str!("../content/snippets/backtop/container.rs")),
+        "form/basic.rs" => Some(include_str!("../content/snippets/form/basic.rs")),
+        "form/validation.rs" => Some(include_str!("../content/snippets/form/validation.rs")),
+        "form/inline.rs" => Some(include_str!("../content/snippets/form/inline.rs")),
+        "preview/image_trigger.rs" => {
+            Some(include_str!("../content/snippets/preview/image_trigger.rs"))
+        }
+        "preview/custom_trigger.rs" => Some(include_str!(
+            "../content/snippets/preview/custom_trigger.rs"
+        )),
+        "preview/escape.rs" => Some(include_str!("../content/snippets/preview/escape.rs")),
         "button/types.rs" => Some(include_str!("../content/snippets/button/types.rs")),
         "button/secondary.rs" => Some(include_str!("../content/snippets/button/secondary.rs")),
         "button/text.rs" => Some(include_str!("../content/snippets/button/text.rs")),
@@ -1414,6 +1435,14 @@ struct LiveDemoContent {
     transfers: Vec<Entity<Transfer>>,
     trees: Vec<Entity<Tree>>,
     menus: Vec<Entity<Menu>>,
+    affixes: Vec<Entity<Affix>>,
+    anchors: Vec<Entity<Anchor>>,
+    backtops: Vec<Entity<Backtop>>,
+    form_inputs: Vec<Entity<Input>>,
+    form_selects: Vec<Entity<Select>>,
+    form_switches: Vec<Entity<Switch>>,
+    form_textareas: Vec<Entity<Textarea>>,
+    scroll_handle: ScrollHandle,
 }
 
 impl LiveDemoContent {
@@ -1445,6 +1474,14 @@ impl LiveDemoContent {
         let mut transfers = Vec::new();
         let mut trees = Vec::new();
         let mut menus = Vec::new();
+        let mut affixes = Vec::new();
+        let mut anchors = Vec::new();
+        let mut backtops = Vec::new();
+        let mut form_inputs = Vec::new();
+        let mut form_selects = Vec::new();
+        let mut form_switches = Vec::new();
+        let mut form_textareas = Vec::new();
+        let scroll_handle = ScrollHandle::new();
 
         match component.as_ref() {
             "AutocompleteBasic" => {
@@ -2001,6 +2038,41 @@ impl LiveDemoContent {
             "MenuHorizontal" => menus.push(cx.new(|_| docs_menu_horizontal())),
             "MenuVertical" => menus.push(cx.new(|_| docs_menu_vertical())),
             "MenuCollapsed" => menus.push(cx.new(|_| docs_menu_collapsed())),
+            "AffixTop" => affixes.push(cx.new(|_| docs_affix_top())),
+            "AffixBottom" => affixes.push(cx.new(|_| docs_affix_bottom())),
+            "AffixContainer" => affixes.push(cx.new(|_| docs_affix_top())),
+            "AnchorBasic" => {
+                let handle = scroll_handle.clone();
+                anchors.push(cx.new(move |_| docs_anchor_basic(handle)));
+            }
+            "AnchorNested" | "AnchorTargets" => {
+                let handle = scroll_handle.clone();
+                anchors.push(cx.new(move |_| docs_anchor_nested(handle)));
+            }
+            "BacktopBasic" | "BacktopContainer" => {
+                let handle = scroll_handle.clone();
+                backtops.push(cx.new(move |_| docs_backtop_basic(handle)));
+            }
+            "BacktopCustom" => {
+                let handle = scroll_handle.clone();
+                backtops.push(cx.new(move |_| docs_backtop_custom(handle)));
+            }
+            "FormBasic" => {
+                form_inputs.push(cx.new(|cx| Input::new("Aura", cx).placeholder("Name")));
+                form_selects
+                    .push(cx.new(|cx| Select::new(vec!["Admin", "Editor", "Viewer"], Some(0), cx)));
+                form_switches.push(cx.new(|cx| Switch::new(true, cx)));
+            }
+            "FormValidation" => {
+                form_inputs.push(cx.new(|cx| Input::new("", cx).placeholder("请输入标题")));
+                form_textareas
+                    .push(cx.new(|cx| Textarea::new("Draft", cx).rows(3).max_length(120)));
+            }
+            "FormInline" => {
+                form_inputs.push(cx.new(|cx| Input::new("", cx).placeholder("Search keyword")));
+                form_selects
+                    .push(cx.new(|cx| Select::new(vec!["All", "Open", "Closed"], Some(0), cx)));
+            }
             _ => {}
         }
 
@@ -2035,6 +2107,14 @@ impl LiveDemoContent {
             transfers,
             trees,
             menus,
+            affixes,
+            anchors,
+            backtops,
+            form_inputs,
+            form_selects,
+            form_switches,
+            form_textareas,
+            scroll_handle,
         }
     }
 }
@@ -3140,7 +3220,43 @@ impl Render for LiveDemoContent {
                 .first()
                 .cloned()
                 .map(Entity::into_any_element)
-                .unwrap_or_else(|| Paragraph::with_text("Menu demo is not initialized.").into_any_element()),
+                .unwrap_or_else(|| {
+                    Paragraph::with_text("Menu demo is not initialized.").into_any_element()
+                }),
+            "AffixTop" | "AffixBottom" => docs_affix_scroll_shell(
+                self.affixes.first().cloned().map(Entity::into_any_element),
+                false,
+                _cx,
+            ),
+            "AffixContainer" => docs_affix_scroll_shell(
+                self.affixes.first().cloned().map(Entity::into_any_element),
+                true,
+                _cx,
+            ),
+            "AnchorBasic" | "AnchorNested" | "AnchorTargets" => self
+                .anchors
+                .first()
+                .cloned()
+                .map(|anchor| docs_anchor_shell(self.scroll_handle.clone(), anchor, _cx))
+                .unwrap_or_else(|| {
+                    Paragraph::with_text("Anchor demo is not initialized.").into_any_element()
+                }),
+            "BacktopBasic" | "BacktopCustom" | "BacktopContainer" => self
+                .backtops
+                .first()
+                .cloned()
+                .map(|backtop| docs_backtop_shell(self.scroll_handle.clone(), backtop, _cx))
+                .unwrap_or_else(|| {
+                    Paragraph::with_text("Backtop demo is not initialized.").into_any_element()
+                }),
+            "FormBasic" => {
+                docs_form_basic(&self.form_inputs, &self.form_selects, &self.form_switches)
+            }
+            "FormValidation" => docs_form_validation(&self.form_inputs, &self.form_textareas),
+            "FormInline" => docs_form_inline(&self.form_inputs, &self.form_selects),
+            "PreviewImageTrigger" => docs_preview_image_trigger().into_any_element(),
+            "PreviewCustomTrigger" => docs_preview_custom_trigger(_cx).into_any_element(),
+            "PreviewEscape" => docs_preview_escape().into_any_element(),
             _ => self.gallery_demo.clone().map_or_else(
                 || {
                     Paragraph::with_text(format!(
@@ -3836,6 +3952,308 @@ fn dialog_body(message: &'static str) -> impl IntoElement {
                         .on_click(|_, _, cx| aura_components::Dialog::close(cx)),
                 ),
         )
+}
+
+fn docs_affix_top() -> Affix {
+    Affix::new().offset_lg().content(|_, _| {
+        Button::new("固钉在距离顶部 80px 的位置")
+            .primary()
+            .into_any_element()
+    })
+}
+
+fn docs_affix_bottom() -> Affix {
+    Affix::new()
+        .position(AffixPosition::Bottom)
+        .offset_md()
+        .content(|_, _| {
+            Button::new("固钉在距离底部 20px 的位置")
+                .success()
+                .into_any_element()
+        })
+}
+
+fn docs_affix_scroll_shell(
+    affix: Option<AnyElement>,
+    show_container_note: bool,
+    cx: &mut Context<LiveDemoContent>,
+) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+
+    Flex::new()
+        .relative()
+        .height_units(360.0)
+        .overflow_hidden()
+        .border()
+        .border_color(theme.neutral.border)
+        .rounded_md()
+        .bg(theme.neutral.hover)
+        .child(
+            Flex::new()
+                .size_full()
+                .id(if show_container_note {
+                    "docs-affix-container-scroll-view"
+                } else {
+                    "docs-affix-scroll-view"
+                })
+                .overflow_y_scroll()
+                .padding_md()
+                .child(
+                    Flex::new()
+                        .height_units(120.0)
+                        .center()
+                        .child(Text::new("向下滚动查看固钉效果").text_color(theme.neutral.text_3)),
+                )
+                .when_some(affix, |this, affix| this.child(affix))
+                .child(
+                    Flex::new()
+                        .height_units(520.0)
+                        .bg(theme.neutral.card)
+                        .margin_y_units(16.0)
+                        .border()
+                        .border_color(theme.neutral.border)
+                        .center()
+                        .child(Text::new(if show_container_note {
+                            "滚动容器负责触发 Affix 测量"
+                        } else {
+                            "长内容占位"
+                        })),
+                )
+                .child(Flex::new().height_units(180.0)),
+        )
+        .into_any_element()
+}
+
+fn docs_anchor_basic(scroll_handle: ScrollHandle) -> Anchor {
+    Anchor::new(scroll_handle)
+        .offset_sm()
+        .link(AnchorLink::new("基础用法", "basic"))
+        .link(AnchorLink::new("API", "api"))
+}
+
+fn docs_anchor_nested(scroll_handle: ScrollHandle) -> Anchor {
+    Anchor::new(scroll_handle)
+        .offset_sm()
+        .link(AnchorLink::new("基础用法", "basic"))
+        .link(
+            AnchorLink::new("API", "api")
+                .child(AnchorLink::new("Attributes", "attributes"))
+                .child(AnchorLink::new("Events", "events")),
+        )
+}
+
+fn docs_anchor_shell(
+    scroll_handle: ScrollHandle,
+    anchor: Entity<Anchor>,
+    cx: &mut Context<LiveDemoContent>,
+) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+
+    Flex::new()
+        .row()
+        .gap_lg()
+        .height_units(420.0)
+        .overflow_hidden()
+        .border()
+        .border_color(theme.neutral.border)
+        .rounded_md()
+        .padding_md()
+        .child(
+            Flex::new().column().width_percent(72.0).h_full().child(
+                Flex::new()
+                    .flex_1()
+                    .id("docs-anchor-scroll-view")
+                    .overflow_y_scroll()
+                    .track_scroll(&scroll_handle)
+                    .child(
+                        Space::new()
+                            .vertical()
+                            .gap_xl()
+                            .child(AnchorTarget::new(
+                                "basic",
+                                anchor.clone(),
+                                docs_anchor_panel(&theme, "基础用法内容区域", 240.0),
+                            ))
+                            .child(AnchorTarget::new(
+                                "api",
+                                anchor.clone(),
+                                docs_anchor_panel(&theme, "API 内容区域", 160.0),
+                            ))
+                            .child(AnchorTarget::new(
+                                "attributes",
+                                anchor.clone(),
+                                docs_anchor_panel(&theme, "Attributes 内容区域", 260.0),
+                            ))
+                            .child(AnchorTarget::new(
+                                "events",
+                                anchor.clone(),
+                                docs_anchor_panel(&theme, "Events 内容区域", 260.0),
+                            ))
+                            .child(Flex::new().height_units(180.0)),
+                    ),
+            ),
+        )
+        .child(Flex::new().width_percent(28.0).child(anchor))
+        .into_any_element()
+}
+
+fn docs_anchor_panel(
+    theme: &aura_theme::Theme,
+    label: &'static str,
+    height: f32,
+) -> impl IntoElement {
+    Flex::new()
+        .height_units(height)
+        .bg(theme.neutral.hover)
+        .rounded_md()
+        .center()
+        .child(Text::new(label))
+}
+
+fn docs_backtop_basic(scroll_handle: ScrollHandle) -> Backtop {
+    Backtop::new(scroll_handle)
+        .id("docs-backtop-basic")
+        .visibility_height_sm()
+}
+
+fn docs_backtop_custom(scroll_handle: ScrollHandle) -> Backtop {
+    Backtop::new(scroll_handle)
+        .id("docs-backtop-custom")
+        .right_lg()
+        .content(|_, cx| {
+            let theme = cx.global::<Config>().theme.clone();
+            Flex::new()
+                .size_full()
+                .center()
+                .bg(theme.primary.base)
+                .child(
+                    Icon::new(IconName::ArrowUp)
+                        .size_md()
+                        .color(theme.neutral.card),
+                )
+                .into_any_element()
+        })
+}
+
+fn docs_backtop_shell(
+    scroll_handle: ScrollHandle,
+    backtop: Entity<Backtop>,
+    cx: &mut Context<LiveDemoContent>,
+) -> AnyElement {
+    let theme = cx.global::<Config>().theme.clone();
+
+    Flex::new()
+        .relative()
+        .height_units(360.0)
+        .overflow_hidden()
+        .border()
+        .border_color(theme.neutral.border)
+        .rounded_md()
+        .child(
+            Flex::new()
+                .size_full()
+                .id("docs-backtop-scroll-view")
+                .overflow_y_scroll()
+                .track_scroll(&scroll_handle)
+                .child(Space::new().vertical().gap_sm().children((0..32).map(|i| {
+                    Flex::new()
+                        .height_units(40.0)
+                        .row()
+                        .align_center()
+                        .padding_x_units(16.0)
+                        .bg(theme.neutral.hover)
+                        .rounded_units(4.0)
+                        .child(Text::new(format!("Scroll Item {i}")))
+                }))),
+        )
+        .child(backtop)
+        .into_any_element()
+}
+
+fn docs_form_basic(
+    inputs: &[Entity<Input>],
+    selects: &[Entity<Select>],
+    switches: &[Entity<Switch>],
+) -> AnyElement {
+    Form::new()
+        .child(
+            FormItem::new()
+                .label("Name")
+                .required(true)
+                .child(inputs[0].clone()),
+        )
+        .child(FormItem::new().label("Role").child(selects[0].clone()))
+        .child(FormItem::new().label("Enabled").child(switches[0].clone()))
+        .into_any_element()
+}
+
+fn docs_form_validation(inputs: &[Entity<Input>], textareas: &[Entity<Textarea>]) -> AnyElement {
+    Form::new()
+        .child(
+            FormItem::new()
+                .label("Title")
+                .required(true)
+                .error("Title is required")
+                .child(inputs[0].clone()),
+        )
+        .child(
+            FormItem::new()
+                .label("Description")
+                .child(textareas[0].clone()),
+        )
+        .into_any_element()
+}
+
+fn docs_form_inline(inputs: &[Entity<Input>], selects: &[Entity<Select>]) -> AnyElement {
+    Form::new()
+        .inline(true)
+        .child(FormItem::new().label("Keyword").child(inputs[0].clone()))
+        .child(FormItem::new().label("Status").child(selects[0].clone()))
+        .child(FormItem::new().child(Button::new("Search").primary()))
+        .into_any_element()
+}
+
+fn docs_preview_image_trigger() -> impl IntoElement {
+    let remote = "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
+
+    Space::new()
+        .wrap()
+        .gap_md()
+        .child(Preview::new(remote).child(Image::new(remote).thumbnail().cover().preview(false)))
+}
+
+fn docs_preview_custom_trigger(cx: &mut Context<LiveDemoContent>) -> impl IntoElement {
+    let theme = cx.global::<Config>().theme.clone();
+    let local = format!("file://{}/assets/local.jpeg", env!("CARGO_MANIFEST_DIR"));
+
+    Preview::new(local).child(
+        Card::new(
+            Space::new()
+                .gap_md()
+                .child(
+                    Icon::new(IconName::Image)
+                        .size_lg()
+                        .color(theme.primary.base),
+                )
+                .child(
+                    Space::new()
+                        .vertical()
+                        .gap_xs()
+                        .child(Text::new("点击查看大图").bold())
+                        .child(Text::new("Preview 可以包裹卡片、按钮或其他元素。")),
+                ),
+        )
+        .no_shadow(),
+    )
+}
+
+fn docs_preview_escape() -> Preview {
+    let remote = "https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg";
+
+    Preview::new(remote)
+        .close_on_escape(false)
+        .hover_effect(false)
+        .child(Button::new("打开预览（ESC 不关闭）").primary())
 }
 
 fn docs_popover_basic() -> Popover {
@@ -5678,6 +6096,39 @@ mod tests {
                     "drawer/placements.rs",
                     "drawer/sizes.rs",
                     "drawer/manual_close.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/affix.md"),
+                "AffixTop",
+                &["affix/top.rs", "affix/bottom.rs", "affix/container.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/anchor.md"),
+                "AnchorBasic",
+                &["anchor/basic.rs", "anchor/nested.rs", "anchor/targets.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/backtop.md"),
+                "BacktopBasic",
+                &[
+                    "backtop/basic.rs",
+                    "backtop/custom.rs",
+                    "backtop/container.rs",
+                ][..],
+            ),
+            (
+                include_str!("../content/pages/form.md"),
+                "FormBasic",
+                &["form/basic.rs", "form/validation.rs", "form/inline.rs"][..],
+            ),
+            (
+                include_str!("../content/pages/preview.md"),
+                "PreviewImageTrigger",
+                &[
+                    "preview/image_trigger.rs",
+                    "preview/custom_trigger.rs",
+                    "preview/escape.rs",
                 ][..],
             ),
             (

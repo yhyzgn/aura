@@ -1,16 +1,42 @@
 # Preview
 
-图片预览弹层。
+图片预览弹层。Preview 可以包裹缩略图、卡片或按钮等任意原生触发器，打开后使用 Aura Portal 展示居中大图。
 
-## 完整示例
+## 图片触发
 
-此示例复用 Aura Gallery 中同名控件的原生 demo，确保文档效果与演示大屏保持一致。
+最常见用法是包裹 `Image` 缩略图。缩略图自身关闭 preview，外层 Preview 负责打开大图。
 
 ### 效果
 
-::AuraDemo{component="Preview"}::
+::AuraDemo{component="PreviewImageTrigger"}::
 
 ### 代码
 
-```rust src="gallery/preview_demo.rs"
+```rust src="preview/image_trigger.rs"
+```
+
+## 自定义触发器
+
+Preview 的 child 可以是任意 Aura/GPUI 元素，例如卡片、按钮或自定义行项目。
+
+### 效果
+
+::AuraDemo{component="PreviewCustomTrigger"}::
+
+### 代码
+
+```rust src="preview/custom_trigger.rs"
+```
+
+## ESC 关闭策略
+
+默认点击图片外阴影区域或按 ESC 会关闭。对于受控流程，可通过 `close_on_escape(false)` 禁用 ESC 关闭。
+
+### 效果
+
+::AuraDemo{component="PreviewEscape"}::
+
+### 代码
+
+```rust src="preview/escape.rs"
 ```
