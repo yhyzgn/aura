@@ -12,11 +12,11 @@
     },
     "019e15ab-a59f-7a20-a134-757da8881b86": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|已生成并推送：`ca30976 add aura packaging icon set` 新增三套图标： - 主库品牌 logo： - `packaging/icons/aura.svg` - `packaging/icons/aura.png` - `packaging/icons/aura.ico` - `packaging/icons/aura.icns` - gallery 应用图标： - `packaging/icons/aura-gallery.svg` - `packaging/icons/aura-gallery.png` - `packaging/icons/aura-gallery.ico` - `packaging/icons/aura-gallery.icns` - docs 应用图标： - `packaging/icons/aura-docs.svg` - `packaging/icons/aura-docs.png` - `packaging/icons/aura-docs.ico` - `packaging/icons/aura-docs.icns` 设计风格： - 高端简约深色底； - 蓝紫粉渐变 aura 光晕； - 主库 logo 是抽象 aura “a” 与轨道光环； - gallery 是组件网格； - docs 是文档页图形； - 三者视觉体系统一，但各自有明确用途。 同时更新： - `packaging/readme.md` - `aura-packager` 校验逻辑：现在会检查主品牌和 app 图标的 svg/png/ico/icns 文件头，避免再提交占位图标。 验证通过： - `cargo fmt` - `cargo check -p aura-packager -p xtask` - `cargo test -p aura-packager` - `cargo run -p xtask -- package validate` - png/ico/icns file magic 检查 - 已目视检查生成 png。",
-        "first_seen_at": "2026-05-15T12:25:59.553Z",
-        "last_seen_at": "2026-05-15T12:25:59.553Z",
+        "fingerprint": "ordinary|已重新生成一批，并且**保留了上一版 `packaging/icons/aura.*` 不覆盖**。 已推送：`cdeb8a7 add alternate aura logo candidates` 新增候选目录： `packaging/icons/candidates/` 4 组主库 logo 候选： 1. `aura-candidate-orbit.*` - 抽象轨道核心，无字母形态。 2. `aura-candidate-prism.*` - 3d 组件/系统棱镜，更偏组件库/体系化。 3. `aura-candidate-ribbon.*` - 流动 aurora 光带，更轻盈现代。 4. `aura-candidate-monolith.*` - 文档/组件面板 + aura 弧线，更偏工程产品。 每组都有： - `.svg` - `.png` - `.ico` - `.icns` 验证： - `cargo run -p xtask -- package validate` - 已目视检查 4 张 png。 - 当前正式 `aura.*` 没被替换，仍保留上一版。",
+        "first_seen_at": "2026-05-15T12:35:05.597Z",
+        "last_seen_at": "2026-05-15T12:35:05.597Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2b94-c94a-7d53-bcc6-45d7eee463f2",
+        "last_turn_id": "019e2b9e-7031-76c1-8f97-4ca0886d19a7",
         "last_thread_id": null
       }
     }
