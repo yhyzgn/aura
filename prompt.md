@@ -14,7 +14,7 @@
 | UI 框架 | GPUI 0.2.2 (git = "https://github.com/zed-industries/zed") |
 | 参考规范 | Element-Plus 2.x (https://element-plus.org/zh-CN/) |
 | 架构 | Cargo Workspace Monorepo |
-| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 原生统计图组件；P11 启动系统托盘/进程常驻阶段 |
+| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 原生统计图组件；P11 系统托盘/进程常驻阶段；P12 原生安装器打包阶段 |
 
 ---
 
@@ -30,6 +30,7 @@
 | **P9 延后高级组件** | `.prompt/P9-deferred-advanced.md` | P5 跳过/延后的高级组件 backlog，后续需要时补充 |
 | **P10 统计图组件** | `.prompt/P10-charts.md` | 原生 GPUI 统计图控件：Line/Area/Bar/Pie/Ring/Sparkline/Axis/Grid/Legend/Tooltip |
 | **P11 托盘常驻** | `.prompt/P11-tray.md` | `aura-tray` 跨平台系统托盘、动态图标、CheckBox/N 级菜单与 GPUI 常驻进程桥接 |
+| **P12 原生打包** | `.prompt/P12-packaging.md` | `aura-packager` / `xtask package` / `packaging/` / CI installer pipeline，纯 Rust + GPUI 原生应用打包 |
 
 ---
 
@@ -44,6 +45,7 @@ aura/
 │   ├── aura-components/ src/        # 全部业务组件 (button.rs, input.rs, ...)
 │   ├── aura-tray/       src/        # 系统托盘 facade (tray-icon + muda)
 │   │   └── lib.rs
+│   ├── aura-packager/   src/        # P12 打包领域逻辑：metadata/format/checksum/manifest/backend config
 │   └── aura-icons/      lib.rs      # Icon trait、图标函数
 ├── apps/
 │   ├── aura-gallery/    src/        # 组件看板 (GPUI 窗口)
@@ -59,6 +61,9 @@ aura/
 │       └── src/
 │           ├── main.rs
 │           └── markdown.rs          # P8: Markdown AST → Aura 原生元素树
+├── xtask/                            # P12 统一工程命令入口：cargo xtask package ...
+├── packaging/                        # P12 icons、desktop、metainfo、entitlements、Windows installer resources
+├── .github/workflows/package.yml      # P12 Linux/macOS/Windows packaging matrix
 ├── .memory/                          # 🧠 记忆库 (跨会话状态)
 │   ├── state.md                     # 当前阶段 + 进度
 │   ├── decisions.md                 # 架构决策记录
@@ -76,7 +81,8 @@ aura/
 │   ├── P8-engineering.md
 │   ├── P9-deferred-advanced.md
 │   ├── P10-charts.md
-│   └── P11-tray.md
+│   ├── P11-tray.md
+│   └── P12-packaging.md
 ├── prompt.md                         # 📌 本文件 (AI 入口)
 ├── architecture-design.md
 └── structure.txt
@@ -102,7 +108,8 @@ aura/
 - P8 当前技术路线已调整为 **Aura Docs 主程序**：官方文档在 GPUI 原生窗口中渲染，且独立为 `aura-docs` 主程序；`aura-gallery` 保持组件看板，不再承担官方文档入口。
 - P9 是 deferred backlog；只有用户明确要求补齐这些组件时才启动。
 - P10 是原生统计图阶段：开发纯原生 GPUI 统计图控件，参考 GPUI 官方 canvas/path/paint API；`vicanso/zedis` 只能作为案例参考，不复制其依赖或实现结构。
-- P11 是当前新阶段：开发 `aura-tray` 系统托盘/进程常驻能力，采用 `tray-icon` + `muda`，支持动态图标、CheckBox 菜单、二级/三级/N 级菜单，并在 Gallery/Docs 中提供丰富用例。
+- P11 是系统托盘/进程常驻阶段：开发 `aura-tray`，采用 `tray-icon` + `muda`，支持动态图标、CheckBox 菜单、二级/三级/N 级菜单，并在 Gallery/Docs 中提供丰富用例。
+- P12 是当前打包阶段：开发 `aura-packager` + `xtask package` + `packaging/` + CI workflow。应用必须保持纯 Rust + GPUI native，严禁转成 Tauri 或引入 WebView/HTML/CSS/DOM/browser runtime。P12 的最新接手进度在 `.prompt/P12-packaging.md#Handoff Snapshot — 2026-05-15`。
 
 ### 4.2 每个组件/功能开发流程
 
@@ -282,6 +289,73 @@ P10 目标是在 `aura-components` 中新增企业级统计图控件，全部运
 
 每个图表必须：新增组件文件、导出 API、Gallery demo、Docs 页面与 snippet、单元测试、`cargo check/test/run` 验证后提交推送。
 
+
+## 6.6 P12 原生安装器打包规约
+
+P12 目标是为 `aura-gallery`、`aura-docs` 以及未来 Aura GPUI 主程序建立跨平台原生安装器/发布产物流水线。
+
+### 6.6.1 绝对边界
+
+- Aura app 必须保持 **纯 Rust + GPUI native**。
+- 严禁把 `aura-gallery`、`aura-docs` 或未来 Aura 主程序改造成 Tauri 应用。
+- 严禁引入 WebView、HTML/CSS/DOM、browser runtime 或前端构建链作为应用运行时。
+- 可以使用独立 packaging tools，但它们只能处理产物打包，不能改变应用架构。
+
+### 6.6.2 当前架构
+
+| 模块 | 职责 |
+|---|---|
+| `crates/aura-packager` | 打包领域逻辑：app metadata、format enum、checksum、manifest、cargo-packager config、RPM metadata |
+| `xtask` | 统一入口：`cargo xtask package ...` / `cargo xtask package ci ...` |
+| `packaging/` | 静态平台资源：icons、Linux desktop/metainfo、macOS entitlements、Windows nsis/wix folders |
+| `.github/workflows/package.yml` | Linux/macOS/Windows packaging matrix，dry-run workflow_dispatch，`v*` tag 真实打包 |
+
+### 6.6.3 已完成能力
+
+- `cargo xtask package validate`
+- `cargo xtask package build --app <gallery|docs>`
+- `cargo xtask package --app <gallery|docs> --format <format>`
+- `cargo xtask package ci --all-apps --format platform-defaults`
+- `--dry-run --skip-build` 生成后端配置并打印真实命令。
+- `cargo-packager` config generation：AppImage、deb、app、dmg、NSIS、MSI/WiX、Pacman。
+- `cargo-generate-rpm` supplemental backend config generation：RPM。
+- 真实打包后生成：`package-manifest.json`、`checksums.txt`、`release-notes.md`。
+- main Aura logo 已选择第 3 套 ribbon，落到 `packaging/icons/aura.*`。
+
+### 6.6.4 当前验证基线
+
+```bash
+cargo check -p xtask -p aura-packager
+cargo test -p aura-packager
+cargo run -p xtask -- package validate
+cargo run -p xtask -- package ci --all-apps --format platform-defaults --dry-run --skip-build
+```
+
+Dry-run 预期生成：
+
+```text
+target/aura-packager/Packager.gallery.toml
+target/aura-packager/Packager.docs.toml
+target/aura-packager/GenerateRpm.gallery.toml
+target/aura-packager/GenerateRpm.docs.toml
+```
+
+### 6.6.5 P12 剩余工作
+
+下一位开发者接手时按此优先级推进：
+
+1. **真实后端 smoke 验证**：安装 `cargo-packager` / `cargo-generate-rpm`，去掉 `--dry-run` 跑 Linux/macOS/Windows 真实包。
+2. **Linux runtime dependency metadata**：补全 deb/rpm 的 Vulkan、GTK3、Ayatana/AppIndicator、X11/Wayland、fontconfig/freetype、xdg 等依赖。
+3. **真正 portable `.tar.gz` backend**：当前 `tar.gz` 暂映射为 cargo-packager `pacman`，中立 portable archive 需要专用 backend。
+4. **Signing / notarization**：macOS `codesign`/`notarytool`/`stapler`，Windows `signtool`/timestamp，CI secrets 与 unsigned fallback。
+5. **GitHub Release automation**：tag 后创建 Release、上传 installers、上传 checksum/manifest、使用 generated `release-notes.md`。
+6. **Install / uninstall smoke scripts**：deb/rpm/AppImage/macOS/Windows runner-safe checks。
+7. **Artifact naming / metadata normalization**：加入 version、platform、target triple、git sha。
+8. **License / metadata cleanup**：当前无明确 `LICENSE`，RPM 暂用 `LicenseRef-Aura`。
+9. **CI real-run iteration**：根据 GitHub runner 实际报错修 Linux AppImage、Windows WiX/NSIS、macOS dmg/codesign。
+
+完整细节见 `.prompt/P12-packaging.md`。
+
 ## 7. Gallery Demo 规约
 
 ### 7.1 Demo 函数签名
@@ -415,7 +489,8 @@ Closes #P1-button-icons
 ├── P8 Native Docs App ✅ → .prompt/P8-engineering.md
 ├── P9 Deferred Advanced ⏸️ → .prompt/P9-deferred-advanced.md
 ├── P10 Charts ✅ → .prompt/P10-charts.md
-└── P11 Tray 🔄 → .prompt/P11-tray.md
+├── P11 Tray ✅ → .prompt/P11-tray.md
+└── P12 Packaging 🔄 → .prompt/P12-packaging.md
 ```
 
 ---
@@ -434,6 +509,15 @@ cargo build
 
 # 运行测试 (如果有)
 cargo test
+
+# P12 打包资源校验
+cargo xtask package validate
+
+# P12 打包 dry-run（生成后端配置，不真实产物）
+cargo xtask package ci --all-apps --format platform-defaults --dry-run --skip-build
+
+# P12 当前平台真实打包（需要先安装后端工具）
+cargo xtask package ci --all-apps --format platform-defaults
 
 # 清理构建
 cargo clean
