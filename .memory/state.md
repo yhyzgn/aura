@@ -75,3 +75,7 @@ After user feedback, `aura-gallery` no longer only previews tray config. On nati
 ### P11 follow-up: Gallery and Docs tray demos
 
 Both `aura-gallery` and `aura-docs` now create independent demonstration tray icons on native startup. Gallery uses `aura-gallery`/blue default icon; Docs uses `aura-docs`/purple default icon. Tray menu includes a `resident-enabled` CheckBox for status-bar residency, and app handlers toggle `QuitMode::Explicit` versus `QuitMode::LastWindowClosed` plus tray visibility. Tray docs now include a compile-checked `tray/residency.rs` snippet for page-level residency configuration.
+
+### P11 follow-up: bundled tray icons and in-window controls
+
+`aura-tray` now includes bundled PNG tray icon assets under `crates/aura-tray/assets/tray-icons/` for Gallery and Docs default/syncing/error states. Apps use `bundled_tray_icon(...)` rather than generated solid-color placeholders. `TrayControlCenter` is a GPUI global command bridge so the Tray page buttons in the main window dispatch real tray commands, not just local previews.

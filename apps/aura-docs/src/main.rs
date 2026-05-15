@@ -8,8 +8,8 @@ use aura_components::{
 use aura_core::init_aura;
 use aura_theme::Theme;
 use aura_tray::{
-    AuraTray, MouseButton, MouseButtonState, TrayCommand, TrayConfig, TrayIconEvent,
-    default_aura_tray_menu, solid_icon,
+    AuraTray, BundledTrayIconSet, BundledTrayIconState, MouseButton, MouseButtonState, TrayCommand,
+    TrayConfig, TrayControlCenter, TrayIconEvent, bundled_tray_icon, default_aura_tray_menu,
 };
 use gpui::{App, Bounds, Global, Window, WindowBounds, WindowOptions, px, size};
 use std::{sync::mpsc, time::Duration};
@@ -19,6 +19,7 @@ struct DocsTrayState {
     window: Option<gpui::AnyWindowHandle>,
     window_visible: bool,
     resident_enabled: bool,
+    tray_visible: bool,
     auto_show: bool,
 }
 
@@ -95,6 +96,7 @@ fn install_docs_tray(cx: &mut App) {
         }
     }));
 
+    let tray_tx = tx.clone();
     TrayIconEvent::set_event_handler(Some(move |event| {
         if matches!(
             event,
@@ -107,7 +109,7 @@ fn install_docs_tray(cx: &mut App) {
                 ..
             }
         ) {
-            let _ = tx.send(TrayCommand::Toggle);
+            let _ = tray_tx.send(TrayCommand::Toggle);
         }
     }));
 
@@ -123,8 +125,10 @@ fn install_docs_tray(cx: &mut App) {
                 window: None,
                 window_visible: true,
                 resident_enabled: true,
+                tray_visible: true,
                 auto_show: true,
             });
+            cx.set_global(TrayControlCenter::new(tx.clone()));
         }
         Err(error) => {
             eprintln!("failed to install Aura Docs tray icon: {error}");
@@ -165,14 +169,24 @@ fn handle_docs_tray_command(command: TrayCommand, cx: &mut App) {
                     _ => "Aura Docs",
                 }));
             }
+            if cx.has_global::<TrayControlCenter>() {
+                cx.global_mut::<TrayControlCenter>().set_active_icon(name);
+            }
         }
         TrayCommand::Custom(name) if name == "auto-show" => {
             if cx.has_global::<DocsTrayState>() {
-                let state = cx.global_mut::<DocsTrayState>();
-                state.auto_show = !state.auto_show;
-                let _ = state
-                    .tray
-                    .set_check_state(&TrayCommand::Custom("auto-show".into()), state.auto_show);
+                let auto_show = {
+                    let state = cx.global_mut::<DocsTrayState>();
+                    state.auto_show = !state.auto_show;
+                    let _ = state
+                        .tray
+                        .set_check_state(&TrayCommand::Custom("auto-show".into()), state.auto_show);
+                    state.auto_show
+                };
+                if cx.has_global::<TrayControlCenter>() {
+                    cx.global_mut::<TrayControlCenter>()
+                        .set_auto_show(auto_show);
+                }
             }
         }
         TrayCommand::Custom(name) if name == "resident-enabled" => {
@@ -180,11 +194,12 @@ fn handle_docs_tray_command(command: TrayCommand, cx: &mut App) {
                 let resident_enabled = {
                     let state = cx.global_mut::<DocsTrayState>();
                     state.resident_enabled = !state.resident_enabled;
+                    state.tray_visible = state.resident_enabled;
                     let _ = state.tray.set_check_state(
                         &TrayCommand::Custom("resident-enabled".into()),
                         state.resident_enabled,
                     );
-                    let _ = state.tray.set_visible(state.resident_enabled);
+                    let _ = state.tray.set_visible(state.tray_visible);
                     state.resident_enabled
                 };
                 cx.set_quit_mode(if resident_enabled {
@@ -192,7 +207,18 @@ fn handle_docs_tray_command(command: TrayCommand, cx: &mut App) {
                 } else {
                     gpui::QuitMode::LastWindowClosed
                 });
+                if cx.has_global::<TrayControlCenter>() {
+                    cx.global_mut::<TrayControlCenter>()
+                        .set_resident_enabled(resident_enabled);
+                }
             }
+        }
+        TrayCommand::Custom(name) if name == "tray-visible" => {
+            let visible = cx
+                .has_global::<DocsTrayState>()
+                .then(|| !cx.global::<DocsTrayState>().tray_visible)
+                .unwrap_or(true);
+            set_docs_tray_visible(cx, visible);
         }
         TrayCommand::Custom(name) => {
             eprintln!("Aura Docs tray custom command: {name}");
@@ -235,6 +261,21 @@ fn hide_docs_window(cx: &mut App) {
     cx.global_mut::<DocsTrayState>().window_visible = false;
 }
 
+fn set_docs_tray_visible(cx: &mut App, visible: bool) {
+    if cx.has_global::<DocsTrayState>() {
+        let state = cx.global_mut::<DocsTrayState>();
+        state.tray_visible = visible;
+        if visible {
+            state.resident_enabled = true;
+        }
+        let _ = state.tray.set_visible(visible);
+    }
+    if cx.has_global::<TrayControlCenter>() {
+        cx.global_mut::<TrayControlCenter>()
+            .set_tray_visible(visible);
+    }
+}
+
 fn toggle_docs_window(cx: &mut App) {
     let should_hide = cx
         .has_global::<DocsTrayState>()
@@ -249,12 +290,11 @@ fn toggle_docs_window(cx: &mut App) {
 }
 
 fn docs_tray_icon(name: &str) -> aura_tray::TrayIconImage {
-    let color = match name {
-        "syncing" => [103, 194, 58, 255],
-        "error" => [245, 108, 108, 255],
-        _ => [103, 58, 183, 255],
-    };
-    solid_icon(color, 32).expect("solid 32px RGBA icon should be valid")
+    bundled_tray_icon(
+        BundledTrayIconSet::Docs,
+        BundledTrayIconState::from_name(name),
+    )
+    .expect("bundled docs tray icon should be valid")
 }
 
 fn main() {

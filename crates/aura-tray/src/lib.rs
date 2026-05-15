@@ -4,8 +4,9 @@
 //! command API so GPUI apps can stay focused on window lifecycle commands while
 //! still supporting dynamic icon updates, check items, and deep nested menus.
 
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, sync::mpsc};
 
+use gpui::Global;
 pub use tray_icon::menu::{CheckMenuItem, MenuEvent, MenuId};
 use tray_icon::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 pub use tray_icon::{Icon as TrayIconImage, MouseButton, MouseButtonState, TrayIconEvent};
@@ -33,6 +34,123 @@ pub enum AuraTrayError {
 }
 
 pub type Result<T> = std::result::Result<T, AuraTrayError>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BundledTrayIconSet {
+    Gallery,
+    Docs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BundledTrayIconState {
+    Default,
+    Syncing,
+    Error,
+}
+
+impl BundledTrayIconState {
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "syncing" => Self::Syncing,
+            "error" => Self::Error,
+            _ => Self::Default,
+        }
+    }
+}
+
+pub fn bundled_tray_icon(
+    set: BundledTrayIconSet,
+    state: BundledTrayIconState,
+) -> Result<TrayIconImage> {
+    let bytes = match (set, state) {
+        (BundledTrayIconSet::Gallery, BundledTrayIconState::Default) => {
+            include_bytes!("../assets/tray-icons/gallery-default.png").as_slice()
+        }
+        (BundledTrayIconSet::Gallery, BundledTrayIconState::Syncing) => {
+            include_bytes!("../assets/tray-icons/gallery-syncing.png").as_slice()
+        }
+        (BundledTrayIconSet::Gallery, BundledTrayIconState::Error) => {
+            include_bytes!("../assets/tray-icons/gallery-error.png").as_slice()
+        }
+        (BundledTrayIconSet::Docs, BundledTrayIconState::Default) => {
+            include_bytes!("../assets/tray-icons/docs-default.png").as_slice()
+        }
+        (BundledTrayIconSet::Docs, BundledTrayIconState::Syncing) => {
+            include_bytes!("../assets/tray-icons/docs-syncing.png").as_slice()
+        }
+        (BundledTrayIconSet::Docs, BundledTrayIconState::Error) => {
+            include_bytes!("../assets/tray-icons/docs-error.png").as_slice()
+        }
+    };
+    icon_from_png_bytes(bytes)
+}
+
+pub fn icon_from_png_bytes(bytes: &[u8]) -> Result<TrayIconImage> {
+    let image = image::load_from_memory(bytes)?.into_rgba8();
+    let (width, height) = image.dimensions();
+    icon_from_rgba(image.into_raw(), width, height)
+}
+
+#[derive(Debug, Clone)]
+pub struct TrayControlState {
+    pub active_icon: String,
+    pub resident_enabled: bool,
+    pub tray_visible: bool,
+    pub auto_show: bool,
+}
+
+impl Default for TrayControlState {
+    fn default() -> Self {
+        Self {
+            active_icon: "default".into(),
+            resident_enabled: true,
+            tray_visible: true,
+            auto_show: true,
+        }
+    }
+}
+
+pub struct TrayControlCenter {
+    sender: mpsc::Sender<TrayCommand>,
+    pub state: TrayControlState,
+}
+
+impl Global for TrayControlCenter {}
+
+impl TrayControlCenter {
+    pub fn new(sender: mpsc::Sender<TrayCommand>) -> Self {
+        Self {
+            sender,
+            state: TrayControlState::default(),
+        }
+    }
+
+    pub fn dispatch(&self, command: TrayCommand) {
+        let _ = self.sender.send(command);
+    }
+
+    pub fn set_active_icon(&mut self, name: impl Into<String>) {
+        self.state.active_icon = name.into();
+    }
+
+    pub fn set_resident_enabled(&mut self, enabled: bool) {
+        self.state.resident_enabled = enabled;
+        if !enabled {
+            self.state.tray_visible = false;
+        }
+    }
+
+    pub fn set_tray_visible(&mut self, visible: bool) {
+        self.state.tray_visible = visible;
+        if visible {
+            self.state.resident_enabled = true;
+        }
+    }
+
+    pub fn set_auto_show(&mut self, enabled: bool) {
+        self.state.auto_show = enabled;
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TrayCommand {
@@ -512,5 +630,18 @@ mod tests {
     fn solid_icon_validates_rgba_size() {
         assert!(solid_icon([32, 96, 255, 255], 16).is_ok());
         assert!(icon_from_rgba(vec![0; 3], 1, 1).is_err());
+    }
+
+    #[test]
+    fn bundled_icons_are_valid_png_assets() {
+        for set in [BundledTrayIconSet::Gallery, BundledTrayIconSet::Docs] {
+            for state in [
+                BundledTrayIconState::Default,
+                BundledTrayIconState::Syncing,
+                BundledTrayIconState::Error,
+            ] {
+                assert!(bundled_tray_icon(set, state).is_ok());
+            }
+        }
     }
 }

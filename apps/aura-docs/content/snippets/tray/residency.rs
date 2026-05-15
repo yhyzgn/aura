@@ -4,7 +4,7 @@
 //! the tray icon and return to `LastWindowClosed` so no invisible process is
 //! left behind.
 
-use aura_tray::{AuraTray, Result};
+use aura_tray::{AuraTray, Result, TrayCommand, TrayControlCenter};
 use gpui::{App, QuitMode};
 
 pub struct TrayResidencyConfig {
@@ -21,5 +21,12 @@ impl TrayResidencyConfig {
             QuitMode::LastWindowClosed
         });
         Ok(())
+    }
+}
+
+pub fn toggle_residency_from_page(cx: &mut App) {
+    if cx.has_global::<TrayControlCenter>() {
+        cx.global::<TrayControlCenter>()
+            .dispatch(TrayCommand::Custom("resident-enabled".into()));
     }
 }

@@ -1,5 +1,5 @@
 use aura_components::{Button, Card, Space, Tag, Text};
-use aura_tray::{TrayCommand, TrayMenuItemSpec, default_aura_tray_menu};
+use aura_tray::{TrayCommand, TrayControlCenter, TrayMenuItemSpec, default_aura_tray_menu};
 use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
 
 use aura_components::layout_helpers::{page, section};
@@ -24,6 +24,21 @@ struct TrayDemo {
 impl Render for TrayDemo {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let entity = cx.entity().clone();
+        let state = if cx.has_global::<TrayControlCenter>() {
+            Some(cx.global::<TrayControlCenter>().state.clone())
+        } else {
+            None
+        };
+        if let Some(state) = &state {
+            self.active_icon = match state.active_icon.as_str() {
+                "syncing" => "syncing",
+                "error" => "error",
+                _ => "default",
+            };
+            self.resident_enabled = state.resident_enabled;
+            self.tray_visible = state.tray_visible;
+            self.auto_show = state.auto_show;
+        }
 
         page(
             "Tray 系统托盘",
@@ -68,6 +83,16 @@ impl Render for TrayDemo {
                                             .child(icon_button("默认", "default", entity.clone()))
                                             .child(icon_button("同步中", "syncing", entity.clone()))
                                             .child(icon_button("错误", "error", entity.clone()))
+                                            .child(tray_command_button(
+                                                "显示主窗口",
+                                                TrayCommand::Show,
+                                                entity.clone(),
+                                            ))
+                                            .child(tray_command_button(
+                                                "隐藏主窗口",
+                                                TrayCommand::Hide,
+                                                entity.clone(),
+                                            ))
                                             .child(toggle_resident_button(
                                                 self.resident_enabled,
                                                 entity.clone(),
@@ -120,10 +145,27 @@ fn active_icon_tag(name: &str) -> Tag {
 
 fn icon_button(label: &'static str, icon: &'static str, entity: Entity<TrayDemo>) -> Button {
     Button::new(label).primary().on_click(move |_, _, cx| {
+        if cx.has_global::<TrayControlCenter>() {
+            cx.global::<TrayControlCenter>()
+                .dispatch(TrayCommand::SetIcon(icon.into()));
+        }
         let _ = entity.update(cx, |demo, cx| {
             demo.active_icon = icon;
             cx.notify();
         });
+    })
+}
+
+fn tray_command_button(
+    label: &'static str,
+    command: TrayCommand,
+    entity: Entity<TrayDemo>,
+) -> Button {
+    Button::new(label).on_click(move |_, _, cx| {
+        if cx.has_global::<TrayControlCenter>() {
+            cx.global::<TrayControlCenter>().dispatch(command.clone());
+        }
+        let _ = entity.update(cx, |_, cx| cx.notify());
     })
 }
 
@@ -134,6 +176,10 @@ fn toggle_auto_show_button(auto_show: bool, entity: Entity<TrayDemo>) -> Button 
         "开启 Auto Show"
     })
     .on_click(move |_, _, cx| {
+        if cx.has_global::<TrayControlCenter>() {
+            cx.global::<TrayControlCenter>()
+                .dispatch(TrayCommand::Custom("auto-show".into()));
+        }
         let _ = entity.update(cx, |demo, cx| {
             demo.auto_show = !demo.auto_show;
             cx.notify();
@@ -149,6 +195,10 @@ fn toggle_resident_button(resident_enabled: bool, entity: Entity<TrayDemo>) -> B
     })
     .warning()
     .on_click(move |_, _, cx| {
+        if cx.has_global::<TrayControlCenter>() {
+            cx.global::<TrayControlCenter>()
+                .dispatch(TrayCommand::Custom("resident-enabled".into()));
+        }
         let _ = entity.update(cx, |demo, cx| {
             demo.resident_enabled = !demo.resident_enabled;
             if !demo.resident_enabled {
@@ -168,6 +218,10 @@ fn toggle_tray_visible_button(tray_visible: bool, entity: Entity<TrayDemo>) -> B
         "显示托盘图标"
     })
     .on_click(move |_, _, cx| {
+        if cx.has_global::<TrayControlCenter>() {
+            cx.global::<TrayControlCenter>()
+                .dispatch(TrayCommand::Custom("tray-visible".into()));
+        }
         let _ = entity.update(cx, |demo, cx| {
             demo.tray_visible = !demo.tray_visible;
             if demo.tray_visible {

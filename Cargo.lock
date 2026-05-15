@@ -532,6 +532,7 @@ dependencies = [
 name = "aura-tray"
 version = "0.1.0"
 dependencies = [
+ "gpui",
  "gtk",
  "image",
  "thiserror 2.0.18",

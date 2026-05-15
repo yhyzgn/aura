@@ -2,11 +2,11 @@
   "sessions": {
     "omx-1778827259120-7n7na4": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|你说得对，问题不是只初始化 gtk，还需要持续泵 gtk/appindicator 事件循环。已修复并推送： - 新提交：`2ad607a pump gtk tray events for gallery status icon` - `aura_tray::pump_platform_events()` 已加入 - `aura-gallery` 启动后会在 gpui foreground task 中持续处理 gtk tray 事件 我本地验证了运行时 dbus 已注册成功： `registeredstatusnotifieritems` 中出现： ```text /org/ayatana/notificationitem/tray_icon_tray_app_aura_gallery ``` 也就是说系统托盘服务已经收到 aura gallery 的 tray item。 你拉最新后运行： ```bash git pull cargo run -p aura-gallery ``` 如果还是肉眼看不到，优先看 kde/gnome 托盘的“隐藏图标/溢出菜单”区域；现在程序侧已经成功注册到系统托盘。",
-        "first_seen_at": "2026-05-15T08:17:32.790Z",
-        "last_seen_at": "2026-05-15T08:17:32.790Z",
+        "fingerprint": "ordinary|已完成并推送：`c869945 add gallery and docs tray residency demos` 这次改动： - `aura-gallery` 和 `aura-docs` 启动时都会分别创建真实托盘图标： - gallery：`aura-gallery` 蓝色图标 - docs：`aura-docs` 紫色图标 - 默认托盘菜单新增： - `状态栏驻留` checkbox - 可切换 `quitmode::explicit` / `quitmode::lastwindowclosed` - 同步托盘显隐 - tray demo 页面补充： - 状态栏驻留开关 - 托盘图标显隐开关 - 自动显示开关 - 动态图标切换 - checkbox / 二级三级 n 级菜单预览 - docs 增加： - `tray/residency.rs` 代码片段 - 文档说明 gallery/docs 都会生成独立演示托盘图标 验证： - `cargo check -p aura-gallery` - `cargo check -p aura-docs` - `cargo check -p aura-docs --bin check_snippets` - `cargo test -p aura-tray` - `cargo test -p aura-gallery` - `cargo test -p aura-docs` - dbus smoke：同时注册到了 `aura_gallery` 和 `aura_docs` 两个 tray item。",
+        "first_seen_at": "2026-05-15T08:37:34.489Z",
+        "last_seen_at": "2026-05-15T08:37:34.489Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2ab3-8fe0-7a61-96a7-1042c56e3e02",
+        "last_turn_id": "019e2abb-ba12-7f50-a7f9-e4a70dd49a0e",
         "last_thread_id": null
       }
     }

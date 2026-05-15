@@ -4,9 +4,9 @@
 
 > 托盘能力属于应用壳层，不是普通视图组件。启用托盘常驻时，GPUI 应用需要使用 `QuitMode::Explicit`，否则最后一个窗口关闭后进程会退出，托盘也会随之消失。
 
-## Gallery 预览
+## 主窗口控制用例
 
-`cargo run -p aura-gallery` 与 `cargo run -p aura-docs` 会在应用启动时分别创建独立的演示系统托盘图标：Gallery 使用蓝色图标，Docs 使用紫色图标。本页和 Gallery 内部的 Tray 页面额外展示同一套菜单配置的可视化预览。
+`cargo run -p aura-gallery` 与 `cargo run -p aura-docs` 会在应用启动时分别创建独立的演示系统托盘图标：Gallery 使用蓝色图标，Docs 使用紫色图标；这两套 PNG 图标资源位于 `crates/aura-tray/assets/tray-icons/`，并通过 `bundled_tray_icon(...)` 引用。本页和 Gallery 内部的 Tray 页面额外在主窗口中提供按钮：切换动态图标、显示/隐藏主窗口、开启/关闭状态栏驻留、显示/隐藏托盘图标、切换自动显示。
 
 ### 效果
 
@@ -19,7 +19,7 @@
 
 ## 状态栏驻留开关
 
-应用可以在页面/设置中暴露「是否开启状态栏驻留」。开启时使用 `QuitMode::Explicit` 并保持托盘入口；关闭时隐藏托盘并恢复 `LastWindowClosed`，避免用户关闭窗口后留下不可见进程。
+应用可以在页面/设置中暴露「是否开启状态栏驻留」，不要只藏在托盘菜单里。开启时使用 `QuitMode::Explicit` 并保持托盘入口；关闭时隐藏托盘并恢复 `LastWindowClosed`，避免用户关闭窗口后留下不可见进程。
 
 ### 代码
 
