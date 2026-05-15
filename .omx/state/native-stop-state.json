@@ -12,11 +12,11 @@
     },
     "019e15ab-a59f-7a20-a134-757da8881b86": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|已同步到主提示词和 p12，未新增 p13。 变更： - 更新 `.prompt/p12-packaging.md` - 追加完整 `handoff snapshot — 2026-05-15` - 包含已完成内容、已验证命令、剩余工作、guardrails - 更新 `prompt.md` - 项目速览加入 p12 - 文档索引加入 `.prompt/p12-packaging.md` - 工程结构加入 `aura-packager`、`xtask`、`packaging/`、`.github/workflows/package.yml` - 阶段状态加入 p12 当前打包阶段说明 - 新增 `6.6 p12 原生安装器打包规约` - 快速命令加入 p12 validate / dry-run / real package 命令 - 删除之前 `.omx/handoffs/packaging-2026-05-15.md`，避免同一交接信息分散维护。 已提交并推送： - `fd24948 move packaging handoff into prompts` 当前仅剩 push hook 自动刷新出来的 2 个 `.omx/state/*` 文件。",
-        "first_seen_at": "2026-05-15T13:13:19.022Z",
-        "last_seen_at": "2026-05-15T13:13:19.022Z",
+        "fingerprint": "ordinary|已完成并推送。 更新内容： - `.github/workflows/package.yml` - 新增 `release` job。 - `v*` tag 触发时： - 等待 linux/macos/windows package matrix 完成。 - 下载 `aura-packages-*` artifacts。 - 将各平台产物扁平化为唯一文件名，避免 `checksums.txt` / `package-manifest.json` 重名覆盖。 - 自动收集 changelog： - 优先取上一个 tag 到当前 tag 的 commit log。 - 无上一个 tag 时取当前 tag 可达的最近 commits。 - 生成 `release-notes.md`。 - 使用 `gh release create` 或 `gh release edit` 创建/更新 github release。 - 使用 `gh release upload --clobber` 上传所有构建产物、manifest、checksum、release notes。 - `prompt.md` / `.prompt/p12-packaging.md` - 同步记录 p12 已支持自动 github release。 - 剩余工作改为 release 策略增强、命名清洗、多平台 manifest 聚合、真实 ci smoke gate。 验证： - python 结构检查： - release job 存在 - download-artifact 存在 - changelog 生成逻辑存在 - gh release create/upload 存在 - prompt 文档已同步 已提交并推送： - `3633ab5 publish package artifacts from release workflow` 当前只剩 push hook 自动刷新出的 2 个 `.omx/state/*` 文件。",
+        "first_seen_at": "2026-05-15T13:17:49.428Z",
+        "last_seen_at": "2026-05-15T13:17:49.428Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2bc1-494b-7161-a1d4-fa05ad2e8447",
+        "last_turn_id": "019e2bc6-c3d7-7902-9db5-985bcb3ccd27",
         "last_thread_id": null
       }
     }

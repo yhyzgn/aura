@@ -69,8 +69,10 @@ Aura 当前使用 workspace 里的 GPUI git 依赖。外部项目可以先按下
 几个关键点：
 
 - `gpui` / `gpui_platform` 来自 Zed 仓库，Aura 当前也是这样接入。
-- Linux app 需要显式启用 `wayland`、`x11`、`font-kit`。
-- 组件库 crate 不应该开启平台 feature；平台 feature 应放在最终 app crate。
+- Linux / FreeBSD app 需要在 target-specific dependencies 中显式启用 `wayland`、`x11`、`font-kit`。
+- macOS app 需要启用 `font-kit`。
+- Windows app 保持默认 GPUI/GPUI Platform 后端即可。
+- 组件库 crate 不应该开启平台 feature；平台 feature 应放在最终 app crate 的 `cfg(...)` target dependency 中。
 - 如果你在 Aura 仓库内开发，优先使用 workspace 中已有的 path dependency。
 
 ## 5. 初始化 Aura 并打开窗口
