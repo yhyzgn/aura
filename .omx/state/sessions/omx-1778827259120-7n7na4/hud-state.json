@@ -1,6 +1,6 @@
 {
-  "last_turn_at": "2026-05-15T09:21:36.076Z",
-  "last_progress_at": "2026-05-15T09:21:36.076Z",
-  "turn_count": 11,
-  "last_agent_output": "确实，问题在 close-hook 返回值。\n\n已修正并推送：`79f33c7 Let remembered tray close proceed`\n\n原因：\n- 之前在 `on_window_sho"
+  "last_turn_at": "2026-05-15T10:06:57.433Z",
+  "last_progress_at": "2026-05-15T10:06:57.433Z",
+  "turn_count": 14,
+  "last_agent_output": "已写好确定版技术方案文档：\n\n`docs/packaging-installer-technical-plan.md`\n\n内容覆盖：\n- 明确 **纯 Rust + GPUI**，禁止改成 Tauri"
 }

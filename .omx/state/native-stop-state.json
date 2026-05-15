@@ -12,11 +12,11 @@
     },
     "019e15ab-a59f-7a20-a134-757da8881b86": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|确实，问题在 close-hook 返回值。 已修正并推送：`79f33c7 let remembered tray close proceed` 原因： - 之前在 `on_window_should_close` 里执行了隐藏逻辑后返回 `false`。 - 但 gpui 语义是：返回 `false` = 取消本次关闭，所以主窗口不会真的关闭。 现在改为： - `hidetotray` 分支先准备 tray 驻留状态： - `quitmode::explicit` - tray 保持可见 - 清空窗口句柄 - 标记窗口不可见 - 然后返回 `true`，让本次原生关闭继续执行，主窗口会真正关闭。 - 非 close-hook 场景，比如 tray 菜单“隐藏窗口”，仍使用 `window.remove_window()` 主动关闭窗口。 验证通过： - `cargo fmt` - `cargo check -p aura-gallery` - `cargo check -p aura-docs --bin aura-docs` - `cargo test -p aura-gallery` - `cargo test -p aura-docs`",
-        "first_seen_at": "2026-05-15T09:21:35.954Z",
-        "last_seen_at": "2026-05-15T09:21:35.954Z",
+        "fingerprint": "ordinary|已写好确定版技术方案文档： `docs/packaging-installer-technical-plan.md` 内容覆盖： - 明确 **纯 rust + gpui**，禁止改成 tauri / webview。 - 调研结论：zed、zedis、tauri、cargo packager。 - 最终方案：`xtask + cargo-packager + rpm 补充工具`。 - 覆盖格式： - linux：appimage / deb / rpm / tar.gz - macos：app / dmg - windows：nsis exe / msi - 目录结构设计、命令设计、ci 发布矩阵。 - app metadata、icons、desktop、签名、notarization、smartscreen 等平台细节。 - 分阶段实施计划和验收标准。 同时已写入记忆库 directive：后续安装器打包阶段必须保持 aura 为纯 rust gpui 原生应用，不允许引入 tauri runtime。",
+        "first_seen_at": "2026-05-15T10:06:57.291Z",
+        "last_seen_at": "2026-05-15T10:06:57.291Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2aef-69dc-7e91-9539-a74796986408",
+        "last_turn_id": "019e2b17-960c-7952-a505-d46669760212",
         "last_thread_id": null
       }
     }
