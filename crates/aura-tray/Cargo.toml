@@ -9,4 +9,5 @@ image = "0.25"
 thiserror = "2"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+gtk = "0.18"
 tray-icon = { version = "0.24", default-features = false, features = ["gtk"] }

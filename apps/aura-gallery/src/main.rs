@@ -6,10 +6,15 @@ use aura_components::{
 use aura_core::{PassivePortal, Portal, init_aura};
 use aura_gallery::demos;
 use aura_theme::Theme;
+use aura_tray::{
+    AuraTray, MouseButton, MouseButtonState, TrayCommand, TrayConfig, TrayIconEvent,
+    default_aura_tray_menu, solid_icon,
+};
 use gpui::{
-    AnyView, App, Bounds, Component, Context, Render, WeakEntity, Window, WindowBounds,
+    AnyView, App, Bounds, Component, Context, Global, Render, WeakEntity, Window, WindowBounds,
     WindowOptions, div, prelude::*, px, size,
 };
+use std::{sync::mpsc, time::Duration};
 
 pub struct Gallery {
     entries: Vec<demos::DemoEntry>,
@@ -18,57 +23,235 @@ pub struct Gallery {
     nav_menu: Option<gpui::Entity<aura_components::Menu>>,
 }
 
+struct GalleryTrayState {
+    tray: AuraTray,
+    window: Option<gpui::AnyWindowHandle>,
+    window_visible: bool,
+    auto_show: bool,
+}
+
+impl Global for GalleryTrayState {}
+
 fn run_gallery() {
-    gpui_platform::application().run(|cx: &mut App| {
-        init_aura(cx, Theme::light());
-        MessageManager::init(cx);
+    gpui_platform::application()
+        .with_quit_mode(gpui::QuitMode::Explicit)
+        .run(|cx: &mut App| {
+            init_aura(cx, Theme::light());
+            MessageManager::init(cx);
 
-        // Register all key bindings
-        Input::register_key_bindings(cx);
-        CodeBlock::register_key_bindings(cx);
-        Checkbox::register_key_bindings(cx);
-        Radio::register_key_bindings(cx);
-        RadioGroup::register_key_bindings(cx);
-        Switch::register_key_bindings(cx);
-        Dialog::register_key_bindings(cx);
-        Drawer::register_key_bindings(cx);
-        Preview::register_key_bindings(cx);
-        Autocomplete::register_key_bindings(cx);
-        Cascader::register_key_bindings(cx);
-        ColorPicker::register_key_bindings(cx);
-        DatePicker::register_key_bindings(cx);
-        DateTimePicker::register_key_bindings(cx);
-        Popover::register_key_bindings(cx);
-        Select::register_key_bindings(cx);
-        TimePicker::register_key_bindings(cx);
-        Text::register_key_bindings(cx);
-        Paragraph::register_key_bindings(cx);
-        Title::register_key_bindings(cx);
+            // Register all key bindings
+            Input::register_key_bindings(cx);
+            CodeBlock::register_key_bindings(cx);
+            Checkbox::register_key_bindings(cx);
+            Radio::register_key_bindings(cx);
+            RadioGroup::register_key_bindings(cx);
+            Switch::register_key_bindings(cx);
+            Dialog::register_key_bindings(cx);
+            Drawer::register_key_bindings(cx);
+            Preview::register_key_bindings(cx);
+            Autocomplete::register_key_bindings(cx);
+            Cascader::register_key_bindings(cx);
+            ColorPicker::register_key_bindings(cx);
+            DatePicker::register_key_bindings(cx);
+            DateTimePicker::register_key_bindings(cx);
+            Popover::register_key_bindings(cx);
+            Select::register_key_bindings(cx);
+            TimePicker::register_key_bindings(cx);
+            Text::register_key_bindings(cx);
+            Paragraph::register_key_bindings(cx);
+            Title::register_key_bindings(cx);
 
-        let _ = cx.open_window(
-            WindowOptions {
-                window_bounds: Some(WindowBounds::Maximized(Bounds {
-                    origin: gpui::Point::default(),
-                    size: size(px(1920.0), px(1080.0)),
-                })),
-                titlebar: Some(gpui::TitlebarOptions {
-                    title: Some("Aura UI Gallery".into()),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            |_, cx| {
-                let entries = demos::registry();
-                let demos = entries.iter().map(|entry| (entry.render)(cx)).collect();
-                cx.new(|_| Gallery {
-                    entries,
-                    demos,
-                    selected: 0,
-                    nav_menu: None,
-                })
-            },
-        );
-    });
+            install_gallery_tray(cx);
+            if let Some(handle) = open_gallery_window(cx) {
+                if cx.has_global::<GalleryTrayState>() {
+                    cx.global_mut::<GalleryTrayState>().window = Some(handle);
+                }
+            }
+        });
+}
+
+fn open_gallery_window(cx: &mut App) -> Option<gpui::AnyWindowHandle> {
+    match cx.open_window(gallery_window_options(), |_, cx| {
+        let entries = demos::registry();
+        let demos = entries.iter().map(|entry| (entry.render)(cx)).collect();
+        cx.new(|_| Gallery {
+            entries,
+            demos,
+            selected: 0,
+            nav_menu: None,
+        })
+    }) {
+        Ok(handle) => Some(handle.into()),
+        Err(error) => {
+            eprintln!("failed to open Aura Gallery window: {error:?}");
+            None
+        }
+    }
+}
+
+fn gallery_window_options() -> WindowOptions {
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Maximized(Bounds {
+            origin: gpui::Point::default(),
+            size: size(px(1920.0), px(1080.0)),
+        })),
+        titlebar: Some(gpui::TitlebarOptions {
+            title: Some("Aura UI Gallery".into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn install_gallery_tray(cx: &mut App) {
+    let (tx, rx) = mpsc::channel::<TrayCommand>();
+    let menu_tx = tx.clone();
+    aura_tray::MenuEvent::set_event_handler(Some(move |event: aura_tray::MenuEvent| {
+        if let Some(command) = TrayCommand::from_id(event.id().as_ref()) {
+            let _ = menu_tx.send(command);
+        }
+    }));
+
+    TrayIconEvent::set_event_handler(Some(move |event| {
+        if matches!(
+            event,
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } | TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            }
+        ) {
+            let _ = tx.send(TrayCommand::Toggle);
+        }
+    }));
+
+    match AuraTray::install(
+        TrayConfig::new("aura-gallery")
+            .tooltip("Aura Gallery")
+            .icon(gallery_tray_icon("default"))
+            .menu(default_aura_tray_menu()),
+    ) {
+        Ok(tray) => {
+            cx.set_global(GalleryTrayState {
+                tray,
+                window: None,
+                window_visible: true,
+                auto_show: true,
+            });
+        }
+        Err(error) => {
+            eprintln!("failed to install Aura Gallery tray icon: {error}");
+            cx.set_quit_mode(gpui::QuitMode::LastWindowClosed);
+            return;
+        }
+    }
+
+    cx.spawn(async move |cx: &mut gpui::AsyncApp| {
+        loop {
+            while let Ok(command) = rx.try_recv() {
+                cx.update(|cx| handle_gallery_tray_command(command, cx));
+            }
+            cx.background_executor()
+                .timer(Duration::from_millis(100))
+                .await;
+        }
+    })
+    .detach();
+}
+
+fn handle_gallery_tray_command(command: TrayCommand, cx: &mut App) {
+    match command {
+        TrayCommand::Show => show_gallery_window(cx),
+        TrayCommand::Hide => hide_gallery_window(cx),
+        TrayCommand::Toggle => toggle_gallery_window(cx),
+        TrayCommand::Quit => cx.quit(),
+        TrayCommand::SetIcon(name) => {
+            if cx.has_global::<GalleryTrayState>() {
+                let state = cx.global_mut::<GalleryTrayState>();
+                if let Err(error) = state.tray.set_icon(gallery_tray_icon(&name)) {
+                    eprintln!("failed to update Aura Gallery tray icon: {error}");
+                }
+                let _ = state.tray.set_tooltip(Some(match name.as_str() {
+                    "syncing" => "Aura Gallery · Syncing",
+                    "error" => "Aura Gallery · Error",
+                    _ => "Aura Gallery",
+                }));
+            }
+        }
+        TrayCommand::Custom(name) if name == "auto-show" => {
+            if cx.has_global::<GalleryTrayState>() {
+                let state = cx.global_mut::<GalleryTrayState>();
+                state.auto_show = !state.auto_show;
+                let _ = state
+                    .tray
+                    .set_check_state(&TrayCommand::Custom("auto-show".into()), state.auto_show);
+            }
+        }
+        TrayCommand::Custom(name) => {
+            eprintln!("Aura Gallery tray custom command: {name}");
+        }
+    }
+}
+
+fn show_gallery_window(cx: &mut App) {
+    if !cx.has_global::<GalleryTrayState>() {
+        return;
+    }
+
+    let existing = cx.global::<GalleryTrayState>().window;
+    if let Some(handle) = existing {
+        if handle
+            .update(cx, |_, window, _| window.activate_window())
+            .is_ok()
+        {
+            let state = cx.global_mut::<GalleryTrayState>();
+            state.window_visible = true;
+            return;
+        }
+    }
+
+    if let Some(handle) = open_gallery_window(cx) {
+        let state = cx.global_mut::<GalleryTrayState>();
+        state.window = Some(handle);
+        state.window_visible = true;
+    }
+}
+
+fn hide_gallery_window(cx: &mut App) {
+    if !cx.has_global::<GalleryTrayState>() {
+        return;
+    }
+
+    let existing = cx.global::<GalleryTrayState>().window;
+    if let Some(handle) = existing {
+        let _ = handle.update(cx, |_, window, _| window.minimize_window());
+    }
+    cx.global_mut::<GalleryTrayState>().window_visible = false;
+}
+
+fn toggle_gallery_window(cx: &mut App) {
+    let should_hide = cx
+        .has_global::<GalleryTrayState>()
+        .then(|| cx.global::<GalleryTrayState>().window_visible)
+        .unwrap_or(false);
+
+    if should_hide {
+        hide_gallery_window(cx);
+    } else {
+        show_gallery_window(cx);
+    }
+}
+
+fn gallery_tray_icon(name: &str) -> aura_tray::TrayIconImage {
+    let color = match name {
+        "syncing" => [230, 162, 60, 255],
+        "error" => [245, 108, 108, 255],
+        _ => [64, 158, 255, 255],
+    };
+    solid_icon(color, 32).expect("solid 32px RGBA icon should be valid")
 }
 
 #[cfg(test)]

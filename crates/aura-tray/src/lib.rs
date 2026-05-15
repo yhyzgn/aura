@@ -8,7 +8,7 @@ use std::{collections::HashMap, path::Path};
 
 pub use tray_icon::menu::{CheckMenuItem, MenuEvent, MenuId};
 use tray_icon::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-pub use tray_icon::{Icon as TrayIconImage, TrayIconEvent};
+pub use tray_icon::{Icon as TrayIconImage, MouseButton, MouseButtonState, TrayIconEvent};
 use tray_icon::{TrayIcon, TrayIconBuilder};
 
 #[derive(Debug, thiserror::Error)]
@@ -21,6 +21,8 @@ pub enum AuraTrayError {
     Menu(#[from] tray_icon::menu::Error),
     #[error("image error: {0}")]
     Image(#[from] image::ImageError),
+    #[error("failed to initialize tray platform runtime: {0}")]
+    PlatformInit(String),
     #[error("invalid rgba icon buffer {width}x{height}: expected {expected} bytes, got {actual}")]
     InvalidRgba {
         width: u32,
@@ -51,6 +53,22 @@ impl TrayCommand {
             Self::Quit => "quit".into(),
             Self::SetIcon(name) => format!("set-icon:{name}"),
             Self::Custom(name) => format!("custom:{name}"),
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        match id {
+            "show" => Some(Self::Show),
+            "hide" => Some(Self::Hide),
+            "toggle" => Some(Self::Toggle),
+            "quit" => Some(Self::Quit),
+            _ => id
+                .strip_prefix("set-icon:")
+                .map(|name| Self::SetIcon(name.to_string()))
+                .or_else(|| {
+                    id.strip_prefix("custom:")
+                        .map(|name| Self::Custom(name.to_string()))
+                }),
         }
     }
 }
@@ -160,6 +178,7 @@ pub struct AuraTray {
 
 impl AuraTray {
     pub fn install(config: TrayConfig) -> Result<Self> {
+        init_platform_tray_runtime()?;
         let (menu, command_by_id, check_by_id) = build_menu(&config.menu)?;
         let mut builder = TrayIconBuilder::new()
             .with_id(config.id)
@@ -233,6 +252,20 @@ impl AuraTray {
             .get(&command.id())
             .map(CheckMenuItem::is_checked)
     }
+}
+
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+fn init_platform_tray_runtime() -> Result<()> {
+    if gtk::is_initialized() {
+        return Ok(());
+    }
+
+    gtk::init().map_err(|error| AuraTrayError::PlatformInit(error.to_string()))
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
+fn init_platform_tray_runtime() -> Result<()> {
+    Ok(())
 }
 
 pub fn icon_from_rgba(rgba: Vec<u8>, width: u32, height: u32) -> Result<TrayIconImage> {
@@ -431,6 +464,15 @@ mod tests {
         assert_eq!(
             TrayCommand::Custom("deep-action".into()).id(),
             "custom:deep-action"
+        );
+        assert_eq!(TrayCommand::from_id("show"), Some(TrayCommand::Show));
+        assert_eq!(
+            TrayCommand::from_id("set-icon:error"),
+            Some(TrayCommand::SetIcon("error".into()))
+        );
+        assert_eq!(
+            TrayCommand::from_id("custom:auto-show"),
+            Some(TrayCommand::Custom("auto-show".into()))
         );
     }
 

@@ -6,6 +6,8 @@
 
 ## Gallery 预览
 
+`cargo run -p aura-gallery` 会在应用启动时创建真实系统托盘图标；本页和 Gallery 内部的 Tray 页面则额外展示同一套菜单配置的可视化预览，避免在文档内容区重复创建 OS 托盘。
+
 ### 效果
 
 ::AuraDemo{component="Tray"}::
