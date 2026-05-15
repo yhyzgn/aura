@@ -101,6 +101,7 @@ jobs:
             libwayland-dev \
             libx11-dev \
             libxkbcommon-dev \
+            libxkbcommon-x11-dev \
             pkg-config \
             rpm \
             zsync
