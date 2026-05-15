@@ -49,6 +49,32 @@ impl PackageManifest {
         out
     }
 
+    pub fn release_notes_markdown(&self) -> String {
+        let mut out = String::from("# Aura native package release\n\n");
+        if self.artifacts.is_empty() {
+            out.push_str("No package artifacts were discovered. This file was generated before backend package outputs existed.\n");
+            return out;
+        }
+
+        let mut current_platform = None;
+        for artifact in &self.artifacts {
+            if current_platform != Some(artifact.platform) {
+                current_platform = Some(artifact.platform);
+                writeln!(out, "\n## {}\n", artifact.platform.as_str()).expect("write to string");
+            }
+            writeln!(
+                out,
+                "- `{}` `{}` `{}`  \n  SHA256: `{}`",
+                artifact.app,
+                artifact.format.as_str(),
+                artifact.path.display(),
+                artifact.checksum.hex
+            )
+            .expect("write to string");
+        }
+        out
+    }
+
     pub fn to_json_pretty(&self) -> String {
         let mut out = String::from("{\n  \"artifacts\": [");
         for (idx, artifact) in self.artifacts.iter().enumerate() {
@@ -160,6 +186,9 @@ mod tests {
                 .checksums_txt()
                 .contains("abc  target/packages/aura-gallery.AppImage")
         );
+        let notes = manifest.release_notes_markdown();
+        assert!(notes.contains("# Aura native package release"));
+        assert!(notes.contains("SHA256: `abc`"));
     }
 
     #[test]

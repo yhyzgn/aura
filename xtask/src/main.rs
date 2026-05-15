@@ -199,6 +199,9 @@ fn write_manifest_outputs(
     let checksum_path = package_dir.join("checksums.txt");
     fs::write(&checksum_path, manifest.checksums_txt())
         .map_err(|error| format!("failed to write {}: {error}", checksum_path.display()))?;
+    let release_notes_path = package_dir.join("release-notes.md");
+    fs::write(&release_notes_path, manifest.release_notes_markdown())
+        .map_err(|error| format!("failed to write {}: {error}", release_notes_path.display()))?;
     if manifest.is_empty() {
         println!(
             "package manifest written with no artifacts yet: {}",
@@ -211,6 +214,7 @@ fn write_manifest_outputs(
             manifest.artifacts.len()
         );
         println!("checksums written: {}", checksum_path.display());
+        println!("release notes written: {}", release_notes_path.display());
     }
     Ok(())
 }

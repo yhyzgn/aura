@@ -472,6 +472,7 @@ release-notes.md
 - [x] 上传 artifacts（`target/packages/**` 与生成的后端配置）。
 - [x] 生成 checksums。
 - [x] 生成 release manifest。
+- [x] 生成 release notes markdown。
 
 验收：
 
@@ -510,7 +511,7 @@ release-notes.md
 
 - `cargo xtask package --app <gallery|docs> --format <fmt> --dry-run --skip-build` 会生成 `target/aura-packager/Packager.<app>.toml`，并打印实际 `cargo packager ...` 调用。
 - `cargo xtask package ci ...` 已作为 CI 入口别名接入，`.github/workflows/package.yml` 在 Linux/macOS/Windows 矩阵中调用该入口。
-- 非 dry-run 打包完成后会扫描 `target/packages/<app>/<platform>/` 下的安装包文件，生成 `target/packages/package-manifest.json` 和 `target/packages/checksums.txt`。
+- 非 dry-run 打包完成后会扫描 `target/packages/<app>/<platform>/` 下的安装包文件，生成 `target/packages/package-manifest.json`、`target/packages/checksums.txt` 和 `target/packages/release-notes.md`。
 - `appimage`、`deb`、`app`、`dmg`、`nsis`、`msi` 走 cargo-packager 主后端；其中 `msi` 映射为 cargo-packager 的 `wix` 格式，`tar.gz` 暂映射为 `pacman`。
 - `rpm` 仍归类为 supplemental backend，但已优先接入 `cargo-generate-rpm` 的 metadata overwrite 配置生成和 `cargo generate-rpm` 命令路由；`nfpm` 仅作为后备方案。
 - 当前环境未全局安装 `cargo-packager`，因此验证以配置生成、命令 dry-run、类型检查和单元测试为准；安装后可直接去掉 `--dry-run` 产出包。
