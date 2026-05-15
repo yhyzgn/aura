@@ -371,7 +371,7 @@ fn show_docs_close_confirm(cx: &mut App) {
                 .child(
                     Space::new()
                         .gap_md()
-                        .child(Button::new("隐藏到托盘").on_click(move |_, _, cx| {
+                        .child(Button::new("隐藏到托盘").on_click(move |_, window, cx| {
                             if remember_for_hide.load(Ordering::Relaxed)
                                 && cx.has_global::<TrayControlCenter>()
                             {
@@ -381,8 +381,9 @@ fn show_docs_close_confirm(cx: &mut App) {
                             if cx.has_global::<DocsTrayState>() {
                                 cx.global_mut::<DocsTrayState>().close_dialog_open = false;
                             }
+                            prepare_docs_hide_to_tray(cx);
                             Dialog::close(cx);
-                            hide_docs_window(cx);
+                            window.remove_window();
                         }))
                         .child(Button::new("关闭进程").danger().on_click(move |_, _, cx| {
                             if remember_for_exit.load(Ordering::Relaxed)

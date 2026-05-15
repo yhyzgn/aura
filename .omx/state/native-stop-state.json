@@ -12,11 +12,11 @@
     },
     "019e15ab-a59f-7a20-a134-757da8881b86": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|已修正并推送：`304fefa close tray windows instead of minimizing` 调整点： - “隐藏到托盘”不再 `minimize_window()`。 - 改为 `window.remove_window()` 真正关闭主窗口。 - 同时清空保存的窗口句柄，后续从 tray 显示时会重新创建窗口。 - 隐藏前强制保持 `quitmode::explicit` 和 tray 可见，确保进程继续驻留。 - demo / docs 文案同步改成“关闭主窗口并驻留托盘”。 验证通过： - `cargo fmt` - `cargo check -p aura-gallery` - `cargo check -p aura-docs --bin aura-docs` - `cargo check -p aura-docs --bin check_snippets` - `cargo test -p aura-tray` - `cargo test -p aura-gallery` - `cargo test -p aura-docs` 备注：推送后 `.omx/state/*` 又出现 heartbeat 运行时变更，属于 omx 后台状态刷新。",
-        "first_seen_at": "2026-05-15T09:11:48.758Z",
-        "last_seen_at": "2026-05-15T09:11:48.758Z",
+        "fingerprint": "ordinary|确实，问题在 close-hook 返回值。 已修正并推送：`79f33c7 let remembered tray close proceed` 原因： - 之前在 `on_window_should_close` 里执行了隐藏逻辑后返回 `false`。 - 但 gpui 语义是：返回 `false` = 取消本次关闭，所以主窗口不会真的关闭。 现在改为： - `hidetotray` 分支先准备 tray 驻留状态： - `quitmode::explicit` - tray 保持可见 - 清空窗口句柄 - 标记窗口不可见 - 然后返回 `true`，让本次原生关闭继续执行，主窗口会真正关闭。 - 非 close-hook 场景，比如 tray 菜单“隐藏窗口”，仍使用 `window.remove_window()` 主动关闭窗口。 验证通过： - `cargo fmt` - `cargo check -p aura-gallery` - `cargo check -p aura-docs --bin aura-docs` - `cargo test -p aura-gallery` - `cargo test -p aura-docs`",
+        "first_seen_at": "2026-05-15T09:21:35.954Z",
+        "last_seen_at": "2026-05-15T09:21:35.954Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2ae3-1a02-7473-972c-2696172f6f02",
+        "last_turn_id": "019e2aef-69dc-7e91-9539-a74796986408",
         "last_thread_id": null
       }
     }

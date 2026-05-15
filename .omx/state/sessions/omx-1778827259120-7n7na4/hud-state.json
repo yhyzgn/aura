@@ -1,6 +1,6 @@
 {
-  "last_turn_at": "2026-05-15T09:11:48.841Z",
-  "last_progress_at": "2026-05-15T09:11:48.841Z",
-  "turn_count": 10,
-  "last_agent_output": "已修正并推送：`304fefa Close tray windows instead of minimizing`\n\n调整点：\n- “隐藏到托盘”不再 `minimize_window()`。\n- 改"
+  "last_turn_at": "2026-05-15T09:21:36.076Z",
+  "last_progress_at": "2026-05-15T09:21:36.076Z",
+  "turn_count": 11,
+  "last_agent_output": "确实，问题在 close-hook 返回值。\n\n已修正并推送：`79f33c7 Let remembered tray close proceed`\n\n原因：\n- 之前在 `on_window_sho"
 }
