@@ -1,6 +1,6 @@
 {
-  "last_turn_at": "2026-05-15T10:06:57.433Z",
-  "last_progress_at": "2026-05-15T10:06:57.433Z",
-  "turn_count": 14,
-  "last_agent_output": "已写好确定版技术方案文档：\n\n`docs/packaging-installer-technical-plan.md`\n\n内容覆盖：\n- 明确 **纯 Rust + GPUI**，禁止改成 Tauri"
+  "last_turn_at": "2026-05-15T12:08:22.628Z",
+  "last_progress_at": "2026-05-15T12:08:22.628Z",
+  "turn_count": 17,
+  "last_agent_output": "对，就定为 **`aura-packager`**。\n\n后续按这个边界落地：\n\n```text\ncrates/aura-packager/   # 打包领域逻辑库\nxtask/            "
 }

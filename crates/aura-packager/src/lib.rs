@@ -1,0 +1,17 @@
+//! Packaging domain logic for Aura native GPUI applications.
+//!
+//! This crate intentionally contains no installer runtime and no Tauri runtime
+//! integration. It only models package metadata, package formats, output
+//! manifests, checksums, and validation helpers used by `cargo xtask package`.
+
+mod app;
+mod checksum;
+mod format;
+mod manifest;
+mod validate;
+
+pub use app::{AppId, AppMetadata, KnownApp, known_apps};
+pub use checksum::{Checksum, sha256_file};
+pub use format::{PackageFormat, Platform};
+pub use manifest::{PackageArtifact, PackageManifest};
+pub use validate::{ValidationError, ValidationReport, validate_packaging_layout};

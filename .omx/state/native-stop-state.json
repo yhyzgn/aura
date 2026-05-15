@@ -12,11 +12,11 @@
     },
     "019e15ab-a59f-7a20-a134-757da8881b86": {
       "ordinary_no_progress_guard": {
-        "fingerprint": "ordinary|已写好确定版技术方案文档： `docs/packaging-installer-technical-plan.md` 内容覆盖： - 明确 **纯 rust + gpui**，禁止改成 tauri / webview。 - 调研结论：zed、zedis、tauri、cargo packager。 - 最终方案：`xtask + cargo-packager + rpm 补充工具`。 - 覆盖格式： - linux：appimage / deb / rpm / tar.gz - macos：app / dmg - windows：nsis exe / msi - 目录结构设计、命令设计、ci 发布矩阵。 - app metadata、icons、desktop、签名、notarization、smartscreen 等平台细节。 - 分阶段实施计划和验收标准。 同时已写入记忆库 directive：后续安装器打包阶段必须保持 aura 为纯 rust gpui 原生应用，不允许引入 tauri runtime。",
-        "first_seen_at": "2026-05-15T10:06:57.291Z",
-        "last_seen_at": "2026-05-15T10:06:57.291Z",
+        "fingerprint": "ordinary|对，就定为 **`aura-packager`**。 后续按这个边界落地： ```text crates/aura-packager/ # 打包领域逻辑库 xtask/ # cargo xtask package 命令入口 packaging/ # 安装包资源与平台配置 ``` 职责： - `aura-packager` - app metadata - package format enum - output manifest - checksum - packager config validation - 平台资源校验 - `xtask` - 解析 cli 参数 - 调用 cargo build - 调用 cargo-packager / rpm 工具 - 管理输出目录 - `packaging/` - icons - desktop/metainfo - macos entitlements - windows installer 配置 我后续会统一使用这个命名，不再使用 `aura-installer`。",
+        "first_seen_at": "2026-05-15T12:08:22.522Z",
+        "last_seen_at": "2026-05-15T12:08:22.522Z",
         "repeat_count": 1,
-        "last_turn_id": "019e2b17-960c-7952-a505-d46669760212",
+        "last_turn_id": "019e2b89-6307-7020-b679-6f06fba77200",
         "last_thread_id": null
       }
     }

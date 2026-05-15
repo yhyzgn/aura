@@ -78,12 +78,31 @@ Tauri 的 bundler 覆盖面完整，包括：
 
 ## 4. 最终技术选型
 
-采用 **`xtask` 编排 + `cargo-packager` 主打包 + 平台补充工具** 的混合方案。
+采用 **`aura-packager` 领域逻辑库 + `xtask` 编排 + `cargo-packager` 主打包 + 平台补充工具** 的混合方案。
+
+### 4.0 命名决策
+
+内部模块命名确定为 **`aura-packager`**，不使用 `aura-installer`。
+
+原因：
+
+- `installer` 容易被理解为安装时运行的 bootstrapper 或 GUI installer runtime。
+- 本模块职责是打包领域逻辑、配置校验、manifest/checksum 生成，不是最终安装器进程。
+- `packager` 与 `cargo-packager`、Zed bundle scripts、发布产物构建语义一致。
+
+职责边界：
+
+| 模块 | 职责 |
+|---|---|
+| `crates/aura-packager` | 可测试的打包领域逻辑库：app metadata、format enum、manifest、checksum、资源校验 |
+| `xtask` | 命令入口和流程编排：调用 cargo build、cargo-packager、RPM 工具、CI 输出 |
+| `packaging/` | 静态资源和平台配置：icons、desktop、metainfo、entitlements、Windows 配置 |
 
 ### 4.1 主路径
 
 | 层级 | 工具 | 责任 |
 |---|---|---|
+| 打包领域逻辑 | `crates/aura-packager` | app metadata、format enum、manifest、checksum、配置校验、平台资源校验 |
 | 构建编排 | `xtask` | 统一命令入口、app 选择、版本、目标格式、CI 适配 |
 | Release 构建 | `cargo build --release -p <app>` | 生成 GPUI 原生二进制 |
 | 主安装器生成 | `cargo-packager` | `.app`、`.dmg`、`.deb`、`.AppImage`、Pacman、NSIS、MSI |
@@ -135,6 +154,17 @@ Tauri 的 bundler 覆盖面完整，包括：
 新增：
 
 ```text
+crates/
+  aura-packager/
+    Cargo.toml
+    src/
+      lib.rs
+      app.rs
+      checksum.rs
+      format.rs
+      manifest.rs
+      validate.rs
+
 xtask/
   Cargo.toml
   src/
@@ -176,6 +206,7 @@ packaging/
 
 说明：
 
+- `aura-packager` 是可测试、可复用的打包领域逻辑库，不直接作为最终用户命令入口。
 - `xtask` 是唯一对外构建入口。
 - `packaging/Packager.*.toml` 按 app 拆分，避免单文件配置复杂化。
 - app icon 与 tray icon 分离：tray icon 服务运行时状态栏，app icon 服务安装器和系统桌面。
@@ -367,10 +398,10 @@ release-notes.md
 ### Phase 1：资源和元数据准备
 
 - [ ] 生成/提交 app icon：PNG、ICNS、ICO。
-- [ ] 新增 `packaging/` 目录。
-- [ ] 为 Gallery / Docs 编写 Packager 配置。
-- [ ] 为 Linux 编写 `.desktop` 和 metainfo。
-- [ ] 明确 app id、名称、描述、license、homepage。
+- [x] 新增 `packaging/` 目录。
+- [x] 为 Gallery / Docs 编写 Packager 配置。
+- [x] 为 Linux 编写 `.desktop` 和 metainfo。
+- [x] 明确 app id、名称、描述、license、homepage。
 
 验收：
 
@@ -379,10 +410,11 @@ release-notes.md
 
 ### Phase 2：xtask 基础编排
 
-- [ ] 新增 `xtask` crate。
-- [ ] 实现 app registry：`gallery`、`docs`。
-- [ ] 实现 release build。
-- [ ] 实现格式路由与输出目录规范。
+- [x] 新增 `crates/aura-packager` crate。
+- [x] 新增 `xtask` crate。
+- [x] 实现 app registry：`gallery`、`docs`。
+- [x] 实现 release build。
+- [x] 实现格式路由与输出目录规范。
 - [ ] 自动生成 checksums 和 manifest。
 
 验收：
@@ -470,8 +502,9 @@ release-notes.md
 
 ## 14. 决策记录
 
+- 采用 `aura-packager` 作为 Aura 内部打包领域逻辑库。
 - 采用 `cargo-packager` 作为主打包工具。
-- 采用 `xtask` 作为统一编排入口。
+- 采用 `xtask` 作为统一编排入口，命令仍为 `cargo xtask package ...`，不直接要求用户运行 `cargo run -p aura-packager`。
 - RPM 使用补充工具实现，不阻塞主路径。
 - Flatpak/Snap 不作为第一批必须目标。
 - 不采用完整 Tauri，不改变 GPUI 原生运行时。
