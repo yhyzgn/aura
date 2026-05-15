@@ -368,6 +368,6 @@ fn workspace_root() -> Result<PathBuf, String> {
 
 fn print_help() {
     println!(
-        "Aura xtask\n\n  cargo xtask package validate\n  cargo xtask package build --app gallery\n  cargo xtask package --app docs --format appimage\n  cargo xtask package --app docs --format deb --dry-run --skip-build\n  cargo xtask package ci --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>\n  --dry-run      generate backend config and print cargo-packager invocation\n  --skip-build   reuse target/release binaries instead of building first"
+        "Aura xtask\n\n  cargo run -p xtask -- package validate\n  cargo run -p xtask -- package build --app gallery\n  cargo run -p xtask -- package --app docs --format appimage\n  cargo run -p xtask -- package --app docs --format deb --dry-run --skip-build\n  cargo run -p xtask -- package ci --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>\n  --dry-run      generate backend config and print cargo-packager invocation\n  --skip-build   reuse target/release binaries instead of building first"
     );
 }

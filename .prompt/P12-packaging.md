@@ -13,7 +13,7 @@ Aura applications must remain pure Rust + GPUI native apps. Do not convert `aura
 The internal packaging module is named `aura-packager`, not `aura-installer`.
 
 - `aura-packager` is a Rust library for packaging domain logic.
-- `xtask` is the command entrypoint: `cargo xtask package ...`.
+- `xtask` is the command entrypoint: `cargo run -p xtask -- package ...`.
 - `packaging/` stores static platform resources and packager configuration.
 
 ## Technical Direction
@@ -62,10 +62,10 @@ The internal packaging module is named `aura-packager`, not `aura-installer`.
   - `cargo-packager` 配置生成。
   - `cargo-generate-rpm` metadata overwrite 配置生成。
 - `xtask`
-  - `cargo xtask package validate`
-  - `cargo xtask package build --app <gallery|docs>`
-  - `cargo xtask package --app <gallery|docs> --format <format>`
-  - `cargo xtask package ci --all-apps --format platform-defaults`
+  - `cargo run -p xtask -- package validate`
+  - `cargo run -p xtask -- package build --app <gallery|docs>`
+  - `cargo run -p xtask -- package --app <gallery|docs> --format <format>`
+  - `cargo run -p xtask -- package ci --all-apps --format platform-defaults`
   - `--dry-run --skip-build` 可生成后端配置并打印真实后端命令。
 - `packaging/`
   - Gallery / Docs packager metadata skeleton。
@@ -109,7 +109,7 @@ target/aura-packager/GenerateRpm.docs.toml
 ```bash
 cargo install cargo-packager --locked
 cargo install cargo-generate-rpm --locked
-cargo xtask package ci --all-apps --format platform-defaults
+cargo run -p xtask -- package ci --all-apps --format platform-defaults
 ```
 
 需要验证真实产物：

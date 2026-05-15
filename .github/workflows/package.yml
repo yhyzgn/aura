@@ -121,7 +121,7 @@ jobs:
         run: cargo install cargo-packager --locked
 
       - name: Validate packaging metadata
-        run: cargo xtask package validate
+        run: cargo run -p xtask -- package validate
 
       - name: Test packager domain logic
         run: cargo test -p aura-packager
@@ -133,7 +133,7 @@ jobs:
           set -euo pipefail
           APP_INPUT="${{ github.event.inputs.app || 'all' }}"
           DRY_INPUT="${{ github.event.inputs.dry_run || 'false' }}"
-          args=(cargo xtask package ci --format platform-defaults)
+          args=(cargo run -p xtask -- package ci --format platform-defaults)
           if [[ "$APP_INPUT" == "all" ]]; then
             args+=(--all-apps)
           else
