@@ -54,6 +54,12 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Prefer toolchain cargo shim
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$(dirname "$(rustup which cargo)")" >> "$GITHUB_PATH"
+
       - name: Configure package channel
         id: package-channel
         shell: bash
