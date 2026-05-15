@@ -243,6 +243,9 @@ cargo xtask package validate
 cargo xtask package ci --app gallery --format appimage
 cargo xtask package ci --app docs --format deb
 cargo xtask package ci --all-apps --format platform-defaults
+
+# workflow_dispatch 默认为 dry-run，只生成并校验后端配置
+cargo xtask package ci --all-apps --format platform-defaults --dry-run --skip-build
 ```
 
 CI 模式要求：
@@ -464,11 +467,11 @@ release-notes.md
 
 ### Phase 6：CI 发布流水线
 
-- [ ] 添加 GitHub Actions packaging workflow。
-- [ ] tag push 触发 release build。
-- [ ] 上传 artifacts。
-- [ ] 生成 checksums。
-- [ ] 生成 release manifest。
+- [x] 添加 GitHub Actions packaging workflow（`.github/workflows/package.yml`）。
+- [x] tag push 触发 release build（`v*` tags）。
+- [x] 上传 artifacts（`target/packages/**` 与生成的后端配置）。
+- [x] 生成 checksums。
+- [x] 生成 release manifest。
 
 验收：
 
@@ -506,6 +509,7 @@ release-notes.md
 截至 2026-05-15：
 
 - `cargo xtask package --app <gallery|docs> --format <fmt> --dry-run --skip-build` 会生成 `target/aura-packager/Packager.<app>.toml`，并打印实际 `cargo packager ...` 调用。
+- `cargo xtask package ci ...` 已作为 CI 入口别名接入，`.github/workflows/package.yml` 在 Linux/macOS/Windows 矩阵中调用该入口。
 - 非 dry-run 打包完成后会扫描 `target/packages/<app>/<platform>/` 下的安装包文件，生成 `target/packages/package-manifest.json` 和 `target/packages/checksums.txt`。
 - `appimage`、`deb`、`app`、`dmg`、`nsis`、`msi` 走 cargo-packager 主后端；其中 `msi` 映射为 cargo-packager 的 `wix` 格式，`tar.gz` 暂映射为 `pacman`。
 - `rpm` 仍归类为 supplemental backend，但已优先接入 `cargo-generate-rpm` 的 metadata overwrite 配置生成和 `cargo generate-rpm` 命令路由；`nfpm` 仅作为后备方案。

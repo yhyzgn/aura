@@ -31,7 +31,7 @@ fn package(args: Vec<String>) -> Result<(), String> {
     match command.action {
         PackageAction::Validate => validate(),
         PackageAction::Build => build(command.apps),
-        PackageAction::Package => package_formats(command),
+        PackageAction::Package | PackageAction::Ci => package_formats(command),
     }
 }
 
@@ -305,6 +305,7 @@ enum PackageAction {
     Validate,
     Build,
     Package,
+    Ci,
 }
 
 impl PackageCommand {
@@ -321,6 +322,7 @@ impl PackageCommand {
             match arg.as_str() {
                 "validate" => action = PackageAction::Validate,
                 "build" => action = PackageAction::Build,
+                "ci" => action = PackageAction::Ci,
                 "--all-apps" => all_apps = true,
                 "--dry-run" => dry_run = true,
                 "--skip-build" => skip_build = true,
@@ -362,6 +364,6 @@ fn workspace_root() -> Result<PathBuf, String> {
 
 fn print_help() {
     println!(
-        "Aura xtask\n\n  cargo xtask package validate\n  cargo xtask package build --app gallery\n  cargo xtask package --app docs --format appimage\n  cargo xtask package --app docs --format deb --dry-run --skip-build\n  cargo xtask package --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>\n  --dry-run      generate backend config and print cargo-packager invocation\n  --skip-build   reuse target/release binaries instead of building first"
+        "Aura xtask\n\n  cargo xtask package validate\n  cargo xtask package build --app gallery\n  cargo xtask package --app docs --format appimage\n  cargo xtask package --app docs --format deb --dry-run --skip-build\n  cargo xtask package ci --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>\n  --dry-run      generate backend config and print cargo-packager invocation\n  --skip-build   reuse target/release binaries instead of building first"
     );
 }

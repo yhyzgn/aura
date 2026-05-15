@@ -1,0 +1,133 @@
+name: Package native Aura apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only generate backend configs and print commands"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      app:
+        description: "App to package"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - gallery
+          - docs
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.os }} native packages
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+          - os: macos-14
+            platform: macos
+          - os: windows-2022
+            platform: windows
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux packaging prerequisites
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            file \
+            libasound2-dev \
+            libatk1.0-dev \
+            libayatana-appindicator3-dev \
+            libcairo2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgdk-pixbuf-2.0-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libpango1.0-dev \
+            librsvg2-dev \
+            libvulkan-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            rpm \
+            zsync
+
+      - name: Install Linux package backends
+        if: matrix.platform == 'linux'
+        run: |
+          cargo install cargo-packager --locked
+          cargo install cargo-generate-rpm --locked
+
+      - name: Install macOS package backend
+        if: matrix.platform == 'macos'
+        run: cargo install cargo-packager --locked
+
+      - name: Install Windows package backend
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: cargo install cargo-packager --locked
+
+      - name: Validate packaging metadata
+        run: cargo xtask package validate
+
+      - name: Test packager domain logic
+        run: cargo test -p aura-packager
+
+      - name: Build package command
+        id: package-command
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_INPUT="${{ github.event.inputs.app || 'all' }}"
+          DRY_INPUT="${{ github.event.inputs.dry_run || 'false' }}"
+          args=(cargo xtask package ci --format platform-defaults)
+          if [[ "$APP_INPUT" == "all" ]]; then
+            args+=(--all-apps)
+          else
+            args+=(--app "$APP_INPUT")
+          fi
+          if [[ "$DRY_INPUT" == "true" ]]; then
+            args+=(--dry-run --skip-build)
+          fi
+          printf 'command=' >> "$GITHUB_OUTPUT"
+          printf '%q ' "${args[@]}" >> "$GITHUB_OUTPUT"
+          printf '\n' >> "$GITHUB_OUTPUT"
+
+      - name: Package Aura apps
+        shell: bash
+        run: ${{ steps.package-command.outputs.command }}
+
+      - name: Upload package artifacts
+        if: github.event.inputs.dry_run != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-packages-${{ matrix.platform }}
+          path: |
+            target/packages/**
+            target/aura-packager/*.toml
+          if-no-files-found: error
