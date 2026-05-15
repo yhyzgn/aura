@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 72083,
+    "run_count": 73430,
     "leader_only": true,
-    "last_tick_at": "2026-05-15T12:17:29.965Z",
+    "last_tick_at": "2026-05-15T12:25:24.030Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-15T12:17:29.965Z",
+    "last_tick_at": "2026-05-15T12:25:24.030Z",
     "last_error": null,
-    "run_count": 72083
+    "run_count": 73430
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-15T12:17:29.966Z",
+    "last_state_check_at": "2026-05-15T12:25:24.031Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "stale_current_session",
@@ -57,10 +57,10 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-15T12:17:29.965Z",
-    "last_turn_at": "2026-05-15T12:08:22.628Z",
-    "last_turn_count": 17,
-    "last_message": "对，就定为 **`aura-packager`**。\n\n后续按这个边界落地：\n\n```text\ncrates/aura-packager/   # 打包领域逻辑库\nxtask/            ",
+    "last_tick_at": "2026-05-15T12:25:24.030Z",
+    "last_turn_at": "2026-05-15T12:19:09.983Z",
+    "last_turn_count": 19,
+    "last_message": "还没有，**只是完成了打包器基础设施的第一步**。\n\n已完成：\n- `aura-packager` crate 骨架\n- `xtask package` 命令入口\n- Gallery / Docs m",
     "last_reason": "eligible_but_not_sent",
     "last_error": null,
     "last_nudged_signature": "",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 250,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-15T12:17:29.966Z",
-    "last_activity_at": "2026-05-15T12:17:29.966Z",
+    "last_tick_at": "2026-05-15T12:25:24.031Z",
+    "last_activity_at": "2026-05-15T12:25:24.031Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"

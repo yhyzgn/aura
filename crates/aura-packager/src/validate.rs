@@ -1,10 +1,18 @@
-use std::{fmt, path::PathBuf};
+use std::{fmt, fs, path::PathBuf};
 
 use crate::known_apps;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidationError {
-    MissingPath { label: String, path: PathBuf },
+    MissingPath {
+        label: String,
+        path: PathBuf,
+    },
+    InvalidAsset {
+        label: String,
+        path: PathBuf,
+        reason: String,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -12,6 +20,13 @@ impl fmt::Display for ValidationError {
         match self {
             Self::MissingPath { label, path } => {
                 write!(f, "missing {label}: {}", path.display())
+            }
+            Self::InvalidAsset {
+                label,
+                path,
+                reason,
+            } => {
+                write!(f, "invalid {label}: {} ({reason})", path.display())
             }
         }
     }
@@ -37,6 +52,32 @@ impl ValidationReport {
             });
         }
     }
+
+    fn require_magic(&mut self, label: impl Into<String>, path: PathBuf, magic: &[u8]) {
+        let label = label.into();
+        match fs::read(&path) {
+            Ok(bytes) if bytes.starts_with(magic) => {}
+            Ok(bytes) => self.errors.push(ValidationError::InvalidAsset {
+                label,
+                path,
+                reason: format!("unexpected file header; {} bytes", bytes.len()),
+            }),
+            Err(_) => self.require_path(label, path),
+        }
+    }
+
+    fn require_svg(&mut self, label: impl Into<String>, path: PathBuf) {
+        let label = label.into();
+        match fs::read_to_string(&path) {
+            Ok(text) if text.contains("<svg") && text.contains("</svg>") => {}
+            Ok(text) => self.errors.push(ValidationError::InvalidAsset {
+                label,
+                path,
+                reason: format!("not an SVG document; {} bytes", text.len()),
+            }),
+            Err(_) => self.require_path(label, path),
+        }
+    }
 }
 
 pub fn validate_packaging_layout(root: impl Into<PathBuf>) -> ValidationReport {
@@ -52,6 +93,8 @@ pub fn validate_packaging_layout(root: impl Into<PathBuf>) -> ValidationReport {
         root.join("packaging/windows"),
     );
 
+    require_icon_set(&mut report, &root, "aura", "Aura brand");
+
     for app in known_apps() {
         let metadata = app.metadata();
         report.require_path(
@@ -66,21 +109,35 @@ pub fn validate_packaging_layout(root: impl Into<PathBuf>) -> ValidationReport {
             format!("{} linux metainfo", metadata.binary),
             metadata.linux_metainfo_path(&root),
         );
-        report.require_path(
-            format!("{} png icon", metadata.binary),
-            metadata.icon_png_path(&root),
-        );
-        report.require_path(
-            format!("{} icns icon", metadata.binary),
-            metadata.icon_icns_path(&root),
-        );
-        report.require_path(
-            format!("{} ico icon", metadata.binary),
-            metadata.icon_ico_path(&root),
-        );
+        require_icon_set(&mut report, &root, &metadata.icon_stem, &metadata.name);
     }
 
     report
+}
+
+fn require_icon_set(
+    report: &mut ValidationReport,
+    root: &std::path::Path,
+    stem: &str,
+    label: &str,
+) {
+    let dir = root.join("packaging/icons");
+    report.require_svg(format!("{label} svg icon"), dir.join(format!("{stem}.svg")));
+    report.require_magic(
+        format!("{label} png icon"),
+        dir.join(format!("{stem}.png")),
+        b"\x89PNG\r\n\x1a\n",
+    );
+    report.require_magic(
+        format!("{label} ico icon"),
+        dir.join(format!("{stem}.ico")),
+        b"\x00\x00\x01\x00",
+    );
+    report.require_magic(
+        format!("{label} icns icon"),
+        dir.join(format!("{stem}.icns")),
+        b"icns",
+    );
 }
 
 #[cfg(test)]
