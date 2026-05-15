@@ -15,9 +15,9 @@
   "dispatch_drain": {
     "enabled": true,
     "max_per_tick": 5,
-    "run_count": 19359,
+    "run_count": 20532,
     "leader_only": true,
-    "last_tick_at": "2026-05-15T08:09:50.151Z",
+    "last_tick_at": "2026-05-15T08:17:12.073Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,16 +30,16 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-15T08:09:50.151Z",
+    "last_tick_at": "2026-05-15T08:17:12.074Z",
     "last_error": null,
-    "run_count": 19359
+    "run_count": 20532
   },
   "ralph_continue_steer": {
     "enabled": true,
     "cadence_ms": 60000,
     "message": "Ralph loop active continue",
     "active": false,
-    "last_state_check_at": "2026-05-15T08:09:50.177Z",
+    "last_state_check_at": "2026-05-15T08:17:12.100Z",
     "last_sent_at": "",
     "cooldown_anchor_at": "",
     "last_reason": "blocked_by_current_session",
@@ -57,10 +57,10 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-15T08:09:50.165Z",
-    "last_turn_at": "2026-05-15T07:52:04.298Z",
-    "last_turn_count": 4,
-    "last_message": "已完成并推送：`f1a6d8f Add native tray facade for resident apps`\n\n本次实现：\n\n- 新增 `crates/aura-tray`\n  - 封装 `tr",
+    "last_tick_at": "2026-05-15T08:17:12.087Z",
+    "last_turn_at": "2026-05-15T08:10:16.426Z",
+    "last_turn_count": 5,
+    "last_message": "确实，上一版只在 demo/docs 展示了 Tray 配置，没有在 `aura-gallery` 启动时创建真实系统托盘。已修复并推送：\n\n- 新提交：`3d2dc2c Create real ga",
     "last_reason": "eligible_but_not_sent",
     "last_error": null,
     "last_nudged_signature": "",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 250,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-15T08:09:50.177Z",
-    "last_activity_at": "2026-05-15T08:09:50.177Z",
+    "last_tick_at": "2026-05-15T08:17:12.100Z",
+    "last_activity_at": "2026-05-15T08:17:12.100Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"

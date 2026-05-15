@@ -254,6 +254,22 @@ impl AuraTray {
     }
 }
 
+/// Pumps platform tray events when the backend requires an external event loop.
+///
+/// On Linux/FreeBSD `tray-icon` uses GTK/AppIndicator. GPUI's own event loop
+/// does not drive GTK, so tray-enabled GPUI apps should call this periodically
+/// on the same thread that created the tray icon.
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+pub fn pump_platform_events() {
+    while gtk::events_pending() {
+        gtk::main_iteration_do(false);
+    }
+}
+
+/// No-op on platforms where `tray-icon` is integrated with the native app loop.
+#[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
+pub fn pump_platform_events() {}
+
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn init_platform_tray_runtime() -> Result<()> {
     if gtk::is_initialized() {

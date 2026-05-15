@@ -151,6 +151,7 @@ fn install_gallery_tray(cx: &mut App) {
 
     cx.spawn(async move |cx: &mut gpui::AsyncApp| {
         loop {
+            aura_tray::pump_platform_events();
             while let Ok(command) = rx.try_recv() {
                 cx.update(|cx| handle_gallery_tray_command(command, cx));
             }
