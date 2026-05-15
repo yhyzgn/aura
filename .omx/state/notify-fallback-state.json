@@ -1,12 +1,12 @@
 {
-  "pid": 1072683,
+  "pid": 1081116,
   "parent_pid": 464849,
-  "started_at": "2026-05-15T12:58:36.665Z",
+  "started_at": "2026-05-15T13:02:22.677Z",
   "cwd": "/home/neo/Projects/neo/lib/aura",
   "notify_script": "/home/neo/.bun/install/global/node_modules/oh-my-codex/dist/scripts/notify-hook.js",
   "authority_only": true,
   "poll_ms": 75,
-  "effective_poll_ms": 1000,
+  "effective_poll_ms": 75,
   "idle_max_poll_ms": 1000,
   "pid_file": null,
   "max_lifetime_ms": 0,
@@ -17,7 +17,7 @@
     "max_per_tick": 5,
     "run_count": 1,
     "leader_only": true,
-    "last_tick_at": "2026-05-15T12:58:36.667Z",
+    "last_tick_at": "2026-05-15T13:02:22.678Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -29,8 +29,8 @@
     "enabled": true,
     "leader_only": true,
     "stale_threshold_ms": 180000,
-    "precomputed_leader_stale": false,
-    "last_tick_at": "2026-05-15T12:58:36.667Z",
+    "precomputed_leader_stale": true,
+    "last_tick_at": "2026-05-15T13:02:22.679Z",
     "last_error": null,
     "run_count": 1
   },
@@ -57,7 +57,7 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-15T12:58:36.681Z",
+    "last_tick_at": "2026-05-15T13:02:22.695Z",
     "last_turn_at": "2026-05-15T12:55:12.079Z",
     "last_turn_count": 23,
     "last_message": "已继续完成并推送两步：\n\n1. **补齐 package manifest / checksums**\n   - 非 dry-run 打包后自动扫描产物。\n   - 生成：\n     - `targe",
@@ -78,11 +78,11 @@
     "enabled": true,
     "base_ms": 75,
     "max_ms": 1000,
-    "current_ms": 1000,
-    "idle_streak": 231,
-    "last_tick_at": "2026-05-15T12:58:36.683Z",
-    "last_activity_at": "2026-05-15T12:54:45.667Z",
-    "last_activity_reason": "eligible_but_not_sent"
+    "current_ms": 75,
+    "idle_streak": 0,
+    "last_tick_at": "2026-05-15T13:02:22.697Z",
+    "last_activity_at": "2026-05-15T13:02:22.697Z",
+    "last_activity_reason": "leader_nudge"
   },
-  "last_cycle_activity": "eligible_but_not_sent"
+  "last_cycle_activity": "leader_nudge"
 }
