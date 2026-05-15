@@ -1,6 +1,10 @@
-use std::{env, path::PathBuf, process::Command};
+use std::{env, fs, path::PathBuf, process::Command};
 
-use aura_packager::{KnownApp, PackageFormat, Platform, validate_packaging_layout};
+use aura_packager::{
+    KnownApp, PackageFormat, Platform, cargo_packager_formats, generated_config_path,
+    package_out_dir, release_binaries_dir, render_cargo_packager_config, supplemental_formats,
+    validate_packaging_layout,
+};
 
 fn main() {
     if let Err(error) = run() {
@@ -26,7 +30,7 @@ fn package(args: Vec<String>) -> Result<(), String> {
     match command.action {
         PackageAction::Validate => validate(),
         PackageAction::Build => build(command.apps),
-        PackageAction::Package => package_formats(command.apps, command.format),
+        PackageAction::Package => package_formats(command),
     }
 }
 
@@ -57,34 +61,107 @@ fn build(apps: Vec<KnownApp>) -> Result<(), String> {
     Ok(())
 }
 
-fn package_formats(apps: Vec<KnownApp>, format: PackageFormat) -> Result<(), String> {
+fn package_formats(command: PackageCommand) -> Result<(), String> {
     validate()?;
-    build(apps.clone())?;
+    if !command.skip_build {
+        build(command.apps.clone())?;
+    }
 
+    let root = workspace_root()?;
     let platform = Platform::current();
-    let formats: Vec<_> = if format == PackageFormat::PlatformDefaults {
+    let formats: Vec<_> = if command.format == PackageFormat::PlatformDefaults {
         PackageFormat::defaults_for(platform).to_vec()
     } else {
-        vec![format]
+        vec![command.format]
     };
 
-    for app in apps {
-        for format in &formats {
+    for app in command.apps {
+        let metadata = app.metadata();
+        let cargo_formats = cargo_packager_formats(&formats);
+        let supplemental = supplemental_formats(&formats);
+        let out_dir = package_out_dir(&root, &metadata, platform);
+        let binaries_dir = release_binaries_dir(&root);
+
+        if !cargo_formats.is_empty() {
+            let config_path = generated_config_path(&root, &metadata);
+            let config_text = render_cargo_packager_config(
+                &root,
+                &metadata,
+                &cargo_formats,
+                &out_dir,
+                &binaries_dir,
+            );
+            if let Some(parent) = config_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+            }
+            fs::write(&config_path, config_text)
+                .map_err(|error| format!("failed to write {}: {error}", config_path.display()))?;
+
+            let args = cargo_packager_args(&config_path, &out_dir, &binaries_dir, &cargo_formats);
             println!(
-                "planned package: app={} platform={} format={} output=target/packages/{}/{}/",
-                app.package(),
+                "cargo-packager config: app={} path={}",
+                metadata.package,
+                config_path.display()
+            );
+            if command.dry_run {
+                println!("dry-run: cargo {}", args.join(" "));
+            } else {
+                run_cargo_packager(&args)?;
+            }
+        }
+
+        for format in supplemental {
+            println!(
+                "supplemental package pending: app={} platform={} format={} output={}",
+                metadata.package,
                 platform.as_str(),
                 format.as_str(),
-                app.package(),
-                platform.as_str()
+                out_dir.display()
             );
         }
     }
 
-    println!(
-        "packager backend invocation is intentionally staged; metadata/build validation is active"
-    );
     Ok(())
+}
+
+fn cargo_packager_args(
+    config_path: &std::path::Path,
+    out_dir: &std::path::Path,
+    binaries_dir: &std::path::Path,
+    formats: &[PackageFormat],
+) -> Vec<String> {
+    let format_arg = formats
+        .iter()
+        .filter_map(|format| format.cargo_packager_format())
+        .collect::<Vec<_>>()
+        .join(",");
+    vec![
+        "packager".into(),
+        "--config".into(),
+        config_path.display().to_string(),
+        "--out-dir".into(),
+        out_dir.display().to_string(),
+        "--binaries-dir".into(),
+        binaries_dir.display().to_string(),
+        "--formats".into(),
+        format_arg,
+    ]
+}
+
+fn run_cargo_packager(args: &[String]) -> Result<(), String> {
+    let status = Command::new("cargo")
+        .args(args)
+        .status()
+        .map_err(|error| format!("failed to spawn cargo packager: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(
+            "cargo packager failed; install backend with `cargo install cargo-packager --locked` and ensure platform tools are available"
+                .into(),
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -92,6 +169,8 @@ struct PackageCommand {
     action: PackageAction,
     apps: Vec<KnownApp>,
     format: PackageFormat,
+    dry_run: bool,
+    skip_build: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,6 +186,8 @@ impl PackageCommand {
         let mut app: Option<KnownApp> = None;
         let mut all_apps = false;
         let mut format = PackageFormat::PlatformDefaults;
+        let mut dry_run = false;
+        let mut skip_build = false;
         let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
@@ -114,6 +195,8 @@ impl PackageCommand {
                 "validate" => action = PackageAction::Validate,
                 "build" => action = PackageAction::Build,
                 "--all-apps" => all_apps = true,
+                "--dry-run" => dry_run = true,
+                "--skip-build" => skip_build = true,
                 "--app" => {
                     let value = iter.next().ok_or("--app requires a value")?;
                     app = Some(value.parse()?);
@@ -140,6 +223,8 @@ impl PackageCommand {
             action,
             apps,
             format,
+            dry_run,
+            skip_build,
         })
     }
 }
@@ -150,6 +235,6 @@ fn workspace_root() -> Result<PathBuf, String> {
 
 fn print_help() {
     println!(
-        "Aura xtask\n\n  cargo xtask package validate\n  cargo xtask package build --app gallery\n  cargo xtask package --app docs --format appimage\n  cargo xtask package --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>"
+        "Aura xtask\n\n  cargo xtask package validate\n  cargo xtask package build --app gallery\n  cargo xtask package --app docs --format appimage\n  cargo xtask package --app docs --format deb --dry-run --skip-build\n  cargo xtask package --all-apps --format platform-defaults\n\nOptions:\n  --app <gallery|docs>\n  --all-apps\n  --format <appimage|deb|rpm|tar.gz|app|dmg|nsis|msi|platform-defaults>\n  --dry-run      generate backend config and print cargo-packager invocation\n  --skip-build   reuse target/release binaries instead of building first"
     );
 }

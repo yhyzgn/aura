@@ -60,6 +60,19 @@ impl PackageFormat {
             Platform::Windows => &[Self::Nsis, Self::Msi],
         }
     }
+
+    pub fn cargo_packager_format(self) -> Option<&'static str> {
+        match self {
+            Self::AppImage => Some("appimage"),
+            Self::Deb => Some("deb"),
+            Self::TarGz => Some("pacman"),
+            Self::App => Some("app"),
+            Self::Dmg => Some("dmg"),
+            Self::Nsis => Some("nsis"),
+            Self::Msi => Some("wix"),
+            Self::Rpm | Self::PlatformDefaults => None,
+        }
+    }
 }
 
 impl std::str::FromStr for PackageFormat {

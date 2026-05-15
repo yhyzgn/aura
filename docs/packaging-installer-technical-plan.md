@@ -1,7 +1,7 @@
 # Aura 程序安装器构建打包技术方案
 
 日期：2026-05-15  
-状态：确定方案 / 待实施  
+状态：实施中 / cargo-packager 后端已接入 dry-run  
 适用范围：`aura-gallery`、`aura-docs` 以及后续所有纯 GPUI Aura 主程序
 
 ## 1. 目标
@@ -397,7 +397,7 @@ release-notes.md
 
 ### Phase 1：资源和元数据准备
 
-- [ ] 生成/提交 app icon：PNG、ICNS、ICO。
+- [x] 生成/提交 app icon：PNG、ICNS、ICO。
 - [x] 新增 `packaging/` 目录。
 - [x] 为 Gallery / Docs 编写 Packager 配置。
 - [x] 为 Linux 编写 `.desktop` 和 metainfo。
@@ -415,6 +415,7 @@ release-notes.md
 - [x] 实现 app registry：`gallery`、`docs`。
 - [x] 实现 release build。
 - [x] 实现格式路由与输出目录规范。
+- [x] 生成 cargo-packager 兼容配置并通过 `cargo xtask package --dry-run` 输出真实后端命令。
 - [ ] 自动生成 checksums 和 manifest。
 
 验收：
@@ -424,10 +425,10 @@ release-notes.md
 
 ### Phase 3：Linux 包
 
-- [ ] AppImage。
-- [ ] deb。
-- [ ] rpm。
-- [ ] portable tar.gz。
+- [ ] AppImage（cargo-packager 后端命令已接入，待安装本机后端工具后产物 smoke）。
+- [ ] deb（cargo-packager 后端命令已接入，待安装本机后端工具后产物 smoke）。
+- [ ] rpm（仍按补充后端实现）。
+- [ ] portable tar.gz / pacman（cargo-packager pacman 映射已预留，portable archive 待补）。
 - [ ] 安装/卸载 smoke test 脚本。
 
 验收：
@@ -500,7 +501,16 @@ release-notes.md
 - CI 可归档安装包、checksum、manifest。
 - 所有打包逻辑通过 `cargo xtask package ...` 统一入口执行。
 
-## 14. 决策记录
+## 14. 当前实现状态
+
+截至 2026-05-15：
+
+- `cargo xtask package --app <gallery|docs> --format <fmt> --dry-run --skip-build` 会生成 `target/aura-packager/Packager.<app>.toml`，并打印实际 `cargo packager ...` 调用。
+- `appimage`、`deb`、`app`、`dmg`、`nsis`、`msi` 走 cargo-packager 主后端；其中 `msi` 映射为 cargo-packager 的 `wix` 格式，`tar.gz` 暂映射为 `pacman`。
+- `rpm` 仍归类为 supplemental backend，后续接入 `cargo-generate-rpm` 或 `nfpm`。
+- 当前环境未全局安装 `cargo-packager`，因此验证以配置生成、命令 dry-run、类型检查和单元测试为准；安装后可直接去掉 `--dry-run` 产出包。
+
+## 15. 决策记录
 
 - 采用 `aura-packager` 作为 Aura 内部打包领域逻辑库。
 - 采用 `cargo-packager` 作为主打包工具。

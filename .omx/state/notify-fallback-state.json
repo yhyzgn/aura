@@ -1,7 +1,7 @@
 {
-  "pid": 1045737,
+  "pid": 1053890,
   "parent_pid": 464849,
-  "started_at": "2026-05-15T12:42:38.595Z",
+  "started_at": "2026-05-15T12:47:52.627Z",
   "cwd": "/home/neo/Projects/neo/lib/aura",
   "notify_script": "/home/neo/.bun/install/global/node_modules/oh-my-codex/dist/scripts/notify-hook.js",
   "authority_only": true,
@@ -17,7 +17,7 @@
     "max_per_tick": 5,
     "run_count": 1,
     "leader_only": true,
-    "last_tick_at": "2026-05-15T12:42:38.597Z",
+    "last_tick_at": "2026-05-15T12:47:52.629Z",
     "last_result": {
       "processed": 0,
       "skipped": 0,
@@ -30,7 +30,7 @@
     "leader_only": true,
     "stale_threshold_ms": 180000,
     "precomputed_leader_stale": true,
-    "last_tick_at": "2026-05-15T12:42:38.597Z",
+    "last_tick_at": "2026-05-15T12:47:52.629Z",
     "last_error": null,
     "run_count": 1
   },
@@ -57,7 +57,7 @@
   "fallback_auto_nudge": {
     "enabled": true,
     "stall_ms": 5000,
-    "last_tick_at": "2026-05-15T12:42:38.612Z",
+    "last_tick_at": "2026-05-15T12:47:52.644Z",
     "last_turn_at": "2026-05-15T12:35:05.712Z",
     "last_turn_count": 21,
     "last_message": "已重新生成一批，并且**保留了上一版 `packaging/icons/aura.*` 不覆盖**。\n\n已推送：`cdeb8a7 Add alternate Aura logo candidates`",
@@ -80,8 +80,8 @@
     "max_ms": 1000,
     "current_ms": 75,
     "idle_streak": 0,
-    "last_tick_at": "2026-05-15T12:42:38.613Z",
-    "last_activity_at": "2026-05-15T12:42:38.613Z",
+    "last_tick_at": "2026-05-15T12:47:52.645Z",
+    "last_activity_at": "2026-05-15T12:47:52.645Z",
     "last_activity_reason": "leader_nudge"
   },
   "last_cycle_activity": "leader_nudge"

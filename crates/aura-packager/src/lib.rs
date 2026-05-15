@@ -5,12 +5,17 @@
 //! manifests, checksums, and validation helpers used by `cargo xtask package`.
 
 mod app;
+mod cargo_packager;
 mod checksum;
 mod format;
 mod manifest;
 mod validate;
 
 pub use app::{AppId, AppMetadata, KnownApp, known_apps};
+pub use cargo_packager::{
+    CargoPackagerPlan, cargo_packager_formats, generated_config_path, package_out_dir,
+    release_binaries_dir, render_cargo_packager_config, supplemental_formats,
+};
 pub use checksum::{Checksum, sha256_file};
 pub use format::{PackageFormat, Platform};
 pub use manifest::{PackageArtifact, PackageManifest};
