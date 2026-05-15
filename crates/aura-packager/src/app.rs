@@ -43,7 +43,7 @@ impl KnownApp {
                 name: "Aura Docs".into(),
                 binary: self.binary().into(),
                 package: self.package().into(),
-                category: "Documentation".into(),
+                category: "DeveloperTool".into(),
                 short_description: "Native GPUI documentation app for Aura.".into(),
                 icon_stem: "aura-docs".into(),
             },

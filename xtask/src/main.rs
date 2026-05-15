@@ -125,7 +125,7 @@ fn package_formats(command: PackageCommand) -> Result<(), String> {
                 fs::write(&config_path, render_generate_rpm_config(&root, &metadata)).map_err(
                     |error| format!("failed to write {}: {error}", config_path.display()),
                 )?;
-                let args = generate_rpm_args(&metadata.package, &config_path, &out_dir);
+                let args = generate_rpm_args(&root, app, &config_path, &out_dir);
                 println!(
                     "generate-rpm config: app={} path={}",
                     metadata.package,
@@ -248,14 +248,16 @@ fn cargo_packager_args(
 }
 
 fn generate_rpm_args(
-    package: &str,
+    root: &std::path::Path,
+    app: KnownApp,
     config_path: &std::path::Path,
     out_dir: &std::path::Path,
 ) -> Vec<String> {
+    let package_dir = root.join("apps").join(app.package());
     vec![
         "generate-rpm".into(),
         "--package".into(),
-        package.into(),
+        package_dir.display().to_string(),
         "--output".into(),
         out_dir.display().to_string(),
         "--metadata-overwrite".into(),
