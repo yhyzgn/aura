@@ -56,3 +56,14 @@ Expected P10 deliverables:
 - Shared chart infrastructure: scale, axis/grid, shapes, legend, tooltip/hover.
 - Completed so far: LineChart, AreaChart, BarChart MVPs with Gallery demos, Docs pages, external snippets, and tests.
 - Remaining P10 components: PieChart, RingChart, Sparkline, plus tooltip/hover and larger-data performance work.
+
+## Current New Phase — P11 Native Tray / Process Resident
+
+P11 is active after P10 chart rendering work. The project now needs a native system tray facade for GPUI apps.
+
+Technical direction:
+- New crate: `crates/aura-tray`.
+- Dependencies: `tray-icon` plus `muda` via `tray_icon::menu` re-export; no vendored source by default.
+- Required APIs: install from `TrayConfig`, dynamic icon updates, tooltip/visibility updates, checkbox menu state, recursive submenus, stable `TrayCommand` mapping.
+- GPUI integration rule: tray-enabled apps must use `QuitMode::Explicit` and keep `AuraTray` alive for process lifetime.
+- Demo/docs rule: Gallery and Docs must show rich tray examples (CheckBox, dynamic icons, 2nd/3rd/N-level menus) without creating real OS tray side effects during normal browsing.

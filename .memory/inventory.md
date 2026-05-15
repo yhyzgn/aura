@@ -173,3 +173,13 @@
 | 5 | PieChart | `crates/aura-components/src/pie_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
 | 6 | RingChart | `crates/aura-components/src/pie_chart.rs` or `ring_chart.rs` | ⏳ | ⏳ | 🔄 Planned |
 | 7 | Sparkline | `crates/aura-components/src/sparkline.rs` | ⏳ | ⏳ | 🔄 Planned |
+
+## P11 Native Tray / Process Resident 🔄
+
+| # | Capability | File | Demo | Docs | Status |
+|---|------------|------|------|------|--------|
+| 1 | Tray facade crate | `crates/aura-tray/src/lib.rs` | — | — | ✅ `TrayConfig`, `TrayMenuItemSpec`, `TrayCommand`, `AuraTray` |
+| 2 | Dynamic icon API | `crates/aura-tray/src/lib.rs` | ✅ | ✅ | ✅ `set_icon`, `clear_icon`, `set_icon_from_rgba`, `set_icon_from_path` |
+| 3 | CheckBox menu state | `crates/aura-tray/src/lib.rs` | ✅ | ✅ | ✅ Check menu item config + state sync |
+| 4 | Recursive native menus | `crates/aura-tray/src/lib.rs` | ✅ | ✅ | ✅ Action, separator, 2nd/3rd/N-level submenu DSL |
+| 5 | Gallery/docs examples | `apps/aura-gallery/src/demos/tray_demo.rs`, `apps/aura-docs/content/pages/tray.md` | ✅ | ✅ | ✅ Rich non-intrusive config preview + compile-checked snippets |

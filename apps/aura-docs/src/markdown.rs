@@ -88,6 +88,7 @@ const TEXTAREA_DOC: &str = include_str!("../content/pages/textarea.md");
 const TIME_PICKER_DOC: &str = include_str!("../content/pages/time_picker.md");
 const TIMELINE_DOC: &str = include_str!("../content/pages/timeline.md");
 const TOOLTIP_DOC: &str = include_str!("../content/pages/tooltip.md");
+const TRAY_DOC: &str = include_str!("../content/pages/tray.md");
 const TRANSFER_DOC: &str = include_str!("../content/pages/transfer.md");
 const TREE_DOC: &str = include_str!("../content/pages/tree.md");
 const TYPOGRAPHY_DOC: &str = include_str!("../content/pages/typography.md");
@@ -358,6 +359,10 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "Transfer",
         markdown: TRANSFER_DOC,
+    },
+    DocPage {
+        title: "Tray",
+        markdown: TRAY_DOC,
     },
     DocPage {
         title: "Tree",
@@ -1137,6 +1142,10 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "time_picker/disabled.rs" => {
             Some(include_str!("../content/snippets/time_picker/disabled.rs"))
         }
+        "tray/basic.rs" => Some(include_str!("../content/snippets/tray/basic.rs")),
+        "tray/dynamic_icon.rs" => Some(include_str!("../content/snippets/tray/dynamic_icon.rs")),
+        "tray/checkbox.rs" => Some(include_str!("../content/snippets/tray/checkbox.rs")),
+        "tray/nested_menu.rs" => Some(include_str!("../content/snippets/tray/nested_menu.rs")),
         "icon/lucide.rs" => Some(include_str!("../content/snippets/icon/lucide.rs")),
         "icon/colors.rs" => Some(include_str!("../content/snippets/icon/colors.rs")),
         "icon/sizes.rs" => Some(include_str!("../content/snippets/icon/sizes.rs")),

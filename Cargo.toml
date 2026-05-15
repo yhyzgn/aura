@@ -5,6 +5,7 @@ members = [
     "crates/aura-core",
     "crates/aura-theme",
     "crates/aura-components",
+    "crates/aura-tray",
     "crates/aura-icons",
     "crates/aura-icons-lucide",
     "apps/aura-gallery",

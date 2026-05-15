@@ -445,6 +445,14 @@ mod transfer_basic;
 mod transfer_disabled;
 #[path = "../../content/snippets/transfer/filterable.rs"]
 mod transfer_filterable;
+#[path = "../../content/snippets/tray/basic.rs"]
+mod tray_basic;
+#[path = "../../content/snippets/tray/checkbox.rs"]
+mod tray_checkbox;
+#[path = "../../content/snippets/tray/dynamic_icon.rs"]
+mod tray_dynamic_icon;
+#[path = "../../content/snippets/tray/nested_menu.rs"]
+mod tray_nested_menu;
 #[path = "../../content/snippets/tree/basic.rs"]
 mod tree_basic;
 #[path = "../../content/snippets/tree/checkable.rs"]

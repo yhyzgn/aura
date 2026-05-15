@@ -85,6 +85,7 @@ aura/
 | `aura-components` | `gpui`, `aura-core`, `aura-theme`, `aura-icons` | 全部业务组件（Button/Input/Dialog/Table 等） |
 | `aura-gallery` | `gpui`(default), `gpui_platform`, 全部 aura crates | 组件看板，展示已实现组件 Demo |
 | `aura-docs` | `gpui`(default), `gpui_platform`, 全部 aura crates；P8 增加 `pulldown-cmark` | 官方原生文档主程序，包含 Markdown 渲染与 Live Demo 注入 |
+| `aura-tray` | `tray-icon`, `muda`(via tray-icon re-export), `image` | P11 系统托盘/进程常驻 facade：动态图标、CheckBox、递归子菜单、稳定命令桥接 |
 | `aura-components::chart*` | `gpui` 原生 `canvas`/`PathBuilder`/paint API | P10 统计图控件基础设施与 Line/Area/Bar/Pie/Ring/Sparkline 组件 |
 
 ### 2.3 GPUI 依赖策略
@@ -102,6 +103,17 @@ aura-gallery/Cargo.toml:
   gpui = { workspace = true, features = ["wayland", "x11", "font-kit"] }
   gpui_platform = { workspace = true, features = ["wayland", "x11"] }
 ```
+
+### 2.5 系统托盘依赖策略（P11）
+
+`aura-tray` 是应用壳层 crate，用于封装 `tray-icon` 和 `muda`，避免 Gallery/Docs/业务 app 直接绑定三方 API。
+
+- 公开 Aura 自有类型：`TrayConfig`、`TrayMenuItemSpec`、`TrayCommand`、`AuraTray`。
+- 通过 `tray-icon::menu` re-export 使用 `muda` 菜单类型，不额外引入平行菜单依赖。
+- 动态图标通过 `TrayIcon::set_icon` 封装为 `set_icon` / `set_icon_from_rgba` / `set_icon_from_path`。
+- 菜单事件映射为稳定 command id，主程序负责将 `Show/Hide/Toggle/Quit/SetIcon/Custom` 应用到 GPUI 窗口和业务状态。
+- 启用托盘的 GPUI app 必须使用 `QuitMode::Explicit` 并持有 `AuraTray` 全生命周期。
+- Linux 需要 GTK/AppIndicator 系统库；macOS 创建要求主线程；普通文档/demo 仅展示配置预览，避免创建真实 OS 托盘副作用。
 
 ### 2.4 Gallery 组件看板规约（P7 已自举）
 

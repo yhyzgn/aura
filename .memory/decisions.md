@@ -180,3 +180,18 @@ Theme/config: Theme, Config, ContextExt, ElementExt, ColorPalette, Spacing, Radi
 - First-class components: `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `RingChart`, `Sparkline`.
 - Shared infrastructure should cover linear/band/point scales, axis/grid/ticks, legend, tooltip/hover hit testing, and theme palette selection.
 - Every chart gets Gallery demo, Docs page, external `.rs` snippets, and scale/shape/builder tests.
+
+## ADR-015: P11 Tray Uses an Aura Facade over tray-icon/muda
+
+**Decision**: Implement system tray support in a new `crates/aura-tray` crate rather than exposing `tray-icon`/`muda` directly from apps or vendoring their source.
+
+**Rationale**:
+- Keeps GPUI apps focused on window lifecycle commands while isolating platform-specific tray/menu APIs.
+- Allows Aura to provide stable `TrayCommand` routing for Show/Hide/Toggle/Quit/SetIcon/Custom actions.
+- Supports future customization behind one facade without copying Tauri-maintained source today.
+
+**Implementation constraints**:
+- Use `tray-icon` and its `tray_icon::menu` re-export for `muda` menu types.
+- Support runtime icon changes, tooltip/visibility updates, checkbox state sync, separators, and recursive 2nd/3rd/N-level submenus.
+- Tray-enabled GPUI apps must use `QuitMode::Explicit` and retain the `AuraTray` handle for process lifetime.
+- Normal Gallery/Docs examples should preview config and command behavior without creating intrusive OS tray icons.

@@ -1,0 +1,12 @@
+[package]
+name = "aura-tray"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tray-icon = { version = "0.24", default-features = false }
+image = "0.25"
+thiserror = "2"
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+tray-icon = { version = "0.24", default-features = false, features = ["gtk"] }

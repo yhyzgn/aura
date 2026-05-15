@@ -1,9 +1,10 @@
 {
-  "session_id": "omx-1778738393541-s8qd8r",
-  "started_at": "2026-05-14T05:59:53.586Z",
+  "session_id": "omx-1778827259120-7n7na4",
+  "native_session_id": "019e15ab-a59f-7a20-a134-757da8881b86",
+  "started_at": "2026-05-15T06:40:59.177Z",
   "cwd": "/home/neo/Projects/neo/lib/aura",
-  "pid": 245837,
+  "pid": 464921,
   "platform": "linux",
-  "pid_start_ticks": 1643159,
-  "pid_cmdline": "node /home/neo/.bun/bin/omx resume --madmax"
+  "pid_start_ticks": 1929350,
+  "pid_cmdline": "/home/neo/.bun/install/global/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex/codex resume --dangerously-bypass-approvals-and-sandbox -c model_instructions_file=\"/home/neo/Projects/neo/lib/aura/.omx/state/sessions/omx-1778827259120-7n7na4/AGENTS.md\""
 }

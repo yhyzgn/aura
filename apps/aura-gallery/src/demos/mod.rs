@@ -56,6 +56,7 @@ pub mod time_picker_demo;
 pub mod timeline_demo;
 pub mod tooltip_demo;
 pub mod transfer_demo;
+pub mod tray_demo;
 pub mod tree_demo;
 pub mod typography_demo;
 pub mod upload_demo;
@@ -156,6 +157,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Tooltip 文字提示",
             description: "简单的文字提示",
             render: |cx| tooltip_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "Tray 系统托盘",
+            description: "进程常驻、动态图标和多级托盘菜单",
+            render: |cx| tray_demo::render(cx).into(),
         },
         DemoEntry {
             name: "Popover 气泡卡片",
@@ -504,6 +510,7 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
         "TimePicker" => Some(time_picker_demo::render(cx).into()),
         "Timeline" => Some(timeline_demo::render(cx).into()),
         "Tooltip" => Some(tooltip_demo::render(cx).into()),
+        "Tray" => Some(tray_demo::render(cx).into()),
         "Transfer" => Some(transfer_demo::render(cx).into()),
         "Tree" => Some(tree_demo::render(cx).into()),
         "Typography" => Some(typography_demo::render(cx).into()),

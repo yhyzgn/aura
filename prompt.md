@@ -14,7 +14,7 @@
 | UI 框架 | GPUI 0.2.2 (git = "https://github.com/zed-industries/zed") |
 | 参考规范 | Element-Plus 2.x (https://element-plus.org/zh-CN/) |
 | 架构 | Cargo Workspace Monorepo |
-| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 启动原生统计图组件阶段 |
+| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 原生统计图组件；P11 启动系统托盘/进程常驻阶段 |
 
 ---
 
@@ -29,6 +29,7 @@
 | **阶段提示词** | `.prompt/` | 各阶段开发指令，链式继承 |
 | **P9 延后高级组件** | `.prompt/P9-deferred-advanced.md` | P5 跳过/延后的高级组件 backlog，后续需要时补充 |
 | **P10 统计图组件** | `.prompt/P10-charts.md` | 原生 GPUI 统计图控件：Line/Area/Bar/Pie/Ring/Sparkline/Axis/Grid/Legend/Tooltip |
+| **P11 托盘常驻** | `.prompt/P11-tray.md` | `aura-tray` 跨平台系统托盘、动态图标、CheckBox/N 级菜单与 GPUI 常驻进程桥接 |
 
 ---
 
@@ -41,6 +42,7 @@ aura/
 │   ├── aura-core/       lib.rs      # Global 配置、ElementExt trait、Z-Index
 │   ├── aura-theme/      lib.rs      # Design Tokens、亮/暗主题、ButtonVariant/Size
 │   ├── aura-components/ src/        # 全部业务组件 (button.rs, input.rs, ...)
+│   ├── aura-tray/       src/        # 系统托盘 facade (tray-icon + muda)
 │   │   └── lib.rs
 │   └── aura-icons/      lib.rs      # Icon trait、图标函数
 ├── apps/
@@ -73,7 +75,8 @@ aura/
 │   ├── P7-demo-self-contained.md
 │   ├── P8-engineering.md
 │   ├── P9-deferred-advanced.md
-│   └── P10-charts.md
+│   ├── P10-charts.md
+│   └── P11-tray.md
 ├── prompt.md                         # 📌 本文件 (AI 入口)
 ├── architecture-design.md
 └── structure.txt
@@ -98,7 +101,8 @@ aura/
 - P5 当前请求范围已结束；Carousel、Calendar、TreeSelect、InputTag、Mention、Watermark、Tour、VirtualizedTable、VirtualizedTree 已移入 `.prompt/P9-deferred-advanced.md`。
 - P8 当前技术路线已调整为 **Aura Docs 主程序**：官方文档在 GPUI 原生窗口中渲染，且独立为 `aura-docs` 主程序；`aura-gallery` 保持组件看板，不再承担官方文档入口。
 - P9 是 deferred backlog；只有用户明确要求补齐这些组件时才启动。
-- P10 是当前新阶段：开发纯原生 GPUI 统计图控件，参考 GPUI 官方 canvas/path/paint API；`vicanso/zedis` 只能作为案例参考，不复制其依赖或实现结构。
+- P10 是原生统计图阶段：开发纯原生 GPUI 统计图控件，参考 GPUI 官方 canvas/path/paint API；`vicanso/zedis` 只能作为案例参考，不复制其依赖或实现结构。
+- P11 是当前新阶段：开发 `aura-tray` 系统托盘/进程常驻能力，采用 `tray-icon` + `muda`，支持动态图标、CheckBox 菜单、二级/三级/N 级菜单，并在 Gallery/Docs 中提供丰富用例。
 
 ### 4.2 每个组件/功能开发流程
 
@@ -410,7 +414,8 @@ Closes #P1-button-icons
 ├── P7 Demo Self-Contained ⬜ → .prompt/P7-demo-self-contained.md
 ├── P8 Native Docs App ✅ → .prompt/P8-engineering.md
 ├── P9 Deferred Advanced ⏸️ → .prompt/P9-deferred-advanced.md
-└── P10 Charts 🔄 → .prompt/P10-charts.md
+├── P10 Charts ✅ → .prompt/P10-charts.md
+└── P11 Tray 🔄 → .prompt/P11-tray.md
 ```
 
 ---
