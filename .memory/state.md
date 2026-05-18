@@ -94,3 +94,7 @@ Scope highlights:
 - Enhancements: RingChart external labels, LineChart per-series stroke style, BarChart standalone mini mode and value range colors, RingProgress gradient/completion color, Button gradient/custom color derived states, Tag flow layout, Radio/Checkbox option customization, vertical list drag.
 - Execution is split into five waves: simple meters/bars/layout, chart/progress enhancements, draggable lists, QR/CodeEditor, and form-control deep customization.
 - Existing-widget enhancement rule: existing controls must be enhanced in-place in their current source/demo/docs; do not add parallel replacement components for Tag flow, RingProgress gradients, chart style options and BarChart standalone mini mode, Button custom colors, or Radio/Checkbox option customization.
+
+P13 screenshot clarifications:
+- HeatBar means a time-axis dense vertical-bar heat chart with top legend/count summary, not a calendar grid heatmap.
+- SegmentRatioBar means one horizontal segmented ratio bar with a separate legend/value row underneath; segment labels and percent/value patterns are customizable.

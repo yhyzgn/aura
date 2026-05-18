@@ -30,9 +30,9 @@ P13 聚焦两类工作：
 | 1 | `QrCode` | 新增 | 二维码生成、识别、尺寸/纠错等级/颜色/Logo/复制/导出 | P0 |
 | 2 | `CodeEditor` | 新增 | 行号、缩进、高亮、选择/复制、编辑、diagnostics 扩展点 | P0 |
 | 3 | `SignalMeter` | 新增 | 手机信号/WiFi 风格、等级、每级颜色、禁用/空状态 | P0 |
-| 4 | `HeatBar` / `HeatmapBar` | 新增 | 柱状热力图、渐变色、区间值、label/tooltip | P0 |
+| 4 | `HeatBar` / `HeatmapBar` | 新增 | 按截图实现时间轴柱状热力图：细圆角竖柱、按 severity/category 或 value range 渐变映射颜色、顶部 legend 汇总、可选 y 轴刻度/时间 x 轴 label、tooltip | P0 |
 | 5 | `BarChart` standalone mini mode | 增强 | 按截图实现无坐标/无网格/无 legend 的独立迷你柱状样式：窄圆角竖柱、淡入/渐变配色、紧凑高度、可嵌入卡片；直接扩展现有 `BarChart`，不新增 `FlatBarMeter` | P0 |
-| 6 | `SegmentRatioBar` | 新增 | 分段颜色/文本 pattern、自定义 label 与比例两端对齐 | P0 |
+| 6 | `SegmentRatioBar` | 新增 | 按截图实现顶部一条分段比例条 + 下方 legend/value 行：每段颜色、圆点、label、比例值 pattern 可自定义，支持 label 与比例值在每个 legend item 两端对齐 | P0 |
 | 7 | `HorizontalList` | 新增 | 横向滚动、item 完全自定义、divider 自定义、item 拖动 | P1 |
 | 8 | Vertical list drag | 增强 | 既有列表/VirtualizedList 增加垂直 item 拖动 | P1 |
 | 9 | `RingChart` external labels | 增强 | 图例 + 比例值完全外置，垂直/水平排列，不需要折线引导 | P1 |
@@ -182,15 +182,43 @@ BarChart::new(series)
 
 用户截图语义：一组轻量迷你竖向圆角柱，没有横竖坐标、没有边框、没有 legend，视觉上可像信号/频谱，但本质仍是 BarChart 的一个展示模式。
 
+### HeatBar / HeatmapBar
+
+```rust
+HeatBar::new(points)
+    .x_labels(HeatAxisLabels::time())
+    .y_ticks(vec![0.0, 5.0, 10.0])
+    .legend(vec![
+        HeatLegendItem::new("错误", 3).color(theme.danger.base),
+        HeatLegendItem::new("警告", 24).color(theme.warning.base),
+    ])
+    .color_ranges(vec![
+        HeatColorRange::new(0.0..=3.0, theme.warning.soft),
+        HeatColorRange::new(3.0..=7.0, theme.warning.base),
+        HeatColorRange::new(7.0..=10.0, theme.danger.base),
+    ])
+    .bar_width(px(4.0))
+    .bar_radius(px(2.0))
+```
+
+用户截图语义：不是日历网格热力图，而是按时间分布的柱状热力图。顶部显示分类 legend 与数量汇总；主体是密集细柱，柱色按类别或数值区间从浅色到高亮色映射；可带轻量 y 轴刻度与 x 轴时间标签。
+
 ### SegmentRatioBar
 
 ```rust
 SegmentRatioBar::new(vec![
-    Segment::new("Done", 42.0).color(success).label_pattern("完成 {label}").value_pattern("{percent:.1}%"),
-    Segment::new("Todo", 58.0).color(neutral).value_pattern("{value}/{total}"),
+    Segment::new("Direct", 42.0).color(blue).value_pattern("{percent:.0}%"),
+    Segment::new("Proxy", 51.0).color(green).value_pattern("{percent:.0}%"),
+    Segment::new("Reject", 7.0).color(red).value_pattern("{percent:.0}%"),
 ])
+.bar_height(px(7.0))
+.bar_radius(px(4.0))
+.legend_layout(SegmentLegendLayout::Inline)
 .label_align(SegmentLabelAlign::SplitEnds)
 ```
+
+用户截图语义：上方是一条横向分段比例条，每段宽度按占比计算、颜色独立；下方是 legend/value 信息行，通常为彩色圆点 + label + 百分比。每个 legend item 内 label 与比例值需要可分开两端对齐，也要支持自定义 pattern，如 `{label}`、`{percent:.1}%`、`{value}/{total}`。
+
 
 ### HorizontalList
 

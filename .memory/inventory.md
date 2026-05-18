@@ -192,9 +192,9 @@
 | 1 | QrCode | `crates/aura-components/src/qr_code.rs` | ⏳ | ⏳ | Planned |
 | 2 | CodeEditor | `crates/aura-components/src/code_editor.rs` | ⏳ | ⏳ | Planned |
 | 3 | SignalMeter | `crates/aura-components/src/signal_meter.rs` | ⏳ | ⏳ | Planned |
-| 4 | HeatBar | `crates/aura-components/src/heat_bar.rs` | ⏳ | ⏳ | Planned |
+| 4 | HeatBar | `crates/aura-components/src/heat_bar.rs` | ⏳ | ⏳ | Planned; time-axis dense vertical-bar heat chart with legend/count summary |
 | 5 | BarChart standalone mini mode | existing `bar_chart.rs` | ⏳ | ⏳ | Planned in-place enhancement; based on user screenshot, no separate FlatBarMeter |
-| 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ⏳ | ⏳ | Planned |
+| 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ⏳ | ⏳ | Planned; segmented top bar plus legend/value row |
 | 7 | HorizontalList | `crates/aura-components/src/horizontal_list.rs` | ⏳ | ⏳ | Planned |
 | 8 | Vertical list drag | existing `virtualized_list.rs` / list components | ⏳ | ⏳ | Planned in-place enhancement |
 | 9 | RingChart external labels | existing `ring_chart.rs` / chart modules | ⏳ | ⏳ | Planned in-place enhancement |
