@@ -97,4 +97,4 @@ Scope highlights:
 
 P13 screenshot clarifications:
 - HeatBar means a time-axis dense vertical-bar heat chart with top legend/count summary, not a calendar grid heatmap.
-- SegmentRatioBar means one horizontal segmented ratio bar with a separate legend/value row underneath; segment labels and percent/value patterns are customizable.
+- SegmentRatioBar means one horizontal segmented ratio bar with configurable legend/value text placement: top, bottom, both, or hidden; segment labels and percent/value patterns are customizable.

@@ -32,7 +32,7 @@ P13 聚焦两类工作：
 | 3 | `SignalMeter` | 新增 | 手机信号/WiFi 风格、等级、每级颜色、禁用/空状态 | P0 |
 | 4 | `HeatBar` / `HeatmapBar` | 新增 | 按截图实现时间轴柱状热力图：细圆角竖柱、按 severity/category 或 value range 渐变映射颜色、顶部 legend 汇总、可选 y 轴刻度/时间 x 轴 label、tooltip | P0 |
 | 5 | `BarChart` standalone mini mode | 增强 | 按截图实现无坐标/无网格/无 legend 的独立迷你柱状样式：窄圆角竖柱、淡入/渐变配色、紧凑高度、可嵌入卡片；直接扩展现有 `BarChart`，不新增 `FlatBarMeter` | P0 |
-| 6 | `SegmentRatioBar` | 新增 | 按截图实现顶部一条分段比例条 + 下方 legend/value 行：每段颜色、圆点、label、比例值 pattern 可自定义，支持 label 与比例值在每个 legend item 两端对齐 | P0 |
+| 6 | `SegmentRatioBar` | 新增 | 按截图实现一条横向分段比例条 + 可配置位置的 legend/value 文本行：文本可在上方、下方、上下同时或隐藏；每段颜色、圆点、label、比例值 pattern 可自定义，支持 label 与比例值在每个 legend item 两端对齐 | P0 |
 | 7 | `HorizontalList` | 新增 | 横向滚动、item 完全自定义、divider 自定义、item 拖动 | P1 |
 | 8 | Vertical list drag | 增强 | 既有列表/VirtualizedList 增加垂直 item 拖动 | P1 |
 | 9 | `RingChart` external labels | 增强 | 图例 + 比例值完全外置，垂直/水平排列，不需要折线引导 | P1 |
@@ -214,10 +214,11 @@ SegmentRatioBar::new(vec![
 .bar_height(px(7.0))
 .bar_radius(px(4.0))
 .legend_layout(SegmentLegendLayout::Inline)
+.legend_position(SegmentLegendPosition::Bottom)
 .label_align(SegmentLabelAlign::SplitEnds)
 ```
 
-用户截图语义：上方是一条横向分段比例条，每段宽度按占比计算、颜色独立；下方是 legend/value 信息行，通常为彩色圆点 + label + 百分比。每个 legend item 内 label 与比例值需要可分开两端对齐，也要支持自定义 pattern，如 `{label}`、`{percent:.1}%`、`{value}/{total}`。
+用户截图语义：默认可表现为上方一条横向分段比例条、下方 legend/value 信息行；但文本位置必须可配置，支持 `Top`、`Bottom`、`Both`、`Hidden`。每段宽度按占比计算、颜色独立；legend/value 通常为彩色圆点 + label + 百分比。每个 legend item 内 label 与比例值需要可分开两端对齐，也要支持自定义 pattern，如 `{label}`、`{percent:.1}%`、`{value}/{total}`。
 
 
 ### HorizontalList
