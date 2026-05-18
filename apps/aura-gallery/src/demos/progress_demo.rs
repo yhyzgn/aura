@@ -75,14 +75,29 @@ impl Render for ProgressDemo {
                     Space::new().gap_lg().wrap().children(vec![
                         Progress::new(32.0).circle(),
                         Progress::new(58.0).circle().status(ProgressStatus::Warning),
-                        Progress::new(76.0).circle().status(ProgressStatus::Exception),
-                        Progress::new(100.0).circle().status(ProgressStatus::Success),
+                        Progress::new(76.0)
+                            .circle()
+                            .status(ProgressStatus::Exception),
+                        Progress::new(100.0)
+                            .circle()
+                            .status(ProgressStatus::Success),
                     ]),
                 ))
                 .child(section(
-                    "自定义中心文本与样式",
-                    "中心进度显示可以替换为业务文案，并独立配置尺寸、颜色、字重、圆环尺寸和轨道颜色。",
+                    "环形渐变与完成色",
+                    "环形进度同样支持渐变，完成时可以指定最终颜色，中间文本和内圆背景都可定制。",
                     Space::new().gap_lg().wrap().children(vec![
+                        Progress::new(100.0)
+                            .circle()
+                            .circle_size(148.0)
+                            .ring_width(12.0)
+                            .ring_color(theme.neutral.hover)
+                            .gradient(vec![theme.primary.base, theme.success.base])
+                            .complete_color(theme.success.base)
+                            .inner_color(theme.neutral.card)
+                            .center_text("Done")
+                            .text_size(22.0)
+                            .text_color(theme.success.base),
                         Progress::new(86.0)
                             .circle()
                             .circle_size(148.0)

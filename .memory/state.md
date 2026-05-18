@@ -98,3 +98,219 @@ Scope highlights:
 P13 screenshot clarifications:
 - HeatBar means a time-axis dense vertical-bar heat chart with top legend/count summary, not a calendar grid heatmap.
 - SegmentRatioBar means one horizontal segmented ratio bar with configurable legend/value text placement: top, bottom, both, or hidden; segment labels and percent/value patterns are customizable.
+
+### P13 Wave 1 implementation progress — 2026-05-18
+
+Wave 1 has started and the first simple/native components are implemented:
+- Added `SignalMeter` for mobile/Wi-Fi signal style bars with level, max level, colors, bar width, gap, and height configuration.
+- Added `HeatBar` as the user-requested time-axis dense vertical-bar heat chart with optional legends/count summary, axis/grid, max value, bar width/gap, and x labels.
+- Added `SegmentRatioBar` with segment color/value configuration, top/bottom/both/hidden legend placement, split legend layout, decimal control, and label/value pattern support.
+- Added `Label` (Icon + Text with gap/color/size) and `Operation` (left label + right action, two-end aligned) components.
+- Enhanced existing `BarChart` in-place with standalone mini mode, rounded bars, explicit bar width/gap, and value range colors; did not add a separate flat bar component.
+- Enhanced existing `Tag` in-place with `TagFlow` layout helper for wrapping tag groups.
+- Gallery demos and Docs pages/snippets were added for these Wave 1 pieces; BarChart and Tag existing docs now include the new in-place enhancement examples.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components` passed: 117 lib tests + integration tests all green.
+
+Remaining P13 scope includes QR generation/recognition, CodeEditor, HorizontalList/item drag, Vertical list drag, RingChart external-label refinements, LineChart per-series style, BarChart interval color docs expansion if needed, RingProgress gradient completion color, Timer, Button gradient/custom derived states, and Radio/Checkbox option customization.
+
+### P13 Wave 2 partial progress — 2026-05-18
+
+Implemented two high-priority in-place enhancements:
+- LineChart/ChartSeries now supports per-series line style: `ChartLineStyle::{Solid, Dashed, Dotted}`, `.dashed()`, `.dotted()`, `.solid()`, and custom `.dash_pattern([...])`, while preserving per-series color, stroke width, and smooth toggles. Rendering uses GPUI `PathBuilder::dash_array` through shared chart shape helpers.
+- Progress circle/ring now supports gradient rings and `.complete_color(...)`; completed gradient rings can resolve to a specified final color. Gallery/docs/snippets include the ring gradient completion example.
+
+Docs and Gallery were updated:
+- `LineChart` page now has a per-line style section with checked snippet `line_chart/line_styles.rs`.
+- `Progress` page now has a ring gradient/completion-color section with checked snippet `progress/circle_gradient.rs`.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components` passed.
+
+### P13 SegmentRatioBar correction — 2026-05-18
+
+User clarified SegmentRatioBar legend/text must be horizontally arranged, not a vertical list. Updated `segment_ratio_bar.rs` so `render_segment_legend` uses a horizontal wrapping flex row (`flex_row` + `flex_wrap` + wider gaps). `split_legend(true)` now splits label/value within each horizontal legend item via `min_w`, instead of stretching each item to a full row. Gallery/docs wording updated to describe horizontal legend text.
+
+Validation evidence:
+- `cargo test -p aura-components segment_ratio_bar` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 SegmentRatioBar split legend refinement — 2026-05-18
+
+User clarified each SegmentRatioBar segment text item should split alignment internally: left side is color legend dot + label, right side is ratio/value text (still pattern-customizable). Updated `SegmentRatioBar` so `split_legend(true)` is the default and each horizontal legend item uses a configurable `legend_item_width`, `justify_between`, left legend+label, and right-aligned value/pattern text. Added `legend_item_width(...)` builder for custom per-item width.
+
+Validation evidence:
+- `cargo test -p aura-components segment_ratio_bar` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 SegmentRatioBar segment-aligned text correction — 2026-05-18
+
+User clarified the intended layout: for each individual ratio segment, the text block must have the same width and horizontal start/end as that segment. The left legend dot + label aligns to the segment's left edge, and the right value/percent aligns to the segment's right edge. Reworked `render_segment_legend` accordingly: it now renders a full-width horizontal row where each legend text cell uses `gpui::relative(item.value / total)` just like the colored bar segment. Removed fixed `legend_item_width` behavior because it could not align to variable segment boundaries. Pattern customization remains on label/value text.
+
+Validation evidence:
+- `cargo test -p aura-components segment_ratio_bar` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 SegmentRatioBar text inset — 2026-05-18
+
+Added configurable left/right text inset for SegmentRatioBar's segment-aligned legend cells. New builders: `legend_inset_x(Pixels)` and alias `legend_text_inset(Pixels)`. The inset applies inside each proportional segment text cell, preserving alignment to the segment boundaries while avoiding text touching segment edges. Gallery and docs snippets now demonstrate non-default inset values.
+
+Validation evidence:
+- `cargo test -p aura-components segment_ratio_bar` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 SegmentRatioBar radius controls — 2026-05-18
+
+Added separate radius controls for SegmentRatioBar: existing `radius(...)` configures the overall bar container radius, and new `segment_radius(...)` / alias `rounded_segments(...)` configures each colored segment's own radius. This supports both whole-bar rounding and per-segment rounding while preserving segment-aligned text cells and text inset behavior. Gallery and docs snippets now demonstrate both levels of rounding.
+
+Validation evidence:
+- `cargo test -p aura-components segment_ratio_bar` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 SignalMeter total/count and per-level colors — 2026-05-18
+
+Enhanced `SignalMeter` with explicit total signal count aliases and per-level active colors. Existing `max_level(...)` remains; new `total_signals(...)` and `signal_count(...)` aliases configure total bars. New `level_colors(...)` / `signal_colors(...)` lets callers assign different active colors for each signal level; inactive bars still use `inactive_color(...)`. Gallery and docs now include total-count/per-level-color examples.
+
+Validation evidence:
+- `cargo test -p aura-components signal_meter` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 docs/demo coverage standard — 2026-05-18
+
+User clarified that every new component and future new component must have Gallery and Docs examples covering the major style/configuration combinations, not just one happy-path example. Applied immediately to SegmentRatioBar: Gallery and Docs now cover bottom legend, top legend, both top+bottom legends, hidden legend, custom label/value pattern, compact thin bar, overall radius, per-segment radius, text inset, split legend, and percentage precision.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components segment_ratio_bar` passed.
+
+### P13 SignalMeter threshold-wide colors — 2026-05-18
+
+User clarified that per-level colors also need a threshold-wide mode: when the current signal reaches a configured level, all active bars use one unified color for that current level (e.g. level 2 = red, 3 = yellow, 4 = orange, 5 = green). Kept the existing per-bar `level_colors(...)` / `signal_colors(...)` behavior and added `SignalLevelColor`, `threshold_colors(...)`, `level_threshold_colors(...)`, and incremental `level_color(level, color)`. Rendering prioritizes threshold-wide color over per-bar level colors when a matching threshold exists. Gallery and Docs now include threshold-wide examples.
+
+Validation evidence:
+- `cargo test -p aura-components signal_meter` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 Timer component — 2026-05-18
+
+Implemented new `Timer` component in `crates/aura-components/src/timer.rs`. It is a controlled display component for count-up/count-down timers, with `TimerDirection`, `TimerUnit`, `TimerSnapshot`, `count_up`, `count_down`, `display_unit`, `show_unit`, `prefix`, `suffix`, `compact`, `snapshot`, `elapsed_as`, and `remaining_as`. Countdown remaining time saturates at zero and exposes `finished`. Gallery and Docs now include count-up, count-down, unit/compact, and result-reading examples. This follows the new docs/demo coverage standard for newly added components.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components timer` passed.
+- `cargo test -p aura-gallery timer_demo_uses_timer_api` passed.
+
+### P13 Timer clock format — 2026-05-18
+
+Enhanced Timer with clock-style formatting for `00:00:00` / `HH:MM:SS`. Added `TimerFormat::{Unit, Clock}`, `Timer::format(TimerFormat)`, `Timer::clock_format()`, and public `format_clock(Duration)`. Gallery and Docs now include a clock-format section and checked snippet `timer/clock.rs`.
+
+Validation evidence:
+- `cargo test -p aura-components timer` passed.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-gallery timer_demo_uses_timer_api` passed.
+
+### P13 Button gradient/custom color enhancement — 2026-05-18
+
+Enhanced existing `Button` in-place with custom color and gradient styling:
+- Added `ButtonColors` for fully custom solid/outline button colors, including explicit base/hover/active/text/border/disabled slots.
+- Added `.custom_color(bg, text)`, `.colors(ButtonColors)`, and `.custom_colors(ButtonColors)` builders.
+- Added `ButtonGradient` plus `.gradient(from, to)` and `.gradient_with_angle(angle, from, to)` builders.
+- Hover, active/clicked, and disabled states are automatically derived for simple custom colors and gradients, while preserving the existing theme variants by default.
+- Gallery `Button` demo and Docs `button.md` now show custom solid/outline/disabled and gradient/loading/disabled examples with compile-checked snippets.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components button` passed.
+- `cargo test -p aura-gallery button_demo_uses_aura_layout_primitives` passed.
+
+### P13 Radio/Checkbox option style customization — 2026-05-18
+
+Enhanced existing `CheckboxGroup` and `RadioGroup` in-place with option-level layout and selected-style customization:
+- Added `CheckboxOptionStyle` and `RadioOptionStyle` builders for option background, selected background, hover background, text/selected text colors, border/selected border colors, radius, padding, gap, indicator visibility, and selected icon/dot visibility.
+- Added `.option_style(...)` and `.card_options()` to both group components.
+- Non-button vertical/horizontal groups now render styled option cards/chips when option style is configured; default rendering remains unchanged.
+- Button-style groups also honor selected/background/text/border/gap/padding/icon options where applicable.
+- Gallery Form Controls demo and Docs `checkbox.md` / `radio.md` now include card-like and chip-like custom option examples with compile-checked snippets.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components option_style` passed.
+- `cargo test -p aura-gallery form_controls` completed with no failures.
+
+
+### P13 QrCode generation and recognition — 2026-05-18
+
+Added new `QrCode` component in `crates/aura-components/src/qr_code.rs` using pure Rust dependencies (`qrcode` for generation and `rqrr` for recognition). Capabilities:
+- Native GPUI-rendered QR display via generated `RenderImage`, with configurable size, quiet zone, foreground/background colors, and error-correction level (`QrEcLevel`).
+- Public generation helpers: `encode_matrix(...)` and `render_image(...)`.
+- Recognition helpers: `decode_bytes(...)`, `decode_file(...)`, and `decode_image(...)`, returning `QrDecoded { content, ecc_level, version }`.
+- Gallery demo added as `QrCode 二维码`; Docs page `qr_code.md` added with basic, style/ECC, and recognition API snippets.
+
+Validation evidence:
+- `cargo test -p aura-components qr_` passed, including a generated-image decode round trip.
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+
+### P13 QrCode interactive demo refinement — 2026-05-18
+
+Updated QrCode demos/docs to meet the interaction requirement:
+- Gallery QrCode demo now includes an input field and `生成二维码` button; clicking updates the displayed QR code from the current string.
+- Gallery QrCode demo now includes a local image path input and `识别图片` button; clicking calls `QrCode::decode_file(...)` and displays success/failure text plus toast feedback.
+- Docs QrCode page now uses the full interactive Gallery demo for the effect area, and snippets show complete interactive generation and local-file recognition patterns.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components qr_` passed.
+
+## 2026-05-18 P13 QrCode style/upload refinement
+- QrCode generation now supports screenshot-like styles: square/rounded/dot modules, square/rounded/circle finder styles, high-recovery center logo badge, corner mini badge, custom foreground/background/logo colors, and logo size ratio.
+- QrCode recognition demos/docs now use Aura Upload to open local image files instead of typing paths; selected file is decoded with QrCode::decode_file and result is shown in the page plus toast feedback.
+- Validation: cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets; cargo test -p aura-components qr_.
+
+Update: QrCode also gained generic logo(...) and corner_logo(...) builders accepting any GPUI element, in addition to logo_text/corner_logo_text convenience APIs, so callers can render images/icons/custom badges in QR overlays. Validation rerun after this API: cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets; cargo test -p aura-components qr_.
+
+## 2026-05-18 P13 QrCode recognition/result and social styles refinement
+- QrCode recognition examples now show the decode result persistently in an on-page result box; toast remains only supplemental feedback.
+- Corrected social QR styling direction by adding `QrPatternStyle::{Matrix, MiniProgram, Douyin}` with radial rendering for mini-program-like and Douyin-like codes instead of rendering them as ordinary dot-matrix QR only.
+- Added builders: `pattern_style(...)`, `matrix_style()`, `mini_program_style()`, `douyin_style()`, and `douyin_badge()`; `mini_program_badge()` now uses the radial mini-program preset.
+- Gallery and Docs style demos now show normal QR, mini-program style, Douyin style, and custom-logo rounded QR.
+- Validation: `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`; `cargo test -p aura-components qr_`.
+
+## 2026-05-18 P13 QrCode social style rewrite
+- Rewrote MiniProgram/Douyin QR style rendering after screenshot feedback showed the previous polar matrix transform looked like noisy broken QR fragments.
+- New social style renderer samples encoded QR content but renders clean radial capsules/dots with deterministic thinning, skips QR finder squares, and draws explicit social-code locator dots plus Douyin-style outer arcs.
+- Validation: `cargo test -p aura-components qr_`; `cargo check -p aura-gallery -p aura-docs --bin check_snippets`.
+
+## 2026-05-18 P13 QrCode social presets second rewrite
+- User clarified the previous social-code output still did not resemble the reference images. Replaced content-matrix polar module plotting with visual-template renderers: MiniProgram now uses sunburst radial capsules/dots plus three locator circles; Douyin now uses segmented circular tracks, sparse radial texture, three locator circles, and bold outer arcs.
+- The render remains deterministic per encoded content via a visual seed, but intentionally prioritizes the requested social-code style instead of QR-matrix readability.
+- Validation: `cargo test -p aura-components qr_`; `cargo check -p aura-gallery -p aura-docs --bin check_snippets`.
+
+## 2026-05-18 P13 QrCode social presets removed, gradient foreground added
+- Removed failed MiniProgram/Douyin social-code style APIs and render branches per user request; no `QrPatternStyle`, `mini_program_*`, or `douyin_*` API remains.
+- Added QR foreground gradient support with color arrays and eight directions via `QrGradientDirection::{ToTop, ToTopRight, ToRight, ToBottomRight, ToBottom, ToBottomLeft, ToLeft, ToTopLeft}`.
+- New builders: `gradient(colors, direction)`, `foreground_gradient(colors, direction)`, `gradient_colors(colors)`, and `gradient_direction(direction)`. Calling `foreground(...)` clears gradient and restores solid color behavior.
+- Gallery and Docs QrCode style examples now show gradient QR variants instead of removed social-code presets.
+- Validation: `cargo test -p aura-components qr_`; `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`.
+
+## 2026-05-18 P13 RingChart external legend enhancement
+- Enhanced existing `RingChart` in-place with fully external legend/value display: `RingExternalLegendOptions`, `RingExternalLegendLayout::{Vertical, Horizontal}`, `external_legend(...)`, `external_vertical_legend()`, `external_horizontal_legend()`, `external_legend_content(...)`, and `external_legend_percentage_decimals(...)`.
+- External legend mode disables inline chart labels and normal legend, avoiding leader lines and putting all label/value/percentage text into a vertical or horizontal legend area.
+- Gallery and Docs now include external legend examples; docs snippet `ring_chart/external.rs` is compile-checked.
+- Validation: `cargo test -p aura-components ring_chart`; `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`.
+
+## 2026-05-18 P13 RingChart external vertical side and item limit
+- Enhanced RingChart external legend mode so vertical legends are rendered beside the chart instead of below it. Added `RingExternalLegendSide::{Left, Right}`, `external_legend_side(...)`, `external_legend_left()`, and `external_legend_right()`.
+- Added `max_items(...)` on `RingExternalLegendOptions` and `external_legend_max_items(...)` on `RingChart` to show only the first N non-zero slices.
+- Gallery and Docs now demonstrate a right-side vertical external legend limited to the first 3 items, plus horizontal external legend coverage.
+- Validation: `cargo test -p aura-components ring_chart`; `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`.
+
+## 2026-05-18 P13 RingChart external vertical layout fix
+- Fixed vertical external legend layout regression where the legend consumed full row width and hid/squeezed the chart. Vertical legend now has fixed side width and `flex_none`, while the chart container uses `flex_1().min_w(0)`.
+- Validation: `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`; `cargo test -p aura-components ring_chart`.
+
+## 2026-05-18 P13 RingChart side legend spacing tightening
+- Tightened RingChart vertical external legend placement so text sits next to the chart instead of far away: reduced side-layout gap, narrowed vertical legend width, and slightly reduced side-layout canvas height to remove excessive empty horizontal/vertical space.
+- Validation: `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets`; `cargo test -p aura-components ring_chart`.

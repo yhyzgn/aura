@@ -23,3 +23,16 @@
 
 ```rust src="ring_chart/custom.rs"
 ```
+
+## 图例与比例值完全外置
+
+圆环内部不绘制文字，也不绘制折线引导；标签统一放在图例区域。图例支持水平排列，也支持垂直放在图形左侧或右侧；可通过 `max_items` 只展示前 N 项，并可通过 `ChartValueLabelContent` 选择显示数量、百分比或数量/总数/百分比组合。
+
+### 效果
+
+::AuraDemo{component="RingChartExternal"}::
+
+### 代码
+
+```rust src="ring_chart/external.rs"
+```

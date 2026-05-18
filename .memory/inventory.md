@@ -189,21 +189,21 @@
 
 | # | Component / Enhancement | File Target | Demo | Docs | Status |
 |---|-------------------------|-------------|------|------|--------|
-| 1 | QrCode | `crates/aura-components/src/qr_code.rs` | ⏳ | ⏳ | Planned |
+| 1 | QrCode | `crates/aura-components/src/qr_code.rs` | ✅ | ✅ | Implemented: QR generation display, color/size/ECC config, decode_bytes/decode_file/decode_image API |
 | 2 | CodeEditor | `crates/aura-components/src/code_editor.rs` | ⏳ | ⏳ | Planned |
-| 3 | SignalMeter | `crates/aura-components/src/signal_meter.rs` | ⏳ | ⏳ | Planned |
-| 4 | HeatBar | `crates/aura-components/src/heat_bar.rs` | ⏳ | ⏳ | Planned; time-axis dense vertical-bar heat chart with legend/count summary |
-| 5 | BarChart standalone mini mode | existing `bar_chart.rs` | ⏳ | ⏳ | Planned in-place enhancement; based on user screenshot, no separate FlatBarMeter |
-| 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ⏳ | ⏳ | Planned; segmented bar plus configurable top/bottom/both/hidden legend-value text |
+| 3 | SignalMeter | `crates/aura-components/src/signal_meter.rs` | ✅ | ✅ | Implemented Wave 1 |
+| 4 | HeatBar | `crates/aura-components/src/heat_bar.rs` | ✅ | ✅ | Implemented Wave 1; time-axis dense vertical-bar heat chart with legend/count summary |
+| 5 | BarChart standalone mini mode | existing `bar_chart.rs` | ✅ | ✅ | Implemented in-place; no separate FlatBarMeter |
+| 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ✅ | ✅ | Implemented Wave 1; segmented bar plus top/bottom/both/hidden legend-value text |
 | 7 | HorizontalList | `crates/aura-components/src/horizontal_list.rs` | ⏳ | ⏳ | Planned |
 | 8 | Vertical list drag | existing `virtualized_list.rs` / list components | ⏳ | ⏳ | Planned in-place enhancement |
 | 9 | RingChart external labels | existing `ring_chart.rs` / chart modules | ⏳ | ⏳ | Planned in-place enhancement |
-| 10 | LineChart per-series style | existing `line_chart.rs` | ⏳ | ⏳ | Planned in-place enhancement |
+| 10 | LineChart per-series style | existing `line_chart.rs` | ✅ | ✅ | Implemented in-place: solid/dashed/dotted/custom dash, per-series color/width/smooth |
 | 11 | BarChart range colors | existing `bar_chart.rs` | ⏳ | ⏳ | Planned in-place enhancement |
-| 12 | RingProgress gradient | existing `progress.rs` | ⏳ | ⏳ | Planned in-place enhancement |
-| 13 | Timer | `crates/aura-components/src/timer.rs` | ⏳ | ⏳ | Planned |
-| 14 | Button gradient/custom colors | existing `button.rs` | ⏳ | ⏳ | Planned in-place enhancement |
-| 15 | Tag flow layout | existing `tag.rs` | ⏳ | ⏳ | Planned in-place enhancement |
-| 16 | Label | `crates/aura-components/src/label.rs` | ⏳ | ⏳ | Planned |
-| 17 | Operation | `crates/aura-components/src/operation.rs` | ⏳ | ⏳ | Planned |
-| 18 | Radio/Checkbox option customization | existing `radio*.rs`, `checkbox*.rs` | ⏳ | ⏳ | Planned in-place enhancement |
+| 12 | RingProgress gradient | existing `progress.rs` | ✅ | ✅ | Implemented in-place: ring gradient plus completion color |
+| 13 | Timer | `crates/aura-components/src/timer.rs` | ✅ | ✅ | Implemented controlled count-up/count-down display with units and result snapshot API |
+| 14 | Button gradient/custom colors | existing `button.rs` | ✅ | ✅ | Implemented in-place: custom solid/outline colors, gradient backgrounds, derived hover/active/disabled states |
+| 15 | Tag flow layout | existing `tag.rs` | ✅ | ✅ | Implemented in-place via TagFlow layout helper |
+| 16 | Label | `crates/aura-components/src/label.rs` | ✅ | ✅ | Implemented Wave 1 |
+| 17 | Operation | `crates/aura-components/src/operation.rs` | ✅ | ✅ | Implemented Wave 1 |
+| 18 | Radio/Checkbox option customization | existing `radio*.rs`, `checkbox*.rs` | ✅ | ✅ | Implemented in-place: option card/chip styling, selected/hover/border/text/padding/radius/indicator customization |

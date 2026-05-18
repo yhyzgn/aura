@@ -34,3 +34,15 @@
 
 ```rust src="radio/buttons.rs"
 ```
+
+
+## 自定义选项样式
+
+### 效果
+
+::AuraDemo{component="RadioCustom"}::
+
+### 代码
+
+```rust src="radio/custom.rs"
+```

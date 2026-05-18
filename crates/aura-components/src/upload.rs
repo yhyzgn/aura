@@ -227,6 +227,17 @@ impl Upload {
         self.files.len()
     }
 
+    pub fn files_ref(&self) -> &[UploadFile] {
+        &self.files
+    }
+
+    pub fn selected_paths(&self) -> Vec<PathBuf> {
+        self.files
+            .iter()
+            .filter_map(|file| file.path.clone())
+            .collect()
+    }
+
     pub fn can_accept_more_len(current_len: usize, limit: Option<usize>, disabled: bool) -> bool {
         !disabled && !limit.is_some_and(|limit| current_len >= limit)
     }
@@ -378,6 +389,9 @@ impl Upload {
                 Some(format!("已忽略 {rejected} 个不符合类型或大小限制的文件").into());
         } else {
             self.last_error = None;
+        }
+        if let Some(on_select) = self.on_select.clone() {
+            on_select(self, cx);
         }
         cx.notify();
     }

@@ -59,6 +59,90 @@ impl CheckboxGroupSize {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct CheckboxOptionStyle {
+    pub bg: Option<Hsla>,
+    pub selected_bg: Option<Hsla>,
+    pub hover_bg: Option<Hsla>,
+    pub text_color: Option<Hsla>,
+    pub selected_text_color: Option<Hsla>,
+    pub border_color: Option<Hsla>,
+    pub selected_border_color: Option<Hsla>,
+    pub radius: Option<Pixels>,
+    pub padding_x: Option<Pixels>,
+    pub padding_y: Option<Pixels>,
+    pub gap: Option<Pixels>,
+    pub show_indicator: Option<bool>,
+    pub show_selected_icon: Option<bool>,
+}
+
+impl CheckboxOptionStyle {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn bg(mut self, color: Hsla) -> Self {
+        self.bg = Some(color);
+        self
+    }
+
+    pub fn selected_bg(mut self, color: Hsla) -> Self {
+        self.selected_bg = Some(color);
+        self
+    }
+
+    pub fn hover_bg(mut self, color: Hsla) -> Self {
+        self.hover_bg = Some(color);
+        self
+    }
+
+    pub fn text_color(mut self, color: Hsla) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
+    pub fn selected_text_color(mut self, color: Hsla) -> Self {
+        self.selected_text_color = Some(color);
+        self
+    }
+
+    pub fn border_color(mut self, color: Hsla) -> Self {
+        self.border_color = Some(color);
+        self
+    }
+
+    pub fn selected_border_color(mut self, color: Hsla) -> Self {
+        self.selected_border_color = Some(color);
+        self
+    }
+
+    pub fn radius(mut self, radius: impl Into<Pixels>) -> Self {
+        self.radius = Some(radius.into());
+        self
+    }
+
+    pub fn padding(mut self, x: impl Into<Pixels>, y: impl Into<Pixels>) -> Self {
+        self.padding_x = Some(x.into());
+        self.padding_y = Some(y.into());
+        self
+    }
+
+    pub fn gap(mut self, gap: impl Into<Pixels>) -> Self {
+        self.gap = Some(gap.into());
+        self
+    }
+
+    pub fn show_indicator(mut self, show: bool) -> Self {
+        self.show_indicator = Some(show);
+        self
+    }
+
+    pub fn show_selected_icon(mut self, show: bool) -> Self {
+        self.show_selected_icon = Some(show);
+        self
+    }
+}
+
 pub struct CheckboxGroup {
     selected: Vec<usize>,
     disabled: bool,
@@ -68,6 +152,7 @@ pub struct CheckboxGroup {
     layout: CheckboxGroupLayout,
     size: CheckboxGroupSize,
     stretch: bool,
+    option_style: Option<CheckboxOptionStyle>,
     on_change: Option<Box<dyn Fn(Vec<usize>, &mut Window, &mut App) + 'static>>,
 }
 
@@ -105,6 +190,7 @@ impl CheckboxGroup {
             layout: CheckboxGroupLayout::Vertical,
             size: CheckboxGroupSize::Default,
             stretch: false,
+            option_style: None,
             on_change: None,
         }
     }
@@ -168,6 +254,20 @@ impl CheckboxGroup {
         self.stretch(block)
     }
 
+    pub fn option_style(mut self, style: CheckboxOptionStyle) -> Self {
+        self.option_style = Some(style);
+        self
+    }
+
+    pub fn card_options(mut self) -> Self {
+        self.option_style = Some(
+            CheckboxOptionStyle::new()
+                .radius(px(10.0))
+                .padding(px(12.0), px(8.0)),
+        );
+        self
+    }
+
     pub fn is_stretched(&self) -> bool {
         self.stretch
     }
@@ -202,6 +302,123 @@ impl CheckboxGroup {
         self.update_selection(idx, checked, cx);
     }
 
+    fn render_indicator(
+        &self,
+        checked: bool,
+        border: Hsla,
+        bg: Hsla,
+        check_color: Hsla,
+        show_selected_icon: bool,
+    ) -> impl IntoElement {
+        let mut indicator = gpui::div()
+            .flex_none()
+            .w(px(16.0))
+            .h(px(16.0))
+            .rounded(px(3.0))
+            .bg(bg)
+            .border_1()
+            .border_color(border)
+            .flex()
+            .items_center()
+            .justify_center();
+
+        if checked && show_selected_icon {
+            indicator =
+                indicator.child(Icon::new(IconName::Check).size(px(12.0)).color(check_color));
+        }
+
+        indicator
+    }
+
+    fn render_styled_option(
+        &self,
+        idx: usize,
+        label: SharedString,
+        checked: bool,
+        style: CheckboxOptionStyle,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let theme = cx.global::<Config>().theme.clone();
+        let disabled = self.disabled;
+        let selected_bg = style
+            .selected_bg
+            .unwrap_or(theme.primary.base.opacity(0.12));
+        let bg = if checked {
+            selected_bg
+        } else {
+            style.bg.unwrap_or(theme.neutral.card)
+        };
+        let hover_bg = style.hover_bg.unwrap_or(theme.neutral.hover);
+        let border = if checked {
+            style.selected_border_color.unwrap_or(theme.primary.base)
+        } else {
+            style.border_color.unwrap_or(theme.neutral.border)
+        };
+        let text_color = if disabled {
+            theme.neutral.text_disabled
+        } else if checked {
+            style.selected_text_color.unwrap_or(theme.primary.base)
+        } else {
+            style.text_color.unwrap_or(theme.neutral.text_1)
+        };
+        let show_indicator = style.show_indicator.unwrap_or(true);
+        let show_selected_icon = style.show_selected_icon.unwrap_or(true);
+
+        let mut item = gpui::div()
+            .flex()
+            .flex_row()
+            .items_center()
+            .gap(style.gap.unwrap_or(px(8.0)))
+            .px(style.padding_x.unwrap_or(px(12.0)))
+            .py(style.padding_y.unwrap_or(px(8.0)))
+            .rounded(style.radius.unwrap_or(px(theme.radius.md)))
+            .border_1()
+            .border_color(border)
+            .bg(bg)
+            .text_size(self.size.text_size(&theme))
+            .text_color(text_color);
+
+        if !disabled {
+            item = item.cursor_pointer().hover(move |s| {
+                if checked {
+                    s.cursor_pointer()
+                } else {
+                    s.cursor_pointer().bg(hover_bg)
+                }
+            });
+            item = item.on_mouse_up(
+                MouseButton::Left,
+                cx.listener(
+                    move |this: &mut Self,
+                          _: &MouseUpEvent,
+                          _: &mut Window,
+                          cx: &mut Context<Self>| {
+                        this.toggle_idx(idx, cx);
+                    },
+                ),
+            );
+        } else {
+            item = item.cursor_not_allowed();
+        }
+
+        if show_indicator {
+            let indicator_bg = if checked {
+                theme.primary.base
+            } else {
+                rgba(0, 0, 0, 0.0)
+            };
+            item = item.child(self.render_indicator(
+                checked,
+                border,
+                indicator_bg,
+                rgba(255, 255, 255, 1.0),
+                show_selected_icon,
+            ));
+        }
+
+        item.child(label)
+    }
+
     fn render_button_group(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let radius = px(theme.radius.md);
@@ -227,44 +444,50 @@ impl CheckboxGroup {
             let checked = self.selected.contains(&idx);
             let is_first = idx == 0;
             let label = label.clone();
+            let style = self.option_style.clone().unwrap_or_default();
             let bg = if checked {
-                theme.primary.base
+                style.selected_bg.unwrap_or(theme.primary.base)
             } else {
-                theme.neutral.card
+                style.bg.unwrap_or(theme.neutral.card)
             };
             let text_color = if self.disabled {
                 theme.neutral.text_disabled
             } else if checked {
-                rgba(255, 255, 255, 1.0)
+                style
+                    .selected_text_color
+                    .unwrap_or_else(|| rgba(255, 255, 255, 1.0))
             } else {
-                theme.neutral.text_1
+                style.text_color.unwrap_or(theme.neutral.text_1)
             };
             let mut item = gpui::div()
                 .h(height)
-                .px(padding_x)
+                .px(style.padding_x.unwrap_or(padding_x))
                 .flex()
                 .items_center()
                 .justify_center()
                 .when(self.stretch, |s| s.flex_1())
-                .gap_2()
+                .gap(style.gap.unwrap_or(px(8.0)))
                 .bg(bg)
                 .text_size(text_size)
                 .text_color(text_color);
 
-            if checked {
+            if checked && style.show_selected_icon.unwrap_or(true) {
                 item = item.child(Icon::new(IconName::Check).size(px(12.0)).color(text_color));
             }
             item = item.child(label);
 
             if !is_first {
-                item = item.border_l_1().border_color(theme.neutral.border);
+                item = item
+                    .border_l_1()
+                    .border_color(style.border_color.unwrap_or(theme.neutral.border));
             }
             if !self.disabled {
+                let hover_bg = style.hover_bg.unwrap_or(theme.neutral.hover);
                 item = item.cursor_pointer().hover(move |s| {
                     if checked {
                         s.cursor_pointer()
                     } else {
-                        s.cursor_pointer().bg(theme.neutral.hover)
+                        s.cursor_pointer().bg(hover_bg)
                     }
                 });
                 item = item.on_mouse_up(
@@ -300,6 +523,7 @@ impl Render for CheckboxGroup {
             return self.render_button_group(cx).into_any_element();
         }
 
+        let style = self.option_style.clone();
         let mut col = gpui::div()
             .flex()
             .when(self.layout == CheckboxGroupLayout::Vertical, |s| {
@@ -313,10 +537,42 @@ impl Render for CheckboxGroup {
             col = col.track_focus(&self.focus_handle);
         }
 
-        for cb_entity in &self.checkboxes {
-            col = col.child(cb_entity.clone());
+        if let Some(style) = style {
+            for (idx, label) in self.options.iter().enumerate() {
+                let checked = self.selected.contains(&idx);
+                col = col.child(self.render_styled_option(
+                    idx,
+                    label.clone(),
+                    checked,
+                    style.clone(),
+                    cx,
+                ));
+            }
+        } else {
+            for cb_entity in &self.checkboxes {
+                col = col.child(cb_entity.clone());
+            }
         }
 
         col.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn checkbox_option_style_supports_layout_and_selected_style() {
+        let style = CheckboxOptionStyle::new()
+            .selected_bg(gpui::blue())
+            .selected_text_color(gpui::white())
+            .padding(px(14.0), px(10.0))
+            .radius(px(12.0))
+            .show_indicator(false);
+
+        assert_eq!(style.selected_bg, Some(gpui::blue()));
+        assert_eq!(style.padding_x, Some(px(14.0)));
+        assert_eq!(style.show_indicator, Some(false));
     }
 }

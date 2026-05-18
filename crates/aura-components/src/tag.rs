@@ -1,7 +1,10 @@
 use aura_core::Config;
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
+use gpui::{
+    AnyElement, App, Component, IntoElement, Pixels, RenderOnce, SharedString, Window, div,
+    prelude::*, px,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TagType {
@@ -203,5 +206,91 @@ impl IntoElement for Tag {
     type Element = Component<Self>;
     fn into_element(self) -> Self::Element {
         Component::new(self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TagFlowAlign {
+    #[default]
+    Start,
+    Center,
+    End,
+}
+
+pub struct TagFlow {
+    tags: Vec<AnyElement>,
+    gap: Pixels,
+    align: TagFlowAlign,
+}
+
+impl TagFlow {
+    pub fn new(tags: impl IntoIterator<Item = Tag>) -> Self {
+        Self {
+            tags: tags.into_iter().map(|tag| tag.into_any_element()).collect(),
+            gap: px(8.0),
+            align: TagFlowAlign::Start,
+        }
+    }
+
+    pub fn from_elements(tags: impl IntoIterator<Item = impl IntoElement>) -> Self {
+        Self {
+            tags: tags.into_iter().map(|tag| tag.into_any_element()).collect(),
+            gap: px(8.0),
+            align: TagFlowAlign::Start,
+        }
+    }
+
+    pub fn gap(mut self, gap: Pixels) -> Self {
+        self.gap = gap.max(px(0.0));
+        self
+    }
+
+    pub fn align(mut self, align: TagFlowAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn center(self) -> Self {
+        self.align(TagFlowAlign::Center)
+    }
+
+    pub fn end(self) -> Self {
+        self.align(TagFlowAlign::End)
+    }
+}
+
+impl RenderOnce for TagFlow {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_wrap()
+            .gap(self.gap)
+            .when(self.align == TagFlowAlign::Center, |s| s.justify_center())
+            .when(self.align == TagFlowAlign::End, |s| s.justify_end())
+            .children(self.tags)
+    }
+}
+
+impl IntoElement for TagFlow {
+    type Element = Component<Self>;
+
+    fn into_element(self) -> Self::Element {
+        Component::new(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tag_flow_tracks_gap_and_alignment() {
+        let flow = TagFlow::new([Tag::new("A"), Tag::new("B")])
+            .gap(px(12.0))
+            .center();
+
+        assert_eq!(flow.gap, px(12.0));
+        assert_eq!(flow.align, TagFlowAlign::Center);
+        assert_eq!(flow.tags.len(), 2);
     }
 }

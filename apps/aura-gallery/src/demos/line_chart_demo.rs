@@ -1,5 +1,7 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{ChartPoint, ChartSeries, ChartValueLabelContent, LineChart, Space};
+use aura_components::{
+    ChartLineStyle, ChartPoint, ChartSeries, ChartValueLabelContent, LineChart, Space,
+};
 use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px};
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -45,6 +47,16 @@ impl Render for LineChartDemo {
                         .area_fill(true)
                         .value_label_content(ChartValueLabelContent::Percentage)
                         .percentage_decimals(1),
+                ))
+                .child(section(
+                    "每条线独立样式",
+                    "每个序列可以分别配置实线、虚线、点线、颜色、粗细和平滑效果。",
+                    LineChart::new(styled_series())
+                        .id("line-chart-demo-styled-lines")
+                        .height(px(420.0))
+                        .y_domain(0.0, 100.0)
+                        .area_fill(false)
+                        .point_markers(false),
                 ))
                 .child(section(
                     "无数据",
@@ -104,6 +116,53 @@ pub fn custom_series() -> Vec<ChartSeries> {
     ]
 }
 
+pub fn styled_series() -> Vec<ChartSeries> {
+    vec![
+        ChartSeries::new(
+            "Solid Smooth",
+            [
+                ChartPoint::new("Mon", 32.0),
+                ChartPoint::new("Tue", 44.0),
+                ChartPoint::new("Wed", 38.0),
+                ChartPoint::new("Thu", 70.0),
+                ChartPoint::new("Fri", 62.0),
+            ],
+        )
+        .stroke_color(blue())
+        .stroke_width(px(3.2))
+        .line_style(ChartLineStyle::Solid)
+        .smooth(true),
+        ChartSeries::new(
+            "Dashed",
+            [
+                ChartPoint::new("Mon", 22.0),
+                ChartPoint::new("Tue", 35.0),
+                ChartPoint::new("Wed", 52.0),
+                ChartPoint::new("Thu", 58.0),
+                ChartPoint::new("Fri", 76.0),
+            ],
+        )
+        .stroke_color(green())
+        .stroke_width(px(2.6))
+        .dashed()
+        .smooth(false),
+        ChartSeries::new(
+            "Dotted",
+            [
+                ChartPoint::new("Mon", 60.0),
+                ChartPoint::new("Tue", 54.0),
+                ChartPoint::new("Wed", 49.0),
+                ChartPoint::new("Thu", 45.0),
+                ChartPoint::new("Fri", 39.0),
+            ],
+        )
+        .stroke_color(gpui::red())
+        .stroke_width(px(2.8))
+        .dotted()
+        .smooth(true),
+    ]
+}
+
 pub fn multi_series() -> Vec<ChartSeries> {
     vec![
         ChartSeries::new(
@@ -145,5 +204,8 @@ mod tests {
         assert!(source.contains("area_fill(true)"));
         assert!(source.contains("stroke_color"));
         assert!(source.contains("value_label_content"));
+        assert!(source.contains("dashed()"));
+        assert!(source.contains("dotted()"));
+        assert!(source.contains("ChartLineStyle"));
     }
 }

@@ -1,4 +1,4 @@
-use aura_components::{Button, Card, Input, Space, Tag};
+use aura_components::{Button, Card, Input, Space, Tag, TagFlow};
 use gpui::{AnyView, App, Context, Entity, Render, Window, prelude::*};
 
 use aura_components::layout_helpers::{page, row_md, section};
@@ -159,6 +159,23 @@ impl Render for TagDemo {
                         Tag::new("Tag 3").warning().round(true).into_any_element(),
                         Tag::new("Tag 4").danger().round(true).into_any_element(),
                     ]),
+                ))
+                .child(section(
+                    "流式布局",
+                    "TagFlow 会自动换行，适合标签云、筛选条件和多选结果展示。",
+                    Card::new(
+                        TagFlow::new([
+                            Tag::new("Design").round(true),
+                            Tag::new("GPUI").success().round(true),
+                            Tag::new("Animation").warning().round(true),
+                            Tag::new("Native Rust").danger().round(true),
+                            Tag::new("Charts").round(true),
+                            Tag::new("Docs").success().round(true),
+                            Tag::new("Installer").warning().round(true),
+                            Tag::new("Tray").round(true),
+                        ])
+                        .gap(gpui::px(10.0)),
+                    ),
                 )),
         )
     }

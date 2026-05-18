@@ -1,3 +1,4 @@
+use crate::chart::ChartLineStyle;
 use gpui::{PathBuilder, PathStyle, Pixels, Point, StrokeOptions, point, px};
 use lyon_tessellation::{LineCap, LineJoin};
 
@@ -42,8 +43,17 @@ pub fn smooth_line_path(
     points: &[Point<Pixels>],
     stroke_width: Pixels,
 ) -> Option<gpui::Path<Pixels>> {
+    smooth_line_path_with_style(points, stroke_width, ChartLineStyle::Solid, None)
+}
+
+pub fn smooth_line_path_with_style(
+    points: &[Point<Pixels>],
+    stroke_width: Pixels,
+    line_style: ChartLineStyle,
+    dash_pattern: Option<&[Pixels]>,
+) -> Option<gpui::Path<Pixels>> {
     let first = *points.first()?;
-    let mut builder = chart_stroke_builder(stroke_width);
+    let mut builder = chart_stroke_builder(stroke_width, line_style, dash_pattern);
     builder.move_to(first);
     if points.len() == 2 {
         builder.line_to(points[1]);
@@ -54,14 +64,31 @@ pub fn smooth_line_path(
     builder.build().ok()
 }
 
-fn chart_stroke_builder(stroke_width: Pixels) -> PathBuilder {
+fn chart_stroke_builder(
+    stroke_width: Pixels,
+    line_style: ChartLineStyle,
+    dash_pattern: Option<&[Pixels]>,
+) -> PathBuilder {
     let options = StrokeOptions::default()
         .with_line_width(stroke_width.as_f32())
         .with_tolerance(0.01)
         .with_line_join(LineJoin::Round)
         .with_line_cap(LineCap::Round);
 
-    PathBuilder::stroke(stroke_width).with_style(PathStyle::Stroke(options))
+    let builder = PathBuilder::stroke(stroke_width).with_style(PathStyle::Stroke(options));
+    let pattern =
+        dash_pattern
+            .map(|pattern| pattern.to_vec())
+            .unwrap_or_else(|| match line_style {
+                ChartLineStyle::Solid => Vec::new(),
+                ChartLineStyle::Dashed => vec![stroke_width * 3.0, stroke_width * 2.0],
+                ChartLineStyle::Dotted => vec![stroke_width, stroke_width * 1.8],
+            });
+    if pattern.is_empty() {
+        builder
+    } else {
+        builder.dash_array(&pattern)
+    }
 }
 
 fn append_smooth_segments(builder: &mut PathBuilder, points: &[Point<Pixels>]) {
@@ -114,16 +141,35 @@ pub fn line_soft_edge_path(
     smooth: bool,
 ) -> Option<gpui::Path<Pixels>> {
     let soft_width = px((stroke_width.as_f32() + 1.2).max(stroke_width.as_f32()));
+    line_soft_edge_path_with_style(points, soft_width, smooth, ChartLineStyle::Solid, None)
+}
+
+pub fn line_soft_edge_path_with_style(
+    points: &[Point<Pixels>],
+    stroke_width: Pixels,
+    smooth: bool,
+    line_style: ChartLineStyle,
+    dash_pattern: Option<&[Pixels]>,
+) -> Option<gpui::Path<Pixels>> {
     if smooth {
-        smooth_line_path(points, soft_width)
+        smooth_line_path_with_style(points, stroke_width, line_style, dash_pattern)
     } else {
-        line_path(points, soft_width)
+        line_path_with_style(points, stroke_width, line_style, dash_pattern)
     }
 }
 
 pub fn line_path(points: &[Point<Pixels>], stroke_width: Pixels) -> Option<gpui::Path<Pixels>> {
+    line_path_with_style(points, stroke_width, ChartLineStyle::Solid, None)
+}
+
+pub fn line_path_with_style(
+    points: &[Point<Pixels>],
+    stroke_width: Pixels,
+    line_style: ChartLineStyle,
+    dash_pattern: Option<&[Pixels]>,
+) -> Option<gpui::Path<Pixels>> {
     let first = *points.first()?;
-    let mut builder = chart_stroke_builder(stroke_width);
+    let mut builder = chart_stroke_builder(stroke_width, line_style, dash_pattern);
     builder.move_to(first);
     for point in points.iter().skip(1) {
         builder.line_to(*point);
@@ -192,5 +238,7 @@ mod tests {
         assert!(source.contains("LineJoin::Round"));
         assert!(source.contains("LineCap::Round"));
         assert!(source.contains("line_soft_edge_path"));
+        assert!(source.contains("dash_array"));
+        assert!(source.contains("ChartLineStyle"));
     }
 }

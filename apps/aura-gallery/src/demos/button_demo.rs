@@ -1,7 +1,7 @@
 use aura_components::{Button, ButtonGroup, Space, Title};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
-use gpui::{App, Context, Entity, IntoElement, Render, Window, prelude::*};
+use gpui::{App, Context, Entity, IntoElement, Render, Window, prelude::*, rgb};
 
 pub fn render(cx: &mut App) -> Entity<ButtonDemo> {
     cx.new(|_| ButtonDemo)
@@ -35,6 +35,10 @@ impl Render for ButtonDemo {
             .child(row(loading_states()))
             .child(hdr("Rounded 圆角"))
             .child(row(rounded()))
+            .child(hdr("Custom Colors 自定义颜色"))
+            .child(row(custom_colors()))
+            .child(hdr("Gradient 渐变按钮"))
+            .child(row(gradients()))
     }
 }
 
@@ -209,5 +213,41 @@ fn rounded() -> Vec<impl IntoElement> {
         Button::new("12px").primary().rounded_md(),
         Button::new("20px").primary().rounded_lg(),
         Button::new("Pill").primary().pill(),
+    ]
+}
+
+fn custom_colors() -> Vec<impl IntoElement> {
+    vec![
+        Button::new("Violet")
+            .custom_color(rgb(0x7c3aed).into(), gpui::white())
+            .pill(),
+        Button::new("Outline")
+            .colors(aura_components::ButtonColors::outline(
+                rgb(0x0891b2).into(),
+                rgb(0x0f172a).into(),
+                gpui::transparent_black(),
+            ))
+            .rounded_md(),
+        Button::new("Disabled")
+            .custom_color(rgb(0xdb2777).into(), gpui::white())
+            .disabled(true),
+    ]
+}
+
+fn gradients() -> Vec<impl IntoElement> {
+    vec![
+        Button::new("Aurora")
+            .gradient(rgb(0x6366f1).into(), rgb(0x06b6d4).into())
+            .pill(),
+        Button::new("Sunset")
+            .gradient_with_angle(110.0, rgb(0xf97316).into(), rgb(0xec4899).into())
+            .large()
+            .rounded_lg(),
+        Button::new("Loading")
+            .gradient(rgb(0x22c55e).into(), rgb(0x14b8a6).into())
+            .loading(true),
+        Button::new("Disabled")
+            .gradient(rgb(0x8b5cf6).into(), rgb(0x3b82f6).into())
+            .disabled(true),
     ]
 }

@@ -1,20 +1,21 @@
 use aura_components::{
     Affix, AffixPosition, Alert, AlertType, Anchor, AnchorLink, AnchorTarget, Autocomplete,
-    AutocompleteItem, Avatar, Backtop, Badge, BadgeType, Button, Card, Checkbox, CheckboxGroup,
-    CodeBlock as AuraCodeBlock, Container, Dropdown, Flex, Form, FormItem, Image, Input,
-    InputNumber, InputNumberControlsPosition, Link, Loading, Menu, MenuMode, NotificationType,
-    Paragraph, Popconfirm, Popover, Preview, Progress, ProgressStatus, Radio, RadioGroup, Rate,
-    Result as AuraResult, ResultStatus, Select, Skeleton, SkeletonItem, SkeletonVariant, Slider,
-    Space, Statistic, Switch, Tag as AuraTag, Text, Textarea, Title, Transfer, TransferItem, Tree,
-    TreeNode, Upload, UploadFile, UploadStatus, VirtualizedList, show_notification, toast_error,
-    toast_info, toast_success, toast_warning,
+    AutocompleteItem, Avatar, Backtop, Badge, BadgeType, Button, ButtonColors, Card, Checkbox,
+    CheckboxGroup, CheckboxOptionStyle, CodeBlock as AuraCodeBlock, Container, Dropdown, Flex,
+    Form, FormItem, Image, Input, InputNumber, InputNumberControlsPosition, Link, Loading, Menu,
+    MenuMode, NotificationType, Paragraph, Popconfirm, Popover, Preview, Progress, ProgressStatus,
+    QrEcLevel, QrFinderStyle, QrGradientDirection, QrModuleStyle, Radio, RadioGroup,
+    RadioOptionStyle, Rate, Result as AuraResult, ResultStatus, Select, Skeleton, SkeletonItem,
+    SkeletonVariant, Slider, Space, Statistic, Switch, Tag as AuraTag, Text, Textarea, Title,
+    Transfer, TransferItem, Tree, TreeNode, Upload, UploadFile, UploadStatus, VirtualizedList,
+    show_notification, toast_error, toast_info, toast_success, toast_warning,
 };
 use aura_core::{Config, PassivePortal, Placement, Portal, clear_popover};
 use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use gpui::{
     AnyElement, AnyView, App, Component, Context, Entity, FontWeight, IntoElement, Render,
-    RenderOnce, ScrollHandle, SharedString, WeakEntity, Window, div, prelude::*, px,
+    RenderOnce, ScrollHandle, SharedString, WeakEntity, Window, div, prelude::*, px, rgb,
 };
 use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 
@@ -50,6 +51,10 @@ const DRAWER_DOC: &str = include_str!("../content/pages/drawer.md");
 const DROPDOWN_DOC: &str = include_str!("../content/pages/dropdown.md");
 const EMPTY_DOC: &str = include_str!("../content/pages/empty.md");
 const FORM_DOC: &str = include_str!("../content/pages/form.md");
+const HEAT_BAR_DOC: &str = include_str!("../content/pages/heat_bar.md");
+const LABEL_OPERATION_DOC: &str = include_str!("../content/pages/label_operation.md");
+const SEGMENT_RATIO_BAR_DOC: &str = include_str!("../content/pages/segment_ratio_bar.md");
+const SIGNAL_METER_DOC: &str = include_str!("../content/pages/signal_meter.md");
 const ICON_DOC: &str = include_str!("../content/pages/icon.md");
 const IMAGE_DOC: &str = include_str!("../content/pages/image.md");
 const INPUT_DOC: &str = include_str!("../content/pages/input.md");
@@ -68,6 +73,7 @@ const POPCONFIRM_DOC: &str = include_str!("../content/pages/popconfirm.md");
 const POPOVER_DOC: &str = include_str!("../content/pages/popover.md");
 const PREVIEW_DOC: &str = include_str!("../content/pages/preview.md");
 const PROGRESS_DOC: &str = include_str!("../content/pages/progress.md");
+const QR_CODE_DOC: &str = include_str!("../content/pages/qr_code.md");
 const PIE_CHART_DOC: &str = include_str!("../content/pages/pie_chart.md");
 const RING_CHART_DOC: &str = include_str!("../content/pages/ring_chart.md");
 const RADIO_DOC: &str = include_str!("../content/pages/radio.md");
@@ -87,6 +93,7 @@ const TABS_DOC: &str = include_str!("../content/pages/tabs.md");
 const TAG_DOC: &str = include_str!("../content/pages/tag.md");
 const TEXTAREA_DOC: &str = include_str!("../content/pages/textarea.md");
 const TIME_PICKER_DOC: &str = include_str!("../content/pages/time_picker.md");
+const TIMER_DOC: &str = include_str!("../content/pages/timer.md");
 const TIMELINE_DOC: &str = include_str!("../content/pages/timeline.md");
 const TOOLTIP_DOC: &str = include_str!("../content/pages/tooltip.md");
 const TRAY_DOC: &str = include_str!("../content/pages/tray.md");
@@ -218,6 +225,22 @@ const DOC_PAGES: &[DocPage] = &[
         markdown: FORM_DOC,
     },
     DocPage {
+        title: "HeatBar",
+        markdown: HEAT_BAR_DOC,
+    },
+    DocPage {
+        title: "Label / Operation",
+        markdown: LABEL_OPERATION_DOC,
+    },
+    DocPage {
+        title: "SegmentRatioBar",
+        markdown: SEGMENT_RATIO_BAR_DOC,
+    },
+    DocPage {
+        title: "SignalMeter",
+        markdown: SIGNAL_METER_DOC,
+    },
+    DocPage {
         title: "Icon",
         markdown: ICON_DOC,
     },
@@ -286,6 +309,10 @@ const DOC_PAGES: &[DocPage] = &[
         markdown: PROGRESS_DOC,
     },
     DocPage {
+        title: "QrCode",
+        markdown: QR_CODE_DOC,
+    },
+    DocPage {
         title: "Radio",
         markdown: RADIO_DOC,
     },
@@ -352,6 +379,10 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "TimePicker",
         markdown: TIME_PICKER_DOC,
+    },
+    DocPage {
+        title: "Timer",
+        markdown: TIMER_DOC,
     },
     DocPage {
         title: "Timeline",
@@ -958,6 +989,30 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "bar_chart/basic.rs" => Some(include_str!("../content/snippets/bar_chart/basic.rs")),
         "bar_chart/grouped.rs" => Some(include_str!("../content/snippets/bar_chart/grouped.rs")),
         "bar_chart/stacked.rs" => Some(include_str!("../content/snippets/bar_chart/stacked.rs")),
+        "label_operation/operation.rs" => Some(include_str!(
+            "../content/snippets/label_operation/operation.rs"
+        )),
+        "label_operation/label.rs" => {
+            Some(include_str!("../content/snippets/label_operation/label.rs"))
+        }
+        "segment_ratio_bar/top.rs" => {
+            Some(include_str!("../content/snippets/segment_ratio_bar/top.rs"))
+        }
+        "segment_ratio_bar/bottom.rs" => Some(include_str!(
+            "../content/snippets/segment_ratio_bar/bottom.rs"
+        )),
+        "heat_bar/events.rs" => Some(include_str!("../content/snippets/heat_bar/events.rs")),
+        "signal_meter/wifi.rs" => Some(include_str!("../content/snippets/signal_meter/wifi.rs")),
+        "signal_meter/levels.rs" => {
+            Some(include_str!("../content/snippets/signal_meter/levels.rs"))
+        }
+        "signal_meter/mobile.rs" => {
+            Some(include_str!("../content/snippets/signal_meter/mobile.rs"))
+        }
+        "tag/flow.rs" => Some(include_str!("../content/snippets/tag/flow.rs")),
+        "bar_chart/standalone.rs" => {
+            Some(include_str!("../content/snippets/bar_chart/standalone.rs"))
+        }
         "input_number/vertical.rs" => {
             Some(include_str!("../content/snippets/input_number/vertical.rs"))
         }
@@ -992,12 +1047,18 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "switch/callback.rs" => Some(include_str!("../content/snippets/switch/callback.rs")),
         "message/types.rs" => Some(include_str!("../content/snippets/message/types.rs")),
         "message/formatting.rs" => Some(include_str!("../content/snippets/message/formatting.rs")),
+        "qr_code/basic.rs" => Some(include_str!("../content/snippets/qr_code/basic.rs")),
+        "qr_code/style.rs" => Some(include_str!("../content/snippets/qr_code/style.rs")),
+        "qr_code/decode.rs" => Some(include_str!("../content/snippets/qr_code/decode.rs")),
         "progress/basic.rs" => Some(include_str!("../content/snippets/progress/basic.rs")),
         "progress/inside.rs" => Some(include_str!("../content/snippets/progress/inside.rs")),
         "progress/status.rs" => Some(include_str!("../content/snippets/progress/status.rs")),
         "progress/color.rs" => Some(include_str!("../content/snippets/progress/color.rs")),
         "progress/circle.rs" => Some(include_str!("../content/snippets/progress/circle.rs")),
         "progress/custom.rs" => Some(include_str!("../content/snippets/progress/custom.rs")),
+        "progress/circle_gradient.rs" => Some(include_str!(
+            "../content/snippets/progress/circle_gradient.rs"
+        )),
         "loading/basic.rs" => Some(include_str!("../content/snippets/loading/basic.rs")),
         "loading/fullscreen.rs" => Some(include_str!("../content/snippets/loading/fullscreen.rs")),
         "link/variants.rs" => Some(include_str!("../content/snippets/link/variants.rs")),
@@ -1030,6 +1091,11 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "steps/vertical.rs" => Some(include_str!("../content/snippets/steps/vertical.rs")),
         "timeline/basic.rs" => Some(include_str!("../content/snippets/timeline/basic.rs")),
         "timeline/custom.rs" => Some(include_str!("../content/snippets/timeline/custom.rs")),
+        "timer/result.rs" => Some(include_str!("../content/snippets/timer/result.rs")),
+        "timer/units.rs" => Some(include_str!("../content/snippets/timer/units.rs")),
+        "timer/count_down.rs" => Some(include_str!("../content/snippets/timer/count_down.rs")),
+        "timer/clock.rs" => Some(include_str!("../content/snippets/timer/clock.rs")),
+        "timer/count_up.rs" => Some(include_str!("../content/snippets/timer/count_up.rs")),
         "timeline/placement.rs" => Some(include_str!("../content/snippets/timeline/placement.rs")),
         "timeline/reverse.rs" => Some(include_str!("../content/snippets/timeline/reverse.rs")),
         "breadcrumb/basic.rs" => Some(include_str!("../content/snippets/breadcrumb/basic.rs")),
@@ -1651,6 +1717,10 @@ impl LiveDemoContent {
                 checkbox_groups.push(cx.new(|cx| city_checkbox_group(cx).small()));
                 checkbox_groups.push(cx.new(|cx| city_checkbox_group(cx).stretch(true)));
             }
+            "CheckboxCustom" => {
+                checkbox_groups.push(cx.new(|cx| styled_checkbox_cards(cx)));
+                checkbox_groups.push(cx.new(|cx| styled_checkbox_chips(cx)));
+            }
             "RadioBasic" => {
                 radios.push(cx.new(|cx| Radio::new(true, cx)));
                 radios.push(cx.new(|cx| Radio::new(false, cx)));
@@ -1671,6 +1741,10 @@ impl LiveDemoContent {
                 radio_groups.push(cx.new(city_radio_group));
                 radio_groups.push(cx.new(|cx| city_radio_group(cx).small()));
                 radio_groups.push(cx.new(|cx| city_radio_group(cx).stretch(true)));
+            }
+            "RadioCustom" => {
+                radio_groups.push(cx.new(|cx| styled_radio_cards(cx)));
+                radio_groups.push(cx.new(|cx| styled_radio_chips(cx)));
             }
             "SelectBasic" => {
                 selects.push(cx.new(|cx| {
@@ -2268,6 +2342,100 @@ impl Render for LiveDemoContent {
                     .into_any_element(),
                 Button::new("Pill").primary().pill().into_any_element(),
             ]),
+            "ButtonCustomColors" => demo_row(vec![
+                Button::new("Violet")
+                    .custom_color(rgb(0x7c3aed).into(), gpui::white())
+                    .pill()
+                    .into_any_element(),
+                Button::new("Outline")
+                    .colors(ButtonColors::outline(
+                        rgb(0x0891b2).into(),
+                        rgb(0x0f172a).into(),
+                        gpui::transparent_black(),
+                    ))
+                    .rounded_md()
+                    .into_any_element(),
+                Button::new("Disabled")
+                    .custom_color(rgb(0xdb2777).into(), gpui::white())
+                    .disabled(true)
+                    .into_any_element(),
+            ]),
+            "ButtonGradient" => demo_row(vec![
+                Button::new("Aurora")
+                    .gradient(rgb(0x6366f1).into(), rgb(0x06b6d4).into())
+                    .pill()
+                    .into_any_element(),
+                Button::new("Sunset")
+                    .gradient_with_angle(110.0, rgb(0xf97316).into(), rgb(0xec4899).into())
+                    .large()
+                    .rounded_lg()
+                    .into_any_element(),
+                Button::new("Loading")
+                    .gradient(rgb(0x22c55e).into(), rgb(0x14b8a6).into())
+                    .loading(true)
+                    .into_any_element(),
+                Button::new("Disabled")
+                    .gradient(rgb(0x8b5cf6).into(), rgb(0x3b82f6).into())
+                    .disabled(true)
+                    .into_any_element(),
+            ]),
+            "QrCodeBasic" => demo_row(vec![
+                QrCode::new("https://github.com/yhyzgn/aura")
+                    .show_text(true)
+                    .into_any_element(),
+                QrCode::new("aura://component/qr-code")
+                    .size(px(140.0))
+                    .quiet_zone(2)
+                    .into_any_element(),
+            ]),
+            "QrCodeStyle" => demo_row(vec![
+                QrCode::new("Aura primary QR")
+                    .size(px(160.0))
+                    .colors(rgb(0x2563eb).into(), rgb(0xeff6ff).into())
+                    .into_any_element(),
+                QrCode::new("Rounded finder")
+                    .size(px(170.0))
+                    .ec_level(QrEcLevel::High)
+                    .module_style(QrModuleStyle::Square)
+                    .finder_style(QrFinderStyle::Rounded)
+                    .colors(rgb(0x16a34a).into(), rgb(0xf0fdf4).into())
+                    .into_any_element(),
+                QrCode::new("Gradient diagonal QR")
+                    .size(px(180.0))
+                    .dot_modules()
+                    .circle_finders()
+                    .foreground_gradient(
+                        vec![
+                            rgb(0x7c3aed).into(),
+                            rgb(0x06b6d4).into(),
+                            rgb(0x22c55e).into(),
+                        ],
+                        QrGradientDirection::ToBottomRight,
+                    )
+                    .background(rgb(0xf8fafc).into())
+                    .into_any_element(),
+                QrCode::new("Gradient left QR")
+                    .size(px(180.0))
+                    .rounded_modules()
+                    .rounded_finders()
+                    .foreground_gradient(
+                        vec![rgb(0xf97316).into(), rgb(0xec4899).into()],
+                        QrGradientDirection::ToLeft,
+                    )
+                    .background(rgb(0xfffbeb).into())
+                    .into_any_element(),
+                QrCode::new("Rounded modules with custom logo")
+                    .size(px(180.0))
+                    .high_recovery()
+                    .rounded_modules()
+                    .circle_finders()
+                    .logo_text("二维")
+                    .logo_size_ratio(0.28)
+                    .logo_background(rgb(0x22c55e).into())
+                    .logo_color(gpui::white())
+                    .colors(rgb(0x0f172a).into(), rgb(0xf8fafc).into())
+                    .into_any_element(),
+            ]),
             "AlertTypes" => demo_stack(vec![
                 Alert::new("Info Alert")
                     .alert_type(AlertType::Info)
@@ -2372,7 +2540,7 @@ impl Render for LiveDemoContent {
                     .map(Entity::into_any_element)
                     .collect(),
             ),
-            "CheckboxGroup" | "CheckboxButtons" => demo_stack(
+            "CheckboxGroup" | "CheckboxButtons" | "CheckboxCustom" => demo_stack(
                 self.checkbox_groups
                     .iter()
                     .cloned()
@@ -2386,7 +2554,7 @@ impl Render for LiveDemoContent {
                     .map(Entity::into_any_element)
                     .collect(),
             ),
-            "RadioGroup" | "RadioButtons" => demo_stack(
+            "RadioGroup" | "RadioButtons" | "RadioCustom" => demo_stack(
                 self.radio_groups
                     .iter()
                     .cloned()
@@ -2733,6 +2901,23 @@ impl Render for LiveDemoContent {
                         .into_any_element(),
                 ])
             }
+            "ProgressCircleGradient" => {
+                let theme = _cx.global::<Config>().theme.clone();
+                demo_row(vec![
+                    Progress::new(100.0)
+                        .circle()
+                        .circle_size(px(148.0))
+                        .ring_width(px(12.0))
+                        .ring_color(theme.neutral.hover)
+                        .gradient(vec![theme.primary.base, theme.success.base])
+                        .complete_color(theme.success.base)
+                        .inner_color(theme.neutral.card)
+                        .center_text("Done")
+                        .text_size(px(22.0))
+                        .text_color(theme.success.base)
+                        .into_any_element(),
+                ])
+            }
             "LoadingBasic" => demo_row(vec![
                 Loading::new().into_any_element(),
                 Loading::new().text("Loading...").into_any_element(),
@@ -2989,6 +3174,203 @@ impl Render for LiveDemoContent {
                 .percentage_decimals(1)
                 .into_any_element(),
             ]),
+            "BarChartStandalone" => demo_row(vec![
+                aura_components::BarChart::new([aura_components::ChartSeries::new(
+                    "Active",
+                    [
+                        aura_components::ChartPoint::new("Mon", 18.0),
+                        aura_components::ChartPoint::new("Tue", 42.0),
+                        aura_components::ChartPoint::new("Wed", 33.0),
+                        aura_components::ChartPoint::new("Thu", 76.0),
+                        aura_components::ChartPoint::new("Fri", 61.0),
+                    ],
+                )])
+                .id("docs-bar-chart-standalone")
+                .standalone()
+                .bar_width(px(8.0))
+                .bar_gap(px(7.0))
+                .bar_radius(px(5.0))
+                .value_color_ranges([
+                    aura_components::BarChartValueColorRange::new(0.0, 35.0, gpui::rgb(0x86efac).into()),
+                    aura_components::BarChartValueColorRange::new(35.0, 70.0, gpui::rgb(0x22c55e).into()),
+                    aura_components::BarChartValueColorRange::new(70.0, 100.0, gpui::rgb(0x16a34a).into()),
+                ])
+                .into_any_element(),
+            ]),
+            "TagFlow" => demo_row(vec![
+                aura_components::TagFlow::new([
+                    aura_components::Tag::new("Design").round(true),
+                    aura_components::Tag::new("GPUI").success().round(true),
+                    aura_components::Tag::new("Animation").warning().round(true),
+                    aura_components::Tag::new("Native Rust").danger().round(true),
+                    aura_components::Tag::new("Charts").round(true),
+                ]).gap(px(10.0)).into_any_element(),
+            ]),
+            "SignalMeterMobile" => demo_row(vec![
+                aura_components::SignalMeter::new(3).height(px(36.0)).into_any_element(),
+            ]),
+            "SignalMeterWifi" => demo_row(vec![
+                aura_components::SignalMeter::new(2)
+                    .wifi()
+                    .active_color(gpui::rgb(0x3b82f6).into())
+                    .inactive_color(gpui::rgb(0xdbeafe).into())
+                    .bar_width(px(8.0))
+                    .gap(px(5.0))
+                    .height(px(44.0))
+                    .into_any_element(),
+            ]),
+            "SignalMeterLevels" => demo_row(vec![
+                aura_components::SignalMeter::new(5)
+                    .total_signals(6)
+                    .level_colors([
+                        gpui::rgb(0xef4444).into(),
+                        gpui::rgb(0xf97316).into(),
+                        gpui::rgb(0xf59e0b).into(),
+                        gpui::rgb(0x84cc16).into(),
+                        gpui::rgb(0x22c55e).into(),
+                        gpui::rgb(0x16a34a).into(),
+                    ])
+                    .height(px(44.0))
+                    .bar_width(px(7.0))
+                    .gap(px(5.0))
+                    .into_any_element(),
+            ]),
+            "SignalMeterThresholdColors" => demo_row(vec![
+                aura_components::SignalMeter::new(2)
+                    .total_signals(5)
+                    .threshold_colors([
+                        aura_components::SignalLevelColor::new(2, gpui::rgb(0xef4444).into()),
+                        aura_components::SignalLevelColor::new(3, gpui::rgb(0xeab308).into()),
+                        aura_components::SignalLevelColor::new(4, gpui::rgb(0xf97316).into()),
+                        aura_components::SignalLevelColor::new(5, gpui::rgb(0x22c55e).into()),
+                    ])
+                    .inactive_color(gpui::rgb(0xf1f5f9).into())
+                    .height(px(42.0))
+                    .bar_width(px(7.0))
+                    .gap(px(5.0))
+                    .into_any_element(),
+                aura_components::SignalMeter::new(4)
+                    .total_signals(5)
+                    .threshold_colors([
+                        aura_components::SignalLevelColor::new(2, gpui::rgb(0xef4444).into()),
+                        aura_components::SignalLevelColor::new(3, gpui::rgb(0xeab308).into()),
+                        aura_components::SignalLevelColor::new(4, gpui::rgb(0xf97316).into()),
+                        aura_components::SignalLevelColor::new(5, gpui::rgb(0x22c55e).into()),
+                    ])
+                    .inactive_color(gpui::rgb(0xf1f5f9).into())
+                    .height(px(42.0))
+                    .bar_width(px(7.0))
+                    .gap(px(5.0))
+                    .into_any_element(),
+            ]),
+            "HeatBarEvents" => demo_row(vec![
+                aura_components::HeatBar::new((0..48).map(|index| {
+                    let value = ((index * 7 + 3) % 11) as f64;
+                    let color = if value > 7.0 { gpui::rgb(0xef4444).into() } else if value > 3.0 { gpui::rgb(0xf59e0b).into() } else { gpui::rgb(0x93c5fd).into() };
+                    aura_components::HeatBarItem::new(format!("t{index}"), value, color)
+                }))
+                .legends([
+                    aura_components::HeatBarLegend::new("错误", 3, gpui::rgb(0xef4444).into()),
+                    aura_components::HeatBarLegend::new("警告", 24, gpui::rgb(0xf59e0b).into()),
+                ])
+                .max_value(10.0)
+                .x_labels(["00:00", "06:00", "12:00", "18:00", "24:00"])
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarBottom" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("Direct", 42.0, gpui::rgb(0x3b82f6).into()),
+                    aura_components::SegmentRatioItem::new("Proxy", 51.0, gpui::rgb(0x22c55e).into()),
+                    aura_components::SegmentRatioItem::new("Reject", 7.0, gpui::rgb(0xef4444).into()),
+                ])
+                .height(px(14.0))
+                .radius(px(8.0))
+                .segment_radius(px(3.0))
+                .legend_inset_x(px(8.0))
+                .percentage_decimals(0)
+                .split_legend(true)
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarTop" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("Direct", 42.0, gpui::rgb(0x3b82f6).into()),
+                    aura_components::SegmentRatioItem::new("Proxy", 51.0, gpui::rgb(0x22c55e).into()),
+                    aura_components::SegmentRatioItem::new("Reject", 7.0, gpui::rgb(0xef4444).into()),
+                ])
+                .legend_position(aura_components::SegmentLegendPosition::Top)
+                .height(px(16.0))
+                .radius(px(8.0))
+                .rounded_segments(px(4.0))
+                .legend_inset_x(px(10.0))
+                .percentage_decimals(1)
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarBoth" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("Direct", 42.0, gpui::rgb(0x3b82f6).into()),
+                    aura_components::SegmentRatioItem::new("Proxy", 51.0, gpui::rgb(0x22c55e).into()),
+                    aura_components::SegmentRatioItem::new("Reject", 7.0, gpui::rgb(0xef4444).into()),
+                ])
+                .legend_both()
+                .height(px(14.0))
+                .radius(px(7.0))
+                .segment_radius(px(3.0))
+                .legend_text_inset(px(8.0))
+                .percentage_decimals(1)
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarHidden" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("Direct", 42.0, gpui::rgb(0x3b82f6).into()),
+                    aura_components::SegmentRatioItem::new("Proxy", 51.0, gpui::rgb(0x22c55e).into()),
+                    aura_components::SegmentRatioItem::new("Reject", 7.0, gpui::rgb(0xef4444).into()),
+                ])
+                .hide_legend()
+                .height(px(18.0))
+                .radius(px(9.0))
+                .segment_radius(px(4.0))
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarPattern" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("Direct", 42.0, gpui::rgb(0x3b82f6).into())
+                        .label_pattern("{label}")
+                        .value_pattern("{value} req / {percent}"),
+                    aura_components::SegmentRatioItem::new("Proxy", 51.0, gpui::rgb(0x22c55e).into())
+                        .value_pattern("{percent}"),
+                    aura_components::SegmentRatioItem::new("Reject", 7.0, gpui::rgb(0xef4444).into())
+                        .value_pattern("{value}"),
+                ])
+                .legend_both()
+                .radius(px(7.0))
+                .segment_radius(px(3.0))
+                .legend_text_inset(px(10.0))
+                .percentage_decimals(1)
+                .into_any_element(),
+            ]),
+            "SegmentRatioBarCompact" => demo_row(vec![
+                aura_components::SegmentRatioBar::new([
+                    aura_components::SegmentRatioItem::new("API", 18.0, gpui::rgb(0x8b5cf6).into()),
+                    aura_components::SegmentRatioItem::new("Web", 33.0, gpui::rgb(0x06b6d4).into()),
+                    aura_components::SegmentRatioItem::new("Jobs", 29.0, gpui::rgb(0xf59e0b).into()),
+                    aura_components::SegmentRatioItem::new("Other", 20.0, gpui::rgb(0x64748b).into()),
+                ])
+                .height(px(8.0))
+                .radius(px(4.0))
+                .rounded_segments(px(2.0))
+                .legend_inset_x(px(14.0))
+                .percentage_decimals(2)
+                .into_any_element(),
+            ]),
+            "LabelBasic" => demo_row(vec![
+                aura_components::Label::new("Build passed").icon(IconName::CircleCheck).color(gpui::green()).into_any_element(),
+            ]),
+            "OperationBasic" => demo_row(vec![
+                aura_components::Operation::new(
+                    aura_components::Label::new("执行操作").icon(IconName::Play),
+                    aura_components::Button::new("Run").small(),
+                ).into_any_element(),
+            ]),
             "PieChart" => demo_row(vec![
                 aura_components::PieChart::new([
                     aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]),
@@ -3047,6 +3429,36 @@ impl Render for LiveDemoContent {
                 .value_label_placement(aura_components::ChartValueLabelPlacement::OutsideAligned)
                 .percentage_decimals(1)
                 .outside_label_threshold_degrees(120)
+                .into_any_element(),
+            ]),
+            "RingChartExternal" => demo_row(vec![
+                aura_components::RingChart::new([
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]).fill_color(gpui::blue()),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]).fill_color(gpui::green()),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]).fill_color(gpui::yellow()),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]).fill_color(gpui::red()),
+                ])
+                .id("docs-ring-chart-external-vertical")
+                .height(px(340.0))
+                .inner_ratio(0.58)
+                .external_vertical_legend()
+                .external_legend_right()
+                .external_legend_max_items(3)
+                .external_legend_content(aura_components::ChartValueLabelContent::Percentage)
+                .external_legend_percentage_decimals(2)
+                .into_any_element(),
+                aura_components::RingChart::new([
+                    aura_components::ChartSeries::new("Desktop", [aura_components::ChartPoint::new("Desktop", 62.0)]).fill_color(gpui::blue()),
+                    aura_components::ChartSeries::new("Mobile", [aura_components::ChartPoint::new("Mobile", 24.0)]).fill_color(gpui::green()),
+                    aura_components::ChartSeries::new("Tablet", [aura_components::ChartPoint::new("Tablet", 9.0)]).fill_color(gpui::yellow()),
+                    aura_components::ChartSeries::new("Other", [aura_components::ChartPoint::new("Other", 5.0)]).fill_color(gpui::red()),
+                ])
+                .id("docs-ring-chart-external-horizontal")
+                .height(px(340.0))
+                .inner_ratio(0.7)
+                .external_horizontal_legend()
+                .external_legend_content(aura_components::ChartValueLabelContent::ValueOverTotalAndPercentage)
+                .external_legend_percentage_decimals(1)
                 .into_any_element(),
             ]),
 
@@ -3135,6 +3547,55 @@ impl Render for LiveDemoContent {
                 .area_fill(true)
                 .value_label_content(aura_components::ChartValueLabelContent::Percentage)
                 .percentage_decimals(1)
+                .into_any_element(),
+            ]),
+            "LineChartLineStyles" => demo_row(vec![
+                aura_components::LineChart::new([
+                    aura_components::ChartSeries::new(
+                        "Solid Smooth",
+                        [
+                            aura_components::ChartPoint::new("Mon", 32.0),
+                            aura_components::ChartPoint::new("Tue", 44.0),
+                            aura_components::ChartPoint::new("Wed", 38.0),
+                            aura_components::ChartPoint::new("Thu", 70.0),
+                        ],
+                    )
+                    .stroke_color(gpui::blue())
+                    .stroke_width(px(3.2))
+                    .line_style(aura_components::ChartLineStyle::Solid)
+                    .smooth(true),
+                    aura_components::ChartSeries::new(
+                        "Dashed",
+                        [
+                            aura_components::ChartPoint::new("Mon", 22.0),
+                            aura_components::ChartPoint::new("Tue", 35.0),
+                            aura_components::ChartPoint::new("Wed", 52.0),
+                            aura_components::ChartPoint::new("Thu", 58.0),
+                        ],
+                    )
+                    .stroke_color(gpui::green())
+                    .stroke_width(px(2.6))
+                    .dashed()
+                    .smooth(false),
+                    aura_components::ChartSeries::new(
+                        "Dotted",
+                        [
+                            aura_components::ChartPoint::new("Mon", 60.0),
+                            aura_components::ChartPoint::new("Tue", 54.0),
+                            aura_components::ChartPoint::new("Wed", 49.0),
+                            aura_components::ChartPoint::new("Thu", 45.0),
+                        ],
+                    )
+                    .stroke_color(gpui::red())
+                    .stroke_width(px(2.8))
+                    .dotted()
+                    .smooth(true),
+                ])
+                .id("docs-line-chart-line-styles")
+                .height(px(320.0))
+                .y_domain(0.0, 100.0)
+                .area_fill(false)
+                .point_markers(false)
                 .into_any_element(),
             ]),
             "LineChartEmpty" => demo_row(vec![
@@ -5344,6 +5805,66 @@ fn city_radio_group(cx: &mut Context<RadioGroup>) -> RadioGroup {
     .button()
 }
 
+fn styled_checkbox_cards(cx: &mut Context<CheckboxGroup>) -> CheckboxGroup {
+    CheckboxGroup::new(vec!["CPU", "Memory", "Network"], vec![0, 2], cx)
+        .horizontal()
+        .option_style(
+            CheckboxOptionStyle::new()
+                .bg(rgb(0xf8fafc).into())
+                .selected_bg(rgb(0xdbeafe).into())
+                .selected_text_color(rgb(0x1d4ed8).into())
+                .selected_border_color(rgb(0x3b82f6).into())
+                .hover_bg(rgb(0xeff6ff).into())
+                .radius(px(12.0))
+                .padding(px(14.0), px(10.0)),
+        )
+}
+
+fn styled_checkbox_chips(cx: &mut Context<CheckboxGroup>) -> CheckboxGroup {
+    CheckboxGroup::new(vec!["Fast", "Stable", "Secure"], vec![1], cx)
+        .horizontal()
+        .option_style(
+            CheckboxOptionStyle::new()
+                .bg(gpui::transparent_black())
+                .selected_bg(rgb(0x111827).into())
+                .selected_text_color(gpui::white())
+                .selected_border_color(rgb(0x111827).into())
+                .radius(px(999.0))
+                .padding(px(16.0), px(8.0))
+                .show_indicator(false),
+        )
+}
+
+fn styled_radio_cards(cx: &mut Context<RadioGroup>) -> RadioGroup {
+    RadioGroup::new(vec!["Daily", "Weekly", "Monthly"], 1, cx)
+        .horizontal()
+        .option_style(
+            RadioOptionStyle::new()
+                .bg(rgb(0xf8fafc).into())
+                .selected_bg(rgb(0xecfeff).into())
+                .selected_text_color(rgb(0x0e7490).into())
+                .selected_border_color(rgb(0x06b6d4).into())
+                .hover_bg(rgb(0xf0fdfa).into())
+                .radius(px(12.0))
+                .padding(px(14.0), px(10.0)),
+        )
+}
+
+fn styled_radio_chips(cx: &mut Context<RadioGroup>) -> RadioGroup {
+    RadioGroup::new(vec!["Low", "Medium", "High"], 2, cx)
+        .horizontal()
+        .option_style(
+            RadioOptionStyle::new()
+                .bg(gpui::transparent_black())
+                .selected_bg(rgb(0x7c3aed).into())
+                .selected_text_color(gpui::white())
+                .selected_border_color(rgb(0x7c3aed).into())
+                .radius(px(999.0))
+                .padding(px(16.0), px(8.0))
+                .show_indicator(false),
+        )
+}
+
 fn demo_stack(children: Vec<AnyElement>) -> AnyElement {
     Space::new()
         .vertical()
@@ -6357,12 +6878,18 @@ mod tests {
                     "checkbox/basic.rs",
                     "checkbox/group.rs",
                     "checkbox/buttons.rs",
+                    "checkbox/custom.rs",
                 ][..],
             ),
             (
                 include_str!("../content/pages/radio.md"),
                 "RadioBasic",
-                &["radio/basic.rs", "radio/group.rs", "radio/buttons.rs"][..],
+                &[
+                    "radio/basic.rs",
+                    "radio/group.rs",
+                    "radio/buttons.rs",
+                    "radio/custom.rs",
+                ][..],
             ),
             (
                 include_str!("../content/pages/select.md"),

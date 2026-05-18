@@ -58,6 +58,90 @@ impl RadioGroupSize {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct RadioOptionStyle {
+    pub bg: Option<Hsla>,
+    pub selected_bg: Option<Hsla>,
+    pub hover_bg: Option<Hsla>,
+    pub text_color: Option<Hsla>,
+    pub selected_text_color: Option<Hsla>,
+    pub border_color: Option<Hsla>,
+    pub selected_border_color: Option<Hsla>,
+    pub radius: Option<Pixels>,
+    pub padding_x: Option<Pixels>,
+    pub padding_y: Option<Pixels>,
+    pub gap: Option<Pixels>,
+    pub show_indicator: Option<bool>,
+    pub show_selected_icon: Option<bool>,
+}
+
+impl RadioOptionStyle {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn bg(mut self, color: Hsla) -> Self {
+        self.bg = Some(color);
+        self
+    }
+
+    pub fn selected_bg(mut self, color: Hsla) -> Self {
+        self.selected_bg = Some(color);
+        self
+    }
+
+    pub fn hover_bg(mut self, color: Hsla) -> Self {
+        self.hover_bg = Some(color);
+        self
+    }
+
+    pub fn text_color(mut self, color: Hsla) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
+    pub fn selected_text_color(mut self, color: Hsla) -> Self {
+        self.selected_text_color = Some(color);
+        self
+    }
+
+    pub fn border_color(mut self, color: Hsla) -> Self {
+        self.border_color = Some(color);
+        self
+    }
+
+    pub fn selected_border_color(mut self, color: Hsla) -> Self {
+        self.selected_border_color = Some(color);
+        self
+    }
+
+    pub fn radius(mut self, radius: impl Into<Pixels>) -> Self {
+        self.radius = Some(radius.into());
+        self
+    }
+
+    pub fn padding(mut self, x: impl Into<Pixels>, y: impl Into<Pixels>) -> Self {
+        self.padding_x = Some(x.into());
+        self.padding_y = Some(y.into());
+        self
+    }
+
+    pub fn gap(mut self, gap: impl Into<Pixels>) -> Self {
+        self.gap = Some(gap.into());
+        self
+    }
+
+    pub fn show_indicator(mut self, show: bool) -> Self {
+        self.show_indicator = Some(show);
+        self
+    }
+
+    pub fn show_selected_icon(mut self, show: bool) -> Self {
+        self.show_selected_icon = Some(show);
+        self
+    }
+}
+
 pub struct RadioGroup {
     selected: usize,
     disabled: bool,
@@ -65,6 +149,7 @@ pub struct RadioGroup {
     layout: RadioGroupLayout,
     size: RadioGroupSize,
     stretch: bool,
+    option_style: Option<RadioOptionStyle>,
     focus_handle: FocusHandle,
     on_change: Option<Box<dyn Fn(usize, &mut Window, &mut App) + 'static>>,
 }
@@ -82,6 +167,7 @@ impl RadioGroup {
             layout: RadioGroupLayout::Vertical,
             size: RadioGroupSize::Default,
             stretch: false,
+            option_style: None,
             focus_handle: cx.focus_handle(),
             on_change: None,
         }
@@ -136,6 +222,20 @@ impl RadioGroup {
         self.stretch(block)
     }
 
+    pub fn option_style(mut self, style: RadioOptionStyle) -> Self {
+        self.option_style = Some(style);
+        self
+    }
+
+    pub fn card_options(mut self) -> Self {
+        self.option_style = Some(
+            RadioOptionStyle::new()
+                .radius(px(10.0))
+                .padding(px(12.0), px(8.0)),
+        );
+        self
+    }
+
     pub fn is_stretched(&self) -> bool {
         self.stretch
     }
@@ -184,6 +284,121 @@ impl RadioGroup {
         }
     }
 
+    fn render_radio_indicator(
+        &self,
+        checked: bool,
+        border: Hsla,
+        dot_color: Hsla,
+        show_selected_icon: bool,
+    ) -> impl IntoElement {
+        let mut circle = gpui::div()
+            .flex_none()
+            .w(px(16.0))
+            .h(px(16.0))
+            .rounded(px(8.0))
+            .border_1()
+            .border_color(border)
+            .flex()
+            .items_center()
+            .justify_center();
+
+        if checked && show_selected_icon {
+            circle = circle.child(
+                gpui::div()
+                    .w(px(8.0))
+                    .h(px(8.0))
+                    .rounded(px(4.0))
+                    .bg(dot_color),
+            );
+        }
+
+        circle
+    }
+
+    fn render_styled_option(
+        &self,
+        idx: usize,
+        label: SharedString,
+        checked: bool,
+        focused: bool,
+        style: RadioOptionStyle,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let theme = cx.global::<Config>().theme.clone();
+        let disabled = self.disabled;
+        let selected_bg = style
+            .selected_bg
+            .unwrap_or(theme.primary.base.opacity(0.12));
+        let bg = if checked {
+            selected_bg
+        } else {
+            style.bg.unwrap_or(theme.neutral.card)
+        };
+        let hover_bg = style.hover_bg.unwrap_or(theme.neutral.hover);
+        let border = if checked || (focused && checked) {
+            style.selected_border_color.unwrap_or(theme.primary.base)
+        } else {
+            style.border_color.unwrap_or(theme.neutral.border)
+        };
+        let text_color = if disabled {
+            theme.neutral.text_disabled
+        } else if checked {
+            style.selected_text_color.unwrap_or(theme.primary.base)
+        } else {
+            style.text_color.unwrap_or(theme.neutral.text_1)
+        };
+        let show_indicator = style.show_indicator.unwrap_or(true);
+        let show_selected_icon = style.show_selected_icon.unwrap_or(true);
+
+        let mut item = gpui::div()
+            .flex()
+            .flex_row()
+            .items_center()
+            .gap(style.gap.unwrap_or(px(8.0)))
+            .px(style.padding_x.unwrap_or(px(12.0)))
+            .py(style.padding_y.unwrap_or(px(8.0)))
+            .rounded(style.radius.unwrap_or(px(theme.radius.md)))
+            .border_1()
+            .border_color(border)
+            .bg(bg)
+            .text_size(self.size.text_size(&theme))
+            .text_color(text_color);
+
+        if !disabled {
+            item = item.cursor_pointer().hover(move |s| {
+                if checked {
+                    s.cursor_pointer()
+                } else {
+                    s.cursor_pointer().bg(hover_bg)
+                }
+            });
+            item = item.on_mouse_up(
+                MouseButton::Left,
+                cx.listener(
+                    move |this: &mut Self,
+                          _: &MouseUpEvent,
+                          window: &mut Window,
+                          cx: &mut Context<Self>| {
+                        this.select(idx, window, cx);
+                    },
+                ),
+            );
+        } else {
+            item = item.cursor_not_allowed();
+        }
+
+        if show_indicator {
+            item = item.child(self.render_radio_indicator(
+                checked,
+                border,
+                theme.primary.base,
+                show_selected_icon,
+            ));
+        }
+
+        item.child(label)
+    }
+
     fn render_button_group(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.global::<Config>().theme.clone();
         let radius = px(theme.radius.md);
@@ -211,39 +426,56 @@ impl RadioGroup {
             let checked = idx == self.selected;
             let is_first = idx == 0;
             let label = label.clone();
+            let style = self.option_style.clone().unwrap_or_default();
             let bg = if checked {
-                theme.primary.base
+                style.selected_bg.unwrap_or(theme.primary.base)
             } else {
-                theme.neutral.card
+                style.bg.unwrap_or(theme.neutral.card)
             };
             let text_color = if self.disabled {
                 theme.neutral.text_disabled
             } else if checked {
-                rgba(255, 255, 255, 1.0)
+                style
+                    .selected_text_color
+                    .unwrap_or_else(|| rgba(255, 255, 255, 1.0))
             } else {
-                theme.neutral.text_1
+                style.text_color.unwrap_or(theme.neutral.text_1)
             };
             let mut item = gpui::div()
                 .h(height)
-                .px(padding_x)
+                .px(style.padding_x.unwrap_or(padding_x))
                 .flex()
                 .items_center()
                 .justify_center()
                 .when(self.stretch, |s| s.flex_1())
+                .gap(style.gap.unwrap_or(px(8.0)))
                 .bg(bg)
                 .text_size(text_size)
-                .text_color(text_color)
-                .child(label);
+                .text_color(text_color);
+
+            if checked && style.show_selected_icon.unwrap_or(false) {
+                item = item.child(
+                    gpui::div()
+                        .w(px(7.0))
+                        .h(px(7.0))
+                        .rounded(px(4.0))
+                        .bg(text_color),
+                );
+            }
+            item = item.child(label);
 
             if !is_first {
-                item = item.border_l_1().border_color(theme.neutral.border);
+                item = item
+                    .border_l_1()
+                    .border_color(style.border_color.unwrap_or(theme.neutral.border));
             }
             if !self.disabled {
+                let hover_bg = style.hover_bg.unwrap_or(theme.neutral.hover);
                 item = item.cursor_pointer().hover(move |s| {
                     if checked {
                         s.cursor_pointer()
                     } else {
-                        s.cursor_pointer().bg(theme.neutral.hover)
+                        s.cursor_pointer().bg(hover_bg)
                     }
                 });
                 item = item.on_mouse_up(
@@ -279,8 +511,9 @@ impl Render for RadioGroup {
             return self.render_button_group(cx).into_any_element();
         }
 
-        let theme = &cx.global::<Config>().theme;
+        let theme = cx.global::<Config>().theme.clone();
         let focused = self.focus_handle.is_focused(_window);
+        let option_style = self.option_style.clone();
         let sz = 16.0;
         let inner_sz = 8.0;
 
@@ -307,6 +540,18 @@ impl Render for RadioGroup {
 
         for (idx, label) in self.options.iter().enumerate() {
             let checked = idx == self.selected;
+            if let Some(style) = option_style.clone() {
+                col = col.child(self.render_styled_option(
+                    idx,
+                    label.clone(),
+                    checked,
+                    focused,
+                    style,
+                    cx,
+                ));
+                continue;
+            }
+
             let (border_color, dot_color) = if self.disabled {
                 (theme.neutral.border, theme.neutral.text_disabled)
             } else if checked {
@@ -375,5 +620,24 @@ impl Render for RadioGroup {
         }
 
         col.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn radio_option_style_supports_layout_and_selected_style() {
+        let style = RadioOptionStyle::new()
+            .selected_bg(gpui::blue())
+            .selected_text_color(gpui::white())
+            .padding(px(14.0), px(10.0))
+            .radius(px(12.0))
+            .show_indicator(false);
+
+        assert_eq!(style.selected_bg, Some(gpui::blue()));
+        assert_eq!(style.padding_x, Some(px(14.0)));
+        assert_eq!(style.show_indicator, Some(false));
     }
 }

@@ -67,3 +67,26 @@
 
 ```rust src="button/rounded.rs"
 ```
+
+
+## 自定义颜色
+
+### 效果
+
+::AuraDemo{component="ButtonCustomColors"}::
+
+### 代码
+
+```rust src="button/custom_colors.rs"
+```
+
+## 渐变按钮
+
+### 效果
+
+::AuraDemo{component="ButtonGradient"}::
+
+### 代码
+
+```rust src="button/gradient.rs"
+```

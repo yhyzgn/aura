@@ -10,6 +10,8 @@ aura-theme = { path = "../aura-theme" }
 aura-icons = { path = "../aura-icons" }
 aura-icons-lucide = { path = "../aura-icons-lucide" }
 image = "0.25"
+qrcode = "0.14"
+rqrr = "0.8"
 lyon_tessellation = "1.0"
 ureq = "2"
 syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }

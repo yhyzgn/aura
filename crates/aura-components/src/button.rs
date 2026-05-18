@@ -4,8 +4,8 @@ use aura_icons::Icon;
 use aura_icons_lucide::IconName;
 use aura_theme::{ButtonSize, ButtonVariant, ButtonVariantColors, Theme};
 use gpui::{
-    AbsoluteLength, AnyElement, App, Component, ElementId, Hsla, IntoElement, RenderOnce, Rgba,
-    SharedString, Window, prelude::*, px,
+    AbsoluteLength, AnyElement, App, Background, Component, ElementId, Hsla, IntoElement,
+    RenderOnce, Rgba, SharedString, Window, linear_color_stop, linear_gradient, prelude::*, px,
 };
 
 fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
@@ -16,6 +16,128 @@ fn rgba(r: u8, g: u8, b: u8, a: f32) -> Hsla {
         a,
     }
     .into()
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ButtonColors {
+    pub bg: Hsla,
+    pub hover_bg: Hsla,
+    pub active_bg: Hsla,
+    pub text: Hsla,
+    pub border: Hsla,
+    pub text_hover: Hsla,
+    pub border_hover: Hsla,
+    pub disabled_bg: Hsla,
+    pub disabled_text: Hsla,
+    pub disabled_border: Hsla,
+}
+
+impl ButtonColors {
+    pub fn filled(bg: Hsla, text: Hsla) -> Self {
+        Self {
+            bg,
+            hover_bg: derive_hover_bg(bg),
+            active_bg: derive_active_bg(bg),
+            text,
+            border: bg,
+            text_hover: text,
+            border_hover: derive_hover_bg(bg),
+            disabled_bg: derive_disabled_bg(bg),
+            disabled_text: text.opacity(0.58),
+            disabled_border: derive_disabled_bg(bg),
+        }
+    }
+
+    pub fn outline(accent: Hsla, text: Hsla, bg: Hsla) -> Self {
+        Self {
+            bg,
+            hover_bg: accent.opacity(0.10),
+            active_bg: accent.opacity(0.18),
+            text,
+            border: accent,
+            text_hover: accent,
+            border_hover: derive_hover_bg(accent),
+            disabled_bg: bg.opacity(0.35),
+            disabled_text: text.opacity(0.45),
+            disabled_border: accent.opacity(0.30),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ButtonGradient {
+    pub from: Hsla,
+    pub to: Hsla,
+    pub angle: f32,
+    pub hover_from: Hsla,
+    pub hover_to: Hsla,
+    pub active_from: Hsla,
+    pub active_to: Hsla,
+    pub disabled_from: Hsla,
+    pub disabled_to: Hsla,
+}
+
+impl ButtonGradient {
+    pub fn new(from: Hsla, to: Hsla) -> Self {
+        Self::with_angle(from, to, 90.0)
+    }
+
+    pub fn with_angle(from: Hsla, to: Hsla, angle: f32) -> Self {
+        Self {
+            from,
+            to,
+            angle,
+            hover_from: derive_hover_bg(from),
+            hover_to: derive_hover_bg(to),
+            active_from: derive_active_bg(from),
+            active_to: derive_active_bg(to),
+            disabled_from: derive_disabled_bg(from),
+            disabled_to: derive_disabled_bg(to),
+        }
+    }
+
+    fn background(&self) -> Background {
+        gradient_background(self.angle, self.from, self.to)
+    }
+
+    fn hover_background(&self) -> Background {
+        gradient_background(self.angle, self.hover_from, self.hover_to)
+    }
+
+    fn active_background(&self) -> Background {
+        gradient_background(self.angle, self.active_from, self.active_to)
+    }
+
+    fn disabled_background(&self) -> Background {
+        gradient_background(self.angle, self.disabled_from, self.disabled_to)
+    }
+}
+
+fn derive_hover_bg(color: Hsla) -> Hsla {
+    color.blend(gpui::white().opacity(0.14))
+}
+
+fn derive_active_bg(color: Hsla) -> Hsla {
+    color.blend(gpui::black().opacity(0.18))
+}
+
+fn derive_disabled_bg(color: Hsla) -> Hsla {
+    // Keep the original hue so disabled custom buttons still look related to
+    // the caller-provided color. Only soften saturation/contrast and opacity.
+    Hsla {
+        h: color.h,
+        s: (color.s * 0.45).clamp(0.0, 1.0),
+        l: (color.l + (1.0 - color.l) * 0.38).clamp(0.0, 1.0),
+        a: (color.a * 0.62).clamp(0.0, 1.0),
+    }
+}
+
+fn gradient_background(angle: f32, from: Hsla, to: Hsla) -> Background {
+    linear_gradient(
+        angle,
+        linear_color_stop(from, 0.0),
+        linear_color_stop(to, 1.0),
+    )
 }
 
 pub enum ButtonIcon {
@@ -58,6 +180,8 @@ pub struct Button {
     icon_top: Option<IconName>,
     icon_bottom: Option<IconName>,
     icon_only: Option<IconName>,
+    custom_colors: Option<ButtonColors>,
+    gradient: Option<ButtonGradient>,
     on_click: Option<Box<dyn Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static>>,
 }
 
@@ -79,6 +203,8 @@ impl Button {
             icon_top: None,
             icon_bottom: None,
             icon_only: None,
+            custom_colors: None,
+            gradient: None,
             on_click: None,
         }
     }
@@ -190,6 +316,34 @@ impl Button {
         self.icon_only = Some(icon);
         self
     }
+    pub fn colors(mut self, colors: ButtonColors) -> Self {
+        self.custom_colors = Some(colors);
+        self.gradient = None;
+        self
+    }
+
+    pub fn custom_colors(self, colors: ButtonColors) -> Self {
+        self.colors(colors)
+    }
+
+    pub fn custom_color(mut self, bg: Hsla, text: Hsla) -> Self {
+        self.custom_colors = Some(ButtonColors::filled(bg, text));
+        self.gradient = None;
+        self
+    }
+
+    pub fn gradient(mut self, from: Hsla, to: Hsla) -> Self {
+        self.gradient = Some(ButtonGradient::new(from, to));
+        self.custom_colors = None;
+        self
+    }
+
+    pub fn gradient_with_angle(mut self, angle: f32, from: Hsla, to: Hsla) -> Self {
+        self.gradient = Some(ButtonGradient::with_angle(from, to, angle));
+        self.custom_colors = None;
+        self
+    }
+
     pub fn on_click(
         mut self,
         cb: impl Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static,
@@ -198,7 +352,52 @@ impl Button {
         self
     }
 
-    fn colors(&self, theme: &Theme) -> ButtonVariantColors {
+    fn resolved_colors(&self, theme: &Theme) -> ButtonVariantColors {
+        if let Some(colors) = self.custom_colors {
+            if self.disabled {
+                return ButtonVariantColors {
+                    bg: colors.disabled_bg,
+                    hover_bg: colors.disabled_bg,
+                    active_bg: colors.disabled_bg,
+                    text: colors.disabled_text,
+                    border: colors.disabled_border,
+                    text_hover: colors.disabled_text,
+                    border_hover: colors.disabled_border,
+                };
+            }
+
+            return ButtonVariantColors {
+                bg: colors.bg,
+                hover_bg: colors.hover_bg,
+                active_bg: colors.active_bg,
+                text: colors.text,
+                border: colors.border,
+                text_hover: colors.text_hover,
+                border_hover: colors.border_hover,
+            };
+        }
+
+        if self.gradient.is_some() {
+            let text = gpui::white();
+            return ButtonVariantColors {
+                bg: rgba(0, 0, 0, 0.0),
+                hover_bg: rgba(0, 0, 0, 0.0),
+                active_bg: rgba(0, 0, 0, 0.0),
+                text: if self.disabled {
+                    text.opacity(0.58)
+                } else {
+                    text
+                },
+                border: rgba(0, 0, 0, 0.0),
+                text_hover: if self.disabled {
+                    text.opacity(0.58)
+                } else {
+                    text
+                },
+                border_hover: rgba(0, 0, 0, 0.0),
+            };
+        }
+
         if self.disabled {
             ButtonVariantColors {
                 bg: rgba(0, 0, 0, 0.0),
@@ -228,7 +427,7 @@ impl Button {
         window: &mut Window,
         cx: &mut App,
     ) -> impl IntoElement {
-        let c = self.colors(&theme);
+        let c = self.resolved_colors(&theme);
         let h = self.size.height();
         let px_h = self.size.padding_x();
         let fs = match self.size {
@@ -263,6 +462,7 @@ impl Button {
         let label = self.label.clone();
         let hover_group = SharedString::from(format!("{}:hover", id));
 
+        let gradient = self.gradient.clone();
         let mut div = gpui::div()
             .flex()
             .justify_center()
@@ -270,9 +470,18 @@ impl Button {
             .gap_1()
             .h(px(if vertical { h + icon_sz + 6.0 } else { h }))
             .rounded(r)
-            .bg(c.bg)
             .text_color(c.text)
             .text_size(px(fs));
+
+        div = if let Some(gradient) = gradient.as_ref() {
+            if self.disabled {
+                div.bg(gradient.disabled_background())
+            } else {
+                div.bg(gradient.background())
+            }
+        } else {
+            div.bg(c.bg)
+        };
 
         if vertical {
             div = div.flex_col();
@@ -419,17 +628,29 @@ impl Button {
         }
 
         let click_handler = self.on_click;
+        let hover_gradient = gradient.clone();
+        let active_gradient = gradient.clone();
 
         div.id(id)
             .group(hover_group)
             .hover(move |style| {
-                let mut s = style.bg(c.hover_bg).text_color(c.text_hover);
+                let hover_bg: gpui::Fill = hover_gradient
+                    .as_ref()
+                    .map(ButtonGradient::hover_background)
+                    .map_or_else(|| c.hover_bg.into(), Into::into);
+                let mut s = style.bg(hover_bg).text_color(c.text_hover);
                 if !c.border_hover.is_transparent() {
                     s = s.border_color(c.border_hover);
                 }
                 s
             })
-            .active(move |style| style.bg(c.active_bg))
+            .active(move |style| {
+                let active_bg: gpui::Fill = active_gradient
+                    .as_ref()
+                    .map(ButtonGradient::active_background)
+                    .map_or_else(|| c.active_bg.into(), Into::into);
+                style.bg(active_bg)
+            })
             .on_click(move |event, window, cx| {
                 if let Some(ref handler) = click_handler {
                     handler(event, window, cx);
@@ -473,5 +694,27 @@ mod tests {
 
         assert!(source.contains("spin_icon("));
         assert!(source.contains("loading-spinner-motion"));
+    }
+
+    #[test]
+    fn custom_color_derives_interaction_states() {
+        let bg = rgba(99, 102, 241, 1.0);
+        let colors = ButtonColors::filled(bg, gpui::white());
+
+        assert_ne!(colors.bg, colors.hover_bg);
+        assert_ne!(colors.bg, colors.active_bg);
+        assert_eq!(colors.disabled_bg.h, colors.bg.h);
+        assert!(colors.disabled_bg.s < colors.bg.s);
+        assert!(colors.disabled_bg.a < colors.bg.a);
+    }
+
+    #[test]
+    fn gradient_builder_derives_state_gradients() {
+        let button = Button::new("gradient").gradient(gpui::blue(), gpui::green());
+        let gradient = button.gradient.unwrap();
+
+        assert_eq!(gradient.angle, 90.0);
+        assert_ne!(gradient.from, gradient.hover_from);
+        assert_ne!(gradient.to, gradient.active_to);
     }
 }

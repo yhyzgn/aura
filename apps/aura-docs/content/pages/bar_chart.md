@@ -45,3 +45,14 @@
 
 ```rust src="bar_chart/custom.rs"
 ```
+
+## 独立柱状图 / 迷你指标
+
+### 效果
+
+::AuraDemo{component="BarChartStandalone"}::
+
+### 代码
+
+```rust src="bar_chart/standalone.rs"
+```

@@ -1,8 +1,8 @@
 use aura_components::{
-    Checkbox, CheckboxGroup, Input, InputNumber, Radio, RadioGroup, Rate, Select, Slider, Space,
-    Switch, Text, Textarea,
+    Checkbox, CheckboxGroup, CheckboxOptionStyle, Input, InputNumber, Radio, RadioGroup,
+    RadioOptionStyle, Rate, Select, Slider, Space, Switch, Text, Textarea,
 };
-use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*};
+use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*, px, rgb};
 
 fn section(title: &'static str, content: impl IntoElement) -> impl IntoElement {
     Space::new()
@@ -115,6 +115,8 @@ struct CheckboxUsage {
     buttons_default: Entity<CheckboxGroup>,
     buttons_small: Entity<CheckboxGroup>,
     buttons_stretch: Entity<CheckboxGroup>,
+    styled_cards: Entity<CheckboxGroup>,
+    styled_chips: Entity<CheckboxGroup>,
 }
 
 impl CheckboxUsage {
@@ -132,6 +134,34 @@ impl CheckboxUsage {
             buttons_default: cx.new(city_checkbox_group),
             buttons_small: cx.new(|cx| city_checkbox_group(cx).small()),
             buttons_stretch: cx.new(|cx| city_checkbox_group(cx).stretch(true)),
+            styled_cards: cx.new(|cx| {
+                CheckboxGroup::new(vec!["CPU", "Memory", "Network"], vec![0, 2], cx)
+                    .horizontal()
+                    .option_style(
+                        CheckboxOptionStyle::new()
+                            .bg(rgb(0xf8fafc).into())
+                            .selected_bg(rgb(0xdbeafe).into())
+                            .selected_text_color(rgb(0x1d4ed8).into())
+                            .selected_border_color(rgb(0x3b82f6).into())
+                            .hover_bg(rgb(0xeff6ff).into())
+                            .radius(px(12.0))
+                            .padding(px(14.0), px(10.0)),
+                    )
+            }),
+            styled_chips: cx.new(|cx| {
+                CheckboxGroup::new(vec!["Fast", "Stable", "Secure"], vec![1], cx)
+                    .horizontal()
+                    .option_style(
+                        CheckboxOptionStyle::new()
+                            .bg(gpui::transparent_black())
+                            .selected_bg(rgb(0x111827).into())
+                            .selected_text_color(gpui::white())
+                            .selected_border_color(rgb(0x111827).into())
+                            .radius(px(999.0))
+                            .padding(px(16.0), px(8.0))
+                            .show_indicator(false),
+                    )
+            }),
         }
     }
 }
@@ -161,6 +191,13 @@ impl Render for CheckboxUsage {
                     self.buttons_stretch.clone().into_any_element(),
                 ]),
             ))
+            .child(section(
+                "Custom option style",
+                control_stack(vec![
+                    self.styled_cards.clone().into_any_element(),
+                    self.styled_chips.clone().into_any_element(),
+                ]),
+            ))
     }
 }
 
@@ -180,6 +217,8 @@ struct RadioUsage {
     buttons_small: Entity<RadioGroup>,
     buttons_stretch: Entity<RadioGroup>,
     group_disabled: Entity<RadioGroup>,
+    styled_cards: Entity<RadioGroup>,
+    styled_chips: Entity<RadioGroup>,
 }
 
 impl RadioUsage {
@@ -197,6 +236,34 @@ impl RadioUsage {
             buttons_stretch: cx.new(|cx| city_radio_group(cx).stretch(true)),
             group_disabled: cx
                 .new(|cx| RadioGroup::new(vec!["Disabled A", "Disabled B"], 0, cx).disabled(true)),
+            styled_cards: cx.new(|cx| {
+                RadioGroup::new(vec!["Daily", "Weekly", "Monthly"], 1, cx)
+                    .horizontal()
+                    .option_style(
+                        RadioOptionStyle::new()
+                            .bg(rgb(0xf8fafc).into())
+                            .selected_bg(rgb(0xecfeff).into())
+                            .selected_text_color(rgb(0x0e7490).into())
+                            .selected_border_color(rgb(0x06b6d4).into())
+                            .hover_bg(rgb(0xf0fdfa).into())
+                            .radius(px(12.0))
+                            .padding(px(14.0), px(10.0)),
+                    )
+            }),
+            styled_chips: cx.new(|cx| {
+                RadioGroup::new(vec!["Low", "Medium", "High"], 2, cx)
+                    .horizontal()
+                    .option_style(
+                        RadioOptionStyle::new()
+                            .bg(gpui::transparent_black())
+                            .selected_bg(rgb(0x7c3aed).into())
+                            .selected_text_color(gpui::white())
+                            .selected_border_color(rgb(0x7c3aed).into())
+                            .radius(px(999.0))
+                            .padding(px(16.0), px(8.0))
+                            .show_indicator(false),
+                    )
+            }),
         }
     }
 }
@@ -225,6 +292,13 @@ impl Render for RadioUsage {
                     self.buttons_small.clone().into_any_element(),
                     self.buttons_stretch.clone().into_any_element(),
                     self.group_disabled.clone().into_any_element(),
+                ]),
+            ))
+            .child(section(
+                "Custom option style",
+                control_stack(vec![
+                    self.styled_cards.clone().into_any_element(),
+                    self.styled_chips.clone().into_any_element(),
                 ]),
             ))
     }

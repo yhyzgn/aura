@@ -47,6 +47,40 @@ pub struct RingChart {
     show_value_labels: bool,
     label_options: PieChartLabelOptions,
     inner_ratio: f32,
+    external_legend: Option<RingExternalLegendOptions>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RingExternalLegendLayout {
+    Vertical,
+    Horizontal,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RingExternalLegendSide {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RingExternalLegendOptions {
+    layout: RingExternalLegendLayout,
+    side: RingExternalLegendSide,
+    content: ChartValueLabelContent,
+    percentage_decimals: usize,
+    max_items: Option<usize>,
+}
+
+impl Default for RingExternalLegendOptions {
+    fn default() -> Self {
+        Self {
+            layout: RingExternalLegendLayout::Vertical,
+            side: RingExternalLegendSide::Right,
+            content: ChartValueLabelContent::ValueOverTotalAndPercentage,
+            percentage_decimals: 1,
+            max_items: None,
+        }
+    }
 }
 
 impl PieChart {
@@ -129,6 +163,7 @@ impl RingChart {
             show_value_labels: true,
             label_options: PieChartLabelOptions::default(),
             inner_ratio: 0.62,
+            external_legend: None,
         }
     }
 
@@ -190,8 +225,108 @@ impl RingChart {
         self
     }
 
+    pub fn external_legend(mut self, options: RingExternalLegendOptions) -> Self {
+        self.external_legend = Some(options);
+        self.show_value_labels = false;
+        self.show_legend = false;
+        self
+    }
+
+    pub fn external_vertical_legend(self) -> Self {
+        self.external_legend(RingExternalLegendOptions::default())
+    }
+
+    pub fn external_horizontal_legend(self) -> Self {
+        self.external_legend(
+            RingExternalLegendOptions::default().layout(RingExternalLegendLayout::Horizontal),
+        )
+    }
+
+    pub fn external_legend_side(mut self, side: RingExternalLegendSide) -> Self {
+        let mut options = self.external_legend.unwrap_or_default();
+        options.side = side;
+        self.external_legend = Some(options);
+        self
+    }
+
+    pub fn external_legend_left(self) -> Self {
+        self.external_legend_side(RingExternalLegendSide::Left)
+    }
+
+    pub fn external_legend_right(self) -> Self {
+        self.external_legend_side(RingExternalLegendSide::Right)
+    }
+
+    pub fn external_legend_max_items(mut self, max_items: usize) -> Self {
+        let mut options = self.external_legend.unwrap_or_default();
+        options.max_items = Some(max_items.max(1));
+        self.external_legend = Some(options);
+        self
+    }
+
+    pub fn external_legend_content(mut self, content: ChartValueLabelContent) -> Self {
+        let mut options = self.external_legend.unwrap_or_default();
+        options.content = content;
+        self.external_legend = Some(options);
+        self
+    }
+
+    pub fn external_legend_percentage_decimals(mut self, decimals: usize) -> Self {
+        let mut options = self.external_legend.unwrap_or_default();
+        options.percentage_decimals = decimals.min(4);
+        self.external_legend = Some(options);
+        self
+    }
+
     pub fn slices(&self) -> &[ChartSeries] {
         &self.slices
+    }
+}
+
+impl RingExternalLegendOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn layout(mut self, layout: RingExternalLegendLayout) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    pub fn vertical(self) -> Self {
+        self.layout(RingExternalLegendLayout::Vertical)
+    }
+
+    pub fn horizontal(self) -> Self {
+        self.layout(RingExternalLegendLayout::Horizontal)
+    }
+
+    pub fn side(mut self, side: RingExternalLegendSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn left(self) -> Self {
+        self.side(RingExternalLegendSide::Left)
+    }
+
+    pub fn right(self) -> Self {
+        self.side(RingExternalLegendSide::Right)
+    }
+
+    pub fn content(mut self, content: ChartValueLabelContent) -> Self {
+        self.content = content;
+        self
+    }
+
+    pub fn percentage_decimals(mut self, decimals: usize) -> Self {
+        self.percentage_decimals = decimals.min(4);
+        self
+    }
+
+    pub fn max_items(mut self, max_items: usize) -> Self {
+        self.max_items = Some(max_items.max(1));
+        self
     }
 }
 
@@ -221,6 +356,7 @@ impl RenderOnce for PieChart {
             self.show_value_labels,
             self.label_options,
             0.0,
+            None,
             cx,
         )
     }
@@ -236,6 +372,7 @@ impl RenderOnce for RingChart {
             self.show_value_labels,
             self.label_options,
             self.inner_ratio,
+            self.external_legend,
             cx,
         )
     }
@@ -249,6 +386,7 @@ fn render_shell(
     show_value_labels: bool,
     label_options: PieChartLabelOptions,
     inner_ratio: f32,
+    external_legend: Option<RingExternalLegendOptions>,
     cx: &mut App,
 ) -> impl IntoElement {
     let theme = cx.global::<Config>().theme.clone();
@@ -280,17 +418,53 @@ fn render_shell(
         shell = shell.child(render_legend(&slices, &palette));
     }
 
-    shell
-        .child(render_canvas(
-            slices,
-            palette,
-            theme.neutral.card,
-            inner_ratio,
-            show_value_labels,
-            label_options,
-            height,
-        ))
-        .into_any_element()
+    let side_legend = external_legend
+        .as_ref()
+        .is_some_and(|options| options.layout == RingExternalLegendLayout::Vertical);
+    let canvas_height = if side_legend { px(280.0) } else { height };
+    let canvas = render_canvas(
+        slices.clone(),
+        palette.clone(),
+        theme.neutral.card,
+        inner_ratio,
+        show_value_labels,
+        label_options,
+        canvas_height,
+    );
+
+    match external_legend {
+        Some(options) if options.layout == RingExternalLegendLayout::Vertical => {
+            let legend = render_external_legend(&slices, &palette, options.clone());
+            let content = div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .children(match options.side {
+                    RingExternalLegendSide::Left => vec![
+                        legend.into_any_element(),
+                        div()
+                            .flex_none()
+                            .w(canvas_height)
+                            .child(canvas)
+                            .into_any_element(),
+                    ],
+                    RingExternalLegendSide::Right => vec![
+                        div()
+                            .flex_none()
+                            .w(canvas_height)
+                            .child(canvas)
+                            .into_any_element(),
+                        legend.into_any_element(),
+                    ],
+                });
+            shell.child(content).into_any_element()
+        }
+        Some(options) => shell
+            .child(canvas)
+            .child(render_external_legend(&slices, &palette, options))
+            .into_any_element(),
+        None => shell.child(canvas).into_any_element(),
+    }
 }
 
 fn render_legend(series: &[ChartSeries], palette: &ChartPalette) -> impl IntoElement {
@@ -305,6 +479,68 @@ fn render_legend(series: &[ChartSeries], palette: &ChartPalette) -> impl IntoEle
                 .child(div().w(px(10.0)).h(px(10.0)).rounded_sm().bg(color))
                 .child(Text::new(series.name.clone()).size(px(12.0)))
         }))
+}
+
+fn render_external_legend(
+    series: &[ChartSeries],
+    palette: &ChartPalette,
+    options: RingExternalLegendOptions,
+) -> impl IntoElement {
+    let total = series_total(series);
+    let items = series
+        .iter()
+        .enumerate()
+        .take(options.max_items.unwrap_or(usize::MAX))
+        .filter_map(|(index, series)| {
+            let value = series_value(series).max(0.0);
+            (value > 0.0).then_some((index, series, value))
+        })
+        .map(|(index, series, value)| {
+            let color = series.color.unwrap_or_else(|| palette.series_color(index));
+            let text = format_value_label(
+                value,
+                total,
+                None,
+                &ChartValueLabelOptions {
+                    content: options.content,
+                    placement: ChartValueLabelPlacement::OutsideAligned,
+                    percentage_decimals: options.percentage_decimals,
+                    outside_threshold_degrees: 0,
+                },
+            );
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap_3()
+                .min_w(px(160.0))
+                .child(
+                    Space::new()
+                        .gap_xs()
+                        .align_center()
+                        .child(div().w(px(10.0)).h(px(10.0)).rounded_full().bg(color))
+                        .child(Text::new(series.name.clone()).size(px(12.0))),
+                )
+                .child(Text::new(text).size(px(12.0)))
+        });
+
+    match options.layout {
+        RingExternalLegendLayout::Vertical => div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .flex_none()
+            .w(px(180.0))
+            .children(items),
+        RingExternalLegendLayout::Horizontal => div()
+            .flex()
+            .gap_2()
+            .w_full()
+            .flex_row()
+            .flex_wrap()
+            .gap_4()
+            .children(items),
+    }
 }
 
 fn render_canvas(
@@ -334,13 +570,7 @@ fn render_canvas(
 
             let values = slices
                 .iter()
-                .map(|series| {
-                    series
-                        .finite_points()
-                        .next()
-                        .map(|point| point.value.max(0.0))
-                        .unwrap_or(0.0)
-                })
+                .map(|series| series_value(series).max(0.0))
                 .collect::<Vec<_>>();
             let total: f64 = values.iter().sum();
             if total <= f64::EPSILON {
@@ -394,6 +624,18 @@ fn render_canvas(
     )
     .w_full()
     .h(height)
+}
+
+fn series_value(series: &ChartSeries) -> f64 {
+    series
+        .finite_points()
+        .next()
+        .map(|point| point.value.max(0.0))
+        .unwrap_or(0.0)
+}
+
+fn series_total(series: &[ChartSeries]) -> f64 {
+    series.iter().map(series_value).sum()
 }
 
 #[derive(Clone, Copy)]
@@ -642,6 +884,33 @@ mod tests {
         assert!(chart.inner_ratio >= 0.2 && chart.inner_ratio <= 0.9);
         assert!(!chart.show_value_labels);
         assert_eq!(chart.label_options().value.percentage_decimals, 3);
+    }
+
+    #[test]
+    fn ring_chart_external_legend_disables_inline_labels() {
+        let chart = RingChart::new(slices())
+            .external_horizontal_legend()
+            .external_legend_content(ChartValueLabelContent::Percentage)
+            .external_legend_percentage_decimals(2);
+        assert!(!chart.show_legend);
+        assert!(!chart.show_value_labels);
+        let options = chart.external_legend.unwrap();
+        assert_eq!(options.layout, RingExternalLegendLayout::Horizontal);
+        assert_eq!(options.side, RingExternalLegendSide::Right);
+        assert_eq!(options.content, ChartValueLabelContent::Percentage);
+        assert_eq!(options.percentage_decimals, 2);
+    }
+
+    #[test]
+    fn ring_chart_external_legend_tracks_side_and_limit() {
+        let chart = RingChart::new(slices())
+            .external_vertical_legend()
+            .external_legend_left()
+            .external_legend_max_items(2);
+        let options = chart.external_legend.unwrap();
+        assert_eq!(options.layout, RingExternalLegendLayout::Vertical);
+        assert_eq!(options.side, RingExternalLegendSide::Left);
+        assert_eq!(options.max_items, Some(2));
     }
 
     #[test]

@@ -29,6 +29,7 @@ pub struct Progress {
     status: Option<ProgressStatus>,
     color: Option<Hsla>,
     gradient: Option<Vec<Hsla>>,
+    complete_color: Option<Hsla>,
     show_text: bool,
     text_inside: bool,
     text_inside_center: bool,
@@ -51,6 +52,7 @@ impl Progress {
             status: None,
             color: None,
             gradient: None,
+            complete_color: None,
             show_text: true,
             text_inside: false,
             text_inside_center: false,
@@ -102,12 +104,14 @@ impl Progress {
     pub fn color(mut self, c: Hsla) -> Self {
         self.color = Some(c);
         self.gradient = None;
+        self.complete_color = None;
         self
     }
 
     pub fn primary(mut self) -> Self {
         self.color = None;
         self.gradient = None;
+        self.complete_color = None;
         self.status = None;
         self
     }
@@ -119,6 +123,11 @@ impl Progress {
             Some(colors)
         };
         self.color = None;
+        self
+    }
+
+    pub fn complete_color(mut self, color: Hsla) -> Self {
+        self.complete_color = Some(color);
         self
     }
 
@@ -237,7 +246,7 @@ impl RenderOnce for Progress {
             .unwrap_or_else(|| format!("{}%", self.percentage.round() as i32).into());
         let id = stable_unique_id(
             format!(
-                "aura-progress:{:?}:{:.3}:{:.3}:{:?}:{:?}:{}:{}:{}:{:?}:{:?}:{:?}:{:?}",
+                "aura-progress:{:?}:{:.3}:{:.3}:{:?}:{:?}:{}:{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}",
                 self.type_,
                 self.percentage,
                 self.stroke_width.as_f32(),
@@ -250,6 +259,7 @@ impl RenderOnce for Progress {
                 self.text_size,
                 self.text_color,
                 self.circle_inner_color,
+                self.complete_color,
             ),
             "aura-progress",
             window,
@@ -381,7 +391,14 @@ impl RenderOnce for Progress {
             if self.animated {
                 let circle_size = self.circle_size;
                 let stroke_width = self.stroke_width;
-                let progress_color = status_color;
+                let progress_color = resolved_progress_color(
+                    status_color,
+                    gradient.as_deref(),
+                    self.complete_color,
+                    target,
+                );
+                let gradient = gradient.clone();
+                let complete_color = self.complete_color;
                 let center_text = percent_text.clone();
                 base.with_animation(
                     format!("{}-circle-fill", id),
@@ -394,6 +411,8 @@ impl RenderOnce for Progress {
                             stroke_width,
                             track_color,
                             progress_color,
+                            gradient.clone(),
+                            complete_color,
                             inner_color,
                         ));
                         if show_text {
@@ -415,7 +434,14 @@ impl RenderOnce for Progress {
                     self.circle_size,
                     self.stroke_width,
                     track_color,
-                    status_color,
+                    resolved_progress_color(
+                        status_color,
+                        gradient.as_deref(),
+                        self.complete_color,
+                        target,
+                    ),
+                    gradient,
+                    self.complete_color,
                     inner_color,
                 ));
                 if show_text {
@@ -459,6 +485,8 @@ fn render_circle_canvas(
     stroke_width: Pixels,
     track_color: Hsla,
     progress_color: Hsla,
+    gradient: Option<Vec<Hsla>>,
+    complete_color: Option<Hsla>,
     inner_color: Hsla,
 ) -> impl IntoElement {
     canvas(
@@ -484,15 +512,27 @@ fn render_circle_canvas(
                 1.0,
                 track_color,
             );
-            paint_smooth_annular_sector(
-                window,
-                center,
-                outer_radius,
-                inner_radius,
-                0.0,
-                progress,
-                progress_color,
-            );
+            if let Some(colors) = gradient.as_deref() {
+                paint_gradient_annular_sector(
+                    window,
+                    center,
+                    outer_radius,
+                    inner_radius,
+                    progress,
+                    colors,
+                    complete_color,
+                );
+            } else {
+                paint_smooth_annular_sector(
+                    window,
+                    center,
+                    outer_radius,
+                    inner_radius,
+                    0.0,
+                    progress,
+                    progress_color,
+                );
+            }
 
             if inner_radius > 0.0 {
                 paint_smooth_circle(window, center, inner_radius, inner_color);
@@ -506,6 +546,77 @@ fn render_circle_canvas(
     .h(size)
 }
 
+fn resolved_progress_color(
+    fallback: Hsla,
+    gradient: Option<&[Hsla]>,
+    complete_color: Option<Hsla>,
+    target: f32,
+) -> Hsla {
+    if target >= 0.999 {
+        complete_color
+            .or_else(|| gradient.and_then(|colors| colors.last().copied()))
+            .unwrap_or(fallback)
+    } else {
+        gradient
+            .and_then(|colors| colors.first().copied())
+            .unwrap_or(fallback)
+    }
+}
+
+fn paint_gradient_annular_sector(
+    window: &mut Window,
+    center: Point<Pixels>,
+    outer_radius: f32,
+    inner_radius: f32,
+    progress: f32,
+    colors: &[Hsla],
+    complete_color: Option<Hsla>,
+) {
+    let progress = progress.clamp(0.0, 1.0);
+    if progress <= f32::EPSILON || colors.is_empty() {
+        return;
+    }
+    if colors.len() == 1 {
+        let color = if progress >= 0.999 {
+            complete_color.unwrap_or(colors[0])
+        } else {
+            colors[0]
+        };
+        paint_smooth_annular_sector(
+            window,
+            center,
+            outer_radius,
+            inner_radius,
+            0.0,
+            progress,
+            color,
+        );
+        return;
+    }
+    let segment_count = colors.len().saturating_sub(1).max(1);
+    for index in 0..segment_count {
+        let start = index as f32 / segment_count as f32;
+        let end = (index + 1) as f32 / segment_count as f32;
+        if start >= progress {
+            break;
+        }
+        let segment_end = end.min(progress);
+        let color = if progress >= 0.999 && index + 1 == segment_count {
+            complete_color.unwrap_or(colors[index + 1])
+        } else {
+            colors[index].blend(colors[index + 1].opacity(0.62))
+        };
+        paint_smooth_annular_sector(
+            window,
+            center,
+            outer_radius,
+            inner_radius,
+            start,
+            segment_end,
+            color,
+        );
+    }
+}
 fn paint_smooth_annular_sector(
     window: &mut Window,
     center: Point<Pixels>,
@@ -716,12 +827,15 @@ mod tests {
             .ring_width(px(12.0))
             .ring_color(gpui::black())
             .progress_color(gpui::white())
-            .inner_color(gpui::white().opacity(0.5));
+            .inner_color(gpui::white().opacity(0.5))
+            .gradient(vec![gpui::blue(), gpui::green()])
+            .complete_color(gpui::green());
         assert_eq!(progress.type_, ProgressType::Circle);
         assert_eq!(progress.circle_size, px(144.0));
         assert_eq!(progress.stroke_width, px(12.0));
         assert_eq!(progress.track_color, Some(gpui::black()));
-        assert_eq!(progress.color, Some(gpui::white()));
+        assert_eq!(progress.gradient, Some(vec![gpui::blue(), gpui::green()]));
+        assert_eq!(progress.complete_color, Some(gpui::green()));
         assert_eq!(
             progress.circle_inner_color,
             Some(gpui::white().opacity(0.5))
@@ -756,5 +870,7 @@ mod tests {
         assert!(source.contains("paint_smooth_annular_sector"));
         assert!(source.contains("with_animation("));
         assert!(source.contains("render_circle_canvas"));
+        assert!(source.contains("paint_gradient_annular_sector"));
+        assert!(source.contains("complete_color"));
     }
 }

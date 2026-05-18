@@ -68,3 +68,14 @@
 
 ```rust src="progress/custom.rs"
 ```
+
+## 环形渐变与完成色
+
+### 效果
+
+::AuraDemo{component="ProgressCircleGradient"}::
+
+### 代码
+
+```rust src="progress/circle_gradient.rs"
+```

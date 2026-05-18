@@ -49,6 +49,35 @@ impl Render for RingChartDemo {
                         .percentage_decimals(2)
                         .outside_label_threshold_degrees(34)
                         .value_label_placement(ChartValueLabelPlacement::OutsideAligned),
+                ))
+                .child(section(
+                    "图例与比例值完全外置",
+                    "圆环内部不绘制文字和引导线，所有标签统一在图例区域中展示，并支持百分比/数量 pattern。",
+                    Space::new()
+                        .wrap()
+                        .gap_lg()
+                        .child(
+                            RingChart::new(colored_slices())
+                                .id("ring-chart-demo-external-vertical")
+                                .height(px(340.0))
+                                .inner_ratio(0.54)
+                                .external_vertical_legend()
+                                .external_legend_right()
+                                .external_legend_max_items(3)
+                                .external_legend_content(ChartValueLabelContent::Percentage)
+                                .external_legend_percentage_decimals(2),
+                        )
+                        .child(
+                            RingChart::new(colored_slices())
+                                .id("ring-chart-demo-external-horizontal")
+                                .height(px(340.0))
+                                .inner_ratio(0.7)
+                                .external_horizontal_legend()
+                                .external_legend_content(
+                                    ChartValueLabelContent::ValueOverTotalAndPercentage,
+                                )
+                                .external_legend_percentage_decimals(1),
+                        ),
                 )),
         )
     }

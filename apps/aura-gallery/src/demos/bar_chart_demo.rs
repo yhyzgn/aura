@@ -1,6 +1,8 @@
 use aura_components::layout_helpers::{page, section};
-use aura_components::{BarChart, ChartPoint, ChartSeries, ChartValueLabelContent, Space};
-use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px};
+use aura_components::{
+    BarChart, BarChartValueColorRange, ChartPoint, ChartSeries, ChartValueLabelContent, Space,
+};
+use gpui::{AnyView, App, Context, Render, Window, blue, green, prelude::*, px, rgb};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|_| BarChartDemo).into()
@@ -49,6 +51,22 @@ impl Render for BarChartDemo {
                         .id("bar-chart-demo-stacked")
                         .height(px(400.0))
                         .stacked(),
+                ))
+                .child(section(
+                    "独立柱状图 / 迷你指标",
+                    "隐藏坐标轴、网格和图例，适合在卡片或看板中展示一组扁平化指标。",
+                    BarChart::new(standalone_series())
+                        .id("bar-chart-demo-standalone")
+                        .standalone()
+                        .height(px(132.0))
+                        .bar_width(px(8.0))
+                        .bar_gap(px(7.0))
+                        .bar_radius(px(5.0))
+                        .value_color_ranges([
+                            BarChartValueColorRange::new(0.0, 35.0, rgb(0x86efac).into()),
+                            BarChartValueColorRange::new(35.0, 70.0, rgb(0x22c55e).into()),
+                            BarChartValueColorRange::new(70.0, 100.0, rgb(0x16a34a).into()),
+                        ]),
                 )),
         )
     }
@@ -91,6 +109,21 @@ pub fn custom_series() -> Vec<ChartSeries> {
     ]
 }
 
+pub fn standalone_series() -> Vec<ChartSeries> {
+    vec![ChartSeries::new(
+        "Active",
+        [
+            ChartPoint::new("Mon", 18.0),
+            ChartPoint::new("Tue", 42.0),
+            ChartPoint::new("Wed", 33.0),
+            ChartPoint::new("Thu", 76.0),
+            ChartPoint::new("Fri", 61.0),
+            ChartPoint::new("Sat", 88.0),
+            ChartPoint::new("Sun", 54.0),
+        ],
+    )]
+}
+
 pub fn multi_series() -> Vec<ChartSeries> {
     vec![
         ChartSeries::new(
@@ -124,5 +157,7 @@ mod tests {
         assert!(source.contains("stacked()"));
         assert!(source.contains("bar_gap_ratio"));
         assert!(source.contains("value_label_content"));
+        assert!(source.contains("standalone()"));
+        assert!(source.contains("value_color_ranges"));
     }
 }

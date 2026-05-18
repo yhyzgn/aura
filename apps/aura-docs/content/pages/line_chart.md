@@ -45,3 +45,14 @@
 
 ```rust src="line_chart/custom.rs"
 ```
+
+## 每条线独立样式
+
+### 效果
+
+::AuraDemo{component="LineChartLineStyles"}::
+
+### 代码
+
+```rust src="line_chart/line_styles.rs"
+```

@@ -20,6 +20,13 @@ impl ChartPoint {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChartLineStyle {
+    Solid,
+    Dashed,
+    Dotted,
+}
+
 #[derive(Clone, Debug)]
 pub struct ChartSeries {
     pub name: SharedString,
@@ -28,6 +35,8 @@ pub struct ChartSeries {
     pub fill_color: Option<Hsla>,
     pub stroke_color: Option<Hsla>,
     pub stroke_width: Option<Pixels>,
+    pub line_style: Option<ChartLineStyle>,
+    pub dash_pattern: Option<Vec<Pixels>>,
     pub smooth: Option<bool>,
 }
 
@@ -43,6 +52,8 @@ impl ChartSeries {
             fill_color: None,
             stroke_color: None,
             stroke_width: None,
+            line_style: None,
+            dash_pattern: None,
             smooth: None,
         }
     }
@@ -64,6 +75,34 @@ impl ChartSeries {
 
     pub fn stroke_width(mut self, width: Pixels) -> Self {
         self.stroke_width = Some(width);
+        self
+    }
+
+    pub fn line_style(mut self, style: ChartLineStyle) -> Self {
+        self.line_style = Some(style);
+        self
+    }
+
+    pub fn dashed(self) -> Self {
+        self.line_style(ChartLineStyle::Dashed)
+    }
+
+    pub fn dotted(self) -> Self {
+        self.line_style(ChartLineStyle::Dotted)
+    }
+
+    pub fn solid(self) -> Self {
+        self.line_style(ChartLineStyle::Solid)
+    }
+
+    pub fn dash_pattern(mut self, pattern: impl IntoIterator<Item = Pixels>) -> Self {
+        self.dash_pattern = Some(
+            pattern
+                .into_iter()
+                .map(|value| value.max(px(0.1)))
+                .collect(),
+        );
+        self.line_style = Some(ChartLineStyle::Dashed);
         self
     }
 

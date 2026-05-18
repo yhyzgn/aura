@@ -5,7 +5,8 @@ use crate::chart::{
 use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::chart_shape::{
-    area_path, line_path, line_soft_edge_path, smooth_area_path, smooth_line_path,
+    area_path, line_path_with_style, line_soft_edge_path_with_style, smooth_area_path,
+    smooth_line_path_with_style,
 };
 use crate::{Empty, Space, Text};
 use aura_core::{Config, unique_id};
@@ -253,6 +254,10 @@ fn render_line_canvas(
                 let fill_color = current.resolved_fill_color(fallback);
                 let current_smooth = current.smooth.unwrap_or(smooth);
                 let current_stroke_width = current.stroke_width.unwrap_or(stroke_width);
+                let current_line_style = current
+                    .line_style
+                    .unwrap_or(crate::chart::ChartLineStyle::Solid);
+                let current_dash_pattern = current.dash_pattern.as_deref();
                 let point_data = current
                     .points
                     .iter()
@@ -283,15 +288,29 @@ fn render_line_canvas(
                         window.paint_path(path, gradient);
                     }
                 }
-                if let Some(path) =
-                    line_soft_edge_path(&points, current_stroke_width, current_smooth)
-                {
+                if let Some(path) = line_soft_edge_path_with_style(
+                    &points,
+                    current_stroke_width,
+                    current_smooth,
+                    current_line_style,
+                    current_dash_pattern,
+                ) {
                     window.paint_path(path, color.opacity(0.20));
                 }
                 if let Some(path) = if current_smooth {
-                    smooth_line_path(&points, current_stroke_width)
+                    smooth_line_path_with_style(
+                        &points,
+                        current_stroke_width,
+                        current_line_style,
+                        current_dash_pattern,
+                    )
                 } else {
-                    line_path(&points, current_stroke_width)
+                    line_path_with_style(
+                        &points,
+                        current_stroke_width,
+                        current_line_style,
+                        current_dash_pattern,
+                    )
                 } {
                     window.paint_path(path, color);
                 }

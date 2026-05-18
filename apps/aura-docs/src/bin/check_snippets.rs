@@ -67,6 +67,8 @@ mod bar_chart_basic;
 mod bar_chart_grouped;
 #[path = "../../content/snippets/bar_chart/stacked.rs"]
 mod bar_chart_stacked;
+#[path = "../../content/snippets/bar_chart/standalone.rs"]
+mod bar_chart_standalone;
 #[path = "../../content/snippets/breadcrumb/basic.rs"]
 mod breadcrumb_basic;
 #[path = "../../content/snippets/breadcrumb/clickable.rs"]
@@ -77,6 +79,10 @@ mod breadcrumb_icon;
 mod breadcrumb_separator;
 #[path = "../../content/snippets/breadcrumb/separator_icon.rs"]
 mod breadcrumb_separator_icon;
+#[path = "../../content/snippets/button/custom_colors.rs"]
+mod button_custom_colors;
+#[path = "../../content/snippets/button/gradient.rs"]
+mod button_gradient;
 #[path = "../../content/snippets/button/rounded.rs"]
 mod button_rounded;
 #[path = "../../content/snippets/button/secondary.rs"]
@@ -107,6 +113,8 @@ mod cascader_selected;
 mod checkbox_basic;
 #[path = "../../content/snippets/checkbox/buttons.rs"]
 mod checkbox_buttons;
+#[path = "../../content/snippets/checkbox/custom.rs"]
+mod checkbox_custom;
 #[path = "../../content/snippets/checkbox/group.rs"]
 mod checkbox_group;
 #[path = "../../content/snippets/code_block/basic.rs"]
@@ -199,6 +207,8 @@ mod form_basic;
 mod form_inline;
 #[path = "../../content/snippets/form/validation.rs"]
 mod form_validation;
+#[path = "../../content/snippets/heat_bar/events.rs"]
+mod heat_bar_events;
 #[path = "../../content/snippets/icon/colors.rs"]
 mod icon_colors;
 #[path = "../../content/snippets/icon/lucide.rs"]
@@ -227,6 +237,10 @@ mod input_number_vertical;
 mod input_password;
 #[path = "../../content/snippets/input/states.rs"]
 mod input_states;
+#[path = "../../content/snippets/label_operation/label.rs"]
+mod label_operation_label;
+#[path = "../../content/snippets/label_operation/operation.rs"]
+mod label_operation_operation;
 #[path = "../../content/snippets/layout/divider.rs"]
 mod layout_divider;
 #[path = "../../content/snippets/layout/grid.rs"]
@@ -237,6 +251,8 @@ mod layout_space;
 mod line_chart_basic;
 #[path = "../../content/snippets/line_chart/empty.rs"]
 mod line_chart_empty;
+#[path = "../../content/snippets/line_chart/line_styles.rs"]
+mod line_chart_line_styles;
 #[path = "../../content/snippets/line_chart/multi.rs"]
 mod line_chart_multi;
 #[path = "../../content/snippets/link/icons.rs"]
@@ -305,12 +321,20 @@ mod preview_escape;
 mod preview_image_trigger;
 #[path = "../../content/snippets/progress/basic.rs"]
 mod progress_basic;
+#[path = "../../content/snippets/progress/circle_gradient.rs"]
+mod progress_circle_gradient;
 #[path = "../../content/snippets/progress/color.rs"]
 mod progress_color;
 #[path = "../../content/snippets/progress/inside.rs"]
 mod progress_inside;
 #[path = "../../content/snippets/progress/status.rs"]
 mod progress_status;
+#[path = "../../content/snippets/qr_code/basic.rs"]
+mod qr_code_basic;
+#[path = "../../content/snippets/qr_code/decode.rs"]
+mod qr_code_decode;
+#[path = "../../content/snippets/qr_code/style.rs"]
+mod qr_code_style;
 #[path = "../../content/snippets/quick_start/component_view.rs"]
 mod quick_start_component_view;
 #[path = "../../content/snippets/quick_start/components.rs"]
@@ -323,6 +347,8 @@ mod quick_start_main_window;
 mod radio_basic;
 #[path = "../../content/snippets/radio/buttons.rs"]
 mod radio_buttons;
+#[path = "../../content/snippets/radio/custom.rs"]
+mod radio_custom;
 #[path = "../../content/snippets/radio/group.rs"]
 mod radio_group;
 #[path = "../../content/snippets/rate/basic.rs"]
@@ -335,8 +361,24 @@ mod result_statuses;
 mod result_success;
 #[path = "../../content/snippets/ring_chart/basic.rs"]
 mod ring_chart_basic;
+#[path = "../../content/snippets/ring_chart/custom.rs"]
+mod ring_chart_custom;
+#[path = "../../content/snippets/ring_chart/external.rs"]
+mod ring_chart_external;
 #[path = "../../content/snippets/scrollbar/basic.rs"]
 mod scrollbar_basic;
+#[path = "../../content/snippets/segment_ratio_bar/both.rs"]
+mod segment_ratio_bar_both;
+#[path = "../../content/snippets/segment_ratio_bar/bottom.rs"]
+mod segment_ratio_bar_bottom;
+#[path = "../../content/snippets/segment_ratio_bar/compact.rs"]
+mod segment_ratio_bar_compact;
+#[path = "../../content/snippets/segment_ratio_bar/hidden.rs"]
+mod segment_ratio_bar_hidden;
+#[path = "../../content/snippets/segment_ratio_bar/pattern.rs"]
+mod segment_ratio_bar_pattern;
+#[path = "../../content/snippets/segment_ratio_bar/top.rs"]
+mod segment_ratio_bar_top;
 #[path = "../../content/snippets/segmented/basic.rs"]
 mod segmented_basic;
 #[path = "../../content/snippets/segmented/block.rs"]
@@ -345,6 +387,14 @@ mod segmented_block;
 mod segmented_disabled;
 #[path = "../../content/snippets/select/basic.rs"]
 mod select_basic;
+#[path = "../../content/snippets/signal_meter/levels.rs"]
+mod signal_meter_levels;
+#[path = "../../content/snippets/signal_meter/mobile.rs"]
+mod signal_meter_mobile;
+#[path = "../../content/snippets/signal_meter/threshold_colors.rs"]
+mod signal_meter_threshold_colors;
+#[path = "../../content/snippets/signal_meter/wifi.rs"]
+mod signal_meter_wifi;
 #[path = "../../content/snippets/skeleton/basic.rs"]
 mod skeleton_basic;
 #[path = "../../content/snippets/skeleton/template.rs"]
@@ -405,6 +455,8 @@ mod tabs_position;
 mod tabs_stretch;
 #[path = "../../content/snippets/tag/closable.rs"]
 mod tag_closable;
+#[path = "../../content/snippets/tag/flow.rs"]
+mod tag_flow;
 #[path = "../../content/snippets/tag/round.rs"]
 mod tag_round;
 #[path = "../../content/snippets/tag/sizes.rs"]
@@ -435,6 +487,16 @@ mod timeline_custom;
 mod timeline_placement;
 #[path = "../../content/snippets/timeline/reverse.rs"]
 mod timeline_reverse;
+#[path = "../../content/snippets/timer/clock.rs"]
+mod timer_clock;
+#[path = "../../content/snippets/timer/count_down.rs"]
+mod timer_count_down;
+#[path = "../../content/snippets/timer/count_up.rs"]
+mod timer_count_up;
+#[path = "../../content/snippets/timer/result.rs"]
+mod timer_result;
+#[path = "../../content/snippets/timer/units.rs"]
+mod timer_units;
 #[path = "../../content/snippets/tooltip/basic.rs"]
 mod tooltip_basic;
 #[path = "../../content/snippets/tooltip/more.rs"]

@@ -34,3 +34,15 @@
 
 ```rust src="checkbox/buttons.rs"
 ```
+
+
+## 自定义选项样式
+
+### 效果
+
+::AuraDemo{component="CheckboxCustom"}::
+
+### 代码
+
+```rust src="checkbox/custom.rs"
+```

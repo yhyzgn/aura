@@ -24,8 +24,10 @@ pub mod dropdown_demo;
 pub mod empty_demo;
 pub mod form_controls_demo;
 pub mod form_demo;
+pub mod heat_bar_demo;
 pub mod icon_demo;
 pub mod image_demo;
+pub mod label_operation_demo;
 pub mod layout_demo;
 pub mod line_chart_demo;
 pub mod link_demo;
@@ -41,10 +43,13 @@ pub mod popconfirm_demo;
 pub mod popover_demo;
 pub mod preview_demo;
 pub mod progress_demo;
+pub mod qr_code_demo;
 pub mod result_demo;
 pub mod ring_chart_demo;
 pub mod scrollbar_demo;
+pub mod segment_ratio_bar_demo;
 pub mod segmented_demo;
+pub mod signal_meter_demo;
 pub mod skeleton_demo;
 pub mod splitter_demo;
 pub mod statistic_demo;
@@ -54,6 +59,7 @@ pub mod tabs_demo;
 pub mod tag_demo;
 pub mod time_picker_demo;
 pub mod timeline_demo;
+pub mod timer_demo;
 pub mod tooltip_demo;
 pub mod transfer_demo;
 pub mod tray_demo;
@@ -77,6 +83,11 @@ pub fn registry() -> Vec<DemoEntry> {
             name: "Button 按钮",
             description: "常用的操作按钮",
             render: |cx| button_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "QrCode 二维码",
+            description: "二维码生成、样式与识别 API",
+            render: |cx| qr_code_demo::render(cx).into(),
         },
         DemoEntry {
             name: "CodeBlock 代码块",
@@ -269,6 +280,11 @@ pub fn registry() -> Vec<DemoEntry> {
             render: |cx| preview_demo::render(cx).into(),
         },
         DemoEntry {
+            name: "Timer 计时器",
+            description: "正向、逆向计时和单位换算",
+            render: |cx| timer_demo::render(cx).into(),
+        },
+        DemoEntry {
             name: "Timeline 时间线",
             description: "垂直展示一系列信息",
             render: |cx| timeline_demo::render(cx).into(),
@@ -404,6 +420,26 @@ pub fn registry() -> Vec<DemoEntry> {
             render: |cx| icon_demo::render(cx).into(),
         },
         DemoEntry {
+            name: "HeatBar 热力条",
+            description: "高密度时间轴热力分布",
+            render: |cx| heat_bar_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "Label / Operation 标签操作",
+            description: "图标文本与左右操作布局",
+            render: |cx| label_operation_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "SegmentRatioBar 分段比例条",
+            description: "多段占比与图例排版",
+            render: |cx| segment_ratio_bar_demo::render(cx).into(),
+        },
+        DemoEntry {
+            name: "SignalMeter 信号图",
+            description: "移动/Wi-Fi 信号等级展示",
+            render: |cx| signal_meter_demo::render(cx).into(),
+        },
+        DemoEntry {
             name: "AreaChart 面积图",
             description: "原生 GPUI 绘制的趋势面积图",
             render: |cx| area_chart_demo::render(cx).into(),
@@ -471,6 +507,10 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
         "Dropdown" => Some(dropdown_demo::render(cx).into()),
         "Empty" => Some(empty_demo::render(cx).into()),
         "Form" => Some(form_demo::render(cx).into()),
+        "HeatBar" => Some(heat_bar_demo::render(cx).into()),
+        "LabelOperation" => Some(label_operation_demo::render(cx).into()),
+        "SegmentRatioBar" => Some(segment_ratio_bar_demo::render(cx).into()),
+        "SignalMeter" => Some(signal_meter_demo::render(cx).into()),
         "Icon" => Some(icon_demo::render(cx).into()),
         "Image" => Some(image_demo::render(cx).into()),
         "Input" => Some(form_controls_demo::render_input(cx)),
@@ -491,6 +531,7 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
         "PieChart" => Some(pie_chart_demo::render(cx).into()),
         "RingChart" => Some(ring_chart_demo::render(cx).into()),
         "Progress" => Some(progress_demo::render(cx).into()),
+        "QrCode" => Some(qr_code_demo::render(cx).into()),
         "Radio" => Some(form_controls_demo::render_radio(cx)),
         "Rate" => Some(form_controls_demo::render_rate(cx)),
         "Result" => Some(result_demo::render(cx).into()),
@@ -508,6 +549,7 @@ pub fn render_doc_demo(component: &str, cx: &mut App) -> Option<AnyView> {
         "Tag" => Some(tag_demo::render(cx).into()),
         "Textarea" => Some(form_controls_demo::render_textarea(cx)),
         "TimePicker" => Some(time_picker_demo::render(cx).into()),
+        "Timer" => Some(timer_demo::render(cx).into()),
         "Timeline" => Some(timeline_demo::render(cx).into()),
         "Tooltip" => Some(tooltip_demo::render(cx).into()),
         "Tray" => Some(tray_demo::render(cx).into()),
