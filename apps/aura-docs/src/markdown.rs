@@ -21,6 +21,7 @@ use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, T
 const INTRO_DOC: &str = include_str!("../content/pages/overview.md");
 const QUICK_START_DOC: &str = include_str!("../content/pages/quick_start.md");
 const ARCHITECTURE_DOC: &str = include_str!("../content/pages/architecture.md");
+const PACKAGING_WORKFLOW_DOC: &str = include_str!("../content/pages/packaging_workflow.md");
 const ABOUT_DOC: &str = include_str!("../content/pages/about.md");
 
 const AFFIX_DOC: &str = include_str!("../content/pages/affix.md");
@@ -111,6 +112,10 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "Architecture",
         markdown: ARCHITECTURE_DOC,
+    },
+    DocPage {
+        title: "Packaging Workflow",
+        markdown: PACKAGING_WORKFLOW_DOC,
     },
     DocPage {
         title: "About",

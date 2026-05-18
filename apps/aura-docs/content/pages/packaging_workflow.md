@@ -1,0 +1,156 @@
+# Packaging Workflow
+
+Aura keeps its native application packaging in the repository instead of relying on Tauri. The workflow builds pure Rust + GPUI desktop applications, stages the raw release executables, then creates platform installer/package formats through `aura-packager` and backend tools.
+
+This page documents the packaging pipeline used by this repository and the pieces that downstream projects usually need to copy.
+
+## Scope
+
+Aura currently packages two applications:
+
+- `aura-gallery` — the component gallery and visual demo application.
+- `aura-docs` — the standalone documentation application.
+
+The reusable packaging logic lives in:
+
+- `crates/aura-packager` — package metadata, format decisions, generated backend config, manifest/checksum helpers.
+- `xtask` — command-line entry point used locally and by CI.
+- `.github/workflows/package.yml` — GitHub Actions preview/release pipeline.
+- `packaging/` — icons, desktop metadata, macOS/Windows/Linux package resources.
+
+## Local Commands
+
+Validate packaging resources before building installers:
+
+```bash
+cargo run -p xtask -- package validate
+```
+
+Build release binaries only:
+
+```bash
+cargo run -p xtask -- package build --all-apps
+```
+
+Generate backend configs without building packages:
+
+```bash
+cargo run -p xtask -- package ci --all-apps --format platform-defaults --dry-run --skip-build
+```
+
+Build platform default packages for both applications:
+
+```bash
+cargo run -p xtask -- package ci --all-apps --format platform-defaults
+```
+
+Build one application and one format:
+
+```bash
+cargo run -p xtask -- package ci --app docs --format deb
+```
+
+## CI Pipeline Steps
+
+The GitHub Actions workflow runs on `push` to `main`, on `v*` tags, and by manual dispatch.
+
+### 1. Checkout and Rust toolchain
+
+The workflow checks out the repository, installs the stable Rust toolchain, restores the cargo cache, and forces the toolchain cargo shim onto `PATH`. The cargo shim step avoids hosted-runner cache issues where an older cargo launcher may accidentally invoke `rustup-init`.
+
+### 2. Configure package channel
+
+The workflow derives the package channel and version from the Git ref:
+
+- `main` push: `preview`
+- `v*` tag: `release`
+
+Preview versions use this shape:
+
+```text
+<base-version>-preview.<github-run-number>.<short-sha>
+```
+
+Release versions come from the tag name without the leading `v`.
+
+### 3. Install platform packaging prerequisites
+
+Linux installs GTK/Wayland/X11/audio/font/icon/rpm prerequisites plus `cargo-packager` and `cargo-generate-rpm`.
+
+macOS installs `cargo-packager`.
+
+Windows installs `cargo-packager`. Preview Windows builds intentionally use NSIS only because MSI requires a numeric-only Windows Installer version and does not accept Aura preview metadata like `0.1.0-preview.123.abcdef0`.
+
+### 4. Validate and test packaging logic
+
+CI runs:
+
+```bash
+cargo run -p xtask -- package validate
+cargo test -p aura-packager
+```
+
+Validation catches missing icons, desktop metadata, package resources, or generated config prerequisites before the expensive package step.
+
+### 5. Build raw runnable binaries
+
+CI builds release-mode application executables before packaging:
+
+```bash
+cargo run -p xtask -- package build --all-apps
+```
+
+The built programs are staged under `target/aura-raw-binaries/` with a `checksums.txt` file and uploaded as a separate Actions artifact named:
+
+```text
+aura-<preview|release>-binaries-<platform>
+```
+
+> Project-specific note: uploading the raw pre-installer executables is an Aura repository release policy. It is useful for smoke tests, direct debugging, and verifying the exact executable that was fed into packaging. Projects that only consume Aura as a component library do not need to upload raw binaries unless their own product release process requires it.
+
+### 6. Build installer/package artifacts
+
+After raw binaries are built, package generation reuses them via `--skip-build`:
+
+```bash
+cargo run -p xtask -- package ci --all-apps --format platform-defaults --skip-build
+```
+
+Generated package outputs are uploaded as:
+
+```text
+aura-<preview|release>-packages-<platform>
+```
+
+The package artifact bundle includes generated backend TOML files and, when outputs are discovered, package manifest/checksum/release-note files under `target/packages/`.
+
+### 7. Preview artifacts
+
+Every push to `main` produces preview artifacts for Linux, macOS, and Windows. These artifacts are retained for a shorter period and are intended for quick QA rather than public distribution.
+
+### 8. GitHub Release assets
+
+When the workflow runs from a `v*` tag, the release job downloads both groups:
+
+- `aura-release-packages-*`
+- `aura-release-binaries-*`
+
+It then flattens them into `release-assets/`, generates grouped release notes, and uploads everything to the GitHub Release.
+
+The release notes include three sections:
+
+1. grouped changelog by commit type (`feat`, `fix`, `docs`, `ci`, `build`, `refactor`, `perf`, `test`, `style`, `chore`, `revert`, and `Other`),
+2. installer/package artifacts,
+3. raw runnable binaries with a clear note that they are Aura-project convenience outputs.
+
+## Downstream Project Guidance
+
+If another GPUI project wants to reuse this packaging approach, copy the structure and keep only the pieces that match its product policy:
+
+1. Keep `aura-packager`-style metadata for app id, binary name, icons, category, desktop metadata, and target formats.
+2. Keep an `xtask` package command so local and CI packaging use the same path.
+3. Keep `package validate` and packager unit tests in CI.
+4. Use preview builds on branch pushes and release builds on version tags.
+5. Upload installer/package artifacts for QA and releases.
+6. Upload raw runnable binaries only if the project explicitly wants direct executable downloads or release debugging artifacts.
+
