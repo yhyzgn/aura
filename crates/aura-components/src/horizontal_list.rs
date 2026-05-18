@@ -2,7 +2,7 @@ use crate::draggable::{DragAxis, DragState, drag_handle, reorder_indices};
 use aura_core::Config;
 use gpui::{
     AnyElement, App, Context, Entity, IntoElement, MouseButton, MouseDownEvent, MouseMoveEvent,
-    Pixels, Render, Window, div, prelude::*, px,
+    Pixels, Render, Window, deferred, div, prelude::*, px,
 };
 use std::sync::Arc;
 
@@ -175,8 +175,10 @@ impl HorizontalList {
         if index >= self.order.len() || index == active {
             return;
         }
-        self.drag_state.set_over(index);
-        cx.notify();
+        if reorder_indices(&mut self.order, active, index) {
+            self.drag_state.move_active_to(index);
+            cx.notify();
+        }
     }
 
     fn update_drag_position(
@@ -197,11 +199,10 @@ impl HorizontalList {
     }
 
     fn finish_drag(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let Some((from, target)) = self.drag_state.finish() else {
+        let Some((from, to)) = self.drag_state.finish() else {
             return;
         };
-        let to = target.min(self.order.len().saturating_sub(1));
-        if from != to && reorder_indices(&mut self.order, from, to) {
+        if from != to {
             if let Some(callback) = self.on_reorder.clone() {
                 callback(from, to, window, cx);
             }
@@ -287,7 +288,12 @@ impl Render for HorizontalList {
                 item_shell = item_shell.child(item);
             }
 
-            children.push(item_shell.into_any_element());
+            let item_element = if is_dragging {
+                deferred(item_shell).with_priority(1000).into_any_element()
+            } else {
+                item_shell.into_any_element()
+            };
+            children.push(item_element);
         }
 
         div()

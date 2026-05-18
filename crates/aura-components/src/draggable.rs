@@ -18,6 +18,7 @@ pub enum DragAxis {
 /// while each UI renders its own preview/handle natively.
 #[derive(Clone, Debug, Default)]
 pub struct DragState {
+    origin_index: Option<usize>,
     active_index: Option<usize>,
     over_index: Option<usize>,
     start_position: Option<Point<Pixels>>,
@@ -26,6 +27,7 @@ pub struct DragState {
 
 impl DragState {
     pub fn start(&mut self, index: usize, position: Point<Pixels>) {
+        self.origin_index = Some(index);
         self.active_index = Some(index);
         self.over_index = Some(index);
         self.start_position = Some(position);
@@ -47,17 +49,20 @@ impl DragState {
     pub fn move_active_to(&mut self, index: usize) {
         self.active_index = Some(index);
         self.over_index = Some(index);
+        self.start_position = self.current_position;
     }
 
     pub fn finish(&mut self) -> Option<(usize, usize)> {
+        let origin = self.origin_index.take()?;
         let active = self.active_index.take()?;
         let target = self.over_index.take().unwrap_or(active);
         self.start_position = None;
         self.current_position = None;
-        Some((active, target))
+        Some((origin, target))
     }
 
     pub fn cancel(&mut self) {
+        self.origin_index = None;
         self.active_index = None;
         self.over_index = None;
         self.start_position = None;
@@ -66,6 +71,10 @@ impl DragState {
 
     pub fn active_index(&self) -> Option<usize> {
         self.active_index
+    }
+
+    pub fn origin_index(&self) -> Option<usize> {
+        self.origin_index
     }
 
     pub fn over_index(&self) -> Option<usize> {
@@ -160,8 +169,10 @@ mod tests {
     fn drag_state_finishes_with_last_over_index() {
         let mut state = DragState::default();
         state.start(1, point(px(0.0), px(0.0)));
-        state.set_over(3);
+        state.update_position(point(px(20.0), px(0.0)));
+        state.move_active_to(3);
         assert_eq!(state.finish(), Some((1, 3)));
+        assert_eq!(state.origin_index(), None);
         assert_eq!(state.active_index(), None);
         assert_eq!(state.over_index(), None);
     }

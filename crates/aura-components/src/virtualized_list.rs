@@ -1,7 +1,7 @@
 use crate::draggable::{DragAxis, DragState, drag_handle, reorder_indices};
 use gpui::{
     AnyElement, App, Context, Entity, IntoElement, ListAlignment, ListState, MouseButton,
-    MouseMoveEvent, Pixels, Render, Window, div, list, prelude::*, px,
+    MouseMoveEvent, Pixels, Render, Window, deferred, div, list, prelude::*, px,
 };
 use std::sync::Arc;
 
@@ -147,8 +147,11 @@ impl VirtualizedList {
         if index >= self.order.len() || index == active {
             return;
         }
-        self.drag_state.set_over(index);
-        cx.notify();
+        if reorder_indices(&mut self.order, active, index) {
+            self.drag_state.move_active_to(index);
+            self.list_state.remeasure();
+            cx.notify();
+        }
     }
 
     fn update_drag_position(
@@ -169,12 +172,10 @@ impl VirtualizedList {
     }
 
     fn finish_drag(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let Some((from, target)) = self.drag_state.finish() else {
+        let Some((from, to)) = self.drag_state.finish() else {
             return;
         };
-        let to = target.min(self.order.len().saturating_sub(1));
-        if from != to && reorder_indices(&mut self.order, from, to) {
-            self.list_state.remeasure();
+        if from != to {
             if let Some(callback) = self.on_reorder.clone() {
                 callback(from, to, window, cx);
             }
@@ -306,10 +307,15 @@ impl Render for VirtualizedList {
                     } else {
                         shell = shell.child(item);
                     }
-                    if spacing > px(0.0) {
-                        div().pb(spacing).child(shell).into_any_element()
+                    let row = if is_dragging {
+                        deferred(shell).with_priority(1000).into_any_element()
                     } else {
                         shell.into_any_element()
+                    };
+                    if spacing > px(0.0) {
+                        div().pb(spacing).child(row).into_any_element()
+                    } else {
+                        row
                     }
                 })
                 .size_full(),

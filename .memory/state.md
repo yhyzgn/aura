@@ -385,3 +385,15 @@ Validation evidence:
 - `cargo test -p aura-components virtualized_list` passed.
 - Follow-up correction: root list containers now also track mouse movement while the left button is pressed, and active item hover no longer overwrites the drop target. This prevents the translated active item from stealing hover events and making the target/offset look random.
 - Additional validation: `cargo test -p aura-gallery horizontal_list_demo` passed; `cargo test -p aura-gallery virtualized_list_demo` passed.
+
+## 2026-05-18 Drag reorder top-layer and live slot preview
+
+Adjusted draggable list behavior so the active dragged row/card is painted above siblings with GPUI deferred drawing priority while preserving its layout participation. Hovering another item now performs a live visual reorder so surrounding items give way immediately; DragState keeps the original position for the final callback and resets the pointer anchor when the active slot changes to avoid runaway offsets.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components draggable` passed.
+- `cargo test -p aura-components horizontal_list` passed.
+- `cargo test -p aura-components virtualized_list` passed.
+- `cargo test -p aura-gallery horizontal_list_demo` passed.
+- `cargo test -p aura-gallery virtualized_list_demo` passed.
