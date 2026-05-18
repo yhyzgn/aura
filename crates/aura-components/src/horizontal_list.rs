@@ -165,12 +165,25 @@ impl HorizontalList {
         cx.notify();
     }
 
-    fn hover_drag(&mut self, index: usize, event: &MouseMoveEvent, cx: &mut Context<Self>) {
-        if event.pressed_button != Some(MouseButton::Left) || self.drag_from.is_none() {
+    fn hover_drag(
+        &mut self,
+        index: usize,
+        _event: &MouseMoveEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(from) = self.drag_from else {
+            return;
+        };
+        if from == index || index >= self.order.len() {
             return;
         }
-        if self.drag_over != Some(index) {
+        if reorder_indices(&mut self.order, from, index) {
+            self.drag_from = Some(index);
             self.drag_over = Some(index);
+            if let Some(callback) = self.on_reorder.clone() {
+                callback(from, index, window, cx);
+            }
             cx.notify();
         }
     }
@@ -180,12 +193,7 @@ impl HorizontalList {
             return;
         };
         self.drag_over = None;
-        let to = index.min(self.order.len().saturating_sub(1));
-        if from != to && reorder_indices(&mut self.order, from, to) {
-            if let Some(callback) = self.on_reorder.clone() {
-                callback(from, to, window, cx);
-            }
-        }
+        let _ = (from, index, window);
         cx.notify();
     }
 
@@ -237,8 +245,8 @@ impl Render for HorizontalList {
 
             if draggable {
                 item_shell = item_shell
-                    .on_mouse_move(cx.listener(move |this, event, _, cx| {
-                        this.hover_drag(position, event, cx);
+                    .on_mouse_move(cx.listener(move |this, event, window, cx| {
+                        this.hover_drag(position, event, window, cx);
                     }))
                     .on_mouse_up(
                         MouseButton::Left,
@@ -289,8 +297,10 @@ impl Render for HorizontalList {
 
 fn render_drag_handle(color: gpui::Hsla, active: bool) -> gpui::Div {
     div()
+        .flex()
         .flex_none()
         .w(px(28.0))
+        .h_full()
         .items_center()
         .justify_center()
         .cursor_pointer()

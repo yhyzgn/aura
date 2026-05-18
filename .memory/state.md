@@ -343,3 +343,8 @@ Validation evidence:
 ## 2026-05-18 Drag reorder handle correction
 
 Corrected HorizontalList and VirtualizedList drag UX after feedback that invisible whole-item dragging was not acceptable. Dragging now starts only from an explicit front-side `GripVertical` handle rendered before each draggable item/row, while hover/drop detection stays on the item shell. Gallery and docs wording now points users to the visible drag handle.
+
+
+## 2026-05-18 Drag reorder live hover fix
+
+Fixed reorder interaction after testing feedback: drag handles are now full-height flex boxes so the Grip icon is centered, and dragging reorders immediately when the pointer moves over a target item/row instead of waiting for final mouse-up delivery. This avoids lost drops when GPUI mouse-up is delivered to the original drag handle instead of the hovered item.
