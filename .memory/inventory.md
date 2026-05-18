@@ -196,7 +196,7 @@
 | 5 | BarChart standalone mini mode | existing `bar_chart.rs` | ✅ | ✅ | Implemented in-place; no separate FlatBarMeter |
 | 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ✅ | ✅ | Implemented Wave 1; segmented bar plus top/bottom/both/hidden legend-value text |
 | 7 | HorizontalList | `crates/aura-components/src/horizontal_list.rs` | ✅ | ✅ | Implemented: horizontal scrolling, custom item/divider rendering, internal drag reorder, on_reorder callback |
-| 8 | Vertical list drag | existing `virtualized_list.rs` / list components | ⏳ | ⏳ | Planned in-place enhancement |
+| 8 | Vertical list drag | existing `virtualized_list.rs` / list components | ✅ | ✅ | Implemented in-place on VirtualizedList: drag reorder, internal order, on_reorder callback |
 | 9 | RingChart external labels | existing `ring_chart.rs` / chart modules | ⏳ | ⏳ | Planned in-place enhancement |
 | 10 | LineChart per-series style | existing `line_chart.rs` | ✅ | ✅ | Implemented in-place: solid/dashed/dotted/custom dash, per-series color/width/smooth |
 | 11 | BarChart range colors | existing `bar_chart.rs` | ⏳ | ⏳ | Planned in-place enhancement |

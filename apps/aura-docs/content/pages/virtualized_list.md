@@ -19,6 +19,15 @@
 ```rust src="virtualized_list/basic.rs"
 ```
 
+## 垂直拖动排序
+
+::AuraDemo{component="VirtualizedList"}::
+
+### 代码
+
+```rust src="virtualized_list/draggable.rs"
+```
+
 ## 设计说明
 
 `VirtualizedList` 不是 Web 虚拟滚动。它仍然运行在 GPUI 原生窗口中：列表状态由 `ListState` 管理，滚轮事件、布局测量、可见范围和滚动条定位都发生在 Rust / GPUI 元素树内。

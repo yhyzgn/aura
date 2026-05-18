@@ -1,10 +1,11 @@
 use gpui::{
-    AnyElement, App, Context, Entity, IntoElement, ListAlignment, ListState, Pixels, Render,
-    Window, div, list, prelude::*, px,
+    AnyElement, App, Context, Entity, IntoElement, ListAlignment, ListState, MouseButton,
+    MouseMoveEvent, Pixels, Render, Window, div, list, prelude::*, px,
 };
 use std::sync::Arc;
 
 type RenderItem = dyn Fn(usize, &mut Window, &mut App) -> AnyElement + 'static;
+type ReorderCallback = dyn Fn(usize, usize, &mut Window, &mut App) + 'static;
 
 /// A native virtualized vertical list for large or expensive item trees.
 ///
@@ -19,6 +20,11 @@ pub struct VirtualizedList {
     item_spacing: Pixels,
     height: Option<Pixels>,
     measure_all_items: bool,
+    order: Vec<usize>,
+    draggable: bool,
+    drag_from: Option<usize>,
+    drag_over: Option<usize>,
+    on_reorder: Option<Arc<ReorderCallback>>,
 }
 
 impl VirtualizedList {
@@ -36,6 +42,11 @@ impl VirtualizedList {
             item_spacing: px(0.0),
             height: None,
             measure_all_items: false,
+            order: (0..item_count).collect(),
+            draggable: false,
+            drag_from: None,
+            drag_over: None,
+            on_reorder: None,
         }
     }
 
@@ -56,6 +67,9 @@ impl VirtualizedList {
             return;
         }
         self.item_count = item_count;
+        self.order = (0..item_count).collect();
+        self.drag_from = None;
+        self.drag_over = None;
         self.list_state = Self::new_list_state(item_count, self.overdraw, self.measure_all_items);
     }
 
@@ -90,6 +104,67 @@ impl VirtualizedList {
         }
         self.height = height;
         self.list_state.remeasure();
+    }
+
+    pub fn set_draggable(&mut self, draggable: bool) {
+        self.draggable = draggable;
+        if !draggable {
+            self.drag_from = None;
+            self.drag_over = None;
+        }
+    }
+
+    pub fn set_on_reorder(
+        &mut self,
+        callback: impl Fn(usize, usize, &mut Window, &mut App) + 'static,
+    ) {
+        self.on_reorder = Some(Arc::new(callback));
+    }
+
+    pub fn order(&self) -> &[usize] {
+        &self.order
+    }
+
+    fn start_drag(&mut self, index: usize, cx: &mut Context<Self>) {
+        if !self.draggable {
+            return;
+        }
+        self.drag_from = Some(index);
+        self.drag_over = Some(index);
+        cx.notify();
+    }
+
+    fn hover_drag(&mut self, index: usize, event: &MouseMoveEvent, cx: &mut Context<Self>) {
+        if event.pressed_button != Some(MouseButton::Left) || self.drag_from.is_none() {
+            return;
+        }
+        if self.drag_over != Some(index) {
+            self.drag_over = Some(index);
+            cx.notify();
+        }
+    }
+
+    fn finish_drag(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(from) = self.drag_from.take() else {
+            return;
+        };
+        self.drag_over = None;
+        let to = index.min(self.order.len().saturating_sub(1));
+        if from != to && crate::horizontal_list::reorder_indices(&mut self.order, from, to) {
+            self.list_state.remeasure();
+            if let Some(callback) = self.on_reorder.clone() {
+                callback(from, to, window, cx);
+            }
+        }
+        cx.notify();
+    }
+
+    fn cancel_drag(&mut self, cx: &mut Context<Self>) {
+        if self.drag_from.is_some() || self.drag_over.is_some() {
+            self.drag_from = None;
+            self.drag_over = None;
+            cx.notify();
+        }
     }
 
     /// Measure every item once so GPUI's scrollbar math has a stable total height.
@@ -130,9 +205,14 @@ impl VirtualizedList {
 }
 
 impl Render for VirtualizedList {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let render_item = self.render_item.clone();
         let spacing = self.item_spacing;
+        let order = self.order.clone();
+        let draggable = self.draggable;
+        let drag_from = self.drag_from;
+        let drag_over = self.drag_over;
+        let entity = cx.entity().clone();
 
         div()
             .relative()
@@ -140,11 +220,48 @@ impl Render for VirtualizedList {
             .when_some(self.height, |el, height| el.h(height))
             .child(
                 list(self.list_state.clone(), move |index, window, cx| {
-                    let item = (render_item)(index, window, cx);
+                    let item_index = order.get(index).copied().unwrap_or(index);
+                    let item = (render_item)(item_index, window, cx);
+                    let is_dragging = drag_from == Some(index);
+                    let is_over = drag_over == Some(index) && drag_from != Some(index);
+                    let item_entity = entity.clone();
+                    let move_entity = entity.clone();
+                    let up_entity = entity.clone();
+                    let out_entity = entity.clone();
+                    let mut shell = div()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(if is_over {
+                            gpui::blue()
+                        } else {
+                            gpui::transparent_black()
+                        })
+                        .opacity(if is_dragging { 0.72 } else { 1.0 })
+                        .child(item);
+                    if draggable {
+                        shell = shell
+                            .cursor_pointer()
+                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                item_entity.update(cx, |list, cx| list.start_drag(index, cx));
+                                cx.stop_propagation();
+                            })
+                            .on_mouse_move(move |event, _, cx| {
+                                move_entity
+                                    .update(cx, |list, cx| list.hover_drag(index, event, cx));
+                            })
+                            .on_mouse_up(MouseButton::Left, move |_, window, cx| {
+                                up_entity
+                                    .update(cx, |list, cx| list.finish_drag(index, window, cx));
+                                cx.stop_propagation();
+                            })
+                            .on_mouse_up_out(MouseButton::Left, move |_, _, cx| {
+                                out_entity.update(cx, |list, cx| list.cancel_drag(cx));
+                            });
+                    }
                     if spacing > px(0.0) {
-                        div().pb(spacing).child(item).into_any_element()
+                        div().pb(spacing).child(shell).into_any_element()
                     } else {
-                        item
+                        shell.into_any_element()
                     }
                 })
                 .size_full(),
@@ -166,6 +283,8 @@ mod tests {
         assert!(source.contains("set_item_spacing"));
         assert!(source.contains("set_render_item"));
         assert!(source.contains("measure_all_items_for_scrollbar"));
+        assert!(source.contains("set_draggable"));
+        assert!(source.contains("set_on_reorder"));
     }
 
     #[test]

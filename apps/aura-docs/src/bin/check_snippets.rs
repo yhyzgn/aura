@@ -541,5 +541,7 @@ mod upload_limits;
 mod upload_picture_card;
 #[path = "../../content/snippets/virtualized_list/basic.rs"]
 mod virtualized_list_basic;
+#[path = "../../content/snippets/virtualized_list/draggable.rs"]
+mod virtualized_list_draggable;
 
 fn main() {}

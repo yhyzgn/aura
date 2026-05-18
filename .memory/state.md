@@ -328,3 +328,13 @@ Validation evidence:
 - `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
 - `cargo test -p aura-components horizontal_list` passed.
 - `cargo test -p aura-gallery horizontal_list_demo` passed.
+
+
+## 2026-05-18 P13 VirtualizedList drag reorder
+
+Enhanced existing `VirtualizedList` in-place with optional vertical drag reorder. The component now keeps an internal item order, renders original item indices through that order, supports `set_draggable(true)`, exposes `set_on_reorder(from_index, to_index, ...)`, and remeasures after reorder without storing `AnyElement` across frames. Gallery and Docs now include a vertical drag sorting example plus compile-checked snippet `virtualized_list/draggable.rs`.
+
+Validation evidence:
+- `cargo check -p aura-components -p aura-gallery -p aura-docs --bin check_snippets` passed.
+- `cargo test -p aura-components virtualized_list` passed.
+- `cargo test -p aura-gallery virtualized_list_demo` passed.
