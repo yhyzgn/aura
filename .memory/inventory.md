@@ -183,3 +183,27 @@
 | 3 | CheckBox menu state | `crates/aura-tray/src/lib.rs` | ✅ | ✅ | ✅ Check menu item config + state sync |
 | 4 | Recursive native menus | `crates/aura-tray/src/lib.rs` | ✅ | ✅ | ✅ Action, separator, 2nd/3rd/N-level submenu DSL |
 | 5 | Gallery/docs examples | `apps/aura-gallery/src/demos/tray_demo.rs`, `apps/aura-docs/content/pages/tray.md` | ✅ | ✅ | ✅ Rich non-intrusive config preview + compile-checked snippets |
+
+
+## P13 Component Expansion 🧭 Planned
+
+| # | Component / Enhancement | File Target | Demo | Docs | Status |
+|---|-------------------------|-------------|------|------|--------|
+| 1 | QrCode | `crates/aura-components/src/qr_code.rs` | ⏳ | ⏳ | Planned |
+| 2 | CodeEditor | `crates/aura-components/src/code_editor.rs` | ⏳ | ⏳ | Planned |
+| 3 | SignalMeter | `crates/aura-components/src/signal_meter.rs` | ⏳ | ⏳ | Planned |
+| 4 | HeatBar | `crates/aura-components/src/heat_bar.rs` | ⏳ | ⏳ | Planned |
+| 5 | FlatBarMeter | `crates/aura-components/src/flat_bar_meter.rs` | ⏳ | ⏳ | Planned |
+| 6 | SegmentRatioBar | `crates/aura-components/src/segment_ratio_bar.rs` | ⏳ | ⏳ | Planned |
+| 7 | HorizontalList | `crates/aura-components/src/horizontal_list.rs` | ⏳ | ⏳ | Planned |
+| 8 | Vertical list drag | `virtualized_list.rs` / list components | ⏳ | ⏳ | Planned |
+| 9 | RingChart external labels | `ring_chart.rs` / chart modules | ⏳ | ⏳ | Planned |
+| 10 | LineChart per-series style | `line_chart.rs` | ⏳ | ⏳ | Planned |
+| 11 | BarChart range colors | `bar_chart.rs` | ⏳ | ⏳ | Planned |
+| 12 | RingProgress gradient | `progress.rs` | ⏳ | ⏳ | Planned |
+| 13 | Timer | `crates/aura-components/src/timer.rs` | ⏳ | ⏳ | Planned |
+| 14 | Button gradient/custom colors | `button.rs` | ⏳ | ⏳ | Planned |
+| 15 | Tag flow layout | `tag.rs` | ⏳ | ⏳ | Planned |
+| 16 | Label | `crates/aura-components/src/label.rs` | ⏳ | ⏳ | Planned |
+| 17 | Operation | `crates/aura-components/src/operation.rs` | ⏳ | ⏳ | Planned |
+| 18 | Radio/Checkbox option customization | `radio*.rs`, `checkbox*.rs` | ⏳ | ⏳ | Planned |

@@ -83,3 +83,13 @@ Both `aura-gallery` and `aura-docs` now create independent demonstration tray ic
 ### P11 follow-up: close confirmation with remembered choice
 
 Gallery and Docs now intercept window close through GPUI `on_window_should_close`. If `TrayControlCenter.state.remembered_close_action` is `Ask`, a native Dialog asks whether to `关闭进程` or `隐藏到托盘`, with a `记住本次选择` checkbox. Remembered choices are stored in runtime tray control state as `TrayCloseAction::{ExitProcess, HideToTray}`; the Tray demo page can reset to Ask or preselect either behavior.
+
+
+## Current New Phase — P13 Component Expansion
+
+User requested a new planning phase for additional widgets and customization enhancements. P13 is now planned in `.prompt/P13-component-expansion.md`; implementation has not started yet.
+
+Scope highlights:
+- New widgets: QrCode generation/recognition, CodeEditor, SignalMeter, HeatBar, FlatBarMeter, SegmentRatioBar, HorizontalList, Timer, Label, Operation.
+- Enhancements: RingChart external labels, LineChart per-series stroke style, BarChart value range colors, RingProgress gradient/completion color, Button gradient/custom color derived states, Tag flow layout, Radio/Checkbox option customization, vertical list drag.
+- Execution is split into five waves: simple meters/bars/layout, chart/progress enhancements, draggable lists, QR/CodeEditor, and form-control deep customization.

@@ -14,7 +14,7 @@
 | UI 框架 | GPUI 0.2.2 (git = "https://github.com/zed-industries/zed") |
 | 参考规范 | Element-Plus 2.x (https://element-plus.org/zh-CN/) |
 | 架构 | Cargo Workspace Monorepo |
-| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 原生统计图组件；P11 系统托盘/进程常驻阶段；P12 原生安装器打包阶段 |
+| 目标 | ~76+ 个企业级组件, 分阶段交付；P9 作为延后高级组件补全 backlog；P10 原生统计图组件；P11 系统托盘/进程常驻阶段；P12 原生安装器打包阶段；P13 高级控件扩展阶段 |
 
 ---
 
@@ -31,6 +31,7 @@
 | **P10 统计图组件** | `.prompt/P10-charts.md` | 原生 GPUI 统计图控件：Line/Area/Bar/Pie/Ring/Sparkline/Axis/Grid/Legend/Tooltip |
 | **P11 托盘常驻** | `.prompt/P11-tray.md` | `aura-tray` 跨平台系统托盘、动态图标、CheckBox/N 级菜单与 GPUI 常驻进程桥接 |
 | **P12 原生打包** | `.prompt/P12-packaging.md` | `aura-packager` / `xtask package` / `packaging/` / CI installer pipeline，纯 Rust + GPUI 原生应用打包 |
+| **P13 高级控件扩展** | `.prompt/P13-component-expansion.md` | 二维码、代码编辑器、信号图、热力/比例/扁平柱、拖动列表、Timer，以及 Chart/Button/Tag/Radio/Checkbox 增强 |
 
 ---
 
@@ -109,7 +110,8 @@ aura/
 - P9 是 deferred backlog；只有用户明确要求补齐这些组件时才启动。
 - P10 是原生统计图阶段：开发纯原生 GPUI 统计图控件，参考 GPUI 官方 canvas/path/paint API；`vicanso/zedis` 只能作为案例参考，不复制其依赖或实现结构。
 - P11 是系统托盘/进程常驻阶段：开发 `aura-tray`，采用 `tray-icon` + `muda`，支持动态图标、CheckBox 菜单、二级/三级/N 级菜单，并在 Gallery/Docs 中提供丰富用例。
-- P12 是当前打包阶段：开发 `aura-packager` + `xtask package` + `packaging/` + CI workflow。应用必须保持纯 Rust + GPUI native，严禁转成 Tauri 或引入 WebView/HTML/CSS/DOM/browser runtime。P12 的最新接手进度在 `.prompt/P12-packaging.md#Handoff Snapshot — 2026-05-15`。
+- P12 是打包阶段：开发 `aura-packager` + `xtask package` + `packaging/` + CI workflow。应用必须保持纯 Rust + GPUI native，严禁转成 Tauri 或引入 WebView/HTML/CSS/DOM/browser runtime。
+- P13 是最新规划阶段：补充二维码、代码编辑器、信号图、热力/比例/扁平柱、横向/纵向拖动列表、Timer、Label、Operation，并增强 Chart/Button/Tag/Radio/Checkbox 等高自定义能力；详见 `.prompt/P13-component-expansion.md`。
 
 ### 4.2 每个组件/功能开发流程
 
@@ -357,6 +359,20 @@ target/aura-packager/GenerateRpm.docs.toml
 
 完整细节见 `.prompt/P12-packaging.md`。
 
+
+## 6.7 P13 高级控件扩展规约
+
+P13 目标是补齐 Dashboard / 低代码配置 / 数据监控 / 内容编辑场景中的高级控件与既有控件高自定义能力。
+
+首批规划范围：
+
+- 新增：`QrCode`、`CodeEditor`、`SignalMeter`、`HeatBar`、`FlatBarMeter`、`SegmentRatioBar`、`HorizontalList`、`Timer`、`Label`、`Operation`。
+- 增强：`RingChart` 外置 legend/value pattern、`LineChart` per-series 线型、`BarChart` value range colors、`RingProgress` gradient/completion color、`Button` gradient/custom color states、`Tag` flow layout、`Radio`/`Checkbox` option render customization、既有垂直列表 item drag。
+- QR/CodeEditor 如需新增依赖，必须先做 dependency review；CodeEditor 第一阶段复用已有 `syntect` 高亮，语法检查只做 provider/diagnostics 扩展点，不硬绑定 LSP。
+- 所有新增/增强控件必须同步 Gallery demo、Docs 页面、外部 snippets 和核心状态/计算测试。
+
+完整计划见 `.prompt/P13-component-expansion.md`。
+
 ## 7. Gallery Demo 规约
 
 ### 7.1 Demo 函数签名
@@ -491,7 +507,8 @@ Closes #P1-button-icons
 ├── P9 Deferred Advanced ⏸️ → .prompt/P9-deferred-advanced.md
 ├── P10 Charts ✅ → .prompt/P10-charts.md
 ├── P11 Tray ✅ → .prompt/P11-tray.md
-└── P12 Packaging 🔄 → .prompt/P12-packaging.md
+├── P12 Packaging ✅ → .prompt/P12-packaging.md
+└── P13 Component Expansion 🧭 → .prompt/P13-component-expansion.md
 ```
 
 ---
