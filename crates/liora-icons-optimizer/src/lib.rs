@@ -808,12 +808,12 @@ mod tests {
         let root = PathBuf::from("/workspace/liora");
 
         assert_eq!(
-            default_asset_out_dir(&root, "liora-docs"),
-            root.join("target/liora/icons/apps/liora-docs/assets/liora-icons")
+            default_asset_out_dir(&root, "sample-app"),
+            root.join("target/liora/icons/apps/sample-app/assets/liora-icons")
         );
         assert_eq!(
-            default_report_file(&root, "liora-docs"),
-            root.join("target/liora/icons/reports/liora-docs.md")
+            default_report_file(&root, "sample-app"),
+            root.join("target/liora/icons/reports/sample-app.md")
         );
     }
 

@@ -444,12 +444,12 @@ mod tests {
             std::thread::current().name().unwrap_or("test")
         ));
         let icons_root = root.join("target/liora/icons");
-        let app_bundle = icons_root.join("apps/liora-docs/assets/liora-icons/lucide");
-        let legacy_bundle = icons_root.join("liora-docs/assets/liora-icons/lucide");
+        let app_bundle = icons_root.join("apps/sample-app/assets/liora-icons/lucide");
+        let legacy_bundle = icons_root.join("sample-app/assets/liora-icons/lucide");
         std::fs::create_dir_all(&app_bundle).unwrap();
         std::fs::create_dir_all(&legacy_bundle).unwrap();
         std::fs::create_dir_all(icons_root.join("reports")).unwrap();
-        std::fs::write(icons_root.join("reports/liora-docs.md"), "report").unwrap();
+        std::fs::write(icons_root.join("reports/sample-app.md"), "report").unwrap();
         std::fs::write(app_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
         std::fs::write(legacy_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
 
@@ -463,7 +463,7 @@ mod tests {
             .iter()
             .position(|path| {
                 path.ends_with(
-                    "target/liora/icons/apps/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg",
+                    "target/liora/icons/apps/sample-app/assets/liora-icons/lucide/a-arrow-down.svg",
                 )
             })
             .expect("new app bundle path should be searched");
@@ -471,7 +471,7 @@ mod tests {
             .iter()
             .position(|path| {
                 path.ends_with(
-                    "target/liora/icons/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg",
+                    "target/liora/icons/sample-app/assets/liora-icons/lucide/a-arrow-down.svg",
                 )
             })
             .expect("legacy app bundle path should remain compatible");
