@@ -193,13 +193,26 @@ pub fn set_active_tooltip(data: TooltipData, cx: &mut App) {
 
 /// Replaces every active tooltip with one tooltip owned by a single trigger.
 ///
+/// Returns `true` when the stored tooltip identity, content, or anchor changed.
 /// General-purpose hover tooltips should be exclusive: when a virtualized item
 /// is recycled under an already-stationary mouse cursor, the new hovered item
 /// must refresh the global tooltip immediately instead of waiting for a
 /// `mouse_move` event. Chart/data tooltips can still call [`set_active_tooltip`]
 /// directly when they intentionally manage multiple data-driven entries.
-pub fn set_exclusive_active_tooltip(data: TooltipData, cx: &mut App) {
-    cx.global_mut::<ActiveTooltip>().0 = vec![data];
+pub fn set_exclusive_active_tooltip(data: TooltipData, cx: &mut App) -> bool {
+    let active = &mut cx.global_mut::<ActiveTooltip>().0;
+    let changed = active.len() != 1
+        || active.first().is_none_or(|current| {
+            current.id != data.id
+                || current.content != data.content
+                || current.anchor_bounds != data.anchor_bounds
+                || current.placement != data.placement
+                || current.offset != data.offset
+        });
+    if changed {
+        *active = vec![data];
+    }
+    changed
 }
 
 /// Clears the current tooltip state.

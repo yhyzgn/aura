@@ -100,6 +100,10 @@ impl RenderOnce for Tooltip {
             .child(TooltipBoundsTracker {
                 trigger: self.trigger,
                 bounds: bounds_cell.clone(),
+                id: id.clone(),
+                content: content.clone(),
+                placement,
+                offset,
             })
             .on_hover(move |hovered, _window, cx| {
                 if !hovered {
@@ -149,6 +153,10 @@ impl IntoElement for Tooltip {
 struct TooltipBoundsTracker {
     trigger: AnyElement,
     bounds: Rc<Cell<Bounds<Pixels>>>,
+    id: SharedString,
+    content: SharedString,
+    placement: Placement,
+    offset: Pixels,
 }
 
 impl IntoElement for TooltipBoundsTracker {
@@ -202,6 +210,20 @@ impl gpui::Element for TooltipBoundsTracker {
         cx: &mut App,
     ) {
         self.bounds.set(bounds);
+        if bounds.contains(&window.mouse_position())
+            && set_exclusive_active_tooltip(
+                TooltipData {
+                    id: self.id.clone(),
+                    content: self.content.clone(),
+                    anchor_bounds: bounds,
+                    placement: self.placement,
+                    offset: self.offset,
+                },
+                cx,
+            )
+        {
+            window.refresh();
+        }
         self.trigger.paint(window, cx);
     }
 }
@@ -217,5 +239,7 @@ mod tests {
         assert!(source.contains("clear_tooltip"));
         assert!(source.contains("hover_content.clone()"));
         assert!(source.contains("if !hovered") && source.contains("return;"));
+        assert!(source.contains("bounds.contains(&window.mouse_position())"));
+        assert!(source.contains("window.refresh()"));
     }
 }
