@@ -23,6 +23,8 @@ pub const INLINE_SVG_ASSET_PREFIX: &str = "liora-icon-inline:";
 /// Virtual asset prefix used by optimized bundled icon sets.
 pub const ICON_SVG_ASSET_PREFIX: &str = "liora-icon://";
 
+const FALLBACK_ICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" data-liora-icon-fallback="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9.5 9a2.5 2.5 0 0 1 4.25-1.77 2.5 2.5 0 0 1-.35 3.84c-.86.58-1.4 1.02-1.4 2.18"/><path d="M12 17h.01"/></svg>"##;
+
 /// Builds a virtual SVG asset path from embedded SVG source text.
 pub fn inline_svg_asset_path(svg: &'static str) -> Cow<'static, str> {
     Cow::Owned(format!("{INLINE_SVG_ASSET_PREFIX}{svg}"))
@@ -78,18 +80,7 @@ impl AssetSource for IconAssetSource {
         }
 
         if let Some(request) = IconAssetRequest::parse(path) {
-            for candidate in request.candidate_paths() {
-                match fs::read(&candidate) {
-                    Ok(bytes) => return Ok(Some(Cow::Owned(bytes))),
-                    Err(error)
-                        if matches!(
-                            error.kind(),
-                            std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
-                        ) => {}
-                    Err(error) => return Err(error.into()),
-                }
-            }
-            return Ok(None);
+            return load_virtual_icon_asset(path, &request);
         }
 
         let path = path.strip_prefix("file://").unwrap_or(path);
@@ -176,14 +167,88 @@ impl IconAssetRequest {
     }
 }
 
+fn load_virtual_icon_asset(
+    original_path: &str,
+    request: &IconAssetRequest,
+) -> gpui::Result<Option<Cow<'static, [u8]>>> {
+    let debug = icon_debug_enabled();
+    let candidates = request.candidate_paths();
+    if debug {
+        eprintln!(
+            "liora-icons: resolving {original_path} with {} candidate path(s)",
+            candidates.len()
+        );
+    }
+
+    for candidate in candidates {
+        match fs::read(&candidate) {
+            Ok(bytes) => {
+                if debug {
+                    eprintln!("liora-icons: hit {}", candidate.display());
+                }
+                return Ok(Some(Cow::Owned(bytes)));
+            }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                ) =>
+            {
+                if debug {
+                    eprintln!(
+                        "liora-icons: miss {} ({})",
+                        candidate.display(),
+                        error.kind()
+                    );
+                }
+            }
+            Err(error) => {
+                if debug {
+                    eprintln!("liora-icons: error {}: {error}", candidate.display());
+                }
+                return Err(error.into());
+            }
+        }
+    }
+
+    if debug {
+        eprintln!("liora-icons: using fallback placeholder for {original_path}");
+    }
+    Ok(Some(Cow::Borrowed(FALLBACK_ICON_SVG.as_bytes())))
+}
+
+fn icon_debug_enabled() -> bool {
+    env::var("LIORA_ICON_DEBUG")
+        .map(|value| {
+            let value = value.trim();
+            !(value.is_empty()
+                || value == "0"
+                || value.eq_ignore_ascii_case("false")
+                || value.eq_ignore_ascii_case("off"))
+        })
+        .unwrap_or(false)
+}
+
 fn target_icon_bundle_candidates(current_dir: &Path, set: &str, file: &str) -> Vec<PathBuf> {
     let root = current_dir.join("target/liora/icons");
     let mut candidates = vec![root.join("assets/liora-icons").join(set).join(file)];
-    if let Ok(entries) = fs::read_dir(&root) {
+    candidates.extend(target_icon_bundle_candidates_under(
+        &root.join("apps"),
+        set,
+        file,
+    ));
+    candidates.extend(target_icon_bundle_candidates_under(&root, set, file));
+    candidates
+}
+
+fn target_icon_bundle_candidates_under(root: &Path, set: &str, file: &str) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(entries) = fs::read_dir(root) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() {
-                candidates.push(path.join("assets/liora-icons").join(set).join(file));
+            let resource_root = path.join("assets/liora-icons");
+            if resource_root.is_dir() {
+                candidates.push(resource_root.join(set).join(file));
             }
         }
     }
@@ -372,29 +437,69 @@ mod tests {
     }
 
     #[test]
-    fn target_icon_bundle_candidates_ignore_report_files() {
+    fn target_icon_bundle_candidates_prefer_app_bundles_and_ignore_reports() {
         let root = std::env::temp_dir().join(format!(
             "liora-icons-candidates-{}-{}",
             std::process::id(),
             std::thread::current().name().unwrap_or("test")
         ));
         let icons_root = root.join("target/liora/icons");
-        let docs_bundle = icons_root.join("liora-docs/assets/liora-icons/lucide");
-        std::fs::create_dir_all(&docs_bundle).unwrap();
-        std::fs::write(icons_root.join("liora_icon_bundle_report.md"), "report").unwrap();
-        std::fs::write(docs_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
+        let app_bundle = icons_root.join("apps/liora-docs/assets/liora-icons/lucide");
+        let legacy_bundle = icons_root.join("liora-docs/assets/liora-icons/lucide");
+        std::fs::create_dir_all(&app_bundle).unwrap();
+        std::fs::create_dir_all(&legacy_bundle).unwrap();
+        std::fs::create_dir_all(icons_root.join("reports")).unwrap();
+        std::fs::write(icons_root.join("reports/liora-docs.md"), "report").unwrap();
+        std::fs::write(app_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
+        std::fs::write(legacy_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
 
         let candidates = target_icon_bundle_candidates(&root, "lucide", "a-arrow-down.svg");
+        let rendered = candidates
+            .iter()
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+            .collect::<Vec<_>>();
 
-        assert!(candidates.iter().any(|path| path.ends_with(
-            "target/liora/icons/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg"
-        )));
-        assert!(!candidates.iter().any(|path| {
-            path.to_string_lossy()
-                .contains("liora_icon_bundle_report.md/assets/liora-icons")
-        }));
+        let app_index = rendered
+            .iter()
+            .position(|path| {
+                path.ends_with(
+                    "target/liora/icons/apps/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg",
+                )
+            })
+            .expect("new app bundle path should be searched");
+        let legacy_index = rendered
+            .iter()
+            .position(|path| {
+                path.ends_with(
+                    "target/liora/icons/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg",
+                )
+            })
+            .expect("legacy app bundle path should remain compatible");
+        assert!(app_index < legacy_index);
+        assert!(
+            !rendered
+                .iter()
+                .any(|path| path.contains("reports/assets/liora-icons"))
+        );
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn virtual_icon_missing_resource_uses_visible_placeholder() {
+        use gpui::AssetSource;
+
+        let path = format!("{ICON_SVG_ASSET_PREFIX}missing/nope.svg");
+        let bytes = IconAssetSource
+            .load(&path)
+            .expect("missing virtual icon should not error")
+            .expect("missing virtual icon should return fallback placeholder");
+        let svg = std::str::from_utf8(&bytes).unwrap();
+
+        assert!(svg.contains("<svg"));
+        assert!(svg.contains("data-liora-icon-fallback=\"true\""));
+        assert!(svg.contains("<rect"));
+        assert!(svg.contains("M12 17h.01"));
     }
 
     #[test]

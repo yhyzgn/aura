@@ -597,7 +597,11 @@ fn main() {
 }
 ```
 
-The optimizer scans the current app and reachable Liora dependency sources, rebuilds `target/liora/icons/<app>/assets/liora-icons`, and writes `target/liora/icons/liora_icon_bundle_report.md`. Host code still uses `IconName` directly; the generated bundle is a packaging resource, not an application API.
+The optimizer scans the current app and reachable Liora dependency sources, rebuilds `target/liora/icons/apps/<app>/assets/liora-icons`, and writes `target/liora/icons/reports/<app>.md`. Host code still uses `IconName` directly; the generated bundle is a packaging resource, not an application API. Packaging tools automatically collect that directory, so application developers should not copy generated SVGs by hand or run extra packaging commands.
+
+Runtime loading is also automatic. `IconAssetSource` searches installer resources, portable resources, generated dev bundles, and the typed icon crate's `dev=` fallback path. If a virtual icon still cannot be found, Liora renders a visible placeholder icon instead of a silent blank. Set `LIORA_ICON_DEBUG=1` only while debugging to print the candidate path chain and the final hit/miss decision.
+
+Avoid `IconName::all()` in normal production app code: it intentionally asks the optimizer to bundle a whole icon pack. It is appropriate for icon-browser pages like Liora Docs, but ordinary apps should reference concrete `IconName::Search` / `IconName::Settings` variants so the bundle stays small.
 
 When using raw `gpui_platform::application()`, install the Liora icon asset source if your app uses bundled SVG payloads:
 

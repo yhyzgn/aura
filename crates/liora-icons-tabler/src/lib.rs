@@ -67,5 +67,9 @@ mod tests {
         let svg = std::str::from_utf8(&bytes).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("viewBox") || svg.contains("viewbox"));
+        assert!(
+            !svg.contains("data-liora-icon-fallback"),
+            "typed icon pack tests must load a real SVG, not the runtime placeholder"
+        );
     }
 }

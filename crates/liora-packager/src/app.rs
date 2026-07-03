@@ -174,6 +174,7 @@ impl AppMetadata {
         root.join("target")
             .join("liora")
             .join("icons")
+            .join("apps")
             .join(&self.package)
             .join("assets")
             .join("liora-icons")

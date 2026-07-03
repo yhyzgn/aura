@@ -596,7 +596,11 @@ fn main() {
 }
 ```
 
-optimizer 会扫描当前应用和可达的 Liora 依赖源码，重建 `target/liora/icons/<app>/assets/liora-icons`，并输出 `target/liora/icons/liora_icon_bundle_report.md`。宿主业务代码仍然直接使用 `IconName`；生成的 bundle 是打包资源，不是业务 API。
+optimizer 会扫描当前应用和可达的 Liora 依赖源码，重建 `target/liora/icons/apps/<app>/assets/liora-icons`，并输出 `target/liora/icons/reports/<app>.md`。宿主业务代码仍然直接使用 `IconName`；生成的 bundle 是打包资源，不是业务 API。打包工具会自动收集这个目录，应用开发者不需要手动复制 SVG，也不需要额外执行打包资源命令。
+
+运行时加载同样是自动的。`IconAssetSource` 会依次查找安装包资源、portable 资源、开发期生成 bundle，以及强类型图标 crate 自带的 `dev=` fallback 路径。如果虚拟图标最终仍然找不到，Liora 会渲染一个可见占位图标，而不是静默空白。只有排查问题时才需要设置 `LIORA_ICON_DEBUG=1`，它会打印候选路径链路和最终命中/失败结果。
+
+普通生产应用中应避免使用 `IconName::all()`：它会明确告诉 optimizer 打包整个图标库。它适合 Liora Docs 这种图标浏览器页面；普通应用应引用具体的 `IconName::Search` / `IconName::Settings` 变体，让 bundle 保持小体积。
 
 如果应用使用 `gpui_platform::application()` 并渲染内置 SVG payload，建议安装 Liora icon asset source：
 

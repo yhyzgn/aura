@@ -75,7 +75,36 @@ Liora SDK 从 crates.io 安装；GPUI 通过 Cargo `[patch.crates-io]` 解析到
 - 组件库 crate 不应该开启平台 feature；平台 feature 应放在最终 app crate 的 `cfg(...)` target dependency 中。
 - 如果你在 Liora 仓库内开发，优先使用 workspace 中已有的 path dependency；外部应用优先使用 crates.io `liora = "0.1"`。
 
-## 5. 初始化 Liora 并打开窗口
+## 5. 启用自动图标资源优化
+
+如果应用使用 Liora 内置图标库，把 `liora-icons-optimizer` 加到应用 crate 的 `[build-dependencies]`，并在已有 `build.rs` 中调用一次 builder。之后 `cargo check` / `cargo run` / `cargo build` 都会自动扫描源码、生成 `target/liora/icons/apps/<app>/assets/liora-icons`，并由打包工具自动带入安装包；开发者不需要手动复制 SVG 或运行额外命令。
+
+```toml
+[build-dependencies]
+liora-icons-optimizer = "0.2"
+```
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+
+    // Keep your existing build.rs work here, such as Windows resources.
+}
+```
+
+运行时只需要在应用启动时安装 asset source。缺失的虚拟图标会显示可见占位符；只有排查路径问题时才需要设置 `LIORA_ICON_DEBUG=1` 查看候选路径链路。普通应用避免使用 `IconName::all()`，否则会自动打包整个图标库。
+
+```rust
+gpui_platform::application()
+    .with_assets(liora_icons::IconAssetSource)
+    .run(|cx| {
+        liora::init_liora(cx);
+    });
+```
+
+## 6. 初始化 Liora 并打开窗口
 
 最小可运行窗口包括三步：
 
@@ -86,14 +115,14 @@ Liora SDK 从 crates.io 安装；GPUI 通过 Cargo `[patch.crates-io]` 解析到
 ```rust src="quick_start/main_window.rs"
 ```
 
-## 6. 注册系统平台菜单
+## 7. 注册系统平台菜单
 
 平台菜单和窗口内菜单栏是两个层级：`Menu::register(cx, menus)` 注册 GPUI 官方平台菜单；如果你还希望在窗口内容里稳定显示 `File / Edit` 这一行，就把同一份 descriptor 渲染成 `MenuBar` 放进 header / Shell / TitleBar。
 
 ```rust src="quick_start/platform_menu.rs"
 ```
 
-## 7. 在 View 中组合 Liora 组件
+## 8. 在 View 中组合 Liora 组件
 
 GPUI 的推荐写法是：状态放在 View 字段里，渲染时把这些字段转换为元素。下面示例演示了按钮、标题、文本、输入框和开关：
 
@@ -108,7 +137,7 @@ GPUI 的推荐写法是：状态放在 View 字段里，渲染时把这些字段
 - 需要弹层或全局提示的应用，要在根布局末尾渲染对应 Portal / Message 层。
 - 字体默认走系统；如果要像 Gallery/Docs 一样指定应用级字体，请先注册字体资源，再在 `Options::system().with_fonts(...)` 中指定有序 fallback family。详见下一节“应用级字体自定义”。
 
-## 8. 应用级字体自定义
+## 9. 应用级字体自定义
 
 Liora 把字体分成两个步骤：**加载资源** 和 **选择 family / weight**。系统已安装字体不需要加载文件，直接用 `FontConfig::system().with_ui_families([...]).with_ui_weight(...).with_code_families([...])` 指定有序兜底列表和可选默认字重即可；随应用分发的私有字体要先通过 `load_app_fonts` / `load_fonts_from_dir` / `load_font_assets` / `load_embedded_fonts` 注册，再用 `init_liora_with_options(...)` 或运行时 `set_font_config(...)` 生效。
 
@@ -124,7 +153,7 @@ Gallery 和 Docs 当前采用同一策略：源码运行时扫描 `apps/<app>/as
 - `with_ui_families([...])` 和 `with_code_families([...])` 都是有序 fallback 列表，不是单个 family；它们不会自动选择 Medium/Bold face。要指定默认字重，请用 `with_ui_weight(FontWeight::MEDIUM)` / `with_code_weight(...)`。建议把品牌字体放前面，把跨平台系统字体放后面。
 - 字体资源属于应用级资产。SDK 只提供加载和配置 API，不会强制把某套字体耦合进所有下游应用。
 
-## 9. 运行和验证
+## 10. 运行和验证
 
 ```shell src="quick_start/verify.sh"
 ```

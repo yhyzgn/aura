@@ -39,7 +39,7 @@ Liora 引入了 **Icon Bundle Auto Optimization** 打包优化机制：**业务�
 - **若是依赖 Liora SDK 的外部独立应用**：
   ```toml
   [build-dependencies]
-  liora-icons-optimizer = "0.1"
+  liora-icons-optimizer = "0.2"
   ```
 
 #### 2. 在应用的唯一的 `build.rs` 中引入 Builder
@@ -71,10 +71,14 @@ fn main() {
 ```
 
 ### 它是如何工作的？
-- **自动扫描与删除**：每次调用 `cargo check` / `cargo run` 或 `cargo build` 时，优化器都会扫描源码中形如 `IconName::Search`、`lucide::IconName::Check` 的强类型使用，重建图标资源目录。如果你在代码中删除了某图标，下一次构建时它就会被自动从 bundle 资源目录中剔除。
+- **自动扫描与删除**：每次调用 `cargo check` / `cargo run` 或 `cargo build` 时，优化器都会扫描源码中形如 `IconName::Search`、`lucide::IconName::Check` 的强类型使用，重建 `target/liora/icons/apps/<app>/assets/liora-icons`。如果你在代码中删除了某图标，下一次构建时它就会被自动从 bundle 资源目录中剔除。
+- **报告自动生成**：optimizer 会写入 `target/liora/icons/reports/<app>.md`，其中包含扫描根目录、实际复制图标、运行时搜索路径。这个报告仅用于诊断，不需要开发者手动参与打包。
 - **开发与打包双通道**：
   - **开发环境**：在本地运行开发时，如果没有生成的打包资源，`IconAssetSource` 会通过 `dev=` 参数自动回退到本地的 Liora 图标源码目录加载 SVG，不影响日常开发调试的效率。
   - **打包环境**：通过 `cargo-packager` 或 `xtask` 打包发布时，打包工具会自动将生成的 `assets/liora-icons` 目录打包入最终安装包，在没有开发源码树的用户电脑上实现无缝加载。
+- **可见 fallback**：如果虚拟图标资源最终仍然缺失，`IconAssetSource` 会返回一个可见占位 SVG，避免页面出现难以排查的空白。
+- **按需诊断**：设置 `LIORA_ICON_DEBUG=1` 后，运行时会打印候选路径、命中路径和 fallback 决策。正常开发与打包不需要设置这个变量。
+- **避免误用全量图标**：`IconName::all()` 会让 optimizer 自动打包整个图标库。它适合 Docs 的图标清单页面；普通应用应使用具体枚举变体，让包体保持最小。
 
 ## 完整 IconName 清单在哪里？
 

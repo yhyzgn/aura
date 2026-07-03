@@ -13,7 +13,7 @@
 //!
 //! The optimizer scans the host crate plus local Liora dependency sources for
 //! strongly typed `IconName::...` usages, then copies only those SVG files into
-//! `target/liora/icons/assets/liora-icons` for packaging.
+//! `target/liora/icons/apps/<app>/assets/liora-icons` for packaging.
 
 use serde_json::Value;
 use std::{
@@ -143,22 +143,14 @@ impl Optimizer {
             .unwrap_or_else(|| self.manifest_dir.clone());
 
         let package_name = env::var("CARGO_PKG_NAME").unwrap_or_else(|_| "app".to_string());
-        let asset_out_dir = self.asset_out_dir.clone().unwrap_or_else(|| {
-            workspace_root
-                .join("target")
-                .join("liora")
-                .join("icons")
-                .join(&package_name)
-                .join("assets")
-                .join("liora-icons")
-        });
-        let report_file = self.report_file.clone().unwrap_or_else(|| {
-            workspace_root
-                .join("target")
-                .join("liora")
-                .join("icons")
-                .join("liora_icon_bundle_report.md")
-        });
+        let asset_out_dir = self
+            .asset_out_dir
+            .clone()
+            .unwrap_or_else(|| default_asset_out_dir(&workspace_root, &package_name));
+        let report_file = self
+            .report_file
+            .clone()
+            .unwrap_or_else(|| default_report_file(&workspace_root, &package_name));
 
         let icon_packages = metadata.icon_packages();
         let mut icon_catalogs = HashMap::new();
@@ -234,9 +226,11 @@ impl Optimizer {
         }
 
         let report = OptimizationReport {
+            package_name,
             scanned_files,
             source_dirs,
             asset_out_dir,
+            report_file: report_file.clone(),
             copied,
             missing,
         };
@@ -264,6 +258,44 @@ impl Optimizer {
     }
 }
 
+fn default_asset_out_dir(workspace_root: &Path, package_name: &str) -> PathBuf {
+    workspace_root
+        .join("target")
+        .join("liora")
+        .join("icons")
+        .join("apps")
+        .join(package_name)
+        .join("assets")
+        .join("liora-icons")
+}
+
+fn default_report_file(workspace_root: &Path, package_name: &str) -> PathBuf {
+    workspace_root
+        .join("target")
+        .join("liora")
+        .join("icons")
+        .join("reports")
+        .join(format!("{package_name}.md"))
+}
+
+fn runtime_search_roots(report: &OptimizationReport) -> Vec<String> {
+    vec![
+        "${LIORA_ICON_ASSETS_DIR}/<set>/<file>".to_string(),
+        "<exe-dir>/assets/liora-icons/<set>/<file>".to_string(),
+        "<exe-dir>/../assets/liora-icons/<set>/<file>".to_string(),
+        "<exe-dir>/../Resources/assets/liora-icons/<set>/<file>".to_string(),
+        "Linux package: /usr/lib/<binary>/assets/liora-icons/<set>/<file>".to_string(),
+        "<current-dir>/assets/liora-icons/<set>/<file>".to_string(),
+        "<workspace>/target/liora/icons/apps/<app>/assets/liora-icons/<set>/<file>".to_string(),
+        "Legacy dev fallback: <workspace>/target/liora/icons/<app>/assets/liora-icons/<set>/<file>"
+            .to_string(),
+        format!(
+            "This build output: {}/<set>/<file>",
+            report.asset_out_dir.display()
+        ),
+    ]
+}
+
 #[derive(Debug, Error)]
 pub enum OptimizerError {
     #[error("failed to run cargo metadata in {manifest_dir}: {source}")]
@@ -285,9 +317,11 @@ pub enum OptimizerError {
 /// Summary produced by [`Optimizer`].
 #[derive(Debug, Clone, Default)]
 pub struct OptimizationReport {
+    pub package_name: String,
     pub scanned_files: usize,
     pub source_dirs: Vec<PathBuf>,
     pub asset_out_dir: PathBuf,
+    pub report_file: PathBuf,
     pub copied: Vec<CopiedIcon>,
     pub missing: Vec<String>,
 }
@@ -694,6 +728,7 @@ fn write_report(path: &Path, report: &OptimizationReport) -> Result<(), Optimize
     }
     let mut out = String::new();
     out.push_str("# Liora icon bundle optimization report\n\n");
+    out.push_str(&format!("- Package: `{}`\n", report.package_name));
     out.push_str(&format!(
         "- Scanned Rust files: `{}`\n",
         report.scanned_files
@@ -703,6 +738,15 @@ fn write_report(path: &Path, report: &OptimizationReport) -> Result<(), Optimize
         "- Output directory: `{}`\n",
         report.asset_out_dir.display()
     ));
+    out.push_str(&format!(
+        "- Report file: `{}`\n",
+        report.report_file.display()
+    ));
+    out.push_str("\n## Runtime search roots\n\n");
+    out.push_str("These paths are used automatically by `liora_icons::IconAssetSource`; application developers do not need to copy files manually.\n\n");
+    for root in runtime_search_roots(report) {
+        out.push_str(&format!("- `{root}`\n"));
+    }
     out.push_str("\n## Scan roots\n\n");
     for dir in &report.source_dirs {
         out.push_str(&format!("- `{}`\n", dir.display()));
@@ -755,6 +799,46 @@ fn to_pascal_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_paths_separate_app_bundles_from_reports() {
+        let root = PathBuf::from("/workspace/liora");
+
+        assert_eq!(
+            default_asset_out_dir(&root, "liora-docs"),
+            root.join("target/liora/icons/apps/liora-docs/assets/liora-icons")
+        );
+        assert_eq!(
+            default_report_file(&root, "liora-docs"),
+            root.join("target/liora/icons/reports/liora-docs.md")
+        );
+    }
+
+    #[test]
+    fn report_documents_runtime_search_roots() {
+        let report = OptimizationReport {
+            package_name: "sample-app".to_string(),
+            scanned_files: 1,
+            source_dirs: vec![PathBuf::from("src")],
+            asset_out_dir: PathBuf::from("target/liora/icons/apps/sample-app/assets/liora-icons"),
+            report_file: PathBuf::from("target/liora/icons/reports/sample-app.md"),
+            copied: Vec::new(),
+            missing: Vec::new(),
+        };
+        let path = std::env::temp_dir().join(format!(
+            "liora-icon-report-{}-{}.md",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+
+        write_report(&path, &report).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+
+        assert!(text.contains("## Runtime search roots"));
+        assert!(text.contains("target/liora/icons/apps/<app>/assets/liora-icons"));
+        assert!(text.contains("do not need to copy files manually"));
+        let _ = std::fs::remove_file(path);
+    }
 
     #[test]
     fn scanner_finds_qualified_and_aliased_icons() {

@@ -11358,7 +11358,7 @@ mod tests {
 
     #[test]
     fn quick_start_documents_app_level_font_customization() {
-        assert!(QUICK_START_DOC.contains("## 8. 应用级字体自定义"));
+        assert!(QUICK_START_DOC.contains("## 9. 应用级字体自定义"));
         assert!(QUICK_START_DOC.contains(r#"src="quick_start/fonts.rs""#));
         assert!(QUICK_START_DOC.contains("Gallery 和 Docs 当前采用同一策略"));
         assert!(QUICK_START_DOC.contains("with_ui_weight(FontWeight::MEDIUM)"));
@@ -11369,8 +11369,22 @@ mod tests {
     }
 
     #[test]
+    fn quick_start_documents_automatic_icon_optimizer_setup() {
+        assert!(QUICK_START_DOC.contains("## 5. 启用自动图标资源优化"));
+        assert!(QUICK_START_DOC.contains("liora-icons-optimizer = \"0.2\""));
+        assert!(QUICK_START_DOC.contains("target/liora/icons/apps/<app>/assets/liora-icons"));
+        assert!(QUICK_START_DOC.contains("不需要手动复制 SVG"));
+        assert!(QUICK_START_DOC.contains("LIORA_ICON_DEBUG=1"));
+        assert!(QUICK_START_DOC.contains("IconName::all()"));
+        let cargo = load_code_snippet("quick_start/app_cargo.toml")
+            .expect("quick start cargo snippet should load");
+        assert!(cargo.contains("[build-dependencies]"));
+        assert!(cargo.contains("liora-icons-optimizer = \"0.2\""));
+    }
+
+    #[test]
     fn quick_start_documents_platform_menu_setup() {
-        assert!(QUICK_START_DOC.contains("## 6. 注册系统平台菜单"));
+        assert!(QUICK_START_DOC.contains("## 7. 注册系统平台菜单"));
         assert!(QUICK_START_DOC.contains(r#"src="quick_start/platform_menu.rs""#));
         assert!(QUICK_START_DOC.contains("Menu::register"));
         assert!(load_code_snippet("quick_start/platform_menu.rs").is_some());
