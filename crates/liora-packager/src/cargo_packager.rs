@@ -437,14 +437,11 @@ fn append_rpm_icon_assets(out: &mut String, root: &Path, app: &AppMetadata) {
 
     for file in files {
         if let Ok(relative) = file.strip_prefix(&icons_dir) {
+            let rel_str = relative.to_string_lossy().replace('\\', "/");
             rpm_asset(
                 out,
                 &file,
-                &format!(
-                    "/usr/lib/{}/assets/liora-icons/{}",
-                    app.binary,
-                    relative.display()
-                ),
+                &format!("/usr/lib/{}/assets/liora-icons/{}", app.binary, rel_str),
                 "644",
             );
         }
@@ -464,14 +461,11 @@ fn append_rpm_font_assets(out: &mut String, root: &Path, app: &AppMetadata) {
 
     for file in files {
         if let Ok(relative) = file.strip_prefix(&fonts_dir) {
+            let rel_str = relative.to_string_lossy().replace('\\', "/");
             rpm_asset(
                 out,
                 &file,
-                &format!(
-                    "/usr/lib/{}/assets/fonts/{}",
-                    app.binary,
-                    relative.display()
-                ),
+                &format!("/usr/lib/{}/assets/fonts/{}", app.binary, rel_str),
                 "644",
             );
         }
