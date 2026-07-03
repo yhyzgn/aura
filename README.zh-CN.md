@@ -90,26 +90,26 @@ Liora 明确不是 Web 外壳：
 
 ```toml
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 ```
 
 只有当你明确需要更窄依赖面时，才直接依赖底层 focused crates：
 
 ```toml
 [dependencies]
-liora-components = "0.1"
-liora-core = "0.1"
-liora-theme = "0.1"
-liora-icons = "0.1"
-liora-icons-lucide = "0.1"
-liora-icons-antd = "0.1"
-liora-icons-ionic = "0.1"
-liora-icons-tabler = "0.1"
-liora-icons-carbon = "0.1"
-liora-icons-material = "0.1"
-liora-tray = "0.1"
-liora-updater = "0.1"
-liora-packager = "0.1"
+liora-components = "0.2"
+liora-core = "0.2"
+liora-theme = "0.2"
+liora-icons = "0.2"
+liora-icons-lucide = "0.2"
+liora-icons-antd = "0.2"
+liora-icons-ionic = "0.2"
+liora-icons-tabler = "0.2"
+liora-icons-carbon = "0.2"
+liora-icons-material = "0.2"
+liora-tray = "0.2"
+liora-updater = "0.2"
+liora-packager = "0.2"
 ```
 
 `liora` facade 重新导出了稳定模块名：
@@ -129,10 +129,10 @@ use liora::packager;
 
 ```toml
 [dependencies]
-liora = { version = "0.1", default-features = false }
+liora = { version = "0.2", default-features = false }
 
 # 或者只保留 updater：
-liora = { version = "0.1", default-features = false, features = ["updater"] }
+liora = { version = "0.2", default-features = false, features = ["updater"] }
 ```
 
 ## GPUI 依赖与本地 patch 策略
@@ -152,12 +152,12 @@ Liora **只能使用官方 Zed GPUI**。禁止使用 `open-gpui` 等重命名或
 ```toml
 [package]
 name = "acme-notes"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 publish = false
 
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 
 # 什么时候需要手动添加 gpui？
 # 当你的 crate 直接写到这些内容时：
@@ -227,12 +227,12 @@ cd acme-notes
 ```toml
 [package]
 name = "acme-notes"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 publish = false
 
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 gpui = { version = "0.2.2", default-features = false }
 gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718", default-features = false }
 
@@ -583,7 +583,7 @@ let tabler_home = Icon::new(liora::icons_tabler::IconName::HomeFilled);
 
 ```toml
 [build-dependencies]
-liora-icons-optimizer = "0.1"
+liora-icons-optimizer = "0.2"
 ```
 
 ```rust

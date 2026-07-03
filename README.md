@@ -91,26 +91,26 @@ Most applications should depend on the facade crate:
 
 ```toml
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 ```
 
 Use focused crates only when you deliberately want a narrower surface:
 
 ```toml
 [dependencies]
-liora-components = "0.1"
-liora-core = "0.1"
-liora-theme = "0.1"
-liora-icons = "0.1"
-liora-icons-lucide = "0.1"
-liora-icons-antd = "0.1"
-liora-icons-ionic = "0.1"
-liora-icons-tabler = "0.1"
-liora-icons-carbon = "0.1"
-liora-icons-material = "0.1"
-liora-tray = "0.1"
-liora-updater = "0.1"
-liora-packager = "0.1"
+liora-components = "0.2"
+liora-core = "0.2"
+liora-theme = "0.2"
+liora-icons = "0.2"
+liora-icons-lucide = "0.2"
+liora-icons-antd = "0.2"
+liora-icons-ionic = "0.2"
+liora-icons-tabler = "0.2"
+liora-icons-carbon = "0.2"
+liora-icons-material = "0.2"
+liora-tray = "0.2"
+liora-updater = "0.2"
+liora-packager = "0.2"
 ```
 
 The facade re-exports stable module names:
@@ -130,10 +130,10 @@ If you do not need packaging or updater helpers in your app dependency graph, tu
 
 ```toml
 [dependencies]
-liora = { version = "0.1", default-features = false }
+liora = { version = "0.2", default-features = false }
 
 # Or keep only updater helpers:
-liora = { version = "0.1", default-features = false, features = ["updater"] }
+liora = { version = "0.2", default-features = false, features = ["updater"] }
 ```
 
 ## GPUI dependency and local patch policy
@@ -153,12 +153,12 @@ Use this application manifest pattern:
 ```toml
 [package]
 name = "acme-notes"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 publish = false
 
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 
 # Add gpui manually when your crate mentions gpui types directly:
 # - gpui::App / Window / Context / Render / RenderOnce
@@ -227,12 +227,12 @@ Paste the manifest from [GPUI dependency and local patch policy](#gpui-dependenc
 ```toml
 [package]
 name = "acme-notes"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 publish = false
 
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 gpui = { version = "0.2.2", default-features = false }
 gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718", default-features = false }
 
@@ -584,7 +584,7 @@ Icon bundle auto optimization keeps application code unchanged while reducing pa
 
 ```toml
 [build-dependencies]
-liora-icons-optimizer = "0.1"
+liora-icons-optimizer = "0.2"
 ```
 
 ```rust
