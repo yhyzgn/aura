@@ -81,7 +81,11 @@ impl AssetSource for IconAssetSource {
             for candidate in request.candidate_paths() {
                 match fs::read(&candidate) {
                     Ok(bytes) => return Ok(Some(Cow::Owned(bytes))),
-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error)
+                        if matches!(
+                            error.kind(),
+                            std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                        ) => {}
                     Err(error) => return Err(error.into()),
                 }
             }
@@ -177,7 +181,10 @@ fn target_icon_bundle_candidates(current_dir: &Path, set: &str, file: &str) -> V
     let mut candidates = vec![root.join("assets/liora-icons").join(set).join(file)];
     if let Ok(entries) = fs::read_dir(&root) {
         for entry in entries.flatten() {
-            candidates.push(entry.path().join("assets/liora-icons").join(set).join(file));
+            let path = entry.path();
+            if path.is_dir() {
+                candidates.push(path.join("assets/liora-icons").join(set).join(file));
+            }
         }
     }
     candidates
@@ -362,6 +369,32 @@ mod tests {
         let svg = std::str::from_utf8(&bytes).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("viewBox"));
+    }
+
+    #[test]
+    fn target_icon_bundle_candidates_ignore_report_files() {
+        let root = std::env::temp_dir().join(format!(
+            "liora-icons-candidates-{}-{}",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let icons_root = root.join("target/liora/icons");
+        let docs_bundle = icons_root.join("liora-docs/assets/liora-icons/lucide");
+        std::fs::create_dir_all(&docs_bundle).unwrap();
+        std::fs::write(icons_root.join("liora_icon_bundle_report.md"), "report").unwrap();
+        std::fs::write(docs_bundle.join("a-arrow-down.svg"), "<svg />").unwrap();
+
+        let candidates = target_icon_bundle_candidates(&root, "lucide", "a-arrow-down.svg");
+
+        assert!(candidates.iter().any(|path| path.ends_with(
+            "target/liora/icons/liora-docs/assets/liora-icons/lucide/a-arrow-down.svg"
+        )));
+        assert!(!candidates.iter().any(|path| {
+            path.to_string_lossy()
+                .contains("liora_icon_bundle_report.md/assets/liora-icons")
+        }));
+
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
