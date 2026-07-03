@@ -64,8 +64,18 @@ TOML 表会在运行时展平成点分隔路径，例如 `[docs] subtitle = "...
 
 ## 生成类型化 key
 
-在应用 `build.rs` 中引入共享 codegen 模块：
+为了让你可以使用 `locales::section::key` 这种强类型常量，Liora 提供了一个自动扫描 TOML 并生成 Rust 常量的代码生成模块（Codegen）。由于这是一个 build 阶段的工具且为了极简化依赖，它以源文件（`locales_codegen.rs`）的形式随 `liora-core` 源码发布，免去了单独引入一个构建依赖包的麻烦。
 
+### 方案 A：在 Liora 根 Workspace 内的应用
+如果你是在 Liora Monorepo 仓库内开发（如 Gallery 或 Docs），可以通过相对路径直接引用 `liora-core` 内部的生成器脚本。
+
+1. 在 `Cargo.toml` 中添加 `toml` 作为构建依赖（编译期用于解析 locales 的 TOML 资源）：
+```toml
+[build-dependencies]
+toml.workspace = true
+```
+
+2. 在你的应用 `build.rs` 中引入该生成器：
 ```rust
 #[path = "../../crates/liora-core/src/locales_codegen.rs"]
 mod locales_codegen;
@@ -75,14 +85,27 @@ fn main() {
 }
 ```
 
-同时在 `Cargo.toml` 的 `[build-dependencies]` 中添加 `toml`（codegen 需要解析 TOML）：
+### 方案 B：在外部独立应用中使用 Liora
+如果你是从 crates.io 引入 `liora` 开发独立的外部应用，你可以通过以下步骤集成翻译生成器：
 
+1. 在你的项目根目录下创建一个 `build-support` 目录，并从 Liora 的 [GitHub 仓库](https://github.com/yhyzgn/liora/blob/main/crates/liora-core/src/locales_codegen.rs) 中下载 `locales_codegen.rs` 并保存。
+2. 在你的 `Cargo.toml` 中增加 `toml` 库作为构建依赖：
 ```toml
 [build-dependencies]
-toml.workspace = true
+toml = "0.8"
+```
+3. 在你的 `build.rs` 中引入你本地保存的脚本：
+```rust
+#[path = "build-support/locales_codegen.rs"]
+mod locales_codegen;
+
+fn main() {
+    locales_codegen::generate_locales_from_package("liora::Locales");
+}
 ```
 
-在应用代码里 include 生成模块：
+### 在应用代码中包含生成的常量
+无论使用上述哪种方案，在你的 Rust 应用源码（如 `main.rs` 或 `lib.rs`）中，只需一行代码即可将编译期生成的常量挂载进你的模块树中：
 
 ```rust
 pub mod locales {
@@ -90,7 +113,7 @@ pub mod locales {
 }
 ```
 
-默认情况下，生成器扫描当前 package 的 `./assets/locales`。当你新增或删除 TOML key 后，重新运行 `cargo check` / `cargo run`，Cargo build script 会重新生成 `locales::section::key` 常量。
+默认情况下，生成器会自动扫描当前 package 根目录下的 `./assets/locales` 中的所有 `.toml` 语言包。当你新增或删除 TOML 里的 key 后，重新运行 `cargo check` 或 `cargo run`，Cargo 构建系统都会实时刷新 `locales::section::key` 的常量定义。
 
 ## 自定义扫描目录
 
