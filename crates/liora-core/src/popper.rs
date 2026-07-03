@@ -191,6 +191,17 @@ pub fn set_active_tooltip(data: TooltipData, cx: &mut App) {
     }
 }
 
+/// Replaces every active tooltip with one tooltip owned by a single trigger.
+///
+/// General-purpose hover tooltips should be exclusive: when a virtualized item
+/// is recycled under an already-stationary mouse cursor, the new hovered item
+/// must refresh the global tooltip immediately instead of waiting for a
+/// `mouse_move` event. Chart/data tooltips can still call [`set_active_tooltip`]
+/// directly when they intentionally manage multiple data-driven entries.
+pub fn set_exclusive_active_tooltip(data: TooltipData, cx: &mut App) {
+    cx.global_mut::<ActiveTooltip>().0 = vec![data];
+}
+
 /// Clears the current tooltip state.
 pub fn clear_tooltip(id: &SharedString, cx: &mut App) {
     cx.global_mut::<ActiveTooltip>()

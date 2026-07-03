@@ -23,7 +23,9 @@ use gpui::{
     AnyElement, App, Bounds, Component, ElementId, GlobalElementId, InspectorElementId,
     IntoElement, LayoutId, Pixels, RenderOnce, SharedString, Window, div, prelude::*, px,
 };
-use liora_core::{Placement, TooltipData, clear_tooltip, set_active_tooltip, stable_unique_id};
+use liora_core::{
+    Placement, TooltipData, clear_tooltip, set_exclusive_active_tooltip, stable_unique_id,
+};
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -91,22 +93,38 @@ impl RenderOnce for Tooltip {
         let bounds_cell_clone = bounds_cell.clone();
         let hover_id = id.clone();
         let move_id = id.clone();
+        let hover_content = content.clone();
 
         div()
             .id(id.clone())
             .child(TooltipBoundsTracker {
                 trigger: self.trigger,
-                bounds: bounds_cell,
+                bounds: bounds_cell.clone(),
             })
             .on_hover(move |hovered, _window, cx| {
                 if !hovered {
                     clear_tooltip(&hover_id, cx);
+                    return;
+                }
+
+                let anchor_bounds = bounds_cell.get();
+                if anchor_bounds.size.width > px(0.0) {
+                    set_exclusive_active_tooltip(
+                        TooltipData {
+                            id: hover_id.clone(),
+                            content: hover_content.clone(),
+                            anchor_bounds,
+                            placement,
+                            offset,
+                        },
+                        cx,
+                    );
                 }
             })
             .on_mouse_move(move |_event, _window, cx| {
                 let anchor_bounds = bounds_cell_clone.get();
                 if anchor_bounds.size.width > px(0.0) {
-                    set_active_tooltip(
+                    set_exclusive_active_tooltip(
                         TooltipData {
                             id: move_id.clone(),
                             content: content.clone(),
@@ -185,5 +203,19 @@ impl gpui::Element for TooltipBoundsTracker {
     ) {
         self.bounds.set(bounds);
         self.trigger.paint(window, cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn tooltip_refreshes_content_on_hover_for_virtualized_reuse() {
+        let source = include_str!("tooltip.rs");
+
+        assert!(source.contains("TooltipBoundsTracker"));
+        assert!(source.contains("set_exclusive_active_tooltip"));
+        assert!(source.contains("clear_tooltip"));
+        assert!(source.contains("hover_content.clone()"));
+        assert!(source.contains("if !hovered") && source.contains("return;"));
     }
 }
