@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 # Liora SDK from crates.io.
-liora = "0.1"
+liora = "0.2"
 
 # Keep gpui as a registry dependency, then patch it to the official Zed revision below.
 gpui = { version = "0.2.2", default-features = false }

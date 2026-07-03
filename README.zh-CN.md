@@ -560,7 +560,7 @@ impl Render for SettingsView {
 | `liora-icons-carbon` | `liora::icons_carbon` | Carbon 名称扁平化成 PascalCase；每个图标保留一个优先尺寸 | `IconName::Save`, `IconName::CheckmarkFilled` |
 | `liora-icons-material` | `liora::icons_material` | Material 24px 风格后缀 | `IconName::Search`, `IconName::SearchOutlined`, `IconName::SearchRound` |
 
-Docs 应用中有独立的 **Icon Libraries** 说明页和 `图标库` 导航分组。每个内置图库都有单独页面（`Lucide Icons`、`Ant Design Icons`、`Ionicons`、`Tabler Icons`、`Carbon Icons`、`Material Icons`），页面使用虚拟化 + 自适应 `Grid` 渲染完整图标墙；点击任意正方形图标 item 会复制完整 `IconName` 路径。
+Docs 应用中有独立的 **Icon Libraries** 说明页、单独的 **Icon Optimizer** 指南，以及 `图标库` 导航分组。每个内置图库都有单独页面（`Lucide Icons`、`Ant Design Icons`、`Ionicons`、`Tabler Icons`、`Carbon Icons`、`Material Icons`），页面使用虚拟化 + 自适应 `Grid` 渲染完整图标墙；点击任意正方形图标 item 会复制完整 `IconName` 路径。
 
 图标 primitive 与内置 icon 名称：
 
@@ -631,6 +631,30 @@ fn main() {
         });
 }
 ```
+
+### `liora-icons-optimizer` 图标优化器
+
+`liora-icons-optimizer` 在 Liora Docs 中有单独页面，因为它属于构建/打包基础设施，而不只是 `Icon` 的渲染选项。当应用使用内置 `IconName` 枚举，并希望发布包里只携带实际引用的 SVG 时，就应该接入它。
+
+接入后流程是自动的：
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+}
+```
+
+关键边界：
+
+- 只扫描 `IconName::Search` 这类内置强类型图标使用点。
+- 输出 `target/liora/icons/apps/<app>/assets/liora-icons`，并在 `target/liora/icons/reports` 生成诊断报告。
+- 打包流程会自动收集生成资源。
+- 业务自己的 SVG（`assets/icons/foo.svg`、`file:///...`、`inline_svg_asset_path(...)`）仍然是普通应用资源，不会被 optimizer 改写。
+- 生产代码中避免使用 `IconName::all()`，除非你明确要打包整个图标库。
+
+完整配置、自定义扫描目录、debug 开关、自定义 SVG 边界和自定义强类型图库建议，请看 Docs → `Icon Optimizer`。
 
 ### `liora-tray`
 
@@ -1438,6 +1462,8 @@ impl Render for OrdersView {
 
 ## 国际化与 Locales
 
+Docs 中现在有单独的 `Locales` 页面，完整说明应用级国际化、codegen、运行时切换、fallback 和自定义 Translator。README 这里保留快速接入路径。
+
 Liora 的国际化系统保持低耦合：语言资源放在外部 TOML 文件中，Rust 调用处使用 `locales::empty::description` 这样的类型化 key，运行时翻译后端也可以由应用完全替换。
 
 适合以下需求：
@@ -1482,7 +1508,7 @@ subtitle = "Native documentation"
 
 ### 2. 为当前 package 生成类型化 key
 
-在应用 crate 中添加 build dependency 和 `build.rs`：
+如果是在 Liora workspace 内部应用中使用，可直接引用 `liora-core` 中的共享生成器，并使用 workspace 里的 `toml` 依赖：
 
 ```rust
 // build.rs
@@ -1494,11 +1520,26 @@ fn main() {
 }
 ```
 
-Add `toml` build-dependency in `Cargo.toml`:
-
 ```toml
 [build-dependencies]
 toml.workspace = true
+```
+
+如果是依赖 crates.io `liora` 的外部应用，把轻量的 `locales_codegen.rs` helper 放到自己的 `build-support/` 目录，并指向公开的 `liora::Locales` 类型：
+
+```rust
+// build.rs
+#[path = "build-support/locales_codegen.rs"]
+mod locales_codegen;
+
+fn main() {
+    locales_codegen::generate_locales_from_package("liora::Locales");
+}
+```
+
+```toml
+[build-dependencies]
+toml = "0.8"
 ```
 
 在应用中 include 生成模块：

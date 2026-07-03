@@ -47,7 +47,7 @@ For a downstream project, use Liora from crates.io and patch Cargo's `gpui` regi
 
 ```toml
 [dependencies]
-liora = "0.1"
+liora = "0.2"
 gpui = { version = "0.2.2", default-features = false }
 gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718", default-features = false }
 

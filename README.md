@@ -561,7 +561,7 @@ Available bundled libraries:
 | `liora-icons-carbon` | `liora::icons_carbon` | Carbon name flattened to PascalCase; one preferred size per icon | `IconName::Save`, `IconName::CheckmarkFilled` |
 | `liora-icons-material` | `liora::icons_material` | Material 24px style suffixes | `IconName::Search`, `IconName::SearchOutlined`, `IconName::SearchRound` |
 
-The Docs app has a dedicated **Icon Libraries** overview plus an **Icon library** navigation group. Each bundled library has its own page (`Lucide Icons`, `Ant Design Icons`, `Ionicons`, `Tabler Icons`, `Carbon Icons`, `Material Icons`) rendered as a virtualized responsive `Grid`; clicking any square icon item copies the fully-qualified `IconName` path.
+The Docs app has a dedicated **Icon Libraries** overview, a separate **Icon Optimizer** guide, and an **Icon library** navigation group. Each bundled library has its own page (`Lucide Icons`, `Ant Design Icons`, `Ionicons`, `Tabler Icons`, `Carbon Icons`, `Material Icons`) rendered as a virtualized responsive `Grid`; clicking any square icon item copies the fully-qualified `IconName` path.
 
 Icon primitives plus bundled icon names:
 
@@ -632,6 +632,30 @@ fn main() {
         });
 }
 ```
+
+### `liora-icons-optimizer`
+
+`liora-icons-optimizer` has its own page in Liora Docs because it is build/packaging infrastructure, not just an `Icon` rendering option. Use it when an application imports bundled `IconName` enums and you want release packages to contain only the SVGs the app actually references.
+
+The integration is automatic after one `build.rs` call:
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+}
+```
+
+Key boundaries:
+
+- It scans typed bundled-icon usage such as `IconName::Search`.
+- It writes `target/liora/icons/apps/<app>/assets/liora-icons` and a diagnostic report under `target/liora/icons/reports`.
+- Packaging collects the generated resources automatically.
+- Caller-owned SVGs (`assets/icons/foo.svg`, `file:///...`, `inline_svg_asset_path(...)`) remain normal application assets and are never rewritten by the optimizer.
+- Avoid `IconName::all()` in production code unless you intentionally want the whole icon pack.
+
+See Docs → `Icon Optimizer` for the full setup, custom scan roots, debug switch, custom SVG boundary, and typed custom icon-pack guidance.
 
 ### `liora-tray`
 
@@ -1439,6 +1463,8 @@ impl Render for OrdersView {
 
 ## Internationalization and locales
 
+Docs has a dedicated `Locales` page with the full application-level guide, including codegen, runtime switching, fallback behavior, and custom translators. The README version below is the quick integration path.
+
 Liora's locale system is deliberately low-coupling: language resources live in external TOML files, Rust code uses typed keys such as `locales::empty::description`, and the runtime translator can be replaced by the application.
 
 Use this feature when you need:
@@ -1483,7 +1509,7 @@ Keep the same key set in every locale file whenever possible. Missing keys fall 
 
 ### 2. Generate typed keys for the current package
 
-Add the build dependency and a tiny `build.rs` to your application crate:
+For an app inside the Liora workspace, include the shared generator from `liora-core` and use the workspace `toml` dependency:
 
 ```rust
 // build.rs
@@ -1495,11 +1521,26 @@ fn main() {
 }
 ```
 
-Add `toml` build-dependency in `Cargo.toml`:
-
 ```toml
 [build-dependencies]
 toml.workspace = true
+```
+
+For an external app using crates.io, vendor the small `locales_codegen.rs` helper into `build-support/` and point it at the public `liora::Locales` type:
+
+```rust
+// build.rs
+#[path = "build-support/locales_codegen.rs"]
+mod locales_codegen;
+
+fn main() {
+    locales_codegen::generate_locales_from_package("liora::Locales");
+}
+```
+
+```toml
+[build-dependencies]
+toml = "0.8"
 ```
 
 Then include the generated module from your app:

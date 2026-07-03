@@ -57,6 +57,7 @@ const DASHBOARD_PATTERNS_DOC: &str = include_str!("../content/pages/dashboard_pa
 const DASHBOARD_STATE_DOC: &str = include_str!("../content/pages/dashboard_state.md");
 const THEME_SYSTEM_DOC: &str = include_str!("../content/pages/theme_system.md");
 const LOCALES_DOC: &str = include_str!("../content/pages/locales.md");
+const ICON_OPTIMIZER_DOC: &str = include_str!("../content/pages/icon_optimizer.md");
 const TITLEBAR_DOC: &str = include_str!("../content/pages/titlebar.md");
 const ABOUT_DOC: &str = include_str!("../content/pages/about.md");
 
@@ -110,6 +111,7 @@ const OPERATION_DOC: &str = include_str!("../content/pages/operation.md");
 const SEGMENT_RATIO_BAR_DOC: &str = include_str!("../content/pages/segment_ratio_bar.md");
 const SIGNAL_METER_DOC: &str = include_str!("../content/pages/signal_meter.md");
 const ICON_DOC: &str = include_str!("../content/pages/icon.md");
+const ICON_LIBRARIES_DOC: &str = include_str!("../content/pages/icon_libraries.md");
 const ICON_LUCIDE_DOC: &str = include_str!("../content/pages/icon_lucide.md");
 const ICON_ANTD_DOC: &str = include_str!("../content/pages/icon_antd.md");
 const ICON_IONIC_DOC: &str = include_str!("../content/pages/icon_ionic.md");
@@ -383,6 +385,14 @@ const DOC_PAGES: &[DocPage] = &[
     DocPage {
         title: "Icon",
         markdown: ICON_DOC,
+    },
+    DocPage {
+        title: "Icon Libraries",
+        markdown: ICON_LIBRARIES_DOC,
+    },
+    DocPage {
+        title: "Icon Optimizer",
+        markdown: ICON_OPTIMIZER_DOC,
     },
     DocPage {
         title: "Lucide Icons",
@@ -11195,6 +11205,7 @@ fn docs_nav_sort_rank(title: &str) -> usize {
         "Adoption" | "Adoption Guide" => 30,
         "Architecture" => 40,
         "Theme" => 50,
+        "Locales" => 55,
         "Packaging" | "Packaging Workflow" => 60,
         "Release" | "Release Candidate" => 70,
         "Gallery" | "Gallery Dogfooding" => 80,
@@ -11203,6 +11214,8 @@ fn docs_nav_sort_rank(title: &str) -> usize {
         "Authoring" => 110,
         "Live" | "Live Demo" => 120,
         "Icon" => 0,
+        "Icon Libraries" => 5,
+        "Icon Optimizer" => 8,
         "Lucide" | "Lucide Icons" => 10,
         "Ant" | "Ant Design" | "Ant Design Icons" => 20,
         "Ionicons" => 30,
@@ -11215,11 +11228,11 @@ fn docs_nav_sort_rank(title: &str) -> usize {
 
 fn docs_nav_category_for(title: &str) -> category::Category {
     match category::component_key(title) {
-        "Icon" | "Lucide" | "Lucide Icons" | "Ant" | "Ant Design" | "Ant Design Icons"
-        | "Ionicons" | "Tabler" | "Tabler Icons" | "Carbon" | "Carbon Icons" | "Material"
-        | "Material Icons" => category::Category::IconLibrary,
-        "About" | "Overview" | "Quick" | "Quick Start" | "Architecture" | "Theme" | "Packaging"
-        | "Packaging Workflow" | "Release" | "Release Candidate" | "Adoption"
+        "Icon" | "Icon Libraries" | "Icon Optimizer" | "Lucide" | "Lucide Icons" | "Ant"
+        | "Ant Design" | "Ant Design Icons" | "Ionicons" | "Tabler" | "Tabler Icons" | "Carbon"
+        | "Carbon Icons" | "Material" | "Material Icons" => category::Category::IconLibrary,
+        "About" | "Overview" | "Quick" | "Quick Start" | "Architecture" | "Theme" | "Locales"
+        | "Packaging" | "Packaging Workflow" | "Release" | "Release Candidate" | "Adoption"
         | "Adoption Guide" | "Gallery" | "Gallery Dogfooding" | "Dashboard"
         | "Dashboard Patterns" | "Dashboard State" | "Live" | "Live Demo" | "Authoring" => {
             category::Category::About
@@ -11468,6 +11481,7 @@ mod tests {
                 "Adoption Guide",
                 "Architecture",
                 "Theme",
+                "Locales",
                 "Packaging Workflow",
                 "Release Candidate",
                 "Gallery Dogfooding",
@@ -11496,6 +11510,8 @@ mod tests {
             icon_labels,
             vec![
                 "Icon",
+                "Icon Libraries",
+                "Icon Optimizer",
                 "Lucide Icons",
                 "Ant Design Icons",
                 "Ionicons",
@@ -11503,7 +11519,7 @@ mod tests {
                 "Carbon Icons",
                 "Material Icons",
             ],
-            "Icon group should expose one overview plus one page per bundled icon pack"
+            "Icon group should expose overview, optimizer guide, and one page per bundled icon pack"
         );
 
         let control_group = docs_menu_group(&items, "控件");
@@ -11700,7 +11716,13 @@ mod tests {
     #[test]
     fn icon_libraries_docs_split_catalogs_by_icon_pack_and_click_to_copy() {
         let icon_libraries_doc = include_str!("../content/pages/icon_libraries.md");
+        let icon_optimizer_doc = include_str!("../content/pages/icon_optimizer.md");
         assert!(icon_libraries_doc.contains("# Icon Libraries"));
+        assert!(icon_libraries_doc.contains("Icon Optimizer"));
+        assert!(!icon_libraries_doc.contains("Icon Bundle Auto Optimization"));
+        assert!(icon_optimizer_doc.contains("# Icon Optimizer"));
+        assert!(icon_optimizer_doc.contains("bundle_auto"));
+        assert!(icon_optimizer_doc.contains("自定义业务 SVG"));
         assert!(!icon_libraries_doc.contains("IconLibraryCatalog"));
         assert!(ICON_LUCIDE_DOC.contains("IconCatalogLucide"));
         assert!(ICON_ANTD_DOC.contains("IconCatalogAntd"));
