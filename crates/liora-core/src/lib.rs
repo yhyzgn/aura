@@ -813,9 +813,7 @@ pub fn sync_system_theme(window: &mut Window, cx: &mut App) {
 /// then activate the returned window handle after `open_window` completes.
 pub fn attach_system_theme_observer(window: &mut Window, cx: &mut App) {
     sync_system_theme(window, cx);
-    window
-        .observe_window_appearance(|window, cx| sync_system_theme(window, cx))
-        .detach();
+    window.observe_window_appearance(sync_system_theme).detach();
 }
 
 /// Renders the render active popover in window layer into native GPUI elements.
@@ -945,7 +943,12 @@ pub fn render_active_tooltip_in_window(window: &mut gpui::Window, cx: &mut App) 
                     .rounded(px(theme.radius.sm))
                     .shadow_lg()
                     .text_size(font_size)
-                    .children(lines.iter().cloned())
+                    .children(lines.iter().cloned().map(|line| {
+                        gpui::div()
+                            .whitespace_nowrap()
+                            .child(line)
+                            .into_any_element()
+                    }))
                     .with_animation(
                         ("liora-tooltip-motion", tooltip_index),
                         Animation::new(Duration::from_millis(220))
@@ -984,6 +987,16 @@ mod tooltip_text_tests {
 
         assert_eq!(lines, vec!["Mon", "O 100  H 110", "L 96  C 108"]);
         assert!(lines.iter().all(|line| !line.contains('\n')));
+    }
+
+    #[test]
+    fn tooltip_lines_are_rendered_as_single_visual_lines() {
+        let source = include_str!("lib.rs").split("#[cfg(test)]").next().unwrap();
+
+        assert!(
+            source.contains(".whitespace_nowrap()"),
+            "tooltip line elements must opt out of default wrapping so short labels do not fold inside the overlay"
+        );
     }
 }
 
@@ -1153,8 +1166,8 @@ mod theme_mode_tests {
                 .expect("next function should follow observer helper")
                 + start];
 
-        let sync_call = format!("{}(window, cx);", "sync_system_theme");
-        let observe_call = format!("{}", "observe_window_appearance");
+        let sync_call = "sync_system_theme(window, cx);".to_string();
+        let observe_call = "observe_window_appearance".to_string();
         let sync_index = body
             .find(&sync_call)
             .expect("observer helper should sync the current window appearance immediately");

@@ -31,7 +31,7 @@ use std::{
 pub const SUPPORTED_FONT_EXTENSIONS: &[&str] = &["ttf", "otf", "ttc", "otc", "woff", "woff2"];
 
 /// Controls which resource location is used when loading app fonts.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum FontLoadMode {
     /// Only load fonts that were embedded in the executable with `include_bytes!`.
     Embedded,
@@ -39,16 +39,11 @@ pub enum FontLoadMode {
     External,
     /// Prefer external mounted files/assets and fall back to embedded bytes when
     /// no external font could be registered.
+    #[default]
     ExternalThenEmbedded,
     /// Always register both external and embedded fonts. Use this when the app
     /// intentionally ships different families in different locations.
     Mixed,
-}
-
-impl Default for FontLoadMode {
-    fn default() -> Self {
-        Self::ExternalThenEmbedded
-    }
 }
 
 /// One embedded font included in the executable.

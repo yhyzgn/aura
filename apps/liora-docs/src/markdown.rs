@@ -17,8 +17,8 @@ use liora_components::{
     RadioOptionStyle, Rate, Result as DocResult, ResultStatus, Segmented, SegmentedOption, Select,
     SelectableTextGroup, Shell, Sidebar, Skeleton, SkeletonItem, SkeletonVariant, Slider, Space,
     Statistic, Switch, Tag as DocTag, Text, Textarea, Timer, TimerFormat, TimerUnit, Title,
-    TitleBar, TitleBarContentAlign, Tour, TourPlacement, TourStep, Transfer, TransferItem, Tree,
-    TreeNode, TreeSelect, TreeSelectNode, Upload, UploadFile, UploadStatus, VirtualizedList,
+    TitleBar, TitleBarContentAlign, Tooltip, Tour, TourPlacement, TourStep, Transfer, TransferItem,
+    Tree, TreeNode, TreeSelect, TreeSelectNode, Upload, UploadFile, UploadStatus, VirtualizedList,
     VirtualizedTable, VirtualizedTree, Watermark, WindowControlsPosition, WindowFrameMode,
     frame_mode_switch_row, show_notification, toast_error, toast_info, toast_success,
     toast_warning,
@@ -7156,31 +7156,58 @@ fn icon_catalog_grid(entries: &[IconCatalogEntry]) -> impl IntoElement {
 fn icon_catalog_item(entry: &IconCatalogEntry) -> impl IntoElement {
     let icon = liora_icons::Icon::new(entry.icon_path.clone()).size_xl();
     let copy_text = format!("{}::{}", entry.module_path, entry.name);
-    let display_name = entry.name.clone();
+    let display_name = middle_ellipsis(&entry.name, 18);
     let hover_group = SharedString::from(format!("icon-catalog-item-{copy_text}"));
     let icon_hover_group = hover_group.clone();
     let text_hover_group = hover_group.clone();
 
-    GridItem::new(
-        Space::new()
-            .vertical()
-            .align_center()
-            .gap_md()
-            .child(icon.group_hover_primary(icon_hover_group))
-            .child(
-                Text::new(display_name)
-                    .bold()
-                    .size(px(12.0))
-                    .nowrap()
-                    .selectable(false)
-                    .group_hover_primary(text_hover_group),
-            ),
+    Tooltip::new(
+        GridItem::new(
+            Space::new()
+                .vertical()
+                .align_center()
+                .gap_md()
+                .child(icon.group_hover_primary(icon_hover_group))
+                .child(
+                    Text::new(display_name)
+                        .bold()
+                        .size(px(12.0))
+                        .nowrap()
+                        .selectable(false)
+                        .group_hover_primary(text_hover_group),
+                ),
+        )
+        .hover_group(hover_group)
+        .on_click(move |_, cx| {
+            cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy_text.clone()));
+            toast_success!("Copied {}", copy_text);
+        }),
     )
-    .hover_group(hover_group)
-    .on_click(move |_, cx| {
-        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy_text.clone()));
-        toast_success!("Copied {}", copy_text);
-    })
+    .content(entry.name.clone())
+    .placement(Placement::Top)
+}
+
+fn middle_ellipsis(text: &str, max_chars: usize) -> String {
+    let char_count = text.chars().count();
+    if char_count <= max_chars {
+        return text.to_string();
+    }
+
+    if max_chars <= 3 {
+        return ".".repeat(max_chars);
+    }
+
+    let side_chars = (max_chars - 3) / 2;
+    let prefix: String = text.chars().take(side_chars).collect();
+    let suffix: String = text
+        .chars()
+        .rev()
+        .take(side_chars)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    format!("{prefix}...{suffix}")
 }
 
 fn icon_catalog_entries(library: IconCatalogLibrary) -> &'static [IconCatalogEntry] {
@@ -11692,7 +11719,10 @@ mod tests {
         assert!(source.contains("GridItem::new"));
         assert!(source.contains("list.set_overdraw(px(160.0));"));
         assert!(source.contains("ICON_CATALOG_GRID_PAGE_SIZE"));
-        assert!(icon_item_source.contains("let display_name = entry.name.clone();"));
+        assert!(source.contains("fn middle_ellipsis"));
+        assert!(icon_item_source.contains("middle_ellipsis(&entry.name"));
+        assert!(icon_item_source.contains("Tooltip::new"));
+        assert!(icon_item_source.contains(".content(entry.name.clone())"));
         assert!(icon_item_source.contains("hover_group(hover_group)"));
         assert!(icon_item_source.contains(".size_xl()"));
         assert!(icon_item_source.contains(".selectable(false)"));
@@ -11707,6 +11737,29 @@ mod tests {
         assert!(source.contains("cx.write_to_clipboard"));
         assert!(source.contains(".on_click(move |_, cx|"));
         assert!(source.contains("Category::IconLibrary"));
+    }
+
+    #[test]
+    fn icon_catalog_middle_ellipsis_keeps_prefix_and_suffix() {
+        assert_eq!(
+            middle_ellipsis(
+                "IbmOpenshiftContainerPlatformOnVpcForRegulatedIndustries",
+                24
+            ),
+            "IbmOpenshi...Industries"
+        );
+        assert_eq!(middle_ellipsis("ShortName", 24), "ShortName");
+    }
+
+    #[test]
+    fn focus_trap_gallery_demo_renders_visible_interactive_surface() {
+        let source = include_str!("../../liora-gallery/src/demos/focus_trap_demo.rs");
+
+        assert!(source.contains("showcase_card_wide"));
+        assert!(source.contains("Trap preview"));
+        assert!(source.contains("Button::new(\"Focus previous\")"));
+        assert!(source.contains("Input::new(\"\", cx)"));
+        assert!(source.contains("FocusTrap::new().disabled()"));
     }
 
     #[test]

@@ -7,11 +7,11 @@
 
 use gpui::{Hsla, Rgba};
 
-/// NaiveUI-inspired Forest Green theme.
-///
-/// Reference: https://github.com/tusen-ai/naive-ui
-/// Light theme base: neutralBase=#FFF, primary=#18A058 (green)
-/// Dark theme base: neutralBase=#000, primary=#63E2B7 (green)
+// NaiveUI-inspired Forest Green theme.
+//
+// Reference: https://github.com/tusen-ai/naive-ui
+// Light theme base: neutralBase=#FFF, primary=#18A058 (green)
+// Dark theme base: neutralBase=#000, primary=#63E2B7 (green)
 
 // ---------------------------------------------------------------------------
 // Color helpers — construct via gpui::Rgba then .into() to Hsla
