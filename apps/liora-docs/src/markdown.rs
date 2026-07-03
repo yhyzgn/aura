@@ -7114,7 +7114,7 @@ fn local_demo_image() -> String {
 struct IconCatalogEntry {
     module_path: &'static str,
     name: String,
-    svg_source: &'static str,
+    icon_path: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7154,9 +7154,7 @@ fn icon_catalog_grid(entries: &[IconCatalogEntry]) -> impl IntoElement {
 }
 
 fn icon_catalog_item(entry: &IconCatalogEntry) -> impl IntoElement {
-    let icon =
-        liora_icons::Icon::new(liora_icons::inline_svg_asset_path(entry.svg_source).into_owned())
-            .size_xl();
+    let icon = liora_icons::Icon::new(entry.icon_path.clone()).size_xl();
     let copy_text = format!("{}::{}", entry.module_path, entry.name);
     let display_name = entry.name.clone();
     let hover_group = SharedString::from(format!("icon-catalog-item-{copy_text}"));
@@ -7229,12 +7227,12 @@ fn material_icon_catalog_entries_cached() -> &'static [IconCatalogEntry] {
 fn icon_catalog_entry(
     module_path: &'static str,
     name: String,
-    svg_source: &'static str,
+    icon_path: String,
 ) -> IconCatalogEntry {
     IconCatalogEntry {
         module_path,
         name,
-        svg_source,
+        icon_path,
     }
 }
 
@@ -7245,7 +7243,7 @@ fn lucide_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_lucide::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -7258,7 +7256,7 @@ fn antd_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_antd::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -7271,7 +7269,7 @@ fn ionic_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_ionic::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -7284,7 +7282,7 @@ fn tabler_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_tabler::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -7297,7 +7295,7 @@ fn carbon_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_carbon::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -7310,7 +7308,7 @@ fn material_icon_catalog_entries() -> Vec<IconCatalogEntry> {
             icon_catalog_entry(
                 "liora::icons_material::IconName",
                 format!("{icon:?}"),
-                icon.svg_source(),
+                icon.svg_path(),
             )
         })
         .collect()
@@ -11651,7 +11649,7 @@ mod tests {
         assert!(sdk.contains("Audit crates.io SDK metadata"));
         assert!(sdk.contains("Package independently publishable crates"));
         assert!(sdk.contains("Verify patched crates.io consumer"));
-        assert!(sdk.contains("liora-theme liora-locales-codegen liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora"));
+        assert!(sdk.contains("liora-theme liora-locales-codegen liora-icons-optimizer liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora"));
         assert!(sdk.contains("cargo publish -p"));
         assert!(!sdk.contains(concat!("cargo publish -p \"$crate\" ", "--", "token")));
     }
@@ -11906,7 +11904,7 @@ mod tests {
         );
         assert!(sdk_workflow.contains("Publish Liora crates.io SDK crates"));
         assert!(sdk_workflow.contains("CRATES_IO_TOKEN"));
-        assert!(sdk_workflow.contains("liora-theme liora-locales-codegen liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora"));
+        assert!(sdk_workflow.contains("liora-theme liora-locales-codegen liora-icons-optimizer liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora"));
         assert!(package_workflow.contains("SHA256SUMS.txt"));
         assert!(package_workflow.contains("portable-staging/*|*.md|*.toml|*.json|*/checksums.txt"));
         assert!(!package_workflow.contains("cp release-notes.md release-assets/release-notes.md"));

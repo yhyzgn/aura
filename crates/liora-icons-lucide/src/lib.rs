@@ -9,19 +9,32 @@ include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 use std::borrow::Cow;
 
 impl IconName {
-    /// Returns the virtual path for the embedded SVG asset for this icon.
-    ///
-    /// The returned value is intentionally not a filesystem path: raw release
-    /// executables must be able to render icons without access to the source
-    /// tree that existed on the build runner.
+    /// Returns the virtual path for this optimized SVG asset.
     pub fn svg_path(&self) -> String {
-        liora_icons::inline_svg_asset_path(self.svg_source()).into_owned()
+        liora_icons::icon_svg_asset_path(
+            self.set(),
+            self.file(),
+            Some(format!(
+                "{}/assets/svgs/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                self.file()
+            )),
+        )
+        .into_owned()
     }
 }
 
 impl liora_icons::IntoIconPath for IconName {
     fn icon_path(&self) -> Cow<'static, str> {
-        liora_icons::inline_svg_asset_path(self.svg_source())
+        liora_icons::icon_svg_asset_path(
+            self.set(),
+            self.file(),
+            Some(format!(
+                "{}/assets/svgs/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                self.file()
+            )),
+        )
     }
 }
 
@@ -39,20 +52,20 @@ mod tests {
     use liora_icons::IntoIconPath;
 
     #[test]
-    fn lucide_icon_paths_are_embedded_for_raw_release_binaries() {
-        let path = IconName::LoaderCircle.icon_path();
-        assert!(path.starts_with(liora_icons::INLINE_SVG_ASSET_PREFIX));
-        assert!(
-            !path.contains(env!("CARGO_MANIFEST_DIR")),
-            "release icon paths must not point at the build machine source tree"
-        );
+    fn icon_paths_are_virtual_and_load_through_asset_source() {
+        let icon = IconName::all()
+            .first()
+            .copied()
+            .expect("icon set should not be empty");
+        let path = icon.icon_path();
+        assert!(path.starts_with(liora_icons::ICON_SVG_ASSET_PREFIX));
 
         let bytes = liora_icons::IconAssetSource
             .load(&path)
-            .expect("embedded Lucide icon loading should not error")
-            .expect("embedded Lucide icon should resolve through IconAssetSource");
+            .expect("virtual icon loading should not error")
+            .expect("virtual icon should resolve through IconAssetSource");
         let svg = std::str::from_utf8(&bytes).unwrap();
         assert!(svg.contains("<svg"));
-        assert!(svg.contains("viewBox"));
+        assert!(svg.contains("viewBox") || svg.contains("viewbox"));
     }
 }

@@ -3430,6 +3430,7 @@ dependencies = [
  "liora-icons-ionic",
  "liora-icons-lucide",
  "liora-icons-material",
+ "liora-icons-optimizer",
  "liora-icons-tabler",
  "liora-locales-codegen",
  "liora-theme",
@@ -3454,6 +3455,7 @@ dependencies = [
  "liora-icons-ionic",
  "liora-icons-lucide",
  "liora-icons-material",
+ "liora-icons-optimizer",
  "liora-icons-tabler",
  "liora-locales-codegen",
  "liora-theme",
@@ -3509,6 +3511,14 @@ version = "0.1.21"
 dependencies = [
  "gpui",
  "liora-icons",
+]
+
+[[package]]
+name = "liora-icons-optimizer"
+version = "0.1.21"
+dependencies = [
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

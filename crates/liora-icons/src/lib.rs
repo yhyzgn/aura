@@ -9,17 +9,41 @@ use gpui::{
     SharedString, Transformation, Window, prelude::*, px,
 };
 use liora_core::Config;
-use std::{borrow::Cow, fs};
+use std::{
+    borrow::Cow,
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 /// Virtual asset prefix used for SVGs embedded directly in the binary.
 ///
-/// `liora-icons-lucide` uses this prefix so raw release executables can render
-/// bundled icons without shipping a separate `assets/svgs` directory.
+/// Kept for caller-provided inline SVG snippets and backwards compatibility.
 pub const INLINE_SVG_ASSET_PREFIX: &str = "liora-icon-inline:";
+
+/// Virtual asset prefix used by optimized bundled icon sets.
+pub const ICON_SVG_ASSET_PREFIX: &str = "liora-icon://";
 
 /// Builds a virtual SVG asset path from embedded SVG source text.
 pub fn inline_svg_asset_path(svg: &'static str) -> Cow<'static, str> {
     Cow::Owned(format!("{INLINE_SVG_ASSET_PREFIX}{svg}"))
+}
+
+/// Builds a virtual SVG asset path for an icon-library SVG file.
+///
+/// Optimized packages should place resources under
+/// `assets/liora-icons/<set>/<file>`. The optional development fallback keeps
+/// local `cargo run` working before installer resources are staged.
+pub fn icon_svg_asset_path(
+    set: &'static str,
+    file: &'static str,
+    dev_path: Option<String>,
+) -> Cow<'static, str> {
+    match dev_path {
+        Some(dev_path) => Cow::Owned(format!(
+            "{ICON_SVG_ASSET_PREFIX}{set}/{file}?dev={dev_path}"
+        )),
+        None => Cow::Owned(format!("{ICON_SVG_ASSET_PREFIX}{set}/{file}")),
+    }
 }
 
 /// Converts icon identifiers into SVG asset paths that `Icon` can render.
@@ -42,9 +66,8 @@ impl IntoIconPath for String {
 /// Asset source for Liora SVG icons.
 ///
 /// GPUI's `svg().path(...)` resolves through the application asset source.
-/// `IconAssetSource` can load both embedded Lucide SVG payloads and explicit
-/// filesystem SVG paths, so release raw executables do not need a source-tree
-/// `assets/svgs` directory next to the binary.
+/// `IconAssetSource` can load inline SVG payloads, optimized icon bundle
+/// resources, and explicit filesystem SVG paths.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct IconAssetSource;
 
@@ -52,6 +75,17 @@ impl AssetSource for IconAssetSource {
     fn load(&self, path: &str) -> gpui::Result<Option<Cow<'static, [u8]>>> {
         if let Some(svg) = path.strip_prefix(INLINE_SVG_ASSET_PREFIX) {
             return Ok(Some(Cow::Owned(svg.as_bytes().to_vec())));
+        }
+
+        if let Some(request) = IconAssetRequest::parse(path) {
+            for candidate in request.candidate_paths() {
+                match fs::read(&candidate) {
+                    Ok(bytes) => return Ok(Some(Cow::Owned(bytes))),
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            return Ok(None);
         }
 
         let path = path.strip_prefix("file://").unwrap_or(path);
@@ -68,6 +102,85 @@ impl AssetSource for IconAssetSource {
     fn list(&self, _path: &str) -> gpui::Result<Vec<SharedString>> {
         Ok(Vec::new())
     }
+}
+
+#[derive(Debug, Clone)]
+struct IconAssetRequest {
+    set: String,
+    file: String,
+    dev_path: Option<PathBuf>,
+}
+
+impl IconAssetRequest {
+    fn parse(path: &str) -> Option<Self> {
+        let rest = path.strip_prefix(ICON_SVG_ASSET_PREFIX)?;
+        let (resource, query) = rest.split_once('?').unwrap_or((rest, ""));
+        let (set, file) = resource.split_once('/')?;
+        if set.is_empty() || file.is_empty() || file.contains("..") || set.contains("..") {
+            return None;
+        }
+        let dev_path = query
+            .split('&')
+            .find_map(|part| part.strip_prefix("dev="))
+            .filter(|value| !value.is_empty())
+            .map(|value| PathBuf::from(value.strip_prefix("file://").unwrap_or(value)));
+        Some(Self {
+            set: set.to_string(),
+            file: file.to_string(),
+            dev_path,
+        })
+    }
+
+    fn candidate_paths(&self) -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+        if let Ok(dir) = env::var("LIORA_ICON_ASSETS_DIR") {
+            candidates.push(PathBuf::from(dir).join(&self.set).join(&self.file));
+        }
+        if let Ok(exe) = env::current_exe() {
+            if let Some(exe_dir) = exe.parent() {
+                candidates.push(self.from_resource_root(exe_dir.join("assets/liora-icons")));
+                candidates.push(self.from_resource_root(exe_dir.join("../assets/liora-icons")));
+                candidates
+                    .push(self.from_resource_root(exe_dir.join("../Resources/assets/liora-icons")));
+            }
+            if let Some(binary) = exe.file_name().and_then(|name| name.to_str()) {
+                candidates.push(
+                    self.from_resource_root(
+                        PathBuf::from("/usr/lib")
+                            .join(binary)
+                            .join("assets/liora-icons"),
+                    ),
+                );
+            }
+        }
+        if let Ok(current_dir) = env::current_dir() {
+            candidates.push(self.from_resource_root(current_dir.join("assets/liora-icons")));
+            candidates.extend(target_icon_bundle_candidates(
+                &current_dir,
+                &self.set,
+                &self.file,
+            ));
+        }
+        if let Some(dev_path) = &self.dev_path {
+            candidates.push(dev_path.clone());
+        }
+        candidates
+    }
+
+    fn from_resource_root(&self, root: PathBuf) -> PathBuf {
+        root.join(&self.set).join(&self.file)
+    }
+}
+
+fn target_icon_bundle_candidates(current_dir: &Path, set: &str, file: &str) -> Vec<PathBuf> {
+    let root = current_dir.join("target/liora/icons");
+    let mut candidates = vec![root.join("assets/liora-icons").join(set).join(file)];
+    if let Ok(entries) = fs::read_dir(&root) {
+        for entry in entries.flatten() {
+            candidates.push(entry.path().join("assets/liora-icons").join(set).join(file));
+        }
+    }
+    candidates
 }
 
 /// Native GPUI SVG icon element with size, color, hover, and rotation controls.
@@ -246,6 +359,24 @@ mod tests {
             .load(&path)
             .expect("embedded icon asset loading should not error")
             .expect("embedded SVG payload should load");
+        let svg = std::str::from_utf8(&bytes).unwrap();
+        assert!(svg.contains("<svg"));
+        assert!(svg.contains("viewBox"));
+    }
+
+    #[test]
+    fn icon_asset_source_loads_virtual_icon_with_dev_fallback() {
+        use gpui::AssetSource;
+
+        let dev_path = format!(
+            "{}/../liora-icons-lucide/assets/svgs/loader-circle.svg",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let path = icon_svg_asset_path("lucide", "loader-circle.svg", Some(dev_path));
+        let bytes = IconAssetSource
+            .load(&path)
+            .expect("virtual icon asset loading should not error")
+            .expect("virtual icon should load from dev fallback");
         let svg = std::str::from_utf8(&bytes).unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("viewBox"));

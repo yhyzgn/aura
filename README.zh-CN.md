@@ -547,7 +547,7 @@ impl Render for SettingsView {
 
 ### `liora-icons` 与内置图标库
 
-`liora-icons` 提供原生 GPUI `Icon` primitive 与 asset loader。各个内置图标库 crate 都严格沿用 `liora-icons-lucide` 的 API 形状：每个 crate 暴露 `IconName` enum、`IconName::all()`、`IconName::file()`、`IconName::svg_source()`，并实现 `liora_icons::IntoIconPath` 与 `gpui::IntoElement`。
+`liora-icons` 提供原生 GPUI `Icon` primitive 与 asset loader。各个内置图标库 crate 都严格沿用 `liora-icons-lucide` 的 API 形状：每个 crate 暴露 `IconName` enum、`IconName::all()`、`IconName::file()`、`IconName::svg_path()`，并实现 `liora_icons::IntoIconPath` 与 `gpui::IntoElement`。`IconName` 会解析为虚拟 `liora-icon://...` 资源路径，因此 release 构建可以只携带 `liora-icons-optimizer` 复制出的实际 SVG，而不是把全部图标嵌进二进制。
 
 可用内置图标库：
 
@@ -577,6 +577,26 @@ let icon = Icon::new(IconName::Settings).size_units(18.0);
 let antd_save = Icon::new(liora::icons_antd::IconName::SaveOutlined);
 let tabler_home = Icon::new(liora::icons_tabler::IconName::HomeFilled);
 ```
+
+
+图标资源打包自动优化可以在不改业务代码的前提下降低 SVG 资源体积。应用只需要把 optimizer 加为 build dependency，并在已有 Cargo build script 中调用 builder：
+
+```toml
+[build-dependencies]
+liora-icons-optimizer = "0.1"
+```
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+
+    // 保留已有 build.rs 逻辑。
+}
+```
+
+optimizer 会扫描当前应用和可达的 Liora 依赖源码，重建 `target/liora/icons/<app>/assets/liora-icons`，并输出 `target/liora/icons/liora_icon_bundle_report.md`。宿主业务代码仍然直接使用 `IconName`；生成的 bundle 是打包资源，不是业务 API。
 
 如果应用使用 `gpui_platform::application()` 并渲染内置 SVG payload，建议安装 Liora icon asset source：
 

@@ -355,7 +355,7 @@ fn check_sdk_release_workflow(root: &Path, report: &mut ReleaseReadinessReport) 
                 && text.contains("cargo package -p")
                 && text.contains("cargo publish -p")
                 && !text.contains(concat!("cargo publish -p \"$crate\" ", "--", "token"))
-                && text.contains("liora-theme liora-locales-codegen liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora") =>
+                && text.contains("liora-theme liora-locales-codegen liora-icons-optimizer liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora") =>
         {
             report.pass(
                 "SDK release workflow",
@@ -1126,6 +1126,11 @@ fn build_portable_tar_gz(
                 .join(format!("{}.png", app.binary)),
         )?;
     }
+
+    copy_dir_if_exists(
+        &app.generated_icon_assets_path(root),
+        &stage_root.join("assets/liora-icons"),
+    )?;
 
     if font_variant.includes_fonts() {
         copy_dir_if_exists(

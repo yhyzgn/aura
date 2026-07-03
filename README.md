@@ -548,7 +548,7 @@ impl Render for SettingsView {
 
 ### `liora-icons` and bundled icon libraries
 
-`liora-icons` contains the native GPUI `Icon` primitive and asset loader. Bundled icon-library crates follow the same API shape as `liora-icons-lucide`: each crate exposes an `IconName` enum, `IconName::all()`, `IconName::file()`, `IconName::svg_source()`, and implements `liora_icons::IntoIconPath` plus `gpui::IntoElement`.
+`liora-icons` contains the native GPUI `Icon` primitive and asset loader. Bundled icon-library crates follow the same API shape as `liora-icons-lucide`: each crate exposes an `IconName` enum, `IconName::all()`, `IconName::file()`, `IconName::svg_path()`, and implements `liora_icons::IntoIconPath` plus `gpui::IntoElement`. `IconName` resolves to a virtual `liora-icon://...` asset path so release builds can ship only the SVG files copied by `liora-icons-optimizer` instead of embedding every icon in the binary.
 
 Available bundled libraries:
 
@@ -578,6 +578,26 @@ let icon = Icon::new(IconName::Settings).size_units(18.0);
 let antd_save = Icon::new(liora::icons_antd::IconName::SaveOutlined);
 let tabler_home = Icon::new(liora::icons_tabler::IconName::HomeFilled);
 ```
+
+
+Icon bundle auto optimization keeps application code unchanged while reducing packaged SVG resources. Add the optimizer as a build dependency and call the builder from the host application's existing Cargo build script:
+
+```toml
+[build-dependencies]
+liora-icons-optimizer = "0.1"
+```
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+
+    // keep existing build.rs logic here.
+}
+```
+
+The optimizer scans the current app and reachable Liora dependency sources, rebuilds `target/liora/icons/<app>/assets/liora-icons`, and writes `target/liora/icons/liora_icon_bundle_report.md`. Host code still uses `IconName` directly; the generated bundle is a packaging resource, not an application API.
 
 When using raw `gpui_platform::application()`, install the Liora icon asset source if your app uses bundled SVG payloads:
 

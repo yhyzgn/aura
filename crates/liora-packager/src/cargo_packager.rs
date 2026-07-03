@@ -282,6 +282,7 @@ pub fn render_generate_rpm_config_for(
     if font_variant.includes_fonts() {
         append_rpm_font_assets(&mut out, root, app);
     }
+    append_rpm_icon_assets(&mut out, root, app);
     line(&mut out, "]");
 
     line(&mut out, "");
@@ -372,8 +373,16 @@ pub fn render_cargo_packager_config_for(
     let icon_refs = icon_paths.iter().map(String::as_str).collect::<Vec<_>>();
     arr(&mut out, "icons", &icon_refs);
     let font_assets_dir = app.app_assets_fonts_path(root);
+    let icon_assets_dir = app.generated_icon_assets_path(root);
+    let mut resource_dirs = Vec::new();
     if font_variant.includes_fonts() && font_assets_dir.is_dir() {
-        resources(&mut out, &[(&font_assets_dir, Path::new("assets/fonts"))]);
+        resource_dirs.push((font_assets_dir.as_path(), Path::new("assets/fonts")));
+    }
+    if icon_assets_dir.is_dir() {
+        resource_dirs.push((icon_assets_dir.as_path(), Path::new("assets/liora-icons")));
+    }
+    if !resource_dirs.is_empty() {
+        resources(&mut out, &resource_dirs);
     }
 
     line(&mut out, "");
@@ -413,6 +422,33 @@ pub fn render_cargo_packager_config_for(
     line(&mut out, "installMode = \"currentUser\"");
 
     out
+}
+
+fn append_rpm_icon_assets(out: &mut String, root: &Path, app: &AppMetadata) {
+    let icons_dir = app.generated_icon_assets_path(root);
+    if !icons_dir.is_dir() {
+        return;
+    }
+
+    let Ok(mut files) = collect_regular_files(&icons_dir) else {
+        return;
+    };
+    files.sort();
+
+    for file in files {
+        if let Ok(relative) = file.strip_prefix(&icons_dir) {
+            rpm_asset(
+                out,
+                &file,
+                &format!(
+                    "/usr/lib/{}/assets/liora-icons/{}",
+                    app.binary,
+                    relative.display()
+                ),
+                "644",
+            );
+        }
+    }
 }
 
 fn append_rpm_font_assets(out: &mut String, root: &Path, app: &AppMetadata) {
@@ -628,6 +664,32 @@ mod tests {
         assert!(text.contains("resources = [{ src ="));
         assert!(text.contains("assets/fonts"));
         assert!(!text.contains(r#"resources = ["{"#));
+    }
+
+    #[test]
+    fn renders_package_configs_with_generated_icon_resources() {
+        let root = test_root("icon-resources");
+        let app = sample_app();
+        let icon_dir = app.generated_icon_assets_path(&root).join("lucide");
+        std::fs::create_dir_all(&icon_dir).expect("create generated icon fixture");
+        std::fs::write(
+            icon_dir.join("search.svg"),
+            br#"<svg viewBox="0 0 24 24"></svg>"#,
+        )
+        .expect("write generated icon fixture");
+
+        let cargo_packager = render_cargo_packager_config_for(
+            &root,
+            &app,
+            &[PackageFormat::Deb],
+            Path::new("target/packages/test"),
+            Path::new("target/release"),
+            FontVariant::WithoutFonts,
+        );
+        assert!(cargo_packager.contains("assets/liora-icons"));
+
+        let rpm = render_generate_rpm_config_for(&root, &app, FontVariant::WithoutFonts);
+        assert!(rpm.contains("/usr/lib/sample-app/assets/liora-icons/lucide/search.svg"));
     }
 
     #[test]

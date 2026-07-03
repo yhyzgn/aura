@@ -4,9 +4,11 @@ use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+const ICON_SET: &str = "ionic";
+
 fn main() {
     if let Err(error) = try_main() {
-        println!("cargo:error=failed to generate icon bindings: {error}");
+        println!("cargo:error=failed to generate {ICON_SET} icon bindings: {error}");
         std::process::exit(1);
     }
 }
@@ -26,7 +28,7 @@ fn try_main() -> io::Result<()> {
         for entry in fs::read_dir(svg_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().is_some_and(|e| e == "svg") {
+            if path.extension().is_some_and(|extension| extension == "svg") {
                 let stem = path_component_to_str(path.file_stem(), &path, "file stem")?;
                 let file_name = path_component_to_str(path.file_name(), &path, "file name")?;
                 entries.push((to_pascal_case(stem), file_name.to_string()));
@@ -56,6 +58,10 @@ fn try_main() -> io::Result<()> {
     }
     writeln!(f, "        ]")?;
     writeln!(f, "    }}")?;
+    writeln!(f, "    /// Returns this icon library set identifier.")?;
+    writeln!(f, "    pub const fn set(&self) -> &'static str {{")?;
+    writeln!(f, "        {:?}", ICON_SET)?;
+    writeln!(f, "    }}")?;
     writeln!(
         f,
         "    /// Returns the bundled SVG file name for this icon."
@@ -64,18 +70,6 @@ fn try_main() -> io::Result<()> {
     writeln!(f, "        match self {{")?;
     for (variant, file) in &entries {
         writeln!(f, "            IconName::{} => {:?},", variant, file)?;
-    }
-    writeln!(f, "        }}")?;
-    writeln!(f, "    }}")?;
-    writeln!(f, "    /// Returns the embedded SVG source for this icon.")?;
-    writeln!(f, "    pub fn svg_source(&self) -> &'static str {{")?;
-    writeln!(f, "        match self {{")?;
-    for (variant, file) in &entries {
-        writeln!(
-            f,
-            "            IconName::{} => include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/assets/svgs/{}\")),",
-            variant, file
-        )?;
     }
     writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;

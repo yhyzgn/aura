@@ -206,6 +206,12 @@ jobs:
               mkdir -p "$dest_dir"
               dest="$dest_dir/${app}${ext}"
               cp "$src" "$dest"
+              icon_assets="target/liora/icons/$app/assets/liora-icons"
+              if [[ -d "$icon_assets" ]]; then
+                mkdir -p "$dest_dir/assets"
+                rm -rf "$dest_dir/assets/liora-icons"
+                cp -R "$icon_assets" "$dest_dir/assets/liora-icons"
+              fi
               digest="$(sha256 "$dest")"
               rel="${dest#${out_root}/}"
               printf '%s  %s\n' "$digest" "$rel" >> "$checksum_file"

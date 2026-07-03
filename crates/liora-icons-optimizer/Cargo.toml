@@ -1,0 +1,12 @@
+[package]
+name = "liora-icons-optimizer"
+version = "0.1.21"
+edition = "2024"
+description = "Build-time icon bundle optimizer for Liora native GPUI applications."
+license-file = "../../LICENSE.md"
+repository = "https://github.com/yhyzgn/liora"
+publish = true
+
+[dependencies]
+serde_json = { workspace = true }
+thiserror = { workspace = true }

@@ -70,3 +70,124 @@ Icon::new().icon(IconName::ShoppingCart)
 ### 任务三：优化 API 的丝滑度（Trait 抽象）
 为了让 `Icon::new()` 既能接受字符串也能接受 `IconName` 枚举，请巧妙利用 Rust 的 Traits（例如定义一个 `IntoIconPath` trait，让 `&str` 和 `IconName` 都实现它），从而达成最精简、最优雅的 API 调用形态。请给出完整的组件结构和 Trait 实现代码。
 ```
+---
+
+## 5. 图标资源打包自动优化（Icon Bundle Auto Optimization）
+
+### 5.1 目标与边界
+
+Liora 的内置图标库规模较大，如果每个 `liora-icons-*` crate 在 `IconName` 的
+`svg_source()` 中对全集 SVG 使用 `include_str!`，最终应用二进制和安装包会被未使用
+图标资源显著放大。图标资源打包自动优化的目标是：
+
+1. **业务代码不变**：应用仍然使用现有写法，例如
+   `Icon::new(liora_icons_lucide::IconName::Search)` 或
+   `Icon::new(LucideIconName::Search)`。
+2. **清单不是业务 API**：自动清单只作为构建优化产物，业务代码不从清单引用图标。
+3. **应用显式接入构建脚本**：应用方在唯一的 Cargo build script 中调用 builder：
+   `liora_icons_optimizer::Optimizer::new().bundle_auto().run();`。如果已有
+   `build.rs`，在现有逻辑前后追加该调用即可；如果想使用非默认文件名，可通过
+   `[package] build = "..."` 指定，但 Cargo 仍只有一个 build script 入口。
+4. **SDK 不耦合业务实现**：`liora-icons-optimizer` 只扫描调用方 crate 及其 Cargo
+   metadata 中的 Liora 依赖源码，不写死 Gallery/Docs 路径，不了解业务页面、菜单或
+   demo 结构。
+5. **默认可开发、发布可瘦身**：开发环境可从源码 SVG 目录回退加载；打包/发布时只将
+   optimizer 发现并复制的图标资源放入应用资源目录。
+
+### 5.2 Builder 接入
+
+应用 `Cargo.toml` 只需要增加构建依赖（业务代码不变）：
+
+```toml
+[build-dependencies]
+liora-icons-optimizer = "0.1"
+```
+
+应用 `build.rs`：
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+
+    // existing build script logic can stay here.
+}
+```
+
+高级用法可覆盖扫描目录、输出目录或报告目录：
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .scan_dir("src")
+        .scan_dir("content/snippets")
+        .asset_out_dir("target/liora/icons/assets/liora-icons")
+        .report_file("target/liora/icons/liora_icon_bundle_report.md")
+        .bundle_auto()
+        .run();
+}
+```
+
+### 5.3 运行时资源路径
+
+图标库的 `IconName` 不再直接返回内联 SVG 文本，而是返回稳定虚拟路径：
+
+```text
+liora-icon://lucide/search.svg
+```
+
+虚拟路径也可携带开发期源码 SVG fallback：
+
+```text
+liora-icon://lucide/search.svg?dev=/path/to/liora-icons-lucide/assets/svgs/search.svg
+```
+
+`IconAssetSource` 解析顺序：
+
+1. 应用可执行文件旁的 `assets/liora-icons/<set>/<file>.svg`。
+2. 当前工作目录下的 `assets/liora-icons/<set>/<file>.svg`。
+3. 虚拟路径中的 `dev=` 源码 fallback（仅开发/本机运行可靠）。
+4. 普通显式文件路径（兼容自定义 SVG 路径）。
+
+因此 optimizer 只需要在构建时把实际使用的 SVG 复制到标准资源目录；业务代码无需
+改为引用清单。
+
+### 5.4 自动登记与删除
+
+`Optimizer::bundle_auto()` 每次执行都全量扫描并重建输出目录：
+
+1. 扫描调用方源码目录（默认 `src/`）。
+2. 通过 `cargo metadata` 发现当前 crate 的 Liora 依赖，扫描这些依赖的 `src/`，确保
+   `liora-components` 内部使用的图标也进入 bundle。
+3. 识别强类型图标使用点：
+   - `liora_icons_lucide::IconName::Search`
+   - `liora::icons_lucide::IconName::Search`
+   - `use liora_icons_lucide::IconName; IconName::Search`
+   - `use liora_icons_lucide::IconName as LucideIcon; LucideIcon::Search`
+   - `use liora::icons_lucide::IconName as LucideIcon; LucideIcon::Search`
+4. 将图标 variant 映射为对应 SVG 文件名并复制到
+   `target/liora/icons/assets/liora-icons/<set>/<file>.svg`。
+5. 生成报告 `target/liora/icons/liora_icon_bundle_report.md`。
+
+因为输出目录每次全量重建，所以新增图标会自动登记，删除图标使用后也会自动从资源
+bundle 中移除。
+
+### 5.5 打包集成
+
+`liora-packager` / `xtask package` 应将应用构建产生的
+`target/liora/icons/assets/liora-icons` 放进最终资源目录：
+
+```text
+assets/liora-icons/<set>/<file>.svg
+```
+
+这样 release raw executable、portable archive 和 installer 均可在没有源码树的目标机器
+上解析图标。Gallery/Docs 只是普通应用接入此能力；SDK 模块不能写死它们的业务路径。
+
+### 5.6 失败策略
+
+- build script 中 `.run()` 适合普通应用：失败时输出 `cargo:error` 并终止构建。
+- `.try_run()` 适合高级用户：返回 `Result`，由应用 build script 自行处理。
+- 如果运行时缺少已使用图标资源，`IconAssetSource` 返回 `None`，GPUI 渲染会按缺失
+  asset 处理；报告中会提示可运行 optimizer 重新生成资源 bundle。

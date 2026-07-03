@@ -1,4 +1,10 @@
 fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .scan_dir("src")
+        .scan_dir("content/snippets")
+        .bundle_auto()
+        .run();
+
     #[cfg(target_os = "windows")]
     {
         let mut res = winresource::WindowsResource::new();

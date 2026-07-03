@@ -1,6 +1,6 @@
 # Icon Libraries
 
-Liora ships typed SVG icon packs for Lucide, Ant Design, Ionicons, Tabler, Carbon, and Material Design. Every icon pack follows the same API shape as `liora-icons-lucide`: each crate exposes an `IconName` enum, `IconName::all()`, `IconName::file()`, `IconName::svg_source()`, and implements `liora_icons::IntoIconPath` plus `gpui::IntoElement`.
+Liora ships typed SVG icon packs for Lucide, Ant Design, Ionicons, Tabler, Carbon, and Material Design. Every icon pack follows the same API shape as `liora-icons-lucide`: each crate exposes an `IconName` enum, `IconName::all()`, `IconName::file()`, `IconName::svg_path()`, and implements `liora_icons::IntoIconPath` plus `gpui::IntoElement`. `IconName` now resolves to a virtual `liora-icon://...` asset path so applications can keep existing icon usage while `liora-icons-optimizer` copies only the actually used SVG files into the final package resources.
 
 ## 快速使用
 
@@ -19,6 +19,28 @@ Liora ships typed SVG icon packs for Lucide, Ant Design, Ionicons, Tabler, Carbo
 | Tabler | `liora-icons-tabler` | `liora::icons_tabler` | outline 使用基础名，filled 追加 `Filled` | `IconName::HomeFilled` |
 | Carbon | `liora-icons-carbon` | `liora::icons_carbon` | Carbon 名称扁平化为 PascalCase，每个图标保留一个优先尺寸 | `IconName::CheckmarkFilled` |
 | Material | `liora-icons-material` | `liora::icons_material` | 默认名，或追加 `Outlined` / `Round` / `Sharp` / `Twotone` | `IconName::SearchOutlined` |
+
+
+## Icon Bundle Auto Optimization
+
+业务代码不需要从清单引用图标，继续使用现有 `IconName` 写法即可。需要为发布包瘦身时，在应用的 build script 中接入 optimizer builder：
+
+```toml
+[build-dependencies]
+liora-icons-optimizer = "0.1"
+```
+
+```rust
+fn main() {
+    liora_icons_optimizer::Optimizer::new()
+        .bundle_auto()
+        .run();
+
+    // existing build.rs logic can stay here.
+}
+```
+
+`Optimizer::bundle_auto()` 会扫描当前应用和 Liora 依赖源码中的强类型 `IconName` 使用点，重建 `target/liora/icons/<app>/assets/liora-icons`，并输出 `target/liora/icons/liora_icon_bundle_report.md`。删除代码中的图标使用后，下一次构建会自动从 bundle 中移除对应 SVG。
 
 ## 完整 IconName 清单在哪里？
 

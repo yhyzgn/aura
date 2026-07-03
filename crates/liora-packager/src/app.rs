@@ -169,6 +169,16 @@ impl AppMetadata {
         self.app_dir_path(root).join("assets").join("fonts")
     }
 
+    /// Returns the generated icon bundle resources directory for this app.
+    pub fn generated_icon_assets_path(&self, root: &Path) -> PathBuf {
+        root.join("target")
+            .join("liora")
+            .join("icons")
+            .join(&self.package)
+            .join("assets")
+            .join("liora-icons")
+    }
+
     /// Returns the filesystem path for the Windows resource build script.
     pub fn windows_resource_build_script_path(&self, root: &Path) -> PathBuf {
         self.app_dir_path(root).join("build.rs")

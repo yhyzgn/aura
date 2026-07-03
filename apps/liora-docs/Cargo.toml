@@ -42,6 +42,7 @@ liora-icons-material = { path = "../../crates/liora-icons-material" }
 pulldown-cmark = "0.13.3"
 
 [build-dependencies]
+liora-icons-optimizer = { version = "0.1.21", path = "../../crates/liora-icons-optimizer" }
 liora-locales-codegen = { version = "0.1.21", path = "../../crates/liora-locales-codegen" }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]

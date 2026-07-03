@@ -4,9 +4,11 @@ use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+const ICON_SET: &str = "lucide";
+
 fn main() {
     if let Err(error) = try_main() {
-        println!("cargo:error=failed to generate lucide icon bindings: {error}");
+        println!("cargo:error=failed to generate {ICON_SET} icon bindings: {error}");
         std::process::exit(1);
     }
 }
@@ -18,7 +20,7 @@ fn try_main() -> io::Result<()> {
     let svg_dir = Path::new("assets/svgs");
 
     if !svg_dir.is_dir() || fs::read_dir(svg_dir).map_or(true, |mut d| d.next().is_none()) {
-        println!("cargo:warning=No SVG icons found. Run: ./scripts/sync-lucide.sh");
+        println!("cargo:warning=No SVG icons found. Run the crate sync script.");
     }
 
     let mut entries = Vec::new();
@@ -26,7 +28,7 @@ fn try_main() -> io::Result<()> {
         for entry in fs::read_dir(svg_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "svg") {
+            if path.extension().is_some_and(|extension| extension == "svg") {
                 let stem = path_component_to_str(path.file_stem(), &path, "file stem")?;
                 let file_name = path_component_to_str(path.file_name(), &path, "file name")?;
                 entries.push((to_pascal_case(stem), file_name.to_string()));
@@ -38,64 +40,36 @@ fn try_main() -> io::Result<()> {
     let generated = out_dir.join("generated.rs");
     let mut f = fs::File::create(&generated)?;
     writeln!(f, "// Auto-generated — {} icons", entries.len())?;
-    writeln!(
-        f,
-        "/// Strongly typed names for the bundled Lucide SVG icon assets."
-    )?;
-    writeln!(f, "///")?;
-    writeln!(
-        f,
-        "/// Pass a variant to `liora_icons::Icon::new(...)` to render that asset as"
-    )?;
-    writeln!(
-        f,
-        "/// a native GPUI SVG element without hard-coding asset paths."
-    )?;
+    writeln!(f, "/// Strongly typed names for bundled SVG icon assets.")?;
     writeln!(f, "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]")?;
     writeln!(f, "pub enum IconName {{")?;
-    for (v, file) in &entries {
+    for (variant, file) in &entries {
         let kebab = file.strip_suffix(".svg").unwrap_or(file);
-        writeln!(f, "    /// The `{}` Lucide icon asset.", kebab)?;
-        writeln!(f, "    {},", v)?;
+        writeln!(f, "    /// The `{}` icon asset.", kebab)?;
+        writeln!(f, "    {},", variant)?;
     }
     writeln!(f, "}}")?;
     writeln!(f, "impl IconName {{")?;
-    writeln!(
-        f,
-        "    /// Returns every Lucide icon in generated enum order."
-    )?;
+    writeln!(f, "    /// Returns every icon in generated enum order.")?;
     writeln!(f, "    pub const fn all() -> &'static [IconName] {{")?;
     writeln!(f, "        &[")?;
-    for (v, _) in &entries {
-        writeln!(f, "            IconName::{},", v)?;
+    for (variant, _) in &entries {
+        writeln!(f, "            IconName::{},", variant)?;
     }
     writeln!(f, "        ]")?;
     writeln!(f, "    }}")?;
+    writeln!(f, "    /// Returns this icon library set identifier.")?;
+    writeln!(f, "    pub const fn set(&self) -> &'static str {{")?;
+    writeln!(f, "        {:?}", ICON_SET)?;
+    writeln!(f, "    }}")?;
     writeln!(
         f,
-        "    /// Returns the bundled SVG file name for this Lucide icon."
+        "    /// Returns the bundled SVG file name for this icon."
     )?;
     writeln!(f, "    pub fn file(&self) -> &'static str {{")?;
     writeln!(f, "        match self {{")?;
-    for (v, file) in &entries {
-        writeln!(f, "    IconName::{} => \"{}\",", v, file)?;
-    }
-    writeln!(f, "        }}")?;
-    writeln!(f, "    }}")?;
-    writeln!(f, "}}")?;
-    writeln!(f, "impl IconName {{")?;
-    writeln!(
-        f,
-        "    /// Returns the embedded SVG source for this Lucide icon."
-    )?;
-    writeln!(f, "    pub fn svg_source(&self) -> &'static str {{")?;
-    writeln!(f, "        match self {{")?;
-    for (v, file) in &entries {
-        writeln!(
-            f,
-            "    IconName::{} => include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/assets/svgs/{}\")),",
-            v, file
-        )?;
+    for (variant, file) in &entries {
+        writeln!(f, "            IconName::{} => {:?},", variant, file)?;
     }
     writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;
@@ -119,14 +93,23 @@ fn path_component_to_str<'a>(
         })
 }
 
-fn to_pascal_case(s: &str) -> String {
-    s.split(&['-', '_', ' '])
-        .map(|w| {
-            let mut c = w.chars();
-            match c.next() {
-                None => String::new(),
-                Some(f) => f.to_uppercase().chain(c).collect(),
-            }
-        })
-        .collect()
+fn to_pascal_case(value: &str) -> String {
+    let mut out = String::new();
+    for part in value.split(|ch: char| !ch.is_ascii_alphanumeric()) {
+        if part.is_empty() {
+            continue;
+        }
+        let mut chars = part.chars();
+        if let Some(first) = chars.next() {
+            out.extend(first.to_uppercase());
+            out.push_str(chars.as_str());
+        }
+    }
+    if out.is_empty() {
+        out.push_str("Icon");
+    }
+    if out.as_bytes().first().is_some_and(u8::is_ascii_digit) {
+        out.insert(0, 'I');
+    }
+    out
 }
