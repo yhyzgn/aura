@@ -7127,17 +7127,19 @@ enum IconCatalogLibrary {
     Material,
 }
 
-const ICON_CATALOG_GRID_PAGE_SIZE: usize = 48;
+const ICON_CATALOG_GRID_COLUMNS: usize = 12;
+const ICON_CATALOG_GRID_ROWS_PER_VIRTUAL_ITEM: usize = 4;
 
 fn docs_icon_library_catalog(
     cx: &mut Context<VirtualizedList>,
     library: IconCatalogLibrary,
 ) -> VirtualizedList {
     let entries = icon_catalog_entries(library);
-    let count = entries.len().div_ceil(ICON_CATALOG_GRID_PAGE_SIZE);
+    let chunk_size = ICON_CATALOG_GRID_COLUMNS * ICON_CATALOG_GRID_ROWS_PER_VIRTUAL_ITEM;
+    let count = entries.len().div_ceil(chunk_size);
     let mut list = VirtualizedList::new(count, cx, move |index, _window, _cx| {
-        let start = index * ICON_CATALOG_GRID_PAGE_SIZE;
-        let end = (start + ICON_CATALOG_GRID_PAGE_SIZE).min(entries.len());
+        let start = index * chunk_size;
+        let end = (start + chunk_size).min(entries.len());
         icon_catalog_grid(&entries[start..end]).into_any_element()
     });
     list.set_height(Some(px(620.0)));
@@ -7148,7 +7150,7 @@ fn docs_icon_library_catalog(
 
 fn icon_catalog_grid(entries: &[IconCatalogEntry]) -> impl IntoElement {
     Grid::new()
-        .fit_item(px(152.0))
+        .fit_columns(ICON_CATALOG_GRID_COLUMNS as u16)
         .gap_md()
         .children(entries.iter().map(icon_catalog_item))
 }
@@ -11713,12 +11715,15 @@ mod tests {
         assert!(source.contains("docs_icon_library_catalog"));
         assert!(source.contains("enum IconCatalogLibrary"));
         assert!(source.contains("icon_catalog_entries(library: IconCatalogLibrary)"));
-        assert!(source.contains("const ICON_CATALOG_GRID_PAGE_SIZE: usize = 48;"));
+        assert!(source.contains("const ICON_CATALOG_GRID_COLUMNS: usize = 12;"));
+        assert!(source.contains("const ICON_CATALOG_GRID_ROWS_PER_VIRTUAL_ITEM: usize = 4;"));
         assert!(source.contains("Grid::new()"));
-        assert!(source.contains(".fit_item(px(152.0))"));
+        assert!(source.contains(".fit_columns(ICON_CATALOG_GRID_COLUMNS as u16)"));
         assert!(source.contains("GridItem::new"));
         assert!(source.contains("list.set_overdraw(px(160.0));"));
-        assert!(source.contains("ICON_CATALOG_GRID_PAGE_SIZE"));
+        assert!(source.contains(
+            "let chunk_size = ICON_CATALOG_GRID_COLUMNS * ICON_CATALOG_GRID_ROWS_PER_VIRTUAL_ITEM;"
+        ));
         assert!(source.contains("fn middle_ellipsis"));
         assert!(icon_item_source.contains("middle_ellipsis(&entry.name"));
         assert!(icon_item_source.contains("Tooltip::new"));

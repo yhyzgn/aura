@@ -601,6 +601,23 @@ The optimizer scans the current app and reachable Liora dependency sources, rebu
 
 Runtime loading is also automatic. `IconAssetSource` searches installer resources, portable resources, generated dev bundles, and the typed icon crate's `dev=` fallback path. If a virtual icon still cannot be found, Liora renders a visible placeholder icon instead of a silent blank. Set `LIORA_ICON_DEBUG=1` only while debugging to print the candidate path chain and the final hit/miss decision.
 
+The optimizer only handles Liora's bundled typed icon libraries (`liora-icons-lucide`, `liora-icons-antd`, and the other `liora-icons-*` packs). Caller-owned SVGs remain regular application assets and are not copied, rewritten, deleted, or renamed by `liora-icons-optimizer`. Use the normal asset strategy for business icons:
+
+```rust
+use liora::icons::{Icon, inline_svg_asset_path};
+
+// External or packaged app asset. Ensure your app/packager ships this file.
+let brand = Icon::new("assets/icons/brand-mark.svg").size_lg();
+let file_icon = Icon::new("file:///opt/acme/icons/status.svg");
+
+// Tiny static SVG payload embedded in code.
+let inline = Icon::new(inline_svg_asset_path(
+    r#"<svg viewBox="0 0 24 24"><path d="M4 12h16"/></svg>"#,
+));
+```
+
+If you want custom SVGs to be mounted outside the executable for installer builds, keep them under your app's normal `assets/` tree and let the packager copy that tree. If you want a first-class custom typed icon pack with optimizer support, create a dedicated `liora-icons-yourpack`-style crate that exposes an `IconName` enum and a known SVG directory; do not mix business assets into `assets/liora-icons`, which is reserved for generated bundled-library resources.
+
 Avoid `IconName::all()` in normal production app code: it intentionally asks the optimizer to bundle a whole icon pack. It is appropriate for icon-browser pages like Liora Docs, but ordinary apps should reference concrete `IconName::Search` / `IconName::Settings` variants so the bundle stays small.
 
 When using raw `gpui_platform::application()`, install the Liora icon asset source if your app uses bundled SVG payloads:

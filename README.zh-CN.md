@@ -600,6 +600,23 @@ optimizer 会扫描当前应用和可达的 Liora 依赖源码，重建 `target/
 
 运行时加载同样是自动的。`IconAssetSource` 会依次查找安装包资源、portable 资源、开发期生成 bundle，以及强类型图标 crate 自带的 `dev=` fallback 路径。如果虚拟图标最终仍然找不到，Liora 会渲染一个可见占位图标，而不是静默空白。只有排查问题时才需要设置 `LIORA_ICON_DEBUG=1`，它会打印候选路径链路和最终命中/失败结果。
 
+optimizer 只处理 Liora 内置强类型图标库（`liora-icons-lucide`、`liora-icons-antd` 等 `liora-icons-*` 图标包）。开发者自己业务项目中的 SVG 仍然是普通应用资源，不会被 `liora-icons-optimizer` 复制、改写、删除或重命名。业务图标继续按普通 assets 方式使用：
+
+```rust
+use liora::icons::{Icon, inline_svg_asset_path};
+
+// 外部或应用打包资源。确保你的 app/packager 会携带这个文件。
+let brand = Icon::new("assets/icons/brand-mark.svg").size_lg();
+let file_icon = Icon::new("file:///opt/acme/icons/status.svg");
+
+// 很小的静态 SVG payload 可以直接嵌入代码。
+let inline = Icon::new(inline_svg_asset_path(
+    r#"<svg viewBox="0 0 24 24"><path d="M4 12h16"/></svg>"#,
+));
+```
+
+如果希望自定义 SVG 在安装包构建时以外部资源挂载，请把它们放在应用自己的 `assets/` 目录，并让打包器复制这个目录。如果希望自定义图库也获得强类型 `IconName` 和 optimizer 支持，科学做法是新增一个类似 `liora-icons-yourpack` 的独立图标包 crate，暴露 `IconName` enum 和固定 SVG 目录；不要把业务资源混放进 `assets/liora-icons`，这个目录保留给内置图标库的自动生成 bundle。
+
 普通生产应用中应避免使用 `IconName::all()`：它会明确告诉 optimizer 打包整个图标库。它适合 Liora Docs 这种图标浏览器页面；普通应用应引用具体的 `IconName::Search` / `IconName::Settings` 变体，让 bundle 保持小体积。
 
 如果应用使用 `gpui_platform::application()` 并渲染内置 SVG payload，建议安装 Liora icon asset source：

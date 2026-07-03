@@ -78,6 +78,8 @@ fn main() {
   - **打包环境**：通过 `cargo-packager` 或 `xtask` 打包发布时，打包工具会自动将生成的 `assets/liora-icons` 目录打包入最终安装包，在没有开发源码树的用户电脑上实现无缝加载。
 - **可见 fallback**：如果虚拟图标资源最终仍然缺失，`IconAssetSource` 会返回一个可见占位 SVG，避免页面出现难以排查的空白。
 - **按需诊断**：设置 `LIORA_ICON_DEBUG=1` 后，运行时会打印候选路径、命中路径和 fallback 决策。正常开发与打包不需要设置这个变量。
+- **自定义 SVG 不受影响**：optimizer 只扫描 Liora 内置强类型图标库的 `IconName::...` 使用点。业务项目自己的 `Icon::new("assets/icons/foo.svg")`、`Icon::new("file:///...")` 和 `inline_svg_asset_path(...)` 仍然走普通应用 assets / 文件路径 / 内联 SVG 加载链路，不会被 optimizer 复制、改写或删除。
+- **自定义图库的科学做法**：如果只是少量业务图标，把 SVG 放在应用自己的 `assets/` 目录并让打包器复制即可；如果要做可复用、可优化的自定义图库，应单独做一个类似 `liora-icons-yourpack` 的 crate，提供 `IconName` enum 和稳定 SVG 目录，而不是把业务资源混入自动生成的 `assets/liora-icons`。
 - **避免误用全量图标**：`IconName::all()` 会让 optimizer 自动打包整个图标库。它适合 Docs 的图标清单页面；普通应用应使用具体枚举变体，让包体保持最小。
 
 ## 完整 IconName 清单在哪里？

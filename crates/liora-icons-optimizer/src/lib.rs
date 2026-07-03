@@ -12,8 +12,11 @@
 //! ```
 //!
 //! The optimizer scans the host crate plus local Liora dependency sources for
-//! strongly typed `IconName::...` usages, then copies only those SVG files into
-//! `target/liora/icons/apps/<app>/assets/liora-icons` for packaging.
+//! strongly typed bundled-library `IconName::...` usages, then copies only
+//! those SVG files into `target/liora/icons/apps/<app>/assets/liora-icons` for
+//! packaging. Caller-owned custom SVG paths, `file://...` paths, and inline SVG
+//! payloads stay on the normal application asset path and are intentionally not
+//! rewritten or copied by this optimizer.
 
 use serde_json::Value;
 use std::{
@@ -867,6 +870,25 @@ mod tests {
         assert!(names.contains(&"tabler.HomeFilled".to_string()));
         assert!(names.contains(&"material.CheckCircleOutlined".to_string()));
         assert!(names.contains(&"carbon.*".to_string()));
+    }
+
+    #[test]
+    fn scanner_ignores_caller_owned_custom_svg_paths() {
+        let text = r#"
+            fn demo() {
+                Icon::new("assets/icons/customer-logo.svg");
+                Icon::new("file:///opt/acme/icons/status.svg");
+                Icon::new(liora_icons::inline_svg_asset_path("<svg viewBox='0 0 24 24'/>"));
+            }
+        "#;
+        let mut used = BTreeSet::new();
+
+        SourceScanner::new().scan_text(text, &mut used);
+
+        assert!(
+            used.is_empty(),
+            "optimizer should only bundle typed built-in IconName usages; custom app SVG assets remain regular GPUI assets"
+        );
     }
 
     #[test]
