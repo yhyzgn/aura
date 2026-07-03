@@ -11730,7 +11730,7 @@ mod tests {
             "Runtime model",
             "liora::init_liora(cx)",
             "liora::init_liora_with_mode",
-            r#"liora = "0.1""#,
+            r#"liora = "0.2""#,
             "Native packaging",
             "Quality gates",
             "Technical differentiators",
@@ -11747,7 +11747,7 @@ mod tests {
             "运行时模型",
             "liora::init_liora(cx)",
             "liora::init_liora_with_mode",
-            r#"liora = "0.1""#,
+            r#"liora = "0.2""#,
             "原生打包",
             "质量门禁",
             "技术创新点",
@@ -11859,7 +11859,7 @@ mod tests {
         assert!(readme.contains("Runtime model"));
         assert!(readme.contains("liora::init_liora(cx)"));
         assert!(readme.contains("liora::init_liora_with_mode"));
-        assert!(readme.contains(r#"liora = "0.1""#));
+        assert!(readme.contains(r#"liora = "0.2""#));
         assert!(readme.contains("Native packaging"));
         assert!(readme.contains("Quality gates"));
         assert!(readme.contains("Technical differentiators"));
