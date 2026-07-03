@@ -382,7 +382,6 @@ impl CargoMetadata {
             .filter(|package| package.name.starts_with("liora-") || package.name == "liora")
             .filter(|package| {
                 package.name != "liora-icons-optimizer"
-                    && package.name != "liora-locales-codegen"
                     && package.name != "liora-icons"
                     && !package.name.starts_with("liora-icons-")
             })

@@ -13,4 +13,4 @@ liora-theme = { version = "0.1.21", path = "../liora-theme" }
 toml.workspace = true
 
 [build-dependencies]
-liora-locales-codegen = { version = "0.1.21", path = "../liora-locales-codegen" }
+toml.workspace = true

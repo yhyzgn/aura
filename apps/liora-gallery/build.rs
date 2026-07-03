@@ -1,3 +1,6 @@
+#[path = "../../build-support/locales_codegen.rs"]
+mod locales_codegen;
+
 fn main() {
     liora_icons_optimizer::Optimizer::new()
         .scan_dir("src")
@@ -16,5 +19,5 @@ fn main() {
         let _ = res.compile();
     }
 
-    liora_locales_codegen::generate_locales_from_package("liora_core::Locales");
+    locales_codegen::generate_locales_from_package("liora_core::Locales");
 }

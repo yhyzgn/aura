@@ -1463,16 +1463,21 @@ subtitle = "Native documentation"
 
 在应用 crate 中添加 build dependency 和 `build.rs`：
 
-```toml
-[build-dependencies]
-liora-locales-codegen = "0.1"
-```
-
 ```rust
 // build.rs
+#[path = "../../build-support/locales_codegen.rs"]
+mod locales_codegen;
+
 fn main() {
-    liora_locales_codegen::generate_locales_from_package("liora_core::Locales");
+    locales_codegen::generate_locales_from_package("liora_core::Locales");
 }
+```
+
+Add `toml` build-dependency in `Cargo.toml`:
+
+```toml
+[build-dependencies]
+toml.workspace = true
 ```
 
 在应用中 include 生成模块：

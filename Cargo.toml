@@ -9,7 +9,6 @@ members = [
     "crates/liora-tray",
     "crates/liora-packager",
     "crates/liora-updater",
-    "crates/liora-locales-codegen",
     "crates/liora-icons-optimizer",
     "xtask",
     "crates/liora-icons",
