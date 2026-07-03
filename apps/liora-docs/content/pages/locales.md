@@ -67,7 +67,7 @@ TOML 表会在运行时展平成点分隔路径，例如 `[docs] subtitle = "...
 在应用 `build.rs` 中引入共享 codegen 模块：
 
 ```rust
-#[path = "../../build-support/locales_codegen.rs"]
+#[path = "../../crates/liora-core/src/locales_codegen.rs"]
 mod locales_codegen;
 
 fn main() {
@@ -262,7 +262,7 @@ fn subtitle(cx: &gpui::App) -> gpui::SharedString {
 }
 ```
 
-宏适合小范围手写 key。正式应用建议优先使用外部 TOML + `build-support/locales_codegen.rs`，因为它能从真实语言资源生成 key，并随 TOML 变更自动更新。
+宏适合小范围手写 key。正式应用建议优先使用外部 TOML + `crates/liora-core/src/locales_codegen.rs`，因为它能从真实语言资源生成 key，并随 TOML 变更自动更新。
 
 ## 开发检查清单
 

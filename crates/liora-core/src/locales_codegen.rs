@@ -5,7 +5,7 @@
 //!
 //! ```rust,ignore
 //! // build.rs
-//! #[path = "../../build-support/locales_codegen.rs"]
+//! #[path = "../../crates/liora-core/src/locales_codegen.rs"]
 //! mod locales_codegen;
 //!
 //! fn main() {

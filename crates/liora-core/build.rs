@@ -1,4 +1,4 @@
-#[path = "../../build-support/locales_codegen.rs"]
+#[path = "src/locales_codegen.rs"]
 mod locales_codegen;
 
 fn main() {

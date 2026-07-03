@@ -1466,7 +1466,7 @@ Add the build dependency and a tiny `build.rs` to your application crate:
 
 ```rust
 // build.rs
-#[path = "../../build-support/locales_codegen.rs"]
+#[path = "../../crates/liora-core/src/locales_codegen.rs"]
 mod locales_codegen;
 
 fn main() {
