@@ -19,7 +19,7 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::gpui_compat::element_id;
+use crate::{Spinner, gpui_compat::element_id};
 use gpui::{
     AnyElement, App, Component, IntoElement, MouseButton, Pixels, RenderOnce, SharedString, Window,
     div, prelude::*, px,
@@ -452,11 +452,7 @@ impl RenderOnce for Table {
                                 .flex_col()
                                 .items_center()
                                 .gap_2()
-                                .child(
-                                    Icon::new(IconName::LoaderCircle)
-                                        .size(px(32.0))
-                                        .color(theme.primary.base),
-                                )
+                                .child(Spinner::new().size(px(32.0)).color(theme.primary.base))
                                 .child(
                                     div()
                                         .text_sm()
@@ -582,5 +578,21 @@ mod tests {
         assert!(production.contains("row_id_prefix"));
         assert!(production.contains(r#"{}-row-{}"#));
         assert!(production.contains(".hover(|s| s.bg(theme.primary.light_9))"));
+    }
+
+    #[test]
+    fn table_loading_state_uses_animated_spinner_component() {
+        let source = include_str!("table.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production source should precede tests");
+
+        let loading_overlay = production
+            .split(".when(self.loading")
+            .nth(1)
+            .expect("table loading overlay should exist");
+        assert!(loading_overlay.contains("Spinner::new()"));
+        assert!(!loading_overlay.contains("Icon::new(IconName::LoaderCircle)"));
     }
 }
