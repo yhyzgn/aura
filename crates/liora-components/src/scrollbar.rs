@@ -20,7 +20,7 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Bounds, Context, DispatchPhase, Element, GlobalElementId, Hitbox,
+    AnyElement, App, Bounds, Context, DispatchPhase, Element, EntityId, GlobalElementId, Hitbox,
     HitboxBehavior, InspectorElementId, IntoElement, LayoutId, ListState, MouseButton,
     MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, ScrollHandle,
     Style, Window, div, point, prelude::*, px, relative, size,
@@ -29,8 +29,8 @@ use liora_core::Config;
 use std::cell::Cell;
 
 thread_local! {
-    static VIRTUAL_SCROLLBAR_GRAB_OFFSET: Cell<Option<Pixels>> = const { Cell::new(None) };
-    static SCROLLBAR_GRAB_OFFSET: Cell<Option<Pixels>> = const { Cell::new(None) };
+    static VIRTUAL_SCROLLBAR_DRAG_STATE: Cell<Option<ScrollbarDragState>> = const { Cell::new(None) };
+    static SCROLLBAR_DRAG_STATE: Cell<Option<ScrollbarDragState>> = const { Cell::new(None) };
 }
 
 const SCROLLBAR_THUMB_WIDTH: Pixels = px(4.0);
@@ -95,6 +95,7 @@ pub struct VirtualScrollbarPrepaint {
     thumb_bounds: Option<Bounds<Pixels>>,
     hover_bounds: Bounds<Pixels>,
     hitbox: Hitbox,
+    owner: u64,
     active: bool,
     dragging: bool,
 }
@@ -105,6 +106,12 @@ struct ThumbMetrics {
     max_offset: Pixels,
     track_height: Pixels,
     track_top: Pixels,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ScrollbarDragState {
+    owner: u64,
+    grab_offset: Pixels,
 }
 
 impl Element for VirtualScrollbar {
@@ -146,7 +153,8 @@ impl Element for VirtualScrollbar {
         let thumb = metrics.map(|metrics| metrics.bounds);
         let hitbox_bounds = scrollbar_track_hitbox(bounds);
         let hitbox = window.insert_hitbox(hitbox_bounds, HitboxBehavior::Normal);
-        let dragging = virtual_scrollbar_grab_offset().is_some();
+        let owner = scrollbar_owner(window.current_view(), hitbox_bounds);
+        let dragging = virtual_scrollbar_drag_state().is_some_and(|state| state.owner == owner);
         let active = hitbox.is_hovered(window)
             || dragging
             || hitbox_bounds.contains(&window.mouse_position());
@@ -162,6 +170,7 @@ impl Element for VirtualScrollbar {
             thumb_bounds,
             hover_bounds: hitbox_bounds,
             hitbox,
+            owner,
             active,
             dragging,
         }
@@ -198,10 +207,12 @@ impl Element for VirtualScrollbar {
 
         let was_active = prepaint.active;
         let hover_bounds = prepaint.hover_bounds;
+        let owner = prepaint.owner;
         let current_view = window.current_view();
         window.on_mouse_event(move |_: &MouseMoveEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture {
-                let active = virtual_scrollbar_grab_offset().is_some()
+                let active = virtual_scrollbar_drag_state()
+                    .is_some_and(|state| state.owner == owner)
                     || hover_bounds.contains(&window.mouse_position());
                 if active != was_active {
                     cx.notify(current_view);
@@ -224,7 +235,7 @@ impl Element for VirtualScrollbar {
                 } else {
                     raw_thumb_bounds.size.height / 2.0
                 };
-                set_virtual_scrollbar_grab_offset(Some(grab_offset));
+                set_virtual_scrollbar_drag_state(Some(ScrollbarDragState { owner, grab_offset }));
                 list_state.scrollbar_drag_started();
                 set_virtual_scrollbar_position(&list_state, event.position, grab_offset);
 
@@ -236,10 +247,12 @@ impl Element for VirtualScrollbar {
         let list_state = self.list_state.clone();
         window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture {
-                let Some(grab_offset) = virtual_scrollbar_grab_offset() else {
+                let Some(drag_state) =
+                    virtual_scrollbar_drag_state().filter(|state| state.owner == owner)
+                else {
                     return;
                 };
-                set_virtual_scrollbar_position(&list_state, event.position, grab_offset);
+                set_virtual_scrollbar_position(&list_state, event.position, drag_state.grab_offset);
                 cx.stop_propagation();
                 window.refresh();
             }
@@ -249,10 +262,10 @@ impl Element for VirtualScrollbar {
         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture
                 && event.button == MouseButton::Left
-                && virtual_scrollbar_grab_offset().is_some()
+                && virtual_scrollbar_drag_state().is_some_and(|state| state.owner == owner)
             {
                 list_state.scrollbar_drag_ended();
-                set_virtual_scrollbar_grab_offset(None);
+                set_virtual_scrollbar_drag_state(None);
                 cx.stop_propagation();
                 window.refresh();
             }
@@ -353,20 +366,33 @@ fn scrollbar_offset_from_position(
     Some(-content_offset)
 }
 
-fn virtual_scrollbar_grab_offset() -> Option<Pixels> {
-    VIRTUAL_SCROLLBAR_GRAB_OFFSET.with(Cell::get)
+fn scrollbar_owner(view_id: EntityId, bounds: Bounds<Pixels>) -> u64 {
+    let mut hash = view_id.as_u64();
+    for value in [
+        bounds.origin.x.as_f32(),
+        bounds.origin.y.as_f32(),
+        bounds.size.width.as_f32(),
+        bounds.size.height.as_f32(),
+    ] {
+        hash = hash.wrapping_mul(16_777_619) ^ u64::from(value.to_bits());
+    }
+    hash
 }
 
-fn set_virtual_scrollbar_grab_offset(offset: Option<Pixels>) {
-    VIRTUAL_SCROLLBAR_GRAB_OFFSET.with(|state| state.set(offset));
+fn virtual_scrollbar_drag_state() -> Option<ScrollbarDragState> {
+    VIRTUAL_SCROLLBAR_DRAG_STATE.with(Cell::get)
 }
 
-fn scrollbar_grab_offset() -> Option<Pixels> {
-    SCROLLBAR_GRAB_OFFSET.with(Cell::get)
+fn set_virtual_scrollbar_drag_state(state: Option<ScrollbarDragState>) {
+    VIRTUAL_SCROLLBAR_DRAG_STATE.with(|slot| slot.set(state));
 }
 
-fn set_scrollbar_grab_offset(offset: Option<Pixels>) {
-    SCROLLBAR_GRAB_OFFSET.with(|state| state.set(offset));
+fn scrollbar_drag_state() -> Option<ScrollbarDragState> {
+    SCROLLBAR_DRAG_STATE.with(Cell::get)
+}
+
+fn set_scrollbar_drag_state(state: Option<ScrollbarDragState>) {
+    SCROLLBAR_DRAG_STATE.with(|slot| slot.set(state));
 }
 
 fn scroll_handle_thumb_metrics(
@@ -438,6 +464,7 @@ struct ScrollbarThumbPrepaint {
     thumb_bounds: Option<Bounds<Pixels>>,
     hover_bounds: Bounds<Pixels>,
     hitbox: Hitbox,
+    owner: u64,
     active: bool,
     dragging: bool,
 }
@@ -488,7 +515,8 @@ impl gpui::Element for ScrollbarThumb {
         let thumb = metrics.map(|metrics| metrics.bounds);
         let hover_bounds = scrollbar_track_hitbox(bounds);
         let hitbox = window.insert_hitbox(hover_bounds, HitboxBehavior::Normal);
-        let dragging = scrollbar_grab_offset().is_some();
+        let owner = scrollbar_owner(window.current_view(), hover_bounds);
+        let dragging = scrollbar_drag_state().is_some_and(|state| state.owner == owner);
         let active = hitbox.is_hovered(window)
             || dragging
             || hover_bounds.contains(&window.mouse_position());
@@ -505,6 +533,7 @@ impl gpui::Element for ScrollbarThumb {
             thumb_bounds,
             hover_bounds,
             hitbox,
+            owner,
             active,
             dragging,
         }
@@ -533,10 +562,11 @@ impl gpui::Element for ScrollbarThumb {
 
         let was_active = prepaint.active;
         let hover_bounds = prepaint.hover_bounds;
+        let owner = prepaint.owner;
         let current_view = window.current_view();
         window.on_mouse_event(move |_: &MouseMoveEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture {
-                let active = scrollbar_grab_offset().is_some()
+                let active = scrollbar_drag_state().is_some_and(|state| state.owner == owner)
                     || hover_bounds.contains(&window.mouse_position());
                 if active != was_active {
                     cx.notify(current_view);
@@ -559,7 +589,7 @@ impl gpui::Element for ScrollbarThumb {
                 } else {
                     raw_thumb_bounds.size.height / 2.0
                 };
-                set_scrollbar_grab_offset(Some(grab_offset));
+                set_scrollbar_drag_state(Some(ScrollbarDragState { owner, grab_offset }));
                 set_scroll_handle_position(&scroll_handle, event.position, grab_offset);
 
                 cx.stop_propagation();
@@ -570,10 +600,11 @@ impl gpui::Element for ScrollbarThumb {
         let scroll_handle = self.scroll_handle.clone();
         window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture {
-                let Some(grab_offset) = scrollbar_grab_offset() else {
+                let Some(drag_state) = scrollbar_drag_state().filter(|state| state.owner == owner)
+                else {
                     return;
                 };
-                set_scroll_handle_position(&scroll_handle, event.position, grab_offset);
+                set_scroll_handle_position(&scroll_handle, event.position, drag_state.grab_offset);
                 cx.stop_propagation();
                 window.refresh();
             }
@@ -582,9 +613,9 @@ impl gpui::Element for ScrollbarThumb {
         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
             if phase == DispatchPhase::Capture
                 && event.button == MouseButton::Left
-                && scrollbar_grab_offset().is_some()
+                && scrollbar_drag_state().is_some_and(|state| state.owner == owner)
             {
-                set_scrollbar_grab_offset(None);
+                set_scrollbar_drag_state(None);
                 cx.stop_propagation();
                 window.refresh();
             }
@@ -623,7 +654,7 @@ mod tests {
         assert!(source.contains("set_offset_from_scrollbar"));
         assert!(source.contains("scrollbar_drag_started"));
         assert!(source.contains("scrollbar_drag_ended"));
-        assert!(source.contains("virtual_scrollbar_grab_offset"));
+        assert!(source.contains("virtual_scrollbar_drag_state"));
     }
 
     #[test]
@@ -695,6 +726,22 @@ mod tests {
     }
 
     #[test]
+    fn scrollbar_drag_state_is_scoped_to_the_owning_track() {
+        let source = include_str!("scrollbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production source should precede tests");
+
+        assert!(source.contains("owner: u64"));
+        assert!(source.contains("scrollbar_owner(window.current_view(), hitbox_bounds)"));
+        assert!(source.contains("scrollbar_owner(window.current_view(), hover_bounds)"));
+        assert!(source.contains("filter(|state| state.owner == owner)"));
+        assert!(source.contains("is_some_and(|state| state.owner == owner)"));
+        assert!(!source.contains("static VIRTUAL_SCROLLBAR_GRAB_OFFSET"));
+        assert!(!source.contains("static SCROLLBAR_GRAB_OFFSET"));
+    }
+
+    #[test]
     fn scrollbars_expand_on_hover_and_drag_without_smoothing() {
         let source = include_str!("scrollbar.rs")
             .split("#[cfg(test)]")
@@ -704,8 +751,8 @@ mod tests {
         assert!(source.contains("SCROLLBAR_THUMB_HOVER_WIDTH"));
         assert!(source.contains("SCROLLBAR_HIT_WIDTH"));
         assert!(source.contains("scrollbar_thumb_bounds_for_width"));
-        assert!(source.contains("set_scrollbar_grab_offset"));
-        assert!(source.contains("set_virtual_scrollbar_grab_offset"));
+        assert!(source.contains("set_scrollbar_drag_state"));
+        assert!(source.contains("set_virtual_scrollbar_drag_state"));
         assert!(source.contains("set_scroll_handle_position"));
         assert!(source.contains("set_virtual_scrollbar_position"));
         assert!(source.contains("hover_bounds.contains(&window.mouse_position())"));
