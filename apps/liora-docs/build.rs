@@ -28,7 +28,8 @@ fn write_embedded_icon_bundle(report: &liora_icons_optimizer::OptimizationReport
     use std::{collections::BTreeMap, env, fs, path::PathBuf};
 
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR should be set"));
-    let dest = out_dir.join("embedded_icon_bundle.rs");
+    let source_path = out_dir.join("embedded_icon_bundle.rs");
+    let bundle_path = out_dir.join("embedded_icon_bundle.bin");
     let mut embedded_icons = BTreeMap::new();
     for icon in &report.copied {
         embedded_icons
@@ -36,17 +37,30 @@ fn write_embedded_icon_bundle(report: &liora_icons_optimizer::OptimizationReport
             .or_insert_with(|| icon.path.clone());
     }
 
-    let mut out = String::new();
-    out.push_str("pub fn load(path: &str) -> Option<&'static [u8]> {\n");
-    out.push_str("    match path {\n");
+    let mut bundle = Vec::new();
+    let mut index = Vec::new();
     for (key, path) in embedded_icons {
-        let path = path.to_string_lossy().replace('\\', "\\\\");
-        out.push_str(&format!(
-            "        {key:?} => Some(include_bytes!({path:?}).as_slice()),\n"
-        ));
+        let start = bundle.len();
+        let bytes = fs::read(&path).expect("optimized icon SVG should be readable");
+        bundle.extend_from_slice(&bytes);
+        index.push((key, start, bytes.len()));
     }
-    out.push_str("        _ => None,\n");
-    out.push_str("    }\n");
+    fs::write(&bundle_path, bundle).expect("embedded icon bundle bytes should be written");
+
+    let bundle_path = bundle_path.to_string_lossy().replace('\\', "\\\\");
+    let mut out = String::new();
+    out.push_str(&format!(
+        "const BUNDLE: &[u8] = include_bytes!({bundle_path:?});\n"
+    ));
+    out.push_str("const INDEX: &[(&str, usize, usize)] = &[\n");
+    for (key, start, len) in index {
+        out.push_str(&format!("    ({key:?}, {start}, {len}),\n"));
+    }
+    out.push_str("];\n");
+    out.push_str("pub fn load(path: &str) -> Option<&'static [u8]> {\n");
+    out.push_str("    let index = INDEX.binary_search_by(|(key, _, _)| key.cmp(&path)).ok()?;\n");
+    out.push_str("    let (_, start, len) = INDEX[index];\n");
+    out.push_str("    Some(&BUNDLE[start..start + len])\n");
     out.push_str("}\n");
-    fs::write(dest, out).expect("embedded icon bundle should be written");
+    fs::write(source_path, out).expect("embedded icon bundle source should be written");
 }
