@@ -115,7 +115,7 @@ pub struct NeutralTokens {
     pub modal: Hsla,
     /// Popover and floating-panel background color.
     pub popover: Hsla,
-    /// Inverted surface color used behind high-contrast content.
+    /// Inverted foreground color used on primary, danger, and other saturated surfaces.
     pub inverted: Hsla,
 
     /// Primary text color.
@@ -324,7 +324,7 @@ impl Theme {
                 card: rgb(255, 255, 255),
                 modal: rgb(255, 255, 255),
                 popover: rgb(255, 255, 255),
-                inverted: rgb(0, 20, 40),
+                inverted: rgb(255, 255, 255),
 
                 text_1: rgb(31, 34, 37),
                 text_2: rgb(51, 54, 57),
@@ -731,6 +731,21 @@ mod tests {
 
         assert_eq!(theme.primary.light_9.a, 1.0);
         assert!(theme.primary.light_9.l > theme.primary.base.l);
+    }
+
+    #[test]
+    fn inverted_token_is_readable_foreground_for_saturated_surfaces() {
+        let light = Theme::light();
+        let dark = Theme::dark();
+
+        assert_eq!(
+            rgba_color(light.neutral.inverted),
+            rgba_color(rgb(255, 255, 255))
+        );
+        assert_eq!(
+            rgba_color(dark.neutral.inverted),
+            rgba_color(rgb(255, 255, 255))
+        );
     }
 
     #[test]

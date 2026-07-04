@@ -9242,7 +9242,7 @@ fn docs_backtop_custom(scroll_handle: ScrollHandle) -> Backtop {
                 .child(
                     Icon::new(IconName::ArrowUp)
                         .size_md()
-                        .color(theme.neutral.card),
+                        .color(theme.neutral.inverted),
                 )
                 .into_any_element()
         })

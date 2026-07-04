@@ -979,6 +979,21 @@ mod visual_theme_consistency_tests {
     }
 
     #[test]
+    fn solid_primary_surfaces_do_not_use_neutral_surface_tokens_as_foreground() {
+        for (name, source) in [
+            ("date_time_picker", include_str!("date_time_picker.rs")),
+            ("transfer", include_str!("transfer.rs")),
+        ] {
+            let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+            assert!(
+                !production.contains(".text_color(theme.neutral.card)")
+                    && !production.contains(".color(theme.neutral.card)"),
+                "{name} should use theme.neutral.inverted for foreground content on saturated surfaces, not card/body surface tokens"
+            );
+        }
+    }
+
+    #[test]
     fn virtualized_components_use_theme_surface_border_and_radius_tokens() {
         for (name, source) in [
             ("virtualized_table", include_str!("virtualized_table.rs")),

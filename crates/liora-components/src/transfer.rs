@@ -615,7 +615,7 @@ fn check_box_visual(checked: bool, disabled: bool, theme: &liora_theme::Theme) -
             s.child(
                 Icon::new(IconName::Check)
                     .size(px(12.0))
-                    .color(theme.neutral.card),
+                    .color(theme.neutral.inverted),
             )
         })
 }

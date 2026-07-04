@@ -1129,7 +1129,7 @@ fn render_footer(
                 .rounded(px(theme.radius.sm))
                 .bg(theme.primary.base)
                 .text_sm()
-                .text_color(theme.neutral.card)
+                .text_color(theme.neutral.inverted)
                 .hover(|s| s.cursor_pointer().bg(theme.primary.hover))
                 .on_mouse_down(MouseButton::Left, move |_, window, cx| {
                     confirm_picker.update(cx, |picker, cx| picker.confirm(window, cx));

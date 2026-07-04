@@ -319,6 +319,7 @@ impl RenderOnce for Table {
         let fixed_header = self.fixed_header || self.height.is_some();
         let height = self.height;
         let body_id = format!("{}-body", self.id);
+        let row_id_prefix = self.id.clone();
         let sort_key = self.sort_key;
         let sort_order = self.sort_order;
         let on_sort_change = self.on_sort_change;
@@ -359,6 +360,7 @@ impl RenderOnce for Table {
                         .map(|(row_index, mut row)| {
                             let striped = stripe && row_index % 2 == 1;
                             div()
+                                .id(element_id(format!("{}-row-{}", row_id_prefix, row_index)))
                                 .flex()
                                 .flex_row()
                                 .w_full()
@@ -565,4 +567,20 @@ fn table_header_cell(
             }
         })
         .into_any_element()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn table_rows_have_stable_hover_identity() {
+        let source = include_str!("table.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production source should precede tests");
+
+        assert!(production.contains("row_id_prefix"));
+        assert!(production.contains(r#"{}-row-{}"#));
+        assert!(production.contains(".hover(|s| s.bg(theme.primary.light_9))"));
+    }
 }

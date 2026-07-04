@@ -278,6 +278,7 @@ impl RenderOnce for VirtualizedTable {
         let state_id = id.clone();
         let header_id = id.clone();
         let root_id = id.clone();
+        let row_id_prefix = id.clone();
         let mut columns = self.columns;
         let border = self.border;
         let stripe = self.stripe;
@@ -341,6 +342,7 @@ impl RenderOnce for VirtualizedTable {
                         let active = active_row == Some(row_index);
                         let callback = on_row_select.clone();
                         div()
+                            .id(element_id(format!("{}-row-{}", row_id_prefix, row_index)))
                             .flex()
                             .flex_row()
                             .w_full()
@@ -605,6 +607,19 @@ mod tests {
         assert!(source.contains("render_cell"));
         assert!(source.contains("row_count: usize,"));
         assert!(source.contains("render_cell: Arc<RenderCell>,"));
+    }
+
+    #[test]
+    fn virtualized_table_rows_have_stable_hover_identity() {
+        let source = include_str!("virtualized_table.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production source should precede tests");
+
+        assert!(production.contains(r#"{}-row-{}"#));
+        assert!(production.contains("root_id"));
+        assert!(production.contains(".hover(|s| s.bg(theme.primary.light_9))"));
     }
 
     #[test]
