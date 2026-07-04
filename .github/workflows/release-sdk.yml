@@ -86,7 +86,9 @@ jobs:
               assert package["publish"] is True, f"{crate} should be publishable to crates.io"
               assert package["license-file"] == "../../LICENSE.md"
               assert package["repository"] == "https://github.com/yhyzgn/liora"
+              assert package.get("readme") == "README.md", f"{crate} should publish its crate-local README.md"
               assert package.get("description")
+              assert (path.parent / "README.md").read_text(encoding="utf-8").strip(), f"{crate} README.md should not be empty"
           print("crates.io SDK metadata OK")
           PY
 

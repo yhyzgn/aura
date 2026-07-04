@@ -1,10 +1,11 @@
 [package]
 name = "liora-updater"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 description = "Safe GitHub release updater planning library for Liora desktop applications."
 license-file = "../../LICENSE.md"
 repository = "https://github.com/yhyzgn/liora"
+readme = "README.md"
 publish = true
 
 [dependencies]

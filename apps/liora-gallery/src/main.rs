@@ -621,10 +621,7 @@ fn request_gallery_window_close(window: &mut Window, cx: &mut App) {
         .remembered_close_action
     {
         TrayCloseAction::ExitProcess => cx.quit(),
-        TrayCloseAction::HideToTray => {
-            prepare_gallery_hide_to_tray(cx);
-            window.remove_window();
-        }
+        TrayCloseAction::HideToTray => hide_gallery_window_in_place(window, cx),
         TrayCloseAction::Ask => {
             if !cx.global::<GalleryTrayState>().close_dialog_open {
                 cx.global_mut::<GalleryTrayState>().close_dialog_open = true;
@@ -734,9 +731,12 @@ fn prepare_gallery_hide_to_tray(cx: &mut App) {
 
     set_gallery_tray_visible(cx, true);
 
-    let state = cx.global_mut::<GalleryTrayState>();
-    state.window_visible = false;
-    state.window = None;
+    cx.global_mut::<GalleryTrayState>().window_visible = false;
+}
+
+fn hide_gallery_window_in_place(window: &mut Window, cx: &mut App) {
+    prepare_gallery_hide_to_tray(cx);
+    window.minimize_window();
 }
 
 fn hide_gallery_window(cx: &mut App) {
@@ -745,9 +745,10 @@ fn hide_gallery_window(cx: &mut App) {
     }
 
     let existing = cx.global::<GalleryTrayState>().window;
-    prepare_gallery_hide_to_tray(cx);
     if let Some(handle) = existing {
-        let _ = handle.update(cx, |_, window, _| window.remove_window());
+        let _ = handle.update(cx, |_, window, cx| hide_gallery_window_in_place(window, cx));
+    } else {
+        prepare_gallery_hide_to_tray(cx);
     }
 }
 
@@ -794,8 +795,8 @@ fn handle_gallery_window_should_close(window: &mut Window, cx: &mut App) -> bool
             false
         }
         TrayCloseAction::HideToTray => {
-            prepare_gallery_hide_to_tray(cx);
-            true
+            hide_gallery_window_in_place(window, cx);
+            false
         }
         TrayCloseAction::Ask => {
             if !cx.global::<GalleryTrayState>().close_dialog_open {
@@ -853,9 +854,8 @@ fn show_gallery_close_confirm(window: &mut Window, cx: &mut App) {
                                         .set_remembered_close_action(TrayCloseAction::HideToTray);
                                 }
                                 reset_gallery_close_confirm(cx);
-                                prepare_gallery_hide_to_tray(cx);
                                 Dialog::close(cx);
-                                window.remove_window();
+                                hide_gallery_window_in_place(window, cx);
                             },
                         ))
                         .child(
@@ -2243,6 +2243,55 @@ mod shell_regression_tests {
                     let _ = gallery.update(cx, |_gallery, cx| {
                         cx.notify();"
         ));
+    }
+
+    #[test]
+    fn gallery_hide_to_tray_preserves_window_for_tray_residency() {
+        let source = include_str!("main.rs")
+            .split("mod shell_regression_tests")
+            .next()
+            .unwrap();
+
+        let prepare = source
+            .split("fn prepare_gallery_hide_to_tray")
+            .nth(1)
+            .expect("Gallery hide-to-tray preparation should exist")
+            .split("fn hide_gallery_window_in_place")
+            .next()
+            .expect("Gallery preparation should end before in-place hide helper");
+        assert!(prepare.contains("set_gallery_tray_visible(cx, true)"));
+        assert!(prepare.contains("window_visible = false"));
+        assert!(!prepare.contains("state.window = None"));
+
+        let hide = source
+            .split("fn hide_gallery_window_in_place")
+            .nth(1)
+            .expect("Gallery in-place hide helper should exist")
+            .split("fn hide_gallery_window")
+            .next()
+            .expect("Gallery in-place hide helper should end before command hide helper");
+        assert!(hide.contains("prepare_gallery_hide_to_tray(cx)"));
+        assert!(hide.contains("window.minimize_window()"));
+        assert!(!hide.contains("window.remove_window()"));
+
+        let close = source
+            .split("fn handle_gallery_window_should_close")
+            .nth(1)
+            .expect("Gallery should-close handler should exist")
+            .split("fn show_gallery_close_confirm")
+            .next()
+            .expect("Gallery should-close handler should end before close confirmation");
+        let hide_arm = close
+            .split("TrayCloseAction::HideToTray =>")
+            .nth(1)
+            .expect("Hide-to-tray close branch should exist")
+            .split("TrayCloseAction::Ask =>")
+            .next()
+            .expect("Hide-to-tray branch should end before Ask branch");
+        assert!(hide_arm.contains("hide_gallery_window_in_place(window, cx)"));
+        assert!(hide_arm.contains("false"));
+        assert!(!hide_arm.contains("true"));
+        assert!(!hide_arm.contains("window.remove_window()"));
     }
 
     #[test]

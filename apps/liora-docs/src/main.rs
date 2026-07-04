@@ -498,10 +498,7 @@ fn request_docs_window_close(window: &mut Window, cx: &mut App) {
         .remembered_close_action
     {
         TrayCloseAction::ExitProcess => cx.quit(),
-        TrayCloseAction::HideToTray => {
-            prepare_docs_hide_to_tray(cx);
-            window.remove_window();
-        }
+        TrayCloseAction::HideToTray => hide_docs_window_in_place(window, cx),
         TrayCloseAction::Ask => {
             if !cx.global::<DocsTrayState>().close_dialog_open {
                 cx.global_mut::<DocsTrayState>().close_dialog_open = true;
@@ -613,9 +610,12 @@ fn prepare_docs_hide_to_tray(cx: &mut App) {
 
     set_docs_tray_visible(cx, true);
 
-    let state = cx.global_mut::<DocsTrayState>();
-    state.window_visible = false;
-    state.window = None;
+    cx.global_mut::<DocsTrayState>().window_visible = false;
+}
+
+fn hide_docs_window_in_place(window: &mut Window, cx: &mut App) {
+    prepare_docs_hide_to_tray(cx);
+    window.minimize_window();
 }
 
 fn hide_docs_window(cx: &mut App) {
@@ -624,9 +624,12 @@ fn hide_docs_window(cx: &mut App) {
     }
 
     let existing = cx.global::<DocsTrayState>().window;
-    prepare_docs_hide_to_tray(cx);
     if let Some(handle) = existing {
-        let _ = handle.update(cx, |_, window: &mut Window, _| window.remove_window());
+        let _ = handle.update(cx, |_, window: &mut Window, cx| {
+            hide_docs_window_in_place(window, cx)
+        });
+    } else {
+        prepare_docs_hide_to_tray(cx);
     }
 }
 
@@ -673,8 +676,8 @@ fn handle_docs_window_should_close(window: &mut Window, cx: &mut App) -> bool {
             false
         }
         TrayCloseAction::HideToTray => {
-            prepare_docs_hide_to_tray(cx);
-            true
+            hide_docs_window_in_place(window, cx);
+            false
         }
         TrayCloseAction::Ask => {
             if !cx.global::<DocsTrayState>().close_dialog_open {
@@ -727,9 +730,8 @@ fn show_docs_close_confirm(window: &mut Window, cx: &mut App) {
                                     .set_remembered_close_action(TrayCloseAction::HideToTray);
                             }
                             reset_docs_close_confirm(cx);
-                            prepare_docs_hide_to_tray(cx);
                             Dialog::close(cx);
-                            window.remove_window();
+                            hide_docs_window_in_place(window, cx);
                         }))
                         .child(Button::new("关闭进程").danger().on_click(move |_, _, cx| {
                             if remember_for_exit.load(Ordering::Relaxed)
@@ -819,6 +821,52 @@ mod shell_tests {
         assert!(source.contains("MenuItem::open_file()"));
         assert!(source.contains("MenuItem::open_folder()"));
         assert!(source.contains("MenuItem::select_all()"));
+    }
+
+    #[test]
+    fn docs_hide_to_tray_preserves_window_for_tray_residency() {
+        let source = include_str!("main.rs");
+
+        let prepare = source
+            .split("fn prepare_docs_hide_to_tray")
+            .nth(1)
+            .expect("Docs hide-to-tray preparation should exist")
+            .split("fn hide_docs_window_in_place")
+            .next()
+            .expect("Docs preparation should end before in-place hide helper");
+        assert!(prepare.contains("set_docs_tray_visible(cx, true)"));
+        assert!(prepare.contains("window_visible = false"));
+        assert!(!prepare.contains("state.window = None"));
+
+        let hide = source
+            .split("fn hide_docs_window_in_place")
+            .nth(1)
+            .expect("Docs in-place hide helper should exist")
+            .split("fn hide_docs_window")
+            .next()
+            .expect("Docs in-place hide helper should end before command hide helper");
+        assert!(hide.contains("prepare_docs_hide_to_tray(cx)"));
+        assert!(hide.contains("window.minimize_window()"));
+        assert!(!hide.contains("window.remove_window()"));
+
+        let close = source
+            .split("fn handle_docs_window_should_close")
+            .nth(1)
+            .expect("Docs should-close handler should exist")
+            .split("fn show_docs_close_confirm")
+            .next()
+            .expect("Docs should-close handler should end before close confirmation");
+        let hide_arm = close
+            .split("TrayCloseAction::HideToTray =>")
+            .nth(1)
+            .expect("Hide-to-tray close branch should exist")
+            .split("TrayCloseAction::Ask =>")
+            .next()
+            .expect("Hide-to-tray branch should end before Ask branch");
+        assert!(hide_arm.contains("hide_docs_window_in_place(window, cx)"));
+        assert!(hide_arm.contains("false"));
+        assert!(!hide_arm.contains("true"));
+        assert!(!hide_arm.contains("window.remove_window()"));
     }
 
     #[test]
