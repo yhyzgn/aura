@@ -4,23 +4,31 @@ pub mod locales {
     include!(concat!(env!("OUT_DIR"), "/locales_keys.rs"));
 }
 
+mod embedded_icon_bundle {
+    include!(concat!(env!("OUT_DIR"), "/embedded_icon_bundle.rs"));
+}
+
 mod markdown;
 
-use gpui::{App, AppContext, FontWeight, Global, Window, WindowOptions, px, size};
+use gpui::{
+    App, AppContext, AssetSource, FontWeight, Global, SharedString, Window, WindowOptions, px, size,
+};
 use liora_components::{
     Button, Checkbox, Dialog, Menu, MenuItem, Paragraph, Space, WindowFrameMode,
     apply_window_frame_mode, init_liora_with_options, request_window_frame_mode,
 };
 use liora_core::{
-    FontConfig, FontLoadMode, FontLoadOptions, LinuxDesktopIdentity, LinuxDesktopPngIcon, Options,
-    attach_system_theme_observer, ensure_linux_desktop_identity, linux_desktop_entry,
-    linux_desktop_png_icon_path, load_app_fonts, startup_maximized_window_bounds,
+    FontConfig, FontLoadMode, FontLoadOptions, LinuxDesktopIdentity, LinuxDesktopPngIcon,
+    LocalesMap, Options, attach_system_theme_observer, ensure_linux_desktop_identity,
+    linux_desktop_entry, linux_desktop_png_icon_path, load_app_fonts,
+    startup_maximized_window_bounds,
 };
 use liora_tray::{
     MouseButton, MouseButtonState, Tray, TrayCloseAction, TrayCommand, TrayConfig,
     TrayControlCenter, TrayIconEvent, icon_from_png_bytes, solid_icon,
 };
 use std::{
+    borrow::Cow,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -42,9 +50,42 @@ struct DocsTrayState {
 
 impl Global for DocsTrayState {}
 
+#[derive(Debug, Clone, Copy)]
+struct DocsAssetSource;
+
+impl AssetSource for DocsAssetSource {
+    fn load(&self, path: &str) -> gpui::Result<Option<Cow<'static, [u8]>>> {
+        if let Some(request) = path.strip_prefix(liora_icons::ICON_SVG_ASSET_PREFIX) {
+            let (resource, _) = request.split_once('?').unwrap_or((request, ""));
+            if let Some(bytes) = embedded_icon_bundle::load(resource) {
+                return Ok(Some(Cow::Borrowed(bytes)));
+            }
+        }
+        liora_icons::IconAssetSource.load(path)
+    }
+
+    fn list(&self, path: &str) -> gpui::Result<Vec<SharedString>> {
+        liora_icons::IconAssetSource.list(path)
+    }
+}
+
+fn embedded_docs_locales() -> LocalesMap {
+    LocalesMap::builtin()
+        .override_locale(
+            "en-US",
+            liora_core::parse_toml_translations(include_str!("../assets/locales/en-US.toml"))
+                .expect("embedded Docs en-US locale must parse"),
+        )
+        .override_locale(
+            "zh-CN",
+            liora_core::parse_toml_translations(include_str!("../assets/locales/zh-CN.toml"))
+                .expect("embedded Docs zh-CN locale must parse"),
+        )
+}
+
 fn run_docs() {
     gpui_platform::application()
-        .with_assets(liora_icons::IconAssetSource)
+        .with_assets(DocsAssetSource)
         .run(|cx: &mut App| {
             install_docs_fonts(cx);
             init_liora_with_options(cx, docs_liora_options());
@@ -109,9 +150,11 @@ fn register_docs_system_menus(cx: &mut App) {
 
 // This app uses init_liora_with_options instead of init_liora(cx) because it sets app fonts.
 fn docs_liora_options() -> Options {
+    let resources = embedded_docs_locales();
     let options = Options::system()
         .with_locale("zh-CN")
         .with_fallback_locale("en-US")
+        .with_locales_resources(resources)
         .with_fonts(
             FontConfig::system()
                 .with_ui_families(["MiSans", "Segoe UI", "Arial"])
@@ -745,7 +788,13 @@ mod shell_tests {
 
         assert!(source.contains("register_docs_desktop_identity();"));
         assert!(source.contains("gpui_platform::application()"));
-        assert!(source.contains("with_assets(liora_icons::IconAssetSource)"));
+        assert!(source.contains("with_assets(DocsAssetSource)"));
+        assert!(source.contains("mod embedded_icon_bundle"));
+        assert!(source.contains("embedded_icon_bundle::load(resource)"));
+        assert!(source.contains("embedded_docs_locales()"));
+        assert!(source.contains("with_locales_resources(resources)"));
+        assert!(source.contains("include_str!(\"../assets/locales/en-US.toml\")"));
+        assert!(source.contains("include_str!(\"../assets/locales/zh-CN.toml\")"));
         assert!(source.contains(r#"app_id: Some("liora-docs".into())"#));
         assert!(source.contains(r#"app_id: "liora-docs""#));
         assert!(source.contains("packaging/linux/liora-docs.desktop"));

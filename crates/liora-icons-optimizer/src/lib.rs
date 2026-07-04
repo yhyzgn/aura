@@ -702,6 +702,13 @@ fn copy_icon_svg(
     source_svg: &str,
     copied: &mut Vec<CopiedIcon>,
 ) -> Result<(), OptimizerError> {
+    if copied
+        .iter()
+        .any(|icon| icon.set == set && icon.file == source_svg)
+    {
+        return Ok(());
+    }
+
     let source = catalog.svg_dir.join(source_svg);
     let dest_dir = asset_out_dir.join(set);
     fs::create_dir_all(&dest_dir).map_err(|source| OptimizerError::Io {
@@ -889,6 +896,50 @@ mod tests {
             used.is_empty(),
             "optimizer should only bundle typed built-in IconName usages; custom app SVG assets remain regular GPUI assets"
         );
+    }
+
+    #[test]
+    fn copy_icon_svg_records_each_output_file_once() {
+        let root = std::env::temp_dir().join(format!(
+            "liora-icon-dedupe-{}-{}",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let source_dir = root.join("source");
+        let output_dir = root.join("output");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::write(source_dir.join("search.svg"), "<svg viewBox='0 0 24 24'/>").unwrap();
+
+        let catalog = IconCatalog {
+            svg_dir: source_dir,
+            variant_to_file: BTreeMap::new(),
+        };
+        let mut copied = Vec::new();
+
+        copy_icon_svg(
+            &output_dir,
+            &catalog,
+            "lucide",
+            "Search",
+            "search.svg",
+            &mut copied,
+        )
+        .unwrap();
+        copy_icon_svg(
+            &output_dir,
+            &catalog,
+            "lucide",
+            "Search",
+            "search.svg",
+            &mut copied,
+        )
+        .unwrap();
+
+        assert_eq!(copied.len(), 1);
+        assert_eq!(copied[0].file, "search.svg");
+        assert!(output_dir.join("lucide/search.svg").exists());
+
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

@@ -160,6 +160,42 @@ let options = Options::system()
     .unwrap_or_else(|_| Options::system().with_locale("zh-CN"));
 ```
 
+## 裸可执行程序的嵌入兜底
+
+安装包和 portable archive 可以携带外部 `assets/locales/*.toml`，但 GitHub Release 里单独上传的裸 `exe` / binary 可能没有任何相邻资源目录。为了避免这种单文件运行场景显示 `language.label`、`language.zh_cn` 这类 key，推荐给应用内置一份基础语言包，然后再允许外部资源覆盖：
+
+```rust
+use liora::{LocalesMap, Options, parse_toml_translations};
+
+fn embedded_locales() -> LocalesMap {
+    LocalesMap::builtin()
+        .override_locale(
+            "en-US",
+            parse_toml_translations(include_str!("../assets/locales/en-US.toml"))
+                .expect("embedded en-US locale must parse"),
+        )
+        .override_locale(
+            "zh-CN",
+            parse_toml_translations(include_str!("../assets/locales/zh-CN.toml"))
+                .expect("embedded zh-CN locale must parse"),
+        )
+}
+
+fn app_options() -> Options {
+    let options = Options::system()
+        .with_locale("zh-CN")
+        .with_fallback_locale("en-US")
+        .with_locales_resources(embedded_locales());
+
+    options
+        .clone()
+        .try_with_locales_dir(app_locales_dir())
+        .unwrap_or(options)
+}
+```
+
+查询顺序仍然尊重应用配置：外部目录加载成功时可以覆盖嵌入资源；外部目录缺失时，裸可执行程序会使用嵌入语言包。Gallery 和 Docs 已采用这套策略。
+
 ## 在组件里直接使用 key
 
 很多 Liora 文本类组件支持 `LocalizedText`，可以直接传类型化 key。组件会在 render 阶段解析当前语言，因此运行时切换语言并刷新窗口后会自动显示新语言。

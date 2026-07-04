@@ -1,8 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use gpui::{
-    AnyView, App, Component, Context, FontWeight, Global, Render, RenderImage, SharedString,
-    Window, WindowOptions, div, img, prelude::*, px, size,
+    AnyView, App, AssetSource, Component, Context, FontWeight, Global, Render, RenderImage,
+    SharedString, Window, WindowOptions, div, img, prelude::*, px, size,
 };
 use liora_components::{
     AppWindowFrame, Button, Card, Checkbox, Container, Dialog, Input, Menu, MenuBar, MenuItem,
@@ -13,7 +13,7 @@ use liora_components::{
 };
 use liora_core::{
     Config, FontConfig, FontLoadMode, FontLoadOptions, LinuxDesktopIdentity, LinuxDesktopPngIcon,
-    Options, PassivePortal, Portal, ThemeMode, apply_locale, apply_theme_mode,
+    LocalesMap, Options, PassivePortal, Portal, ThemeMode, apply_locale, apply_theme_mode,
     attach_system_theme_observer, current_locale, ensure_linux_desktop_identity,
     linux_desktop_entry, linux_desktop_png_icon_path, load_app_fonts,
     startup_maximized_window_bounds, tr,
@@ -31,7 +31,12 @@ pub mod locales {
     include!(concat!(env!("OUT_DIR"), "/locales_keys.rs"));
 }
 
+mod embedded_icon_bundle {
+    include!(concat!(env!("OUT_DIR"), "/embedded_icon_bundle.rs"));
+}
+
 use std::{
+    borrow::Cow,
     process::Command,
     sync::{
         Arc, OnceLock,
@@ -119,6 +124,39 @@ fn locale_template(
     tr(cx, key).to_string()
 }
 
+#[derive(Debug, Clone, Copy)]
+struct GalleryAssetSource;
+
+impl AssetSource for GalleryAssetSource {
+    fn load(&self, path: &str) -> gpui::Result<Option<Cow<'static, [u8]>>> {
+        if let Some(request) = path.strip_prefix(liora_icons::ICON_SVG_ASSET_PREFIX) {
+            let (resource, _) = request.split_once('?').unwrap_or((request, ""));
+            if let Some(bytes) = embedded_icon_bundle::load(resource) {
+                return Ok(Some(Cow::Borrowed(bytes)));
+            }
+        }
+        liora_icons::IconAssetSource.load(path)
+    }
+
+    fn list(&self, path: &str) -> gpui::Result<Vec<SharedString>> {
+        liora_icons::IconAssetSource.list(path)
+    }
+}
+
+fn embedded_gallery_locales() -> LocalesMap {
+    LocalesMap::builtin()
+        .override_locale(
+            "en-US",
+            liora_core::parse_toml_translations(include_str!("../assets/locales/en-US.toml"))
+                .expect("embedded Gallery en-US locale must parse"),
+        )
+        .override_locale(
+            "zh-CN",
+            liora_core::parse_toml_translations(include_str!("../assets/locales/zh-CN.toml"))
+                .expect("embedded Gallery zh-CN locale must parse"),
+        )
+}
+
 fn theme_mode_label(cx: &impl liora_core::LocalesContext, mode: ThemeMode) -> String {
     match mode {
         ThemeMode::System => tr(cx, locales::theme_mode::system).to_string(),
@@ -159,7 +197,7 @@ impl Global for GalleryTrayState {}
 
 fn run_gallery() {
     gpui_platform::application()
-        .with_assets(liora_icons::IconAssetSource)
+        .with_assets(GalleryAssetSource)
         .run(|cx: &mut App| {
             install_gallery_fonts(cx);
             init_liora_with_options(cx, gallery_liora_options());
@@ -228,9 +266,11 @@ fn register_gallery_system_menus(cx: &mut App) {
 
 // This app uses init_liora_with_options instead of init_liora(cx) because it sets app fonts.
 fn gallery_liora_options() -> Options {
+    let resources = embedded_gallery_locales();
     let options = Options::system()
         .with_locale("zh-CN")
         .with_fallback_locale("en-US")
+        .with_locales_resources(resources)
         .with_fonts(
             FontConfig::system()
                 .with_ui_families(["MiSans", "Segoe UI", "Arial"])
@@ -881,7 +921,13 @@ mod shell_tests {
         assert!(source.contains(".no_shrink()"));
         assert!(source.contains("init_liora(cx)"));
         assert!(source.contains("gpui_platform::application()"));
-        assert!(source.contains("with_assets(liora_icons::IconAssetSource)"));
+        assert!(source.contains("with_assets(GalleryAssetSource)"));
+        assert!(source.contains("mod embedded_icon_bundle"));
+        assert!(source.contains("embedded_icon_bundle::load(resource)"));
+        assert!(source.contains("embedded_gallery_locales()"));
+        assert!(source.contains("with_locales_resources(resources)"));
+        assert!(source.contains("include_str!(\"../assets/locales/en-US.toml\")"));
+        assert!(source.contains("include_str!(\"../assets/locales/zh-CN.toml\")"));
         assert!(source.contains("nav_filter"));
         assert!(source.contains("nav_menu: Option"));
         assert!(source.contains(r#".id("gallery-sidebar")"#));

@@ -57,6 +57,51 @@ fn main() {
 
 `IconAssetSource` 会自动查找安装包资源、portable 资源、开发期生成 bundle，以及强类型图标 crate 自带的 `dev=` fallback 路径。如果虚拟图标最终仍然找不到，Liora 会显示一个可见占位图标，避免 UI 静默空白。
 
+## 裸可执行程序的嵌入兜底
+
+安装包和 portable archive 会携带 `assets/liora-icons` 外部资源目录；但是 GitHub Release 里单独上传的裸 `exe` / binary 不能假设旁边一定有 assets 目录。因此应用如果要发布单文件可执行程序，应在 `build.rs` 里使用 `try_run()` 拿到 `OptimizationReport`，再生成一个 `OUT_DIR` Rust 文件，把已优化过的 SVG 作为兜底嵌入：
+
+```rust
+fn main() {
+    let report = liora_icons_optimizer::Optimizer::new()
+        .scan_dir("src")
+        .bundle_auto()
+        .try_run()
+        .expect("icon optimization should complete");
+
+    write_embedded_icon_bundle(&report);
+}
+```
+
+运行时的 asset source 先查嵌入 bundle，再委托给 `liora_icons::IconAssetSource` 查安装包 / portable / 开发期路径：
+
+```rust
+mod embedded_icon_bundle {
+    include!(concat!(env!("OUT_DIR"), "/embedded_icon_bundle.rs"));
+}
+
+struct AppAssetSource;
+
+impl gpui::AssetSource for AppAssetSource {
+    fn load(&self, path: &str) -> gpui::Result<Option<std::borrow::Cow<'static, [u8]>>> {
+        if let Some(request) = path.strip_prefix(liora_icons::ICON_SVG_ASSET_PREFIX) {
+            let (resource, _) = request.split_once('?').unwrap_or((request, ""));
+            if let Some(bytes) = embedded_icon_bundle::load(resource) {
+                return Ok(Some(std::borrow::Cow::Borrowed(bytes)));
+            }
+        }
+
+        liora_icons::IconAssetSource.load(path)
+    }
+
+    fn list(&self, path: &str) -> gpui::Result<Vec<gpui::SharedString>> {
+        liora_icons::IconAssetSource.list(path)
+    }
+}
+```
+
+Gallery 和 Docs 已采用这套策略，所以 raw executable、installer、portable archive 都能显示同一套优化后的图标。普通业务应用不需要手动运行任何命令；只要 `build.rs` 写好，Cargo 构建会自动完成扫描、复制和嵌入兜底生成。
+
 ## 输出目录和报告
 
 默认输出位置由当前 package 名和 workspace root 决定：

@@ -1654,6 +1654,7 @@ impl Translator for AppTranslator {
 - 语言资源保持为外部 TOML 文件，不写进 Rust 代码。
 - 应用壳 UI 文案应放进 TOML；Docs 的 markdown 页面正文不强制拆成多语言 markdown，除非产品明确需要。
 - 修改 TOML 后重新运行 `cargo check`，让 build script 重新生成类型化 key。
+- 如果发布单文件裸可执行程序，应用应通过 `include_str!("../assets/locales/<locale>.toml")` 内嵌一份基础 `LocalesMap`，再让 `try_with_locales_dir(...)` 在安装包 / portable 资源存在时覆盖它，避免下载后的单文件程序显示 `language.label` 这类原始 key。
 
 ## 组件清单
 

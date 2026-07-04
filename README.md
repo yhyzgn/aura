@@ -1655,6 +1655,7 @@ impl Translator for AppTranslator {
 - Keep language files external to Rust source code.
 - Keep all app shell text in TOML; Docs markdown page bodies can remain single-language unless your product requires translated markdown content.
 - Re-run `cargo check` after editing TOML so build scripts regenerate the typed keys.
+- For standalone raw executables, embed a baseline `LocalesMap` with `include_str!("../assets/locales/<locale>.toml")`, then let `try_with_locales_dir(...)` override it when installer/portable resources are present. This prevents downloaded single-file binaries from displaying raw keys such as `language.label`.
 
 ## Component catalog
 
