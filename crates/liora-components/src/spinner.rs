@@ -19,7 +19,7 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::motion::spin_icon_with_duration;
+use crate::motion::spin_icon;
 use gpui::{App, Component, Hsla, IntoElement, Pixels, RenderOnce, Window, px};
 use liora_core::{Config, stable_unique_id};
 use liora_icons::Icon;
@@ -85,11 +85,7 @@ impl RenderOnce for Spinner {
             cx,
         );
 
-        spin_icon_with_duration(
-            motion_id,
-            Icon::new(self.icon).size(self.size).color(color),
-            std::time::Duration::from_millis(1350),
-        )
+        spin_icon(motion_id, Icon::new(self.icon).size(self.size).color(color))
     }
 }
 
@@ -123,8 +119,6 @@ mod tests {
         let source = include_str!("spinner.rs");
         assert!(source.contains("stable_unique_id("));
         assert!(source.contains("liora-spinner-motion:{:?}:{:?}:{:?}"));
-        assert!(source.contains("spin_icon_with_duration("));
-        assert!(source.contains("Duration::from_millis(1350)"));
         let render_body = source
             .split("impl RenderOnce for Spinner")
             .nth(1)
@@ -132,6 +126,9 @@ mod tests {
             .split("impl IntoElement for Spinner")
             .next()
             .expect("RenderOnce block should end before IntoElement");
+        assert!(render_body.contains("spin_icon("));
+        assert!(!render_body.contains("Duration::from_millis(1350)"));
+        assert!(!render_body.contains("spin_icon_with_duration("));
         assert!(!render_body.contains(r#"liora_core::unique_id("liora-spinner-motion")"#));
         assert!(render_body.contains("Icon::new(self.icon).size(self.size).color(color)"));
         let stale_field = ["motion_id", ": &'static str"].join("");
