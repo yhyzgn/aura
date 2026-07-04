@@ -681,6 +681,11 @@ fn handle_gallery_tray_command(command: TrayCommand, cx: &mut App) {
                     let _ = state.tray.set_visible(state.tray_visible);
                     state.resident_enabled
                 };
+                cx.set_quit_mode(if resident_enabled {
+                    gpui::QuitMode::Explicit
+                } else {
+                    gpui::QuitMode::LastWindowClosed
+                });
                 if cx.has_global::<TrayControlCenter>() {
                     cx.global_mut::<TrayControlCenter>()
                         .set_resident_enabled(resident_enabled);
@@ -729,14 +734,17 @@ fn prepare_gallery_hide_to_tray(cx: &mut App) {
         return;
     }
 
+    cx.set_quit_mode(gpui::QuitMode::Explicit);
     set_gallery_tray_visible(cx, true);
 
-    cx.global_mut::<GalleryTrayState>().window_visible = false;
+    let state = cx.global_mut::<GalleryTrayState>();
+    state.window_visible = false;
+    state.window = None;
 }
 
 fn hide_gallery_window_in_place(window: &mut Window, cx: &mut App) {
     prepare_gallery_hide_to_tray(cx);
-    window.minimize_window();
+    window.remove_window();
 }
 
 fn hide_gallery_window(cx: &mut App) {
@@ -2246,7 +2254,7 @@ mod shell_regression_tests {
     }
 
     #[test]
-    fn gallery_hide_to_tray_preserves_window_for_tray_residency() {
+    fn gallery_hide_to_tray_removes_window_without_quitting_process() {
         let source = include_str!("main.rs")
             .split("mod shell_regression_tests")
             .next()
@@ -2259,9 +2267,10 @@ mod shell_regression_tests {
             .split("fn hide_gallery_window_in_place")
             .next()
             .expect("Gallery preparation should end before in-place hide helper");
+        assert!(prepare.contains("cx.set_quit_mode(gpui::QuitMode::Explicit)"));
         assert!(prepare.contains("set_gallery_tray_visible(cx, true)"));
         assert!(prepare.contains("window_visible = false"));
-        assert!(!prepare.contains("state.window = None"));
+        assert!(prepare.contains("state.window = None"));
 
         let hide = source
             .split("fn hide_gallery_window_in_place")
@@ -2271,8 +2280,8 @@ mod shell_regression_tests {
             .next()
             .expect("Gallery in-place hide helper should end before command hide helper");
         assert!(hide.contains("prepare_gallery_hide_to_tray(cx)"));
-        assert!(hide.contains("window.minimize_window()"));
-        assert!(!hide.contains("window.remove_window()"));
+        assert!(hide.contains("window.remove_window()"));
+        assert!(!hide.contains("window.minimize_window()"));
 
         let close = source
             .split("fn handle_gallery_window_should_close")
@@ -2291,7 +2300,7 @@ mod shell_regression_tests {
         assert!(hide_arm.contains("hide_gallery_window_in_place(window, cx)"));
         assert!(hide_arm.contains("false"));
         assert!(!hide_arm.contains("true"));
-        assert!(!hide_arm.contains("window.remove_window()"));
+        assert!(hide_arm.contains("hide_gallery_window_in_place(window, cx)"));
     }
 
     #[test]
