@@ -2811,13 +2811,16 @@ impl LiveDemoContent {
                 }));
             }
             "ScrollbarBasic" => {
-                scrollbars.push(cx.new(|cx| {
-                    liora_components::Scrollbar::new(cx, |_, _| {
-                        let items = (1..=20).map(|i| Text::new(format!("Scrollable line {}", i)));
-                        Space::new().vertical().gap_lg().children(items)
-                    })
-                    .height(150.0)
-                }));
+                scrollbars.push(cx.new(docs_scrollbar_basic_demo));
+            }
+            "ScrollbarCards" => {
+                scrollbars.push(cx.new(docs_scrollbar_cards_demo));
+            }
+            "ScrollbarArticle" => {
+                scrollbars.push(cx.new(docs_scrollbar_article_demo));
+            }
+            "ScrollbarCompact" => {
+                scrollbars.push(cx.new(docs_scrollbar_compact_demo));
             }
             "ColorPickerBasic" => {
                 color_pickers.push(cx.new(|_| {
@@ -5679,12 +5682,20 @@ impl Render for LiveDemoContent {
                 .left(Card::new(Text::new("Left panel")).no_shadow())
                 .right(Card::new(Text::new("Right panel")).no_shadow())
                 .into_any_element(),
-            "ScrollbarBasic" => self
-                .scrollbars
-                .first()
-                .cloned()
-                .map(Entity::into_any_element)
-                .unwrap_or_else(|| Paragraph::with_text("Missing Scrollbar demo").into_any_element()),
+            "ScrollbarBasic" | "ScrollbarCards" | "ScrollbarArticle" | "ScrollbarCompact" => {
+                let index = match self.component.as_ref() {
+                    "ScrollbarCards" => 1,
+                    "ScrollbarArticle" => 2,
+                    "ScrollbarCompact" => 3,
+                    _ => 0,
+                };
+                self.scrollbars
+                    .get(index)
+                    .cloned()
+                    .or_else(|| self.scrollbars.first().cloned())
+                    .map(Entity::into_any_element)
+                    .unwrap_or_else(|| Paragraph::with_text("Missing Scrollbar demo").into_any_element())
+            }
             "DescriptionsBasic" => descriptions_basic_demo(),
             "DescriptionsBorder" => descriptions_border_demo(),
             "DescriptionsVertical" => descriptions_vertical_demo(),
@@ -8771,6 +8782,102 @@ fn docs_quick_stat(label: &'static str, value: &'static str) -> impl IntoElement
         .gap_sm()
         .child(Text::new(label).xs())
         .child(Text::new(value).bold())
+}
+
+fn docs_scrollbar_basic_demo(
+    cx: &mut Context<liora_components::Scrollbar>,
+) -> liora_components::Scrollbar {
+    liora_components::Scrollbar::new(cx, |_, cx| {
+        let theme = cx.global::<Config>().theme.clone();
+        Flex::new()
+            .column()
+            .gap_md()
+            .padding_md()
+            .children((1..=32).map(move |i| {
+                Flex::new()
+                    .row()
+                    .align_center()
+                    .justify_between()
+                    .padding_sm()
+                    .rounded_units(4.0)
+                    .bg(if i % 2 == 0 {
+                        theme.neutral.hover
+                    } else {
+                        theme.neutral.card
+                    })
+                    .child(Text::new(format!("Scrollable line {:02}", i)))
+                    .child(DocTag::new(if i % 3 == 0 { "active" } else { "idle" }).info())
+            }))
+            .into_any_element()
+    })
+    .height(220.0)
+}
+
+fn docs_scrollbar_cards_demo(
+    cx: &mut Context<liora_components::Scrollbar>,
+) -> liora_components::Scrollbar {
+    liora_components::Scrollbar::new(cx, |_, _| {
+        Space::new()
+            .vertical()
+            .gap_md()
+            .children((1..=12).map(|i| {
+                Card::new(
+                    Space::new()
+                        .vertical()
+                        .gap_xs()
+                        .child(Text::new(format!("Workflow card #{:02}", i)).bold())
+                        .child(
+                            Text::new(
+                                "Complex component trees can live inside a Scrollbar viewport.",
+                            )
+                            .wrap(),
+                        )
+                        .child(
+                            Space::new()
+                                .gap_xs()
+                                .wrap()
+                                .child(DocTag::new("scroll").success())
+                                .child(DocTag::new("native").info())
+                                .child(DocTag::new("gpui").warning()),
+                        ),
+                )
+                .no_shadow()
+            }))
+            .into_any_element()
+    })
+    .height(300.0)
+}
+
+fn docs_scrollbar_article_demo(
+    cx: &mut Context<liora_components::Scrollbar>,
+) -> liora_components::Scrollbar {
+    liora_components::Scrollbar::new(cx, |_, _| {
+        Space::new()
+            .vertical()
+            .gap_lg()
+            .children((1..=8).map(|i| {
+                Space::new()
+                    .vertical()
+                    .gap_xs()
+                    .child(Text::new(format!("Section {}", i)).bold())
+                    .child(Text::new("Long wrapped text remains selectable while the scrollbar reports a stable thumb height and position.").wrap())
+            }))
+            .into_any_element()
+    })
+    .height(260.0)
+}
+
+fn docs_scrollbar_compact_demo(
+    cx: &mut Context<liora_components::Scrollbar>,
+) -> liora_components::Scrollbar {
+    liora_components::Scrollbar::new(cx, |_, _| {
+        Space::new()
+            .vertical()
+            .gap_sm()
+            .children((1..=18).map(|i| Text::new(format!("Compact item {}", i))))
+            .into_any_element()
+    })
+    .height(120.0)
 }
 
 fn docs_accordion_basic_demo() -> liora_components::Accordion {
@@ -13319,7 +13426,12 @@ mod tests {
             (
                 include_str!("../content/pages/scrollbar.md"),
                 "ScrollbarBasic",
-                &["scrollbar/basic.rs"][..],
+                &[
+                    "scrollbar/basic.rs",
+                    "scrollbar/cards.rs",
+                    "scrollbar/article.rs",
+                    "scrollbar/compact.rs",
+                ][..],
             ),
             (
                 include_str!("../content/pages/descriptions.md"),
