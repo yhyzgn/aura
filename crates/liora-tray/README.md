@@ -11,8 +11,8 @@ It wraps tray menu state, close-to-tray behavior, tray commands, icon events, an
 ```rust
 use liora_tray::TrayConfig;
 
-let _config = TrayConfig::new("liora-gallery")
-    .tooltip("Liora Gallery");
+let _config = TrayConfig::new("my-native-app")
+    .tooltip("My Native App");
 ```
 
 ## Recommended usage

@@ -13,12 +13,12 @@ use liora_updater::{AssetSelector, Platform, UpdateRequest};
 
 let platform = Platform::current().unwrap_or(Platform::LinuxX64);
 let _request = UpdateRequest::new(
-    "liora-gallery",
+    "my-native-app",
     "v0.2.3",
     platform,
     std::env::temp_dir().join("liora-update-cache"),
 );
-let _selector = AssetSelector::for_platform(platform).matching_prefix("liora-gallery");
+let _selector = AssetSelector::for_platform(platform).matching_prefix("my-native-app");
 ```
 
 ## Recommended usage
