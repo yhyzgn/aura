@@ -262,6 +262,7 @@ pub struct Icon {
     group_hover_color: Option<(SharedString, Hsla)>,
     group_hover_primary: Option<SharedString>,
     rotation: Option<Radians>,
+    render_scale: Option<f32>,
     asset_path: String,
 }
 
@@ -274,6 +275,7 @@ impl Icon {
             group_hover_color: None,
             group_hover_primary: None,
             rotation: None,
+            render_scale: None,
             asset_path: path.icon_path().into_owned(),
         }
     }
@@ -332,6 +334,16 @@ impl Icon {
         self.rotation = Some(rotation);
         self
     }
+
+    /// Scales the rendered SVG around its center without changing the icon layout box.
+    ///
+    /// This is useful for oversampled animated icons: callers can request a
+    /// larger SVG layout and scale the rendered primitive down to reduce
+    /// visible stair-stepping while keeping the outer component dimensions stable.
+    pub fn render_scale(mut self, scale: f32) -> Self {
+        self.render_scale = Some(scale.max(0.1));
+        self
+    }
 }
 
 impl RenderOnce for Icon {
@@ -352,8 +364,15 @@ impl RenderOnce for Icon {
             let primary = theme.primary.base;
             el = el.group_hover(group, move |style| style.text_color(primary));
         }
-        if let Some(rotation) = self.rotation {
-            el = el.with_transformation(Transformation::rotate(rotation));
+        if self.rotation.is_some() || self.render_scale.is_some() {
+            let mut transformation = Transformation::default();
+            if let Some(scale) = self.render_scale {
+                transformation = transformation.with_scaling(gpui::size(scale, scale));
+            }
+            if let Some(rotation) = self.rotation {
+                transformation = transformation.with_rotation(rotation);
+            }
+            el = el.with_transformation(transformation);
         }
         el
     }
@@ -396,6 +415,22 @@ mod tests {
             Icon::new("loader").rotation(gpui::radians(1.0)).rotation,
             Some(gpui::radians(1.0))
         );
+    }
+
+    #[test]
+    fn icon_render_scale_tracks_transform_request() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production source should precede tests");
+
+        assert_eq!(
+            Icon::new("loader").render_scale(0.5).render_scale,
+            Some(0.5)
+        );
+        assert!(production.contains("with_scaling(gpui::size(scale, scale))"));
+        assert!(production.contains("with_rotation(rotation)"));
     }
 
     #[test]

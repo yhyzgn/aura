@@ -20,7 +20,9 @@
 //! crate.
 
 use crate::motion::spin_icon;
-use gpui::{App, Component, Hsla, IntoElement, Pixels, RenderOnce, Window, px};
+use gpui::{
+    App, Component, Hsla, IntoElement, ParentElement, Pixels, RenderOnce, Styled, Window, div, px,
+};
 use liora_core::{Config, stable_unique_id};
 use liora_icons::Icon;
 use liora_icons_lucide::IconName;
@@ -85,7 +87,33 @@ impl RenderOnce for Spinner {
             cx,
         );
 
-        spin_icon(motion_id, Icon::new(self.icon).size(self.size).color(color))
+        let oversample_scale = spinner_oversample_scale(self.size);
+        let render_size = self.size * oversample_scale;
+
+        div()
+            .flex_none()
+            .w(self.size)
+            .h(self.size)
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(spin_icon(
+                motion_id,
+                Icon::new(self.icon)
+                    .size(render_size)
+                    .render_scale(1.0 / oversample_scale)
+                    .color(color),
+            ))
+    }
+}
+
+fn spinner_oversample_scale(size: Pixels) -> f32 {
+    if size <= px(18.0) {
+        2.0
+    } else if size < px(32.0) {
+        1.5
+    } else {
+        1.0
     }
 }
 
@@ -127,11 +155,23 @@ mod tests {
             .next()
             .expect("RenderOnce block should end before IntoElement");
         assert!(render_body.contains("spin_icon("));
+        assert!(render_body.contains("spinner_oversample_scale(self.size)"));
+        assert!(render_body.contains(".render_scale(1.0 / oversample_scale)"));
         assert!(!render_body.contains("Duration::from_millis(1350)"));
         assert!(!render_body.contains("spin_icon_with_duration("));
         assert!(!render_body.contains(r#"liora_core::unique_id("liora-spinner-motion")"#));
-        assert!(render_body.contains("Icon::new(self.icon).size(self.size).color(color)"));
+        assert!(render_body.contains("Icon::new(self.icon)"));
+        assert!(render_body.contains(".size(render_size)"));
+        assert!(render_body.contains(".color(color)"));
         let stale_field = ["motion_id", ": &'static str"].join("");
         assert!(!source.contains(&stale_field));
+    }
+
+    #[test]
+    fn spinner_oversamples_small_svg_icons_for_smoother_rotation() {
+        assert_eq!(spinner_oversample_scale(px(12.0)), 2.0);
+        assert_eq!(spinner_oversample_scale(px(16.0)), 2.0);
+        assert_eq!(spinner_oversample_scale(px(24.0)), 1.5);
+        assert_eq!(spinner_oversample_scale(px(32.0)), 1.0);
     }
 }
