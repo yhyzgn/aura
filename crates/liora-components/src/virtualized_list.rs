@@ -97,12 +97,26 @@ impl VirtualizedList {
         if self.item_count == item_count {
             return;
         }
+
+        let old_count = self.item_count;
+        if item_count > old_count {
+            self.order.extend(old_count..item_count);
+            self.item_bounds.borrow_mut().resize(item_count, None);
+            self.drag_reference_bounds.resize(item_count, None);
+            self.list_state
+                .splice(old_count..old_count, item_count - old_count);
+        } else {
+            self.order.retain(|index| *index < item_count);
+            self.item_bounds.borrow_mut().truncate(item_count);
+            self.drag_reference_bounds.truncate(item_count);
+            self.list_state.splice(item_count..old_count, 0);
+        }
+
         self.item_count = item_count;
-        self.order = (0..item_count).collect();
         self.drag_state.cancel();
-        *self.item_bounds.borrow_mut() = vec![None; item_count];
-        self.drag_reference_bounds = vec![None; item_count];
-        self.list_state = Self::new_list_state(item_count, self.overdraw, self.measure_all_items);
+        if self.measure_all_items {
+            self.list_state = self.list_state.clone().measure_all();
+        }
     }
 
     /// Updates the stored render item value and keeps the existing component identity.
@@ -294,12 +308,12 @@ impl VirtualizedList {
     /// Updating the render closure alone does not remeasure automatically, so
     /// callers that know item heights changed can opt into the heavier work.
     pub fn remeasure(&self) {
-        self.list_state.reset(self.item_count);
+        self.list_state.remeasure();
     }
 
-    /// Mark one item range for remeasurement while preserving proportional scroll.
+    /// Mark one item range for remeasurement while preserving the current scroll anchor.
     pub fn remeasure_items(&self, range: std::ops::Range<usize>) {
-        self.list_state.splice(range.clone(), range.len());
+        self.list_state.remeasure_items(range);
     }
 }
 
@@ -507,14 +521,18 @@ mod tests {
     }
 
     #[test]
-    fn virtualized_list_resets_state_when_count_or_overdraw_changes() {
+    fn virtualized_list_preserves_scroll_state_when_count_changes() {
         let source = include_str!("virtualized_list.rs");
 
         assert!(source.contains("set_item_count"));
+        assert!(source.contains(".splice(old_count..old_count"));
+        assert!(source.contains(".splice(item_count..old_count, 0)"));
         assert!(source.contains("set_overdraw"));
         assert!(source.contains("Self::new_list_state"));
         assert!(source.contains("pub fn remeasure(&self)"));
+        assert!(source.contains("self.list_state.remeasure();"));
         assert!(source.contains("pub fn remeasure_items"));
+        assert!(source.contains("self.list_state.remeasure_items(range);"));
     }
 
     #[test]
