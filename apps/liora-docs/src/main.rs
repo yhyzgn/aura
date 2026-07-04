@@ -699,6 +699,13 @@ fn handle_docs_window_should_close(window: &mut Window, cx: &mut App) -> bool {
 
 fn show_docs_close_confirm(window: &mut Window, cx: &mut App) {
     let remember = Arc::new(AtomicBool::new(false));
+    let remember_for_checkbox = remember.clone();
+    let checkbox = cx.new(move |cx| {
+        Checkbox::new(false, cx).label("记住本次选择").on_change({
+            let remember = remember_for_checkbox.clone();
+            move |checked, _, _| remember.store(checked, Ordering::Relaxed)
+        })
+    });
 
     Dialog::new()
         .id("docs-close-confirm")
@@ -707,16 +714,9 @@ fn show_docs_close_confirm(window: &mut Window, cx: &mut App) {
         .close_on_click_outside(false)
         .close_on_escape(true)
         .on_close(|_, cx| reset_docs_close_confirm(cx))
-        .content(move |_window, cx| {
-            let remember_for_checkbox = remember.clone();
+        .content(move |_window, _cx| {
             let remember_for_exit = remember.clone();
             let remember_for_hide = remember.clone();
-            let checkbox = cx.new(move |cx| {
-                Checkbox::new(false, cx).label("记住本次选择").on_change({
-                    let remember = remember_for_checkbox.clone();
-                    move |checked, _, _| remember.store(checked, Ordering::Relaxed)
-                })
-            });
 
             Space::new()
                 .vertical()
@@ -725,7 +725,7 @@ fn show_docs_close_confirm(window: &mut Window, cx: &mut App) {
                 .child(Paragraph::with_text(
                     "你可以直接退出进程，或者关闭主窗口并让文档应用继续驻留在系统托盘。",
                 ))
-                .child(checkbox)
+                .child(checkbox.clone())
                 .child(
                     Space::new()
                         .gap_md()
@@ -914,6 +914,9 @@ mod shell_tests {
         assert!(confirm.contains(".show_in_window(window, cx)"));
         assert!(confirm.contains(".on_close(|_, cx| reset_docs_close_confirm(cx))"));
         assert_eq!(confirm.matches("reset_docs_close_confirm(cx);").count(), 2);
+        assert_eq!(confirm.matches("Checkbox::new(false, cx)").count(), 1);
+        assert_eq!(confirm.matches("cx.new(move |cx| {").count(), 1);
+        assert!(confirm.contains(".child(checkbox.clone())"));
         assert!(source.contains("fn reset_docs_close_confirm(cx: &mut App)"));
     }
 }

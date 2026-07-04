@@ -818,6 +818,15 @@ fn handle_gallery_window_should_close(window: &mut Window, cx: &mut App) -> bool
 
 fn show_gallery_close_confirm(window: &mut Window, cx: &mut App) {
     let remember = Arc::new(AtomicBool::new(false));
+    let remember_for_checkbox = remember.clone();
+    let checkbox = cx.new(move |cx| {
+        Checkbox::new(false, cx)
+            .label(locales::close_confirm::remember)
+            .on_change({
+                let remember = remember_for_checkbox.clone();
+                move |checked, _, _| remember.store(checked, Ordering::Relaxed)
+            })
+    });
 
     Dialog::new()
         .id("gallery-close-confirm")
@@ -827,17 +836,8 @@ fn show_gallery_close_confirm(window: &mut Window, cx: &mut App) {
         .close_on_escape(true)
         .on_close(|_, cx| reset_gallery_close_confirm(cx))
         .content(move |_window, cx| {
-            let remember_for_checkbox = remember.clone();
             let remember_for_exit = remember.clone();
             let remember_for_hide = remember.clone();
-            let checkbox = cx.new(move |cx| {
-                Checkbox::new(false, cx)
-                    .label(locales::close_confirm::remember)
-                    .on_change({
-                        let remember = remember_for_checkbox.clone();
-                        move |checked, _, _| remember.store(checked, Ordering::Relaxed)
-                    })
-            });
 
             Space::new()
                 .vertical()
@@ -848,7 +848,7 @@ fn show_gallery_close_confirm(window: &mut Window, cx: &mut App) {
                     cx,
                     locales::close_confirm::gallery_body,
                 )))
-                .child(checkbox)
+                .child(checkbox.clone())
                 .child(
                     Space::new()
                         .gap_md()
@@ -2079,6 +2079,9 @@ mod shell_regression_tests {
             confirm.matches("reset_gallery_close_confirm(cx);").count(),
             2
         );
+        assert_eq!(confirm.matches("Checkbox::new(false, cx)").count(), 1);
+        assert_eq!(confirm.matches("cx.new(move |cx| {").count(), 1);
+        assert!(confirm.contains(".child(checkbox.clone())"));
         assert!(source.contains("fn reset_gallery_close_confirm(cx: &mut App)"));
     }
 
