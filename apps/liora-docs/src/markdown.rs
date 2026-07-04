@@ -1729,6 +1729,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "container/layout.rs" => Some(include_str!("../content/snippets/container/layout.rs")),
         "splitter/basic.rs" => Some(include_str!("../content/snippets/splitter/basic.rs")),
         "scrollbar/basic.rs" => Some(include_str!("../content/snippets/scrollbar/basic.rs")),
+        "scrollbar/cards.rs" => Some(include_str!("../content/snippets/scrollbar/cards.rs")),
+        "scrollbar/article.rs" => Some(include_str!("../content/snippets/scrollbar/article.rs")),
+        "scrollbar/compact.rs" => Some(include_str!("../content/snippets/scrollbar/compact.rs")),
         "shell/basic.rs" => Some(include_str!("../content/snippets/shell/basic.rs")),
         "shell/full_product.rs" => Some(include_str!("../content/snippets/shell/full_product.rs")),
         "shell/content_first.rs" => {

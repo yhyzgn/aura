@@ -493,8 +493,14 @@ mod ring_chart_custom;
 mod ring_chart_external;
 #[path = "../../content/snippets/scrollable_mask/basic.rs"]
 mod scrollable_mask_basic;
+#[path = "../../content/snippets/scrollbar/article.rs"]
+mod scrollbar_article;
 #[path = "../../content/snippets/scrollbar/basic.rs"]
 mod scrollbar_basic;
+#[path = "../../content/snippets/scrollbar/cards.rs"]
+mod scrollbar_cards;
+#[path = "../../content/snippets/scrollbar/compact.rs"]
+mod scrollbar_compact;
 #[path = "../../content/snippets/searchable_list/basic.rs"]
 mod searchable_list_basic;
 #[path = "../../content/snippets/searchable_list/empty.rs"]

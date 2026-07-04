@@ -10,7 +10,11 @@
 
 短视口 + 多行文本，适合菜单、日志和设置项列表。
 
+### 效果
+
 ::Demo{component="ScrollbarBasic"}::
+
+### 代码
 
 ```rust src="scrollbar/basic.rs"
 ```
@@ -19,7 +23,11 @@
 
 滚动内容可以组合 `Card`、`Tag`、`Space` 等复杂组件，滚动条仍只负责视口和滚动位置。
 
+### 效果
+
 ::Demo{component="ScrollbarCards"}::
+
+### 代码
 
 ```rust src="scrollbar/cards.rs"
 ```
@@ -28,7 +36,11 @@
 
 正文内容可以自动换行、鼠标选择，滚动条高度和位置由真实内容高度计算。
 
+### 效果
+
 ::Demo{component="ScrollbarArticle"}::
+
+### 代码
 
 ```rust src="scrollbar/article.rs"
 ```
@@ -37,7 +49,11 @@
 
 小高度视口适合弹窗、下拉面板和工具窗口。hover 轨道后 thumb 会加宽，拖拽命中区比可见 thumb 更宽。
 
+### 效果
+
 ::Demo{component="ScrollbarCompact"}::
+
+### 代码
 
 ```rust src="scrollbar/compact.rs"
 ```
