@@ -1,8 +1,8 @@
 use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*};
 use liora_components::layout_helpers::{page, section, showcase_card_wide, showcase_stack};
 use liora_components::{
-    CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeHover, CodeLanguage, CodeTheme, Space,
-    Text, toast_info,
+    CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeEditorOptions, CodeHover, CodeLanguage,
+    CodeTheme, Space, Text, toast_info,
 };
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -13,6 +13,7 @@ struct CodeEditorDemo {
     basic: Entity<CodeEditor>,
     diagnostics: Entity<CodeEditor>,
     advanced: Entity<CodeEditor>,
+    configurable: Entity<CodeEditor>,
 }
 
 impl CodeEditorDemo {
@@ -68,10 +69,39 @@ impl CodeEditorDemo {
                 ))
         });
 
+        let configurable = cx.new(|cx| {
+            CodeEditor::new(CONFIG_SAMPLE, cx)
+                .language(CodeLanguage::Rust)
+                .theme(CodeTheme::OneDark)
+                .options(CodeEditorOptions {
+                    read_only: true,
+                    header: false,
+                    status_bar: true,
+                    line_numbers: false,
+                    diagnostics_panel: false,
+                    completions_panel: true,
+                    hover_panel: false,
+                    current_line_highlight: true,
+                    completion_limit: 3,
+                })
+                .completions([
+                    CodeCompletionItem::new("CodeEditorOptions::default")
+                        .kind("config")
+                        .detail("start from full chrome"),
+                    CodeCompletionItem::new("read_only(true)")
+                        .kind("builder")
+                        .detail("disable mutation commands"),
+                    CodeCompletionItem::new("current_line_highlight(true)")
+                        .kind("builder")
+                        .detail("highlight the active row"),
+                ])
+        });
+
         Self {
             basic,
             diagnostics,
             advanced,
+            configurable,
         }
     }
 }
@@ -107,6 +137,12 @@ impl Render for CodeEditorDemo {
                         self.advanced.clone(),
                     )
                     .into_any_element(),
+                    showcase_card_wide(
+                        "配置矩阵：只读、Chrome 和扩展面板",
+                        "通过 CodeEditorOptions 或 builder 控制 header/status、行号、只读、当前行高亮、诊断/补全/hover 面板和补全数量。",
+                        self.configurable.clone(),
+                    )
+                    .into_any_element(),
                 ]),
             )),
         )
@@ -129,6 +165,13 @@ export function summarize(items: Metric[]) {
 }
 "#;
 
+const CONFIG_SAMPLE: &str = r#"use liora_components::{CodeEditor, CodeEditorOptions};
+
+let options = CodeEditorOptions::default();
+// Turn panels on/off per product surface.
+// Read-only mode still supports selection, copy, scroll and hover.
+"#;
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -142,5 +185,8 @@ mod tests {
         assert!(source.contains("CodeCompletionItem"));
         assert!(source.contains("CodeHover"));
         assert!(source.contains("search_query"));
+        assert!(source.contains("CodeEditorOptions"));
+        assert!(source.contains("read_only(true)"));
+        assert!(source.contains("current_line_highlight(true)"));
     }
 }

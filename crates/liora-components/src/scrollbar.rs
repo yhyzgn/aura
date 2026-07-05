@@ -20,10 +20,10 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Bounds, Context, DispatchPhase, Element, EntityId, GlobalElementId, Hitbox,
-    HitboxBehavior, InspectorElementId, IntoElement, LayoutId, ListState, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, ScrollHandle,
-    Style, Window, div, point, prelude::*, px, relative, size,
+    AnyElement, App, Bounds, Context, CursorStyle, DispatchPhase, Element, EntityId,
+    GlobalElementId, Hitbox, HitboxBehavior, InspectorElementId, IntoElement, LayoutId, ListState,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render,
+    ScrollHandle, Style, Window, div, point, prelude::*, px, relative, size,
 };
 use liora_core::Config;
 use std::cell::Cell;
@@ -212,6 +212,7 @@ impl Element for VirtualScrollbar {
             border_color: gpui::transparent_black(),
             border_style: gpui::BorderStyle::Solid,
         });
+        set_scrollbar_cursor(window, &prepaint.hitbox, prepaint.active, prepaint.dragging);
 
         let was_active = prepaint.active;
         let hover_bounds = prepaint.hover_bounds;
@@ -278,6 +279,14 @@ impl Element for VirtualScrollbar {
                 window.refresh();
             }
         });
+    }
+}
+
+fn set_scrollbar_cursor(window: &mut Window, hitbox: &Hitbox, active: bool, dragging: bool) {
+    if dragging {
+        window.set_window_cursor_style(CursorStyle::ResizeUpDown);
+    } else if active {
+        window.set_cursor_style(CursorStyle::PointingHand, hitbox);
     }
 }
 
@@ -632,6 +641,8 @@ impl gpui::Element for ScrollbarThumb {
             }
         });
 
+        set_scrollbar_cursor(window, &prepaint.hitbox, prepaint.active, prepaint.dragging);
+
         window.paint_quad(gpui::PaintQuad {
             bounds: thumb_bounds,
             corner_radii: gpui::Corners::all(thumb_bounds.size.width / 2.0),
@@ -768,6 +779,8 @@ mod tests {
         assert!(source.contains("set_virtual_scrollbar_drag_state"));
         assert!(source.contains("set_scroll_handle_position"));
         assert!(source.contains("set_virtual_scrollbar_position"));
+        assert!(source.contains("CursorStyle::PointingHand"));
+        assert!(source.contains("CursorStyle::ResizeUpDown"));
         assert!(source.contains("hover_bounds.contains(&window.mouse_position())"));
         assert!(source.contains("cx.notify(current_view)"));
         assert!(!source.contains("lerp_pixels"));

@@ -1547,6 +1547,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "code_editor/advanced.rs" => {
             Some(include_str!("../content/snippets/code_editor/advanced.rs"))
         }
+        "code_editor/configuration.rs" => Some(include_str!(
+            "../content/snippets/code_editor/configuration.rs"
+        )),
         "code_editor/diagnostics.rs" => Some(include_str!(
             "../content/snippets/code_editor/diagnostics.rs"
         )),
@@ -2464,6 +2467,37 @@ impl LiveDemoContent {
                             "Space::new",
                             "Creates a flexible native layout container.",
                         ))
+                }));
+            }
+            "CodeEditorConfiguration" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_CONFIG_SAMPLE, cx)
+                        .language(CodeLanguage::Rust)
+                        .theme(CodeTheme::OneDark)
+                        .options(liora_components::CodeEditorOptions {
+                            read_only: true,
+                            header: false,
+                            status_bar: true,
+                            line_numbers: false,
+                            diagnostics_panel: false,
+                            completions_panel: true,
+                            hover_panel: false,
+                            current_line_highlight: true,
+                            completion_limit: 3,
+                        })
+                        .completions([
+                            liora_components::CodeCompletionItem::new("CodeEditorOptions::default")
+                                .kind("config")
+                                .detail("start from full chrome"),
+                            liora_components::CodeCompletionItem::new("read_only(true)")
+                                .kind("builder")
+                                .detail("disable mutation commands"),
+                            liora_components::CodeCompletionItem::new(
+                                "current_line_highlight(true)",
+                            )
+                            .kind("builder")
+                            .detail("highlight the active row"),
+                        ])
                 }));
             }
             "CodeEditorDiagnostics" => {
@@ -3719,7 +3753,10 @@ impl Render for LiveDemoContent {
                     .map(Entity::into_any_element)
                     .collect(),
             ),
-            "CodeEditorBasic" | "CodeEditorDiagnostics" | "CodeEditorAdvanced" => demo_stack(
+            "CodeEditorBasic"
+            | "CodeEditorDiagnostics"
+            | "CodeEditorAdvanced"
+            | "CodeEditorConfiguration" => demo_stack(
                 self.code_editors
                     .iter()
                     .cloned()
@@ -7856,6 +7893,12 @@ const DOCS_CODE_EDITOR_RUST_SAMPLE: &str = r#"fn main() {
 const DOCS_CODE_EDITOR_TS_SAMPLE: &str = r#"export function run(value: number) {
   return value.toString()
 }
+"#;
+
+const DOCS_CODE_EDITOR_CONFIG_SAMPLE: &str = r#"use liora_components::{CodeEditor, CodeEditorOptions};
+
+let options = CodeEditorOptions::default();
+// Read-only editors still support selection, copy, scroll and hover.
 "#;
 
 const DOCS_HORIZONTAL_STEPS: &[(&str, &str)] =

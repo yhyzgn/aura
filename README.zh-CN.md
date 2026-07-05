@@ -1104,6 +1104,25 @@ impl Render for EditorView {
 
 `CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。当前已用内部 display map 统一行高、gutter 和鼠标命中映射，并提供基础编辑事务，支持 `Ctrl/Cmd+Z` 撤销与 `Ctrl/Cmd+Shift+Z` 重做。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
 
+当内嵌编辑器需要按产品场景裁剪 chrome 或交互规则时，使用 `CodeEditorOptions` 统一配置：
+
+```rust
+use liora::components::{CodeEditor, CodeEditorOptions};
+
+let editor = CodeEditor::new(source, cx)
+    .options(CodeEditorOptions {
+        read_only: true,
+        header: false,
+        status_bar: true,
+        line_numbers: false,
+        diagnostics_panel: false,
+        completions_panel: true,
+        hover_panel: false,
+        current_line_highlight: true,
+        completion_limit: 3,
+    });
+```
+
 
 ### 二维码、上传、图片与预览
 

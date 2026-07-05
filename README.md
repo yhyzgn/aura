@@ -1105,6 +1105,25 @@ impl Render for EditorView {
 
 `CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. It now centralizes row metrics and pointer hit-testing in an internal display map and includes basic edit transactions for `Ctrl/Cmd+Z` undo plus `Ctrl/Cmd+Shift+Z` redo. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
 
+Use `CodeEditorOptions` when an embedded editor needs product-specific chrome or interaction rules:
+
+```rust
+use liora::components::{CodeEditor, CodeEditorOptions};
+
+let editor = CodeEditor::new(source, cx)
+    .options(CodeEditorOptions {
+        read_only: true,
+        header: false,
+        status_bar: true,
+        line_numbers: false,
+        diagnostics_panel: false,
+        completions_panel: true,
+        hover_panel: false,
+        current_line_highlight: true,
+        completion_limit: 3,
+    });
+```
+
 
 ### QR code, upload, image, and preview
 

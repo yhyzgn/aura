@@ -614,6 +614,45 @@ impl CodeViewport {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Display and interaction options for CodeEditor chrome and extension panels.
+pub struct CodeEditorOptions {
+    /// Whether text editing commands may mutate the buffer.
+    pub read_only: bool,
+    /// Whether the top metadata toolbar is visible.
+    pub header: bool,
+    /// Whether the bottom status row is visible.
+    pub status_bar: bool,
+    /// Whether line numbers are visible in the gutter.
+    pub line_numbers: bool,
+    /// Whether provider/static diagnostics are rendered below the editor.
+    pub diagnostics_panel: bool,
+    /// Whether completion candidates are rendered below the editor.
+    pub completions_panel: bool,
+    /// Whether hover/help content is rendered below the editor.
+    pub hover_panel: bool,
+    /// Whether the current row receives a subtle background highlight.
+    pub current_line_highlight: bool,
+    /// Maximum completion rows shown by the built-in completion panel.
+    pub completion_limit: usize,
+}
+
+impl Default for CodeEditorOptions {
+    fn default() -> Self {
+        Self {
+            read_only: false,
+            header: true,
+            status_bar: true,
+            line_numbers: true,
+            diagnostics_panel: true,
+            completions_panel: true,
+            hover_panel: true,
+            current_line_highlight: false,
+            completion_limit: 6,
+        }
+    }
+}
+
 /// Native code editing surface with virtualized rows, line numbers, indentation metadata,
 /// live syntax highlighting and pluggable diagnostics.
 ///
@@ -629,7 +668,7 @@ pub struct CodeEditor {
     list_state: ListState,
     language: CodeLanguage,
     theme: CodeTheme,
-    line_numbers: bool,
+    options: CodeEditorOptions,
     tab_size: usize,
     soft_tabs: bool,
     viewport: CodeViewport,
@@ -665,7 +704,7 @@ impl CodeEditor {
             list_state: ListState::new(row_count, ListAlignment::Top, px(160.0)),
             language: CodeLanguage::PlainText,
             theme: CodeTheme::Auto,
-            line_numbers: true,
+            options: CodeEditorOptions::default(),
             tab_size: 4,
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
@@ -761,7 +800,61 @@ impl CodeEditor {
 
     /// Sets the line numbers value used by the component.
     pub fn line_numbers(mut self, enabled: bool) -> Self {
-        self.line_numbers = enabled;
+        self.options.line_numbers = enabled;
+        self
+    }
+
+    /// Sets all CodeEditor display and interaction options at once.
+    pub fn options(mut self, options: CodeEditorOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    /// Controls whether editing commands may mutate the buffer.
+    pub fn read_only(mut self, read_only: bool) -> Self {
+        self.options.read_only = read_only;
+        self
+    }
+
+    /// Controls whether the top CodeEditor metadata toolbar is rendered.
+    pub fn header(mut self, visible: bool) -> Self {
+        self.options.header = visible;
+        self
+    }
+
+    /// Controls whether the bottom CodeEditor status bar is rendered.
+    pub fn status_bar(mut self, visible: bool) -> Self {
+        self.options.status_bar = visible;
+        self
+    }
+
+    /// Controls whether the diagnostics panel is rendered.
+    pub fn diagnostics_panel(mut self, visible: bool) -> Self {
+        self.options.diagnostics_panel = visible;
+        self
+    }
+
+    /// Controls whether the completions panel is rendered.
+    pub fn completions_panel(mut self, visible: bool) -> Self {
+        self.options.completions_panel = visible;
+        self
+    }
+
+    /// Controls whether the hover/help panel is rendered.
+    pub fn hover_panel(mut self, visible: bool) -> Self {
+        self.options.hover_panel = visible;
+        self
+    }
+
+    /// Controls whether the active line receives a subtle highlight.
+    pub fn current_line_highlight(mut self, enabled: bool) -> Self {
+        self.options.current_line_highlight = enabled;
+        self
+    }
+
+    /// Sets the maximum number of completion candidates rendered by the built-in panel.
+    pub fn completion_limit(mut self, limit: usize) -> Self {
+        self.options.completion_limit = limit.max(1);
         self
     }
 
@@ -897,6 +990,30 @@ impl CodeEditor {
         cx.notify();
     }
 
+    /// Updates all display and interaction options for an existing editor entity.
+    pub fn set_options(&mut self, options: CodeEditorOptions, cx: &mut Context<Self>) {
+        self.options = options;
+        cx.notify();
+    }
+
+    /// Updates the read-only state for an existing editor entity.
+    pub fn set_read_only(&mut self, read_only: bool, cx: &mut Context<Self>) {
+        self.options.read_only = read_only;
+        cx.notify();
+    }
+
+    /// Updates whether line numbers are visible for an existing editor entity.
+    pub fn set_line_numbers(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        self.options.line_numbers = enabled;
+        cx.notify();
+    }
+
+    /// Updates the completion panel limit for an existing editor entity.
+    pub fn set_completion_limit(&mut self, limit: usize, cx: &mut Context<Self>) {
+        self.options.completion_limit = limit.max(1);
+        cx.notify();
+    }
+
     /// Performs the indent unit operation used by this component.
     pub fn indent_unit(&self) -> String {
         if self.soft_tabs {
@@ -966,7 +1083,7 @@ impl CodeEditor {
     }
 
     fn display_map(&self) -> CodeDisplayMap {
-        CodeDisplayMap::default_for(self.line_numbers)
+        CodeDisplayMap::default_for(self.options.line_numbers)
     }
 
     fn local_editor_position(&self, position: Point<Pixels>) -> Point<Pixels> {
@@ -991,7 +1108,7 @@ impl CodeEditor {
             self.local_editor_position(position),
             scroll_top.item_ix,
             scroll_top.offset_in_item,
-            self.line_numbers,
+            self.options.line_numbers,
         )
     }
 
@@ -1233,6 +1350,9 @@ impl CodeEditor {
     }
 
     fn replace_selection(&mut self, replacement: &str, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         let transaction =
             CodeTransaction::new(self.buffer.as_str().to_string(), self.selection.clone());
         let range = self.selection.range.clone();
@@ -1309,6 +1429,9 @@ impl CodeEditor {
     }
 
     fn indent(&mut self, _: &CodeEditorIndent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         let indent = self.indent_unit();
         if indent.is_empty() {
             return;
@@ -1321,11 +1444,17 @@ impl CodeEditor {
     }
 
     fn outdent(&mut self, _: &CodeEditorOutdent, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         let indent = self.indent_unit();
         self.reindent_selected_lines(&indent, false, cx);
     }
 
     fn reindent_selected_lines(&mut self, indent: &str, indenting: bool, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         let selection = self.selection.range.clone();
         let line_bounds = self.buffer.selected_line_bounds(selection.clone());
         let source = self.buffer.as_str().to_string();
@@ -1387,6 +1516,9 @@ impl CodeEditor {
     }
 
     fn backspace(&mut self, _: &CodeEditorBackspace, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         if self.selection.is_empty() {
             let cursor = self.selection.cursor();
             let previous = self.buffer.prev_char(cursor);
@@ -1399,6 +1531,9 @@ impl CodeEditor {
     }
 
     fn delete(&mut self, _: &CodeEditorDelete, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         if self.selection.is_empty() {
             let cursor = self.selection.cursor();
             let next = self.buffer.next_char(cursor);
@@ -1416,6 +1551,9 @@ impl CodeEditor {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.options.read_only {
+            return;
+        }
         if self.selection.is_empty() {
             let cursor = self.selection.cursor();
             let previous = self.previous_word_boundary(cursor);
@@ -1433,6 +1571,9 @@ impl CodeEditor {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.options.read_only {
+            return;
+        }
         if self.selection.is_empty() {
             let cursor = self.selection.cursor();
             let next = self.next_word_boundary(cursor);
@@ -1629,6 +1770,9 @@ impl CodeEditor {
     }
 
     fn paste(&mut self, _: &CodeEditorPaste, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         if let Some(clipboard) = cx.read_from_clipboard() {
             if let Some(text) = clipboard.text() {
                 self.replace_selection(&text, cx);
@@ -1637,6 +1781,9 @@ impl CodeEditor {
     }
 
     fn cut(&mut self, _: &CodeEditorCut, window: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         if !self.selection.is_empty() {
             self.copy(&CodeEditorCopy, window, cx);
             self.replace_selection("", cx);
@@ -1644,6 +1791,9 @@ impl CodeEditor {
     }
 
     fn enter(&mut self, _: &CodeEditorEnter, _: &mut Window, cx: &mut Context<Self>) {
+        if self.options.read_only {
+            return;
+        }
         self.replace_selection("\n", cx);
     }
 
@@ -1715,6 +1865,9 @@ impl EntityInputHandler for CodeEditor {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.options.read_only {
+            return;
+        }
         let range = range_utf16
             .map(|range| self.offset_from_utf16(range.start)..self.offset_from_utf16(range.end))
             .or_else(|| self.marked_range.clone())
@@ -1733,6 +1886,9 @@ impl EntityInputHandler for CodeEditor {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.options.read_only {
+            return;
+        }
         let replacement_start = range_utf16
             .as_ref()
             .map(|range| self.offset_from_utf16(range.start))
@@ -1892,6 +2048,7 @@ impl Render for CodeEditor {
         } else {
             "tabs".to_string()
         };
+        let options = self.options;
         let display_map = self.display_map();
         let editor_height = self
             .height
@@ -1902,7 +2059,7 @@ impl Render for CodeEditor {
         let selection = self.selection.clone();
         let marked_range = self.marked_range.clone();
         let diagnostics = self.diagnostics.clone();
-        let show_line_numbers = self.line_numbers;
+        let show_line_numbers = options.line_numbers;
         let row_display_map = display_map;
         let row_language = self.language;
         let row_code_theme = self.theme;
@@ -1965,57 +2122,71 @@ impl Render for CodeEditor {
             .on_action(cx.listener(Self::outdent))
             .on_action(cx.listener(Self::undo))
             .on_action(cx.listener(Self::redo))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_3()
-                    .px_4()
-                    .py_2()
-                    .border_b_1()
-                    .border_color(theme.neutral.border)
-                    .bg(theme.neutral.hover.opacity(0.52))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .text_sm()
-                            .font_weight(gpui::FontWeight::BOLD)
-                            .text_color(theme.neutral.text_1)
-                            .child(
-                                Icon::new(IconName::FileCode)
-                                    .size(px(14.0))
-                                    .color(theme.primary.base),
-                            )
-                            .child("CodeEditor"),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_3()
-                            .text_xs()
-                            .text_color(theme.neutral.text_3)
-                            .child(self.language.label())
-                            .child(indent_label)
-                            .child(format!("{} lines", line_count))
-                            .child(format!("{}:{}", cursor.row + 1, cursor.column + 1))
-                            .when_some(self.search_query.clone(), |s, query| {
-                                s.child(format!(
-                                    "matches:{}",
-                                    search_match_count(self.buffer.as_str(), query.as_ref())
-                                ))
-                            }),
-                    ),
-            )
+            .when(options.header, |s| {
+                s.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap_3()
+                        .px_4()
+                        .py_2()
+                        .border_b_1()
+                        .border_color(theme.neutral.border)
+                        .bg(theme.neutral.hover.opacity(0.52))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .text_sm()
+                                .font_weight(gpui::FontWeight::BOLD)
+                                .text_color(theme.neutral.text_1)
+                                .child(
+                                    Icon::new(IconName::FileCode)
+                                        .size(px(14.0))
+                                        .color(theme.primary.base),
+                                )
+                                .child("CodeEditor")
+                                .when(options.read_only, |s| {
+                                    s.child(
+                                        div()
+                                            .rounded_md()
+                                            .border_1()
+                                            .border_color(theme.neutral.border)
+                                            .px_1()
+                                            .text_xs()
+                                            .text_color(theme.neutral.text_3)
+                                            .child("read-only"),
+                                    )
+                                }),
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_3()
+                                .text_xs()
+                                .text_color(theme.neutral.text_3)
+                                .child(self.language.label())
+                                .child(indent_label)
+                                .child(format!("{} lines", line_count))
+                                .child(format!("{}:{}", cursor.row + 1, cursor.column + 1))
+                                .when_some(self.search_query.clone(), |s, query| {
+                                    s.child(format!(
+                                        "matches:{}",
+                                        search_match_count(self.buffer.as_str(), query.as_ref())
+                                    ))
+                                }),
+                        ),
+                )
+            })
             .child(
                 div()
                     .relative()
                     .h(editor_height)
                     .bg(theme.neutral.hover.opacity(0.18))
-                    .cursor_text()
+                    .when(!options.read_only, |s| s.cursor_text())
                     .on_mouse_down(MouseButton::Left, cx.listener(Self::mouse_down_in_editor))
                     .on_mouse_move(cx.listener(Self::mouse_move_in_editor))
                     .on_mouse_up(MouseButton::Left, cx.listener(Self::mouse_up_in_editor))
@@ -2036,6 +2207,7 @@ impl Render for CodeEditor {
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
                                 row_display_map,
+                                options.current_line_highlight,
                                 cursor_active,
                                 cursor_visible,
                                 editor_for_row,
@@ -2050,15 +2222,33 @@ impl Render for CodeEditor {
                     })
                     .child(VirtualScrollbar::new(list_state)),
             )
-            .when(!self.diagnostics.is_empty(), |s| {
-                s.child(render_diagnostics(&self.diagnostics, &theme))
+            .when(options.status_bar, |s| {
+                s.child(render_status_bar(
+                    cursor,
+                    line_count,
+                    self.buffer.len(),
+                    options,
+                    &theme,
+                ))
             })
-            .when(!self.completion_items.is_empty(), |s| {
-                s.child(render_completions(&self.completion_items, &theme))
-            })
-            .when_some(self.hover.clone(), |s, hover| {
-                s.child(render_hover(hover, &theme))
-            })
+            .when(
+                options.diagnostics_panel && !self.diagnostics.is_empty(),
+                |s| s.child(render_diagnostics(&self.diagnostics, &theme)),
+            )
+            .when(
+                options.completions_panel && !self.completion_items.is_empty(),
+                |s| {
+                    s.child(render_completions(
+                        &self.completion_items,
+                        options.completion_limit,
+                        &theme,
+                    ))
+                },
+            )
+            .when_some(
+                options.hover_panel.then(|| self.hover.clone()).flatten(),
+                |s, hover| s.child(render_hover(hover, &theme)),
+            )
     }
 }
 
@@ -2081,6 +2271,7 @@ fn render_editor_row(
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
     display_map: CodeDisplayMap,
+    current_line_highlight: bool,
     cursor_active: bool,
     cursor_visible: bool,
     editor: Entity<CodeEditor>,
@@ -2095,7 +2286,11 @@ fn render_editor_row(
         .iter()
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .collect::<Vec<_>>();
-    let row_bg = theme.neutral.card.opacity(0.0);
+    let row_bg = if current_line_highlight && cursor_row {
+        theme.primary.base.opacity(0.055)
+    } else {
+        theme.neutral.card.opacity(0.0)
+    };
     let runs = highlighted_code_runs(line, language, code_theme, theme, &code_family, code_weight);
 
     div()
@@ -2516,6 +2711,39 @@ fn apply_signed_delta(value: usize, delta: isize) -> usize {
     }
 }
 
+fn render_status_bar(
+    cursor: CodePoint,
+    line_count: usize,
+    byte_count: usize,
+    options: CodeEditorOptions,
+    theme: &liora_theme::Theme,
+) -> gpui::Div {
+    div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap_3()
+        .border_t_1()
+        .border_color(theme.neutral.border)
+        .bg(theme.neutral.hover.opacity(0.22))
+        .px_4()
+        .py_1()
+        .text_xs()
+        .text_color(theme.neutral.text_3)
+        .child(format!(
+            "Ln {}, Col {} · {} lines · {} bytes",
+            cursor.row + 1,
+            cursor.column + 1,
+            line_count,
+            byte_count
+        ))
+        .child(if options.read_only {
+            "read-only"
+        } else {
+            "editable"
+        })
+}
+
 fn render_diagnostics(diagnostics: &[CodeDiagnostic], theme: &liora_theme::Theme) -> gpui::Div {
     let mut panel = div()
         .flex()
@@ -2563,7 +2791,11 @@ fn render_diagnostics(diagnostics: &[CodeDiagnostic], theme: &liora_theme::Theme
     panel
 }
 
-fn render_completions(items: &[CodeCompletionItem], theme: &liora_theme::Theme) -> gpui::Div {
+fn render_completions(
+    items: &[CodeCompletionItem],
+    limit: usize,
+    theme: &liora_theme::Theme,
+) -> gpui::Div {
     let mut panel = div()
         .flex()
         .flex_col()
@@ -2580,7 +2812,7 @@ fn render_completions(items: &[CodeCompletionItem], theme: &liora_theme::Theme) 
                 .text_color(theme.neutral.text_3)
                 .child("Completions"),
         );
-    for item in items.iter().take(6) {
+    for item in items.iter().take(limit) {
         panel = panel.child(
             div()
                 .flex()
@@ -2895,6 +3127,7 @@ gamma",
         assert!(production_source.contains("window.paint_quad"));
         assert!(production_source.contains("prepaint.shaped.paint"));
         assert!(production_source.contains("on_mouse_up_out(MouseButton::Left"));
+        assert!(production_source.contains("current_line_highlight && cursor_row"));
         assert!(production_source.contains("theme.neutral.card.opacity(0.0)"));
         assert!(production_source.contains("cursor_active"));
         assert!(production_source.contains("cursor_visible"));
@@ -2935,6 +3168,21 @@ gamma",
     }
 
     #[test]
+    fn code_editor_options_default_to_full_editing_chrome() {
+        let options = CodeEditorOptions::default();
+
+        assert!(!options.read_only);
+        assert!(options.header);
+        assert!(options.status_bar);
+        assert!(options.line_numbers);
+        assert!(options.diagnostics_panel);
+        assert!(options.completions_panel);
+        assert!(options.hover_panel);
+        assert!(!options.current_line_highlight);
+        assert_eq!(options.completion_limit, 6);
+    }
+
+    #[test]
     fn code_editor_exposes_navigation_and_ime_foundation() {
         let source = include_str!("code_editor.rs");
         assert!(source.contains("CodeEditorWordLeft"));
@@ -2950,6 +3198,10 @@ gamma",
         assert!(source.contains("fn marked_text_range"));
         assert!(source.contains("replace_and_mark_text_in_range"));
         assert!(source.contains("utf16_offset_in_text"));
+        assert!(source.contains("CodeEditorOptions"));
+        assert!(source.contains("fn read_only"));
+        assert!(source.contains("fn completion_limit"));
+        assert!(source.contains("fn render_status_bar"));
     }
 
     #[test]
