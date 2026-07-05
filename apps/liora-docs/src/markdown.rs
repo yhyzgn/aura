@@ -2483,7 +2483,7 @@ impl LiveDemoContent {
                             diagnostics_panel: false,
                             completions_panel: true,
                             hover_panel: false,
-                            current_line_highlight: true,
+                            current_line_highlight: false,
                             completion_limit: 3,
                             ..liora_components::CodeEditorOptions::default()
                         })

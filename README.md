@@ -1103,7 +1103,7 @@ impl Render for EditorView {
 }
 ```
 
-`CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. It now centralizes row metrics and pointer hit-testing in an internal display map and includes basic edit transactions for `Ctrl/Cmd+Z` undo plus `Ctrl/Cmd+Shift+Z` redo. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
+`CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. Syntax highlighting follows the Zed-style route: tree-sitter parses the buffer, Liora queries emit Zed-compatible capture names, and `CodeEditorSyntaxTheme` maps those captures to GPUI text runs. `CodeBlock` remains an independent display component; it can later reuse the same highlighting engine, but applications should still treat CodeBlock and CodeEditor as separate controls. Keep CodeEditor inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
 
 Use `CodeEditorOptions` when an embedded editor needs product-specific chrome, editing behavior, viewport behavior, or extension panels:
 
@@ -1150,6 +1150,34 @@ let editor = CodeEditor::new(source, cx)
                 gpui::rgb(0x1e293b).into(),
             ),
     );
+```
+
+File-driven configuration can load behavior plus a Zed JSON theme family:
+
+```toml
+language = "rust"
+theme_file = "themes/one.json"
+theme_name = "One Dark"
+rows = 18
+tab_size = 4
+soft_tabs = true
+
+[options]
+line_numbers = true
+rulers = true
+ruler_column = 100
+whitespace = "boundary"
+
+[appearance.syntax.keyword]
+color = "#ff79c6ff"
+font_style = "italic"
+```
+
+```rust
+use liora::components::{CodeEditor, CodeEditorConfig};
+
+let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
+let editor = CodeEditor::new(source, cx).config(config);
 ```
 
 

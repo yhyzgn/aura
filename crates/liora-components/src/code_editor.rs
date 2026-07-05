@@ -19,19 +19,28 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::{CodeLanguage, CodeTheme, VirtualScrollbar, code_block::highlighted_code_runs};
+use crate::{CodeLanguage, CodeTheme, VirtualScrollbar};
 use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
-    IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton, MouseDownEvent,
-    MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, ShapedLine, SharedString,
-    Style, TextAlign, TextRun, UTF16Selection, Window, actions, div, fill, list, point, prelude::*,
-    px, relative, size,
+    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, HighlightStyle, Hsla,
+    InspectorElementId, IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, Rgba,
+    ShapedLine, SharedString, Style, TextAlign, TextRun, UTF16Selection, Window, actions, div,
+    fill, font, list, point, prelude::*, px, relative, size,
 };
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
 use liora_icons_lucide::IconName;
-use std::{ops::Range, sync::Arc, time::Duration};
+use serde::Deserialize;
+use std::{
+    collections::BTreeMap,
+    fs,
+    ops::Range,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
+use tree_sitter::{Language as TreeSitterLanguage, Parser, Query, QueryCursor, StreamingIterator};
 
 /// Type alias for code editor change callback values used by the code editor API.
 pub type CodeEditorChangeCallback = dyn Fn(&str, &mut Context<CodeEditor>) + 'static;
@@ -606,6 +615,59 @@ impl CodeViewport {
     }
 }
 
+fn parse_code_theme(value: &str) -> Option<CodeTheme> {
+    match value.trim().to_ascii_lowercase().replace('_', "-").as_str() {
+        "auto" => Some(CodeTheme::Auto),
+        "light" => Some(CodeTheme::Light),
+        "dark" => Some(CodeTheme::Dark),
+        "liora-light" | "brand-light" => Some(CodeTheme::BrandLight),
+        "liora-dark" | "brand-dark" => Some(CodeTheme::BrandDark),
+        "github-light" => Some(CodeTheme::GitHubLight),
+        "github-dark" => Some(CodeTheme::GitHubDark),
+        "one-dark" | "onedark" => Some(CodeTheme::OneDark),
+        "nord" => Some(CodeTheme::Nord),
+        "dracula" => Some(CodeTheme::Dracula),
+        _ => None,
+    }
+}
+
+fn parse_inline_diagnostics(value: &str) -> CodeEditorInlineDiagnostics {
+    match value.trim().to_ascii_lowercase().replace('_', "-").as_str() {
+        "none" | "off" | "hidden" => CodeEditorInlineDiagnostics::None,
+        "warnings-and-errors" | "warning" | "warnings" => {
+            CodeEditorInlineDiagnostics::WarningsAndErrors
+        }
+        _ => CodeEditorInlineDiagnostics::All,
+    }
+}
+
+fn parse_whitespace_mode(value: &str) -> CodeEditorWhitespaceMode {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "all" => CodeEditorWhitespaceMode::All,
+        "boundary" | "indent" | "indentation" => CodeEditorWhitespaceMode::Boundary,
+        _ => CodeEditorWhitespaceMode::Hidden,
+    }
+}
+
+fn parse_hex_color(value: &str) -> Option<Hsla> {
+    let value = value.trim().trim_start_matches('#');
+    let parse = |range: std::ops::Range<usize>| u8::from_str_radix(&value[range], 16).ok();
+    let (r, g, b, a) = match value.len() {
+        6 => (parse(0..2)?, parse(2..4)?, parse(4..6)?, 255),
+        8 => (parse(0..2)?, parse(2..4)?, parse(4..6)?, parse(6..8)?),
+        _ => return None,
+    };
+    Some(
+        Rgba {
+            r: r as f32 / 255.0,
+            g: g as f32 / 255.0,
+            b: b as f32 / 255.0,
+            a: a as f32 / 255.0,
+        }
+        .into(),
+    )
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Controls how whitespace is displayed inside CodeEditor rows.
 pub enum CodeEditorWhitespaceMode {
@@ -725,6 +787,535 @@ impl Default for CodeEditorOptions {
     }
 }
 
+#[derive(Clone, Debug, Default, Deserialize)]
+/// File-driven CodeEditor configuration loaded from TOML or JSON.
+///
+/// The config format intentionally mirrors Zed's editor model: behavior and
+/// chrome live in this file, while syntax colors are loaded from a Zed theme JSON
+/// (`themes[].style.syntax`). It does not accept TextMate `.tmTheme` files; use a
+/// Zed-compatible JSON theme when product teams want portable code colors.
+pub struct CodeEditorConfig {
+    /// Optional language label, such as `rust`, `typescript`, or `json`.
+    pub language: Option<String>,
+    /// Optional built-in code theme label used as fallback for editor chrome.
+    pub theme: Option<String>,
+    /// Optional visible row count.
+    pub rows: Option<usize>,
+    /// Optional fixed height in pixels.
+    pub height_px: Option<f32>,
+    /// Optional indentation width.
+    pub tab_size: Option<usize>,
+    /// Optional soft-tabs toggle.
+    pub soft_tabs: Option<bool>,
+    /// Optional editor behavior and chrome options.
+    pub options: Option<CodeEditorOptionsConfig>,
+    /// Optional editor visual theme section.
+    pub appearance: Option<CodeEditorAppearanceConfig>,
+    /// Optional Zed JSON theme file path, resolved relative to this config file.
+    pub theme_file: Option<String>,
+    /// Optional exact theme name inside a Zed theme family JSON file.
+    pub theme_name: Option<String>,
+}
+
+impl CodeEditorConfig {
+    /// Loads CodeEditor configuration from a TOML or JSON file path.
+    pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, CodeEditorConfigError> {
+        let path = path.as_ref();
+        let source = fs::read_to_string(path)?;
+        let base_dir = path.parent().map(Path::to_path_buf);
+        Self::load_from_str_with_base(
+            &source,
+            path.extension().and_then(|ext| ext.to_str()),
+            base_dir,
+        )
+    }
+
+    /// Loads CodeEditor configuration from TOML text.
+    pub fn load_toml(source: &str) -> Result<Self, CodeEditorConfigError> {
+        Self::load_from_str_with_base(source, Some("toml"), None)
+    }
+
+    /// Loads CodeEditor configuration from JSON text.
+    pub fn load_json(source: &str) -> Result<Self, CodeEditorConfigError> {
+        Self::load_from_str_with_base(source, Some("json"), None)
+    }
+
+    fn load_from_str_with_base(
+        source: &str,
+        extension: Option<&str>,
+        base_dir: Option<PathBuf>,
+    ) -> Result<Self, CodeEditorConfigError> {
+        let mut config: CodeEditorConfig =
+            match extension.unwrap_or("toml").to_ascii_lowercase().as_str() {
+                "json" => serde_json::from_str(source)?,
+                _ => toml::from_str(source)?,
+            };
+        config.resolve_theme_file(base_dir)?;
+        Ok(config)
+    }
+
+    fn resolve_theme_file(
+        &mut self,
+        base_dir: Option<PathBuf>,
+    ) -> Result<(), CodeEditorConfigError> {
+        let Some(theme_file) = self.theme_file.clone() else {
+            return Ok(());
+        };
+        let mut path = PathBuf::from(theme_file);
+        if path.is_relative() {
+            if let Some(base_dir) = base_dir {
+                path = base_dir.join(path);
+            }
+        }
+        let source = fs::read_to_string(path)?;
+        let external = CodeEditorZedTheme::load(&source, self.theme_name.as_deref())?;
+        self.theme = external.base_theme.or_else(|| self.theme.take());
+        self.appearance = Some(match self.appearance.take() {
+            Some(appearance) => appearance.merge_missing(external.appearance),
+            None => external.appearance,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+/// Serializable subset of CodeEditorOptions used by config files.
+pub struct CodeEditorOptionsConfig {
+    pub read_only: Option<bool>,
+    pub header: Option<bool>,
+    pub status_bar: Option<bool>,
+    pub line_numbers: Option<bool>,
+    pub diagnostics_panel: Option<bool>,
+    pub completions_panel: Option<bool>,
+    pub hover_panel: Option<bool>,
+    pub current_line_highlight: Option<bool>,
+    pub rulers: Option<bool>,
+    pub ruler_column: Option<usize>,
+    pub inline_diagnostics: Option<String>,
+    pub whitespace: Option<String>,
+    pub selection: Option<bool>,
+    pub copy: Option<bool>,
+    pub clipboard_editing: Option<bool>,
+    pub cursor_blink: Option<bool>,
+    pub drag_selection: Option<bool>,
+    pub word_selection: Option<bool>,
+    pub line_selection: Option<bool>,
+    pub indentation: Option<bool>,
+    pub history: Option<bool>,
+    pub reveal_cursor: Option<bool>,
+    pub scrollbar: Option<bool>,
+    pub completion_limit: Option<usize>,
+    pub diagnostics_limit: Option<usize>,
+}
+
+impl CodeEditorOptionsConfig {
+    fn apply_to(&self, options: &mut CodeEditorOptions) {
+        macro_rules! set_bool {
+            ($field:ident) => {
+                if let Some(value) = self.$field {
+                    options.$field = value;
+                }
+            };
+        }
+        set_bool!(read_only);
+        set_bool!(header);
+        set_bool!(status_bar);
+        set_bool!(line_numbers);
+        set_bool!(diagnostics_panel);
+        set_bool!(completions_panel);
+        set_bool!(hover_panel);
+        set_bool!(current_line_highlight);
+        set_bool!(rulers);
+        set_bool!(selection);
+        set_bool!(copy);
+        set_bool!(clipboard_editing);
+        set_bool!(cursor_blink);
+        set_bool!(drag_selection);
+        set_bool!(word_selection);
+        set_bool!(line_selection);
+        set_bool!(indentation);
+        set_bool!(history);
+        set_bool!(reveal_cursor);
+        set_bool!(scrollbar);
+        if let Some(value) = self.ruler_column {
+            options.ruler_column = value.max(1);
+        }
+        if let Some(value) = self.completion_limit {
+            options.completion_limit = value.max(1);
+        }
+        if let Some(value) = self.diagnostics_limit {
+            options.diagnostics_limit = value.max(1);
+        }
+        if let Some(value) = self.inline_diagnostics.as_deref() {
+            options.inline_diagnostics = parse_inline_diagnostics(value);
+        }
+        if let Some(value) = self.whitespace.as_deref() {
+            options.whitespace = parse_whitespace_mode(value);
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+/// Serializable editor appearance overrides. Color values use `#rrggbb` or `#rrggbbaa`.
+pub struct CodeEditorAppearanceConfig {
+    pub base: Option<String>,
+    pub surface: Option<String>,
+    pub chrome_surface: Option<String>,
+    pub gutter_surface: Option<String>,
+    pub border: Option<String>,
+    pub text: Option<String>,
+    pub muted_text: Option<String>,
+    pub caret: Option<String>,
+    pub selection: Option<String>,
+    pub current_line: Option<String>,
+    pub ruler: Option<String>,
+    pub whitespace: Option<String>,
+    pub info: Option<String>,
+    pub warning: Option<String>,
+    pub error: Option<String>,
+    pub syntax: Option<BTreeMap<String, CodeEditorSyntaxStyleConfig>>,
+}
+
+impl CodeEditorAppearanceConfig {
+    fn merge_missing(mut self, fallback: Self) -> Self {
+        macro_rules! fill {
+            ($field:ident) => {
+                if self.$field.is_none() {
+                    self.$field = fallback.$field;
+                }
+            };
+        }
+        fill!(base);
+        fill!(surface);
+        fill!(chrome_surface);
+        fill!(gutter_surface);
+        fill!(border);
+        fill!(text);
+        fill!(muted_text);
+        fill!(caret);
+        fill!(selection);
+        fill!(current_line);
+        fill!(ruler);
+        fill!(whitespace);
+        fill!(info);
+        fill!(warning);
+        fill!(error);
+        if self.syntax.is_none() {
+            self.syntax = fallback.syntax;
+        }
+        self
+    }
+
+    fn to_theme(&self, fallback: CodeTheme) -> CodeEditorHighlightTheme {
+        let mut theme = CodeEditorHighlightTheme::new(
+            self.base
+                .as_deref()
+                .and_then(parse_code_theme)
+                .unwrap_or(fallback),
+        );
+        theme.surface = self.surface.as_deref().and_then(parse_hex_color);
+        theme.chrome_surface = self.chrome_surface.as_deref().and_then(parse_hex_color);
+        theme.gutter_surface = self.gutter_surface.as_deref().and_then(parse_hex_color);
+        theme.border = self.border.as_deref().and_then(parse_hex_color);
+        theme.text = self.text.as_deref().and_then(parse_hex_color);
+        theme.muted_text = self.muted_text.as_deref().and_then(parse_hex_color);
+        theme.caret = self.caret.as_deref().and_then(parse_hex_color);
+        theme.selection = self.selection.as_deref().and_then(parse_hex_color);
+        theme.current_line = self.current_line.as_deref().and_then(parse_hex_color);
+        theme.ruler = self.ruler.as_deref().and_then(parse_hex_color);
+        theme.whitespace = self.whitespace.as_deref().and_then(parse_hex_color);
+        theme.info = self.info.as_deref().and_then(parse_hex_color);
+        theme.warning = self.warning.as_deref().and_then(parse_hex_color);
+        theme.error = self.error.as_deref().and_then(parse_hex_color);
+        if let Some(syntax) = self.syntax.as_ref() {
+            theme.syntax = CodeEditorSyntaxTheme::from_config(syntax);
+        }
+        theme
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+/// One Zed-style syntax style entry loaded from a config or theme JSON.
+pub struct CodeEditorSyntaxStyleConfig {
+    pub color: Option<String>,
+    pub background_color: Option<String>,
+    pub font_weight: Option<f32>,
+    pub font_style: Option<String>,
+}
+
+impl CodeEditorSyntaxStyleConfig {
+    fn to_highlight_style(&self) -> HighlightStyle {
+        HighlightStyle {
+            color: self.color.as_deref().and_then(parse_hex_color),
+            background_color: self.background_color.as_deref().and_then(parse_hex_color),
+            font_weight: self.font_weight.map(gpui::FontWeight),
+            font_style: self.font_style.as_deref().and_then(|style| {
+                match style.trim().to_ascii_lowercase().as_str() {
+                    "italic" => Some(gpui::FontStyle::Italic),
+                    "oblique" => Some(gpui::FontStyle::Oblique),
+                    "normal" => Some(gpui::FontStyle::Normal),
+                    _ => None,
+                }
+            }),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Debug)]
+/// Errors produced while loading CodeEditor configuration files.
+pub enum CodeEditorConfigError {
+    /// The file could not be read.
+    Io(std::io::Error),
+    /// TOML parsing failed.
+    Toml(toml::de::Error),
+    /// JSON parsing failed.
+    Json(serde_json::Error),
+}
+
+impl std::fmt::Display for CodeEditorConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(error) => write!(f, "failed to read CodeEditor config: {error}"),
+            Self::Toml(error) => write!(f, "failed to parse CodeEditor TOML config: {error}"),
+            Self::Json(error) => write!(f, "failed to parse CodeEditor JSON config: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for CodeEditorConfigError {}
+
+impl From<std::io::Error> for CodeEditorConfigError {
+    fn from(error: std::io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+impl From<toml::de::Error> for CodeEditorConfigError {
+    fn from(error: toml::de::Error) -> Self {
+        Self::Toml(error)
+    }
+}
+
+impl From<serde_json::Error> for CodeEditorConfigError {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Json(error)
+    }
+}
+
+struct CodeEditorZedTheme {
+    base_theme: Option<String>,
+    appearance: CodeEditorAppearanceConfig,
+}
+
+impl CodeEditorZedTheme {
+    fn load(source: &str, theme_name: Option<&str>) -> Result<Self, CodeEditorConfigError> {
+        let family = serde_json::from_str::<ZedThemeFamilyConfig>(source)?;
+        let theme = theme_name
+            .and_then(|name| family.themes.iter().find(|theme| theme.name == name))
+            .or_else(|| family.themes.first());
+        let Some(theme) = theme else {
+            return Ok(Self {
+                base_theme: None,
+                appearance: CodeEditorAppearanceConfig::default(),
+            });
+        };
+        let get = |key: &str| {
+            theme
+                .style
+                .get(key)
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+        };
+        let syntax = theme.style.get("syntax").and_then(|value| {
+            serde_json::from_value::<BTreeMap<String, CodeEditorSyntaxStyleConfig>>(value.clone())
+                .ok()
+        });
+        Ok(Self {
+            base_theme: theme.appearance.as_deref().map(|appearance| {
+                if appearance.eq_ignore_ascii_case("dark") {
+                    "one-dark".to_string()
+                } else {
+                    "github-light".to_string()
+                }
+            }),
+            appearance: CodeEditorAppearanceConfig {
+                surface: get("editor.background").or_else(|| get("background")),
+                chrome_surface: get("editor.subheader.background")
+                    .or_else(|| get("panel.background")),
+                gutter_surface: get("editor.gutter.background"),
+                border: get("border"),
+                text: get("editor.foreground").or_else(|| get("text")),
+                muted_text: get("editor.line_number").or_else(|| get("text.muted")),
+                caret: get("editor.active_line_number").or_else(|| get("text.accent")),
+                selection: get("editor.document_highlight.read_background")
+                    .or_else(|| get("search.match_background")),
+                current_line: get("editor.active_line.background"),
+                ruler: get("editor.wrap_guide"),
+                whitespace: get("editor.invisible"),
+                info: get("info"),
+                warning: get("warning"),
+                error: get("error"),
+                syntax,
+                ..CodeEditorAppearanceConfig::default()
+            },
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct ZedThemeFamilyConfig {
+    themes: Vec<ZedThemeConfig>,
+}
+
+#[derive(Deserialize)]
+struct ZedThemeConfig {
+    name: String,
+    appearance: Option<String>,
+    style: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+/// Zed-style syntax palette keyed by tree-sitter capture names.
+///
+/// This mirrors Zed's `SyntaxTheme` lookup semantics at the component level: a
+/// capture such as `function.method.call` can fall back to `function.method` and
+/// then `function` when only broader styles are present.
+pub struct CodeEditorSyntaxTheme {
+    styles: BTreeMap<String, HighlightStyle>,
+}
+
+impl Default for CodeEditorSyntaxTheme {
+    fn default() -> Self {
+        Self::new(default_zed_syntax_styles())
+    }
+}
+
+impl CodeEditorSyntaxTheme {
+    /// Creates a syntax theme from capture-name/style pairs.
+    pub fn new(styles: impl IntoIterator<Item = (String, HighlightStyle)>) -> Self {
+        Self {
+            styles: styles.into_iter().collect(),
+        }
+    }
+
+    /// Creates a syntax theme from serializable Zed-style config entries.
+    pub fn from_config(styles: &BTreeMap<String, CodeEditorSyntaxStyleConfig>) -> Self {
+        Self::new(
+            styles
+                .iter()
+                .map(|(name, style)| (name.clone(), style.to_highlight_style())),
+        )
+    }
+
+    /// Creates a Liora fallback syntax theme for a built-in code theme.
+    pub fn from_code_theme(code_theme: CodeTheme, app_theme: &liora_theme::Theme) -> Self {
+        let dark = match code_theme {
+            CodeTheme::BrandLight | CodeTheme::GitHubLight | CodeTheme::Light => false,
+            CodeTheme::BrandDark
+            | CodeTheme::GitHubDark
+            | CodeTheme::OneDark
+            | CodeTheme::Nord
+            | CodeTheme::Dracula
+            | CodeTheme::Dark => true,
+            CodeTheme::Auto => app_theme.name.eq_ignore_ascii_case("dark"),
+        };
+        Self::new(default_zed_syntax_styles_for_mode(dark))
+    }
+
+    /// Adds or replaces one capture style and returns the updated theme.
+    pub fn with_style(mut self, capture: impl Into<String>, style: HighlightStyle) -> Self {
+        self.styles.insert(capture.into(), style);
+        self
+    }
+
+    fn style_for_capture(&self, capture: &str) -> Option<HighlightStyle> {
+        let mut candidate = Some(capture);
+        while let Some(name) = candidate {
+            if let Some(style) = self.styles.get(name) {
+                return Some(*style);
+            }
+            candidate = name.rsplit_once('.').map(|(parent, _)| parent);
+        }
+        None
+    }
+}
+
+fn default_zed_syntax_styles() -> Vec<(String, HighlightStyle)> {
+    default_zed_syntax_styles_for_mode(true)
+}
+
+fn default_zed_syntax_styles_for_mode(dark: bool) -> Vec<(String, HighlightStyle)> {
+    let color = |hex: u32| HighlightStyle {
+        color: Some(gpui::rgb(hex).into()),
+        ..Default::default()
+    };
+    let italic = |hex: u32| HighlightStyle {
+        color: Some(gpui::rgb(hex).into()),
+        font_style: Some(gpui::FontStyle::Italic),
+        ..Default::default()
+    };
+    let styles: &[(&str, HighlightStyle)] = if dark {
+        &[
+            ("attribute", color(0x74ade8)),
+            ("boolean", color(0xbf956a)),
+            ("comment", italic(0x5d636f)),
+            ("comment.doc", italic(0x878e98)),
+            ("constant", color(0xdfc184)),
+            ("constructor", color(0x73ade9)),
+            ("embedded", color(0xabb2bf)),
+            ("emphasis", italic(0xabb2bf)),
+            ("function", color(0x61afef)),
+            ("function.method", color(0x61afef)),
+            ("keyword", color(0xc678dd)),
+            ("label", color(0xe5c07b)),
+            ("link_uri", color(0x56b6c2)),
+            ("number", color(0xd19a66)),
+            ("operator", color(0x56b6c2)),
+            ("property", color(0xe06c75)),
+            ("punctuation", color(0xabb2bf)),
+            ("string", color(0x98c379)),
+            ("string.escape", color(0x56b6c2)),
+            ("tag", color(0xe06c75)),
+            ("text", color(0xabb2bf)),
+            ("type", color(0xe5c07b)),
+            ("variable", color(0xabb2bf)),
+            ("variable.special", color(0xe06c75)),
+        ]
+    } else {
+        &[
+            ("attribute", color(0x0969da)),
+            ("boolean", color(0x953800)),
+            ("comment", italic(0x6e7781)),
+            ("comment.doc", italic(0x57606a)),
+            ("constant", color(0x0550ae)),
+            ("constructor", color(0x8250df)),
+            ("embedded", color(0x24292f)),
+            ("emphasis", italic(0x24292f)),
+            ("function", color(0x8250df)),
+            ("function.method", color(0x8250df)),
+            ("keyword", color(0xcf222e)),
+            ("label", color(0x953800)),
+            ("link_uri", color(0x0969da)),
+            ("number", color(0x0550ae)),
+            ("operator", color(0x0550ae)),
+            ("property", color(0x116329)),
+            ("punctuation", color(0x24292f)),
+            ("string", color(0x0a3069)),
+            ("string.escape", color(0x0550ae)),
+            ("tag", color(0x116329)),
+            ("text", color(0x24292f)),
+            ("type", color(0x953800)),
+            ("variable", color(0x24292f)),
+            ("variable.special", color(0x953800)),
+        ]
+    };
+    styles
+        .iter()
+        .map(|(name, style)| ((*name).to_string(), *style))
+        .collect()
+}
+
 #[derive(Clone, Debug, PartialEq)]
 /// Theme overrides used by CodeEditor without replacing the global Liora theme.
 pub struct CodeEditorHighlightTheme {
@@ -758,10 +1349,8 @@ pub struct CodeEditorHighlightTheme {
     pub warning: Option<Hsla>,
     /// Diagnostic error color.
     pub error: Option<Hsla>,
-    /// Optional color applied to every syntax run after syntect highlighting.
-    pub syntax_text: Option<Hsla>,
-    /// Optional syntax background applied to every syntax run.
-    pub syntax_background: Option<Hsla>,
+    /// Zed-style syntax theme used to color tree-sitter capture names.
+    pub syntax: CodeEditorSyntaxTheme,
 }
 
 impl Default for CodeEditorHighlightTheme {
@@ -782,8 +1371,7 @@ impl Default for CodeEditorHighlightTheme {
             info: None,
             warning: None,
             error: None,
-            syntax_text: None,
-            syntax_background: None,
+            syntax: CodeEditorSyntaxTheme::default(),
         }
     }
 }
@@ -861,15 +1449,9 @@ impl CodeEditorHighlightTheme {
         self
     }
 
-    /// Forces all syntax runs to use one foreground color after highlighter output.
-    pub fn syntax_text(mut self, color: Hsla) -> Self {
-        self.syntax_text = Some(color);
-        self
-    }
-
-    /// Adds a background color to all syntax runs after highlighter output.
-    pub fn syntax_background(mut self, color: Hsla) -> Self {
-        self.syntax_background = Some(color);
+    /// Replaces the syntax palette used for tree-sitter capture names.
+    pub fn syntax_theme(mut self, syntax: CodeEditorSyntaxTheme) -> Self {
+        self.syntax = syntax;
         self
     }
 }
@@ -890,13 +1472,13 @@ struct ResolvedCodeEditorTheme {
     info: Hsla,
     warning: Hsla,
     error: Hsla,
-    syntax_text: Option<Hsla>,
-    syntax_background: Option<Hsla>,
+    syntax: CodeEditorSyntaxTheme,
 }
 
 impl ResolvedCodeEditorTheme {
     fn resolve(
         overrides: Option<&CodeEditorHighlightTheme>,
+        code_theme: CodeTheme,
         app_theme: &liora_theme::Theme,
     ) -> Self {
         Self {
@@ -942,8 +1524,9 @@ impl ResolvedCodeEditorTheme {
             error: overrides
                 .and_then(|theme| theme.error)
                 .unwrap_or(app_theme.danger.base),
-            syntax_text: overrides.and_then(|theme| theme.syntax_text),
-            syntax_background: overrides.and_then(|theme| theme.syntax_background),
+            syntax: overrides
+                .map(|theme| theme.syntax.clone())
+                .unwrap_or_else(|| CodeEditorSyntaxTheme::from_code_theme(code_theme, app_theme)),
         }
     }
 
@@ -956,22 +1539,208 @@ impl ResolvedCodeEditorTheme {
     }
 }
 
-fn apply_editor_syntax_overrides(
-    mut runs: Vec<TextRun>,
-    theme: &ResolvedCodeEditorTheme,
-) -> Vec<TextRun> {
-    if theme.syntax_text.is_none() && theme.syntax_background.is_none() {
-        return runs;
+#[derive(Clone, Debug)]
+struct CodeEditorSyntaxRun {
+    range: Range<usize>,
+    capture: String,
+}
+
+fn tree_sitter_language(language: CodeLanguage) -> Option<TreeSitterLanguage> {
+    match language {
+        CodeLanguage::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
+        CodeLanguage::Json => Some(tree_sitter_json::LANGUAGE.into()),
+        CodeLanguage::Markdown => Some(tree_sitter_md::LANGUAGE.into()),
+        CodeLanguage::TypeScript | CodeLanguage::JavaScript => {
+            Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
+        }
+        CodeLanguage::Shell | CodeLanguage::Toml | CodeLanguage::PlainText => None,
     }
-    for run in &mut runs {
-        if let Some(color) = theme.syntax_text {
-            run.color = color;
+}
+
+fn tree_sitter_highlight_query(language: CodeLanguage) -> Option<&'static str> {
+    match language {
+        CodeLanguage::Rust => Some(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../assets/liora/queries/rust/highlights.scm"
+        ))),
+        CodeLanguage::Json => Some(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../assets/liora/queries/json/highlights.scm"
+        ))),
+        CodeLanguage::Markdown => Some(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../assets/liora/queries/markdown/highlights.scm"
+        ))),
+        CodeLanguage::TypeScript => Some(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../assets/liora/queries/typescript/highlights.scm"
+        ))),
+        CodeLanguage::JavaScript => Some(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../assets/liora/queries/javascript/highlights.scm"
+        ))),
+        CodeLanguage::Shell | CodeLanguage::Toml | CodeLanguage::PlainText => None,
+    }
+}
+
+fn zed_tree_sitter_syntax_runs(source: &str, language: CodeLanguage) -> Vec<CodeEditorSyntaxRun> {
+    let Some(ts_language) = tree_sitter_language(language) else {
+        return Vec::new();
+    };
+    let Some(query_source) = tree_sitter_highlight_query(language) else {
+        return Vec::new();
+    };
+    let Ok(query) = Query::new(&ts_language, query_source) else {
+        return Vec::new();
+    };
+    let mut parser = Parser::new();
+    if parser.set_language(&ts_language).is_err() {
+        return Vec::new();
+    }
+    let Some(tree) = parser.parse(source, None) else {
+        return Vec::new();
+    };
+    let capture_names = query.capture_names();
+    let mut cursor = QueryCursor::new();
+    let mut matches = cursor.matches(&query, tree.root_node(), source.as_bytes());
+    let mut runs = Vec::new();
+    while let Some(mat) = matches.next() {
+        for capture in mat.captures {
+            let range = capture.node.byte_range();
+            if range.start >= range.end || range.end > source.len() {
+                continue;
+            }
+            let Some(capture_name) = capture_names.get(capture.index as usize) else {
+                continue;
+            };
+            runs.push(CodeEditorSyntaxRun {
+                range,
+                capture: (*capture_name).to_string(),
+            });
         }
-        if let Some(background) = theme.syntax_background {
-            run.background_color = Some(background);
+    }
+    runs.sort_by(|left, right| {
+        left.range
+            .start
+            .cmp(&right.range.start)
+            .then_with(|| right.range.end.cmp(&left.range.end))
+    });
+    runs
+}
+
+fn zed_tree_sitter_line_runs(
+    line: &str,
+    line_start: usize,
+    source_runs: &[CodeEditorSyntaxRun],
+    syntax_theme: &CodeEditorSyntaxTheme,
+    default_color: Hsla,
+    code_family: &SharedString,
+    code_weight: Option<gpui::FontWeight>,
+) -> Vec<TextRun> {
+    let line_end = line_start + line.len();
+    if line.is_empty() {
+        return vec![base_code_text_run(
+            0,
+            default_color,
+            None,
+            code_family,
+            code_weight,
+            None,
+        )];
+    }
+    let mut segments: Vec<(usize, usize, HighlightStyle)> = source_runs
+        .iter()
+        .filter_map(|run| {
+            let start = run.range.start.max(line_start);
+            let end = run.range.end.min(line_end);
+            if start >= end {
+                return None;
+            }
+            syntax_theme
+                .style_for_capture(&run.capture)
+                .map(|style| (start - line_start, end - line_start, style))
+        })
+        .collect();
+    segments.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| (right.1 - right.0).cmp(&(left.1 - left.0)))
+    });
+
+    let mut runs = Vec::new();
+    let mut cursor = 0;
+    for (start, end, style) in segments {
+        let start = clamp_to_char_boundary(line, start);
+        let end = clamp_to_char_boundary(line, end);
+        if end <= cursor || start >= end {
+            continue;
         }
+        if start > cursor {
+            runs.push(base_code_text_run(
+                start - cursor,
+                default_color,
+                None,
+                code_family,
+                code_weight,
+                None,
+            ));
+        }
+        runs.push(base_code_text_run(
+            end - start,
+            style.color.unwrap_or(default_color),
+            style.background_color,
+            code_family,
+            style.font_weight.or(code_weight),
+            style.font_style,
+        ));
+        cursor = end;
+    }
+    if cursor < line.len() {
+        runs.push(base_code_text_run(
+            line.len() - cursor,
+            default_color,
+            None,
+            code_family,
+            code_weight,
+            None,
+        ));
+    }
+    if runs.is_empty() {
+        runs.push(base_code_text_run(
+            line.len(),
+            default_color,
+            None,
+            code_family,
+            code_weight,
+            None,
+        ));
     }
     runs
+}
+
+fn base_code_text_run(
+    len: usize,
+    color: Hsla,
+    background_color: Option<Hsla>,
+    code_family: &SharedString,
+    code_weight: Option<gpui::FontWeight>,
+    font_style: Option<gpui::FontStyle>,
+) -> TextRun {
+    let mut run_font = font(code_family.clone());
+    if let Some(weight) = code_weight {
+        run_font.weight = weight;
+    }
+    if let Some(style) = font_style {
+        run_font.style = style;
+    }
+    TextRun {
+        len,
+        font: run_font,
+        color,
+        background_color,
+        underline: None,
+        strikethrough: None,
+    }
 }
 
 /// Native code editing surface with virtualized rows, line numbers, indentation metadata,
@@ -1134,6 +1903,69 @@ impl CodeEditor {
     pub fn clear_highlight_theme(mut self) -> Self {
         self.highlight_theme = None;
         self
+    }
+
+    /// Applies a loaded config file to the editor builder.
+    pub fn config(mut self, config: CodeEditorConfig) -> Self {
+        if let Some(language) = config.language {
+            self.language = CodeLanguage::from_label(&language);
+        }
+        if let Some(theme) = config.theme.as_deref().and_then(parse_code_theme) {
+            self.theme = theme;
+        }
+        if let Some(rows) = config.rows {
+            self.viewport = CodeViewport::new(rows);
+        }
+        if let Some(height) = config.height_px {
+            self.height = Some(px(height));
+        }
+        if let Some(tab_size) = config.tab_size {
+            self.tab_size = tab_size.max(1);
+        }
+        if let Some(soft_tabs) = config.soft_tabs {
+            self.soft_tabs = soft_tabs;
+        }
+        if let Some(options) = config.options {
+            options.apply_to(&mut self.options);
+        }
+        if let Some(appearance) = config.appearance {
+            let theme = appearance.to_theme(self.theme);
+            self.theme = theme.base;
+            self.highlight_theme = Some(theme);
+        }
+        self
+    }
+
+    /// Updates an existing editor entity from a loaded config file.
+    pub fn set_config(&mut self, config: CodeEditorConfig, cx: &mut Context<Self>) {
+        if let Some(language) = config.language {
+            self.language = CodeLanguage::from_label(&language);
+        }
+        if let Some(theme) = config.theme.as_deref().and_then(parse_code_theme) {
+            self.theme = theme;
+        }
+        if let Some(rows) = config.rows {
+            self.viewport = CodeViewport::new(rows);
+        }
+        if let Some(height) = config.height_px {
+            self.height = Some(px(height));
+        }
+        if let Some(tab_size) = config.tab_size {
+            self.tab_size = tab_size.max(1);
+        }
+        if let Some(soft_tabs) = config.soft_tabs {
+            self.soft_tabs = soft_tabs;
+        }
+        if let Some(options) = config.options {
+            options.apply_to(&mut self.options);
+        }
+        if let Some(appearance) = config.appearance {
+            let theme = appearance.to_theme(self.theme);
+            self.theme = theme.base;
+            self.highlight_theme = Some(theme);
+        }
+        self.invalidate_row_layouts();
+        cx.notify();
     }
 
     /// Sets the line numbers value used by the component.
@@ -2518,7 +3350,8 @@ impl Render for CodeEditor {
             "tabs".to_string()
         };
         let options = self.options;
-        let editor_theme = ResolvedCodeEditorTheme::resolve(self.highlight_theme.as_ref(), &theme);
+        let editor_theme =
+            ResolvedCodeEditorTheme::resolve(self.highlight_theme.as_ref(), self.theme, &theme);
         let display_map = self.display_map();
         let editor_height = self
             .height
@@ -2537,10 +3370,12 @@ impl Render for CodeEditor {
         let theme_for_rows = theme.clone();
         let editor_theme_for_rows = editor_theme.clone();
         let code_weight_for_rows = code_weight;
+        let syntax_runs = zed_tree_sitter_syntax_runs(self.buffer.as_str(), self.language);
         let editor_entity = cx.entity();
         let editor_entity_for_rows = editor_entity.clone();
         let cursor_active = focused;
         let cursor_visible = focused && self.cursor_visible;
+        let syntax_runs_for_rows = Arc::new(syntax_runs);
 
         div()
             .flex()
@@ -2676,6 +3511,7 @@ impl Render for CodeEditor {
                                 row_code_theme,
                                 &theme_for_rows,
                                 &editor_theme_for_rows,
+                                syntax_runs_for_rows.as_ref(),
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
                                 row_display_map,
@@ -2759,6 +3595,7 @@ fn render_editor_row(
     code_theme: CodeTheme,
     theme: &liora_theme::Theme,
     editor_theme: &ResolvedCodeEditorTheme,
+    syntax_runs: &[CodeEditorSyntaxRun],
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
     display_map: CodeDisplayMap,
@@ -2781,21 +3618,23 @@ fn render_editor_row(
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .filter(|diagnostic| options.inline_diagnostics.includes(diagnostic.severity))
         .collect::<Vec<_>>();
-    let row_bg = if options.current_line_highlight && cursor_row {
-        editor_theme.current_line
-    } else {
-        editor_theme.surface.opacity(0.0)
-    };
-    let runs = apply_editor_syntax_overrides(
-        highlighted_code_runs(line, language, code_theme, theme, &code_family, code_weight),
-        editor_theme,
+    let highlight_current_line = options.current_line_highlight && cursor_row;
+    let line_start = buffer.line_start(row);
+    let runs = zed_tree_sitter_line_runs(
+        line,
+        line_start,
+        syntax_runs,
+        &editor_theme.syntax,
+        editor_theme.text,
+        &code_family,
+        code_weight,
     );
+    let _ = (language, code_theme, theme);
 
     div()
         .flex()
         .items_start()
         .min_h(display_map.row_height())
-        .bg(row_bg)
         .child(if line_numbers {
             div()
                 .flex_none()
@@ -2838,6 +3677,7 @@ fn render_editor_row(
                     cursor_column,
                     cursor_visible: cursor_active && cursor_visible && cursor_column.is_some(),
                     line_height: display_map.row_height(),
+                    current_line_highlight: highlight_current_line,
                     theme: theme.clone(),
                     editor_theme: editor_theme.clone(),
                     whitespace: options.whitespace,
@@ -2872,6 +3712,7 @@ struct CodeEditorLineElement {
     cursor_column: Option<usize>,
     cursor_visible: bool,
     line_height: Pixels,
+    current_line_highlight: bool,
     theme: liora_theme::Theme,
     editor_theme: ResolvedCodeEditorTheme,
     whitespace: CodeEditorWhitespaceMode,
@@ -2880,6 +3721,7 @@ struct CodeEditorLineElement {
 
 struct CodeEditorLinePrepaint {
     shaped: ShapedLine,
+    current_line: Option<PaintQuad>,
     selection: Vec<PaintQuad>,
     whitespace: Vec<PaintQuad>,
     marked: Option<PaintQuad>,
@@ -2936,6 +3778,16 @@ impl Element for CodeEditorLineElement {
     ) -> Self::PrepaintState {
         self.editor.update(cx, |editor, _| {
             editor.update_row_layout(self.row, bounds, shaped.clone());
+        });
+
+        let current_line = self.current_line_highlight.then(|| {
+            fill(
+                Bounds::new(
+                    point(bounds.left(), bounds.top()),
+                    size(bounds.size.width.max(px(1.0)), self.line_height),
+                ),
+                self.editor_theme.current_line,
+            )
         });
 
         let mut selection = Vec::new();
@@ -2996,6 +3848,7 @@ impl Element for CodeEditorLineElement {
 
         CodeEditorLinePrepaint {
             shaped: shaped.clone(),
+            current_line,
             selection,
             whitespace,
             marked,
@@ -3013,6 +3866,9 @@ impl Element for CodeEditorLineElement {
         window: &mut Window,
         cx: &mut App,
     ) {
+        if let Some(current_line) = prepaint.current_line.take() {
+            window.paint_quad(current_line);
+        }
         for quad in prepaint.selection.drain(..) {
             window.paint_quad(quad);
         }
@@ -3489,7 +4345,8 @@ mod tests {
         assert!(source.contains("point_for_editor_position"));
         assert!(source.contains("render_editor_row"));
         assert!(source.contains("CodeEditorLineElement"));
-        assert!(source.contains("highlighted_code_runs"));
+        assert!(source.contains("zed_tree_sitter_syntax_runs"));
+        assert!(source.contains("tree_sitter_highlight_query"));
         assert!(
             !source
                 .lines()
@@ -3708,8 +4565,8 @@ gamma",
         assert!(production_source.contains("window.paint_quad"));
         assert!(production_source.contains("prepaint.shaped.paint"));
         assert!(production_source.contains("on_mouse_up_out(MouseButton::Left"));
-        assert!(production_source.contains("current_line_highlight && cursor_row"));
-        assert!(production_source.contains("theme.neutral.card.opacity(0.0)"));
+        assert!(production_source.contains("highlight_current_line"));
+        assert!(production_source.contains("current_line_highlight: highlight_current_line"));
         assert!(production_source.contains("cursor_active"));
         assert!(production_source.contains("cursor_visible"));
         assert!(!production_source.contains(
@@ -3783,12 +4640,52 @@ gamma",
     fn code_editor_highlight_theme_tracks_editor_specific_overrides() {
         let theme = CodeEditorHighlightTheme::new(CodeTheme::Nord)
             .surface(gpui::rgb(0x0f172a).into())
-            .syntax_text(gpui::rgb(0xffffff).into());
+            .syntax_theme(CodeEditorSyntaxTheme::default().with_style(
+                "keyword",
+                HighlightStyle {
+                    color: Some(gpui::rgb(0xffffff).into()),
+                    ..Default::default()
+                },
+            ));
 
         assert_eq!(theme.base, CodeTheme::Nord);
         assert!(theme.surface.is_some());
-        assert!(theme.syntax_text.is_some());
+        assert!(theme.syntax.style_for_capture("keyword.control").is_some());
         assert!(theme.chrome_surface.is_none());
+    }
+
+    #[test]
+    fn zed_tree_sitter_highlighter_generates_capture_runs_for_rust() {
+        let source = "fn main() { println!(\"hi\"); }";
+        let runs = zed_tree_sitter_syntax_runs(source, CodeLanguage::Rust);
+
+        assert!(!runs.is_empty());
+        assert!(
+            runs.iter().any(
+                |run| run.capture.starts_with("keyword") || run.capture.starts_with("function")
+            )
+        );
+    }
+
+    #[test]
+    fn code_editor_config_loads_zed_syntax_theme_json() {
+        let theme_json = r##"{
+          "themes": [{
+            "name": "Example Dark",
+            "appearance": "dark",
+            "style": {
+              "editor.background": "#101010ff",
+              "syntax": {
+                "keyword": { "color": "#ff0000ff", "font_style": "italic" }
+              }
+            }
+          }]
+        }"##;
+        let zed_theme = CodeEditorZedTheme::load(theme_json, Some("Example Dark")).unwrap();
+        let theme = zed_theme.appearance.to_theme(CodeTheme::Auto);
+
+        assert!(theme.surface.is_some());
+        assert!(theme.syntax.style_for_capture("keyword.control").is_some());
     }
 
     #[test]

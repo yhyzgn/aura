@@ -17,7 +17,15 @@ liora-icons-lucide = { version = "0.2.7", path = "../liora-icons-lucide" }
 image = "0.25"
 qrcode = "0.14"
 rqrr = "0.8"
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
 lyon_tessellation = "1.0"
 ureq = "2"
 syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
 two-face = { version = "0.5.1", default-features = false, features = ["syntect-default-fancy"] }
+tree-sitter.workspace = true
+tree-sitter-json.workspace = true
+tree-sitter-md.workspace = true
+tree-sitter-rust.workspace = true
+tree-sitter-typescript.workspace = true

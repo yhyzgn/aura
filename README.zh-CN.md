@@ -1102,7 +1102,7 @@ impl Render for EditorView {
 }
 ```
 
-`CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。当前已用内部 display map 统一行高、gutter 和鼠标命中映射，并提供基础编辑事务，支持 `Ctrl/Cmd+Z` 撤销与 `Ctrl/Cmd+Shift+Z` 重做。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
+`CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。语法高亮走 Zed 风格路线：tree-sitter 解析 buffer，Liora query 产出兼容 Zed 的 capture name，再由 `CodeEditorSyntaxTheme` 映射为 GPUI text run。`CodeBlock` 仍然是独立的展示控件；后续可以复用同一套高亮引擎，但应用开发时仍应把 CodeBlock 和 CodeEditor 当作两个独立控件使用。请把 CodeEditor 保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
 
 当内嵌编辑器需要按产品场景裁剪 chrome、编辑行为、视口行为或扩展面板时，使用 `CodeEditorOptions` 统一配置：
 
@@ -1149,6 +1149,34 @@ let editor = CodeEditor::new(source, cx)
                 gpui::rgb(0x1e293b).into(),
             ),
     );
+```
+
+也可以通过配置文件一次性加载行为配置和 Zed JSON theme family：
+
+```toml
+language = "rust"
+theme_file = "themes/one.json"
+theme_name = "One Dark"
+rows = 18
+tab_size = 4
+soft_tabs = true
+
+[options]
+line_numbers = true
+rulers = true
+ruler_column = 100
+whitespace = "boundary"
+
+[appearance.syntax.keyword]
+color = "#ff79c6ff"
+font_style = "italic"
+```
+
+```rust
+use liora::components::{CodeEditor, CodeEditorConfig};
+
+let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
+let editor = CodeEditor::new(source, cx).config(config);
 ```
 
 

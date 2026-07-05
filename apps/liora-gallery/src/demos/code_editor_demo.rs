@@ -129,7 +129,7 @@ impl CodeEditorDemo {
                     diagnostics_panel: false,
                     completions_panel: true,
                     hover_panel: false,
-                    current_line_highlight: true,
+                    current_line_highlight: false,
                     completion_limit: 3,
                     ..CodeEditorOptions::default()
                 })
@@ -178,7 +178,7 @@ impl Render for CodeEditorDemo {
                             .vertical()
                             .gap_md()
                             .child(self.diagnostics.clone())
-                            .child(Text::new("v2 基座已完成基础输入、导航、选择、行号、缩进元数据、虚拟行渲染、诊断渲染、display map 与 undo/redo 事务基座；后续继续增强 Tree-sitter、LSP bridge 与精确 glyph hit-test。")),
+                            .child(Text::new("v2 基座已完成基础输入、导航、选择、行号、缩进元数据、虚拟行渲染、诊断渲染、display map 与 undo/redo 事务基座；当前已切到 tree-sitter + Zed-style SyntaxTheme 高亮路线；后续继续增强 LSP bridge、软换行和增量解析。")),
                     )
                     .into_any_element(),
                     showcase_card_wide(
@@ -195,7 +195,7 @@ impl Render for CodeEditorDemo {
                     .into_any_element(),
                     showcase_card_wide(
                         "自定义高亮主题和高级编辑行为",
-                        "CodeEditorHighlightTheme 可覆盖编辑器底色、gutter、selection、caret、ruler、whitespace、诊断色和语法 run。",
+                        "CodeEditorHighlightTheme 可覆盖编辑器底色、gutter、selection、caret、ruler、whitespace、诊断色，并可装载 Zed-style syntax capture 主题。",
                         self.themed.clone(),
                     )
                     .into_any_element(),
