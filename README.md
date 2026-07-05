@@ -1105,23 +1105,51 @@ impl Render for EditorView {
 
 `CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. It now centralizes row metrics and pointer hit-testing in an internal display map and includes basic edit transactions for `Ctrl/Cmd+Z` undo plus `Ctrl/Cmd+Shift+Z` redo. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
 
-Use `CodeEditorOptions` when an embedded editor needs product-specific chrome or interaction rules:
+Use `CodeEditorOptions` when an embedded editor needs product-specific chrome, editing behavior, viewport behavior, or extension panels:
 
 ```rust
-use liora::components::{CodeEditor, CodeEditorOptions};
+use liora::components::{
+    CodeEditor, CodeEditorHighlightTheme, CodeEditorInlineDiagnostics, CodeEditorOptions,
+    CodeEditorWhitespaceMode, CodeTheme,
+};
 
 let editor = CodeEditor::new(source, cx)
+    .theme(CodeTheme::OneDark)
     .options(CodeEditorOptions {
-        read_only: true,
-        header: false,
+        read_only: false,
+        header: true,
         status_bar: true,
-        line_numbers: false,
-        diagnostics_panel: false,
-        completions_panel: true,
-        hover_panel: false,
+        line_numbers: true,
         current_line_highlight: true,
-        completion_limit: 3,
-    });
+        rulers: true,
+        ruler_column: 100,
+        whitespace: CodeEditorWhitespaceMode::Boundary,
+        inline_diagnostics: CodeEditorInlineDiagnostics::WarningsAndErrors,
+        selection: true,
+        copy: true,
+        clipboard_editing: true,
+        cursor_blink: true,
+        drag_selection: true,
+        indentation: true,
+        history: true,
+        reveal_cursor: true,
+        scrollbar: true,
+        completion_limit: 6,
+        diagnostics_limit: 8,
+        ..CodeEditorOptions::default()
+    })
+    .highlight_theme(
+        CodeEditorHighlightTheme::new(CodeTheme::Nord)
+            .surface(gpui::rgb(0x0f172a).into())
+            .chrome_surface(gpui::rgb(0x111827).into())
+            .text(gpui::rgb(0xe5e7eb).into())
+            .muted_text(gpui::rgb(0x94a3b8).into())
+            .interaction(
+                gpui::rgb(0x38bdf8).into(),
+                gpui::rgb(0x2563eb).opacity(0.32).into(),
+                gpui::rgb(0x1e293b).into(),
+            ),
+    );
 ```
 
 

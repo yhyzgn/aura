@@ -1104,23 +1104,51 @@ impl Render for EditorView {
 
 `CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。当前已用内部 display map 统一行高、gutter 和鼠标命中映射，并提供基础编辑事务，支持 `Ctrl/Cmd+Z` 撤销与 `Ctrl/Cmd+Shift+Z` 重做。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
 
-当内嵌编辑器需要按产品场景裁剪 chrome 或交互规则时，使用 `CodeEditorOptions` 统一配置：
+当内嵌编辑器需要按产品场景裁剪 chrome、编辑行为、视口行为或扩展面板时，使用 `CodeEditorOptions` 统一配置：
 
 ```rust
-use liora::components::{CodeEditor, CodeEditorOptions};
+use liora::components::{
+    CodeEditor, CodeEditorHighlightTheme, CodeEditorInlineDiagnostics, CodeEditorOptions,
+    CodeEditorWhitespaceMode, CodeTheme,
+};
 
 let editor = CodeEditor::new(source, cx)
+    .theme(CodeTheme::OneDark)
     .options(CodeEditorOptions {
-        read_only: true,
-        header: false,
+        read_only: false,
+        header: true,
         status_bar: true,
-        line_numbers: false,
-        diagnostics_panel: false,
-        completions_panel: true,
-        hover_panel: false,
+        line_numbers: true,
         current_line_highlight: true,
-        completion_limit: 3,
-    });
+        rulers: true,
+        ruler_column: 100,
+        whitespace: CodeEditorWhitespaceMode::Boundary,
+        inline_diagnostics: CodeEditorInlineDiagnostics::WarningsAndErrors,
+        selection: true,
+        copy: true,
+        clipboard_editing: true,
+        cursor_blink: true,
+        drag_selection: true,
+        indentation: true,
+        history: true,
+        reveal_cursor: true,
+        scrollbar: true,
+        completion_limit: 6,
+        diagnostics_limit: 8,
+        ..CodeEditorOptions::default()
+    })
+    .highlight_theme(
+        CodeEditorHighlightTheme::new(CodeTheme::Nord)
+            .surface(gpui::rgb(0x0f172a).into())
+            .chrome_surface(gpui::rgb(0x111827).into())
+            .text(gpui::rgb(0xe5e7eb).into())
+            .muted_text(gpui::rgb(0x94a3b8).into())
+            .interaction(
+                gpui::rgb(0x38bdf8).into(),
+                gpui::rgb(0x2563eb).opacity(0.32).into(),
+                gpui::rgb(0x1e293b).into(),
+            ),
+    );
 ```
 
 

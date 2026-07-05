@@ -1550,6 +1550,7 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "code_editor/configuration.rs" => Some(include_str!(
             "../content/snippets/code_editor/configuration.rs"
         )),
+        "code_editor/theme.rs" => Some(include_str!("../content/snippets/code_editor/theme.rs")),
         "code_editor/diagnostics.rs" => Some(include_str!(
             "../content/snippets/code_editor/diagnostics.rs"
         )),
@@ -2484,6 +2485,7 @@ impl LiveDemoContent {
                             hover_panel: false,
                             current_line_highlight: true,
                             completion_limit: 3,
+                            ..liora_components::CodeEditorOptions::default()
                         })
                         .completions([
                             liora_components::CodeCompletionItem::new("CodeEditorOptions::default")
@@ -2498,6 +2500,49 @@ impl LiveDemoContent {
                             .kind("builder")
                             .detail("highlight the active row"),
                         ])
+                }));
+            }
+            "CodeEditorTheme" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_THEME_SAMPLE, cx)
+                        .language(CodeLanguage::Rust)
+                        .highlight_theme(
+                            liora_components::CodeEditorHighlightTheme::new(CodeTheme::Nord)
+                                .surface(gpui::rgb(0x0f172a).into())
+                                .chrome_surface(gpui::rgb(0x111827).into())
+                                .gutter_surface(gpui::rgb(0x0b1220).into())
+                                .border(gpui::rgb(0x334155).into())
+                                .text(gpui::rgb(0xe5e7eb).into())
+                                .muted_text(gpui::rgb(0x94a3b8).into())
+                                .interaction(
+                                    gpui::rgb(0x38bdf8).into(),
+                                    gpui::rgb(0x2563eb).opacity(0.32).into(),
+                                    gpui::rgb(0x1e293b).into(),
+                                )
+                                .ruler(gpui::rgb(0x475569).opacity(0.72).into())
+                                .whitespace(gpui::rgb(0x64748b).opacity(0.58).into())
+                                .diagnostics(
+                                    gpui::rgb(0x22d3ee).into(),
+                                    gpui::rgb(0xfacc15).into(),
+                                    gpui::rgb(0xfb7185).into(),
+                                ),
+                        )
+                        .options(liora_components::CodeEditorOptions {
+                            current_line_highlight: true,
+                            rulers: true,
+                            ruler_column: 88,
+                            whitespace: liora_components::CodeEditorWhitespaceMode::Boundary,
+                            inline_diagnostics:
+                                liora_components::CodeEditorInlineDiagnostics::WarningsAndErrors,
+                            diagnostics_limit: 4,
+                            completion_limit: 4,
+                            ..liora_components::CodeEditorOptions::default()
+                        })
+                        .diagnostics([liora_components::CodeDiagnostic::warning(
+                            4,
+                            5,
+                            "Theme overrides also recolor diagnostics.",
+                        )])
                 }));
             }
             "CodeEditorDiagnostics" => {
@@ -3756,7 +3801,8 @@ impl Render for LiveDemoContent {
             "CodeEditorBasic"
             | "CodeEditorDiagnostics"
             | "CodeEditorAdvanced"
-            | "CodeEditorConfiguration" => demo_stack(
+            | "CodeEditorConfiguration"
+            | "CodeEditorTheme" => demo_stack(
                 self.code_editors
                     .iter()
                     .cloned()
@@ -7899,6 +7945,18 @@ const DOCS_CODE_EDITOR_CONFIG_SAMPLE: &str = r#"use liora_components::{CodeEdito
 
 let options = CodeEditorOptions::default();
 // Read-only editors still support selection, copy, scroll and hover.
+"#;
+
+const DOCS_CODE_EDITOR_THEME_SAMPLE: &str = r#"use liora_components::{
+    CodeEditorHighlightTheme, CodeEditorOptions, CodeEditorWhitespaceMode,
+};
+
+let options = CodeEditorOptions {
+    current_line_highlight: true,
+    rulers: true,
+    whitespace: CodeEditorWhitespaceMode::Boundary,
+    ..CodeEditorOptions::default()
+};
 "#;
 
 const DOCS_HORIZONTAL_STEPS: &[(&str, &str)] =

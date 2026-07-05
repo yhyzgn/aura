@@ -1,8 +1,9 @@
-use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*};
+use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*, rgb};
 use liora_components::layout_helpers::{page, section, showcase_card_wide, showcase_stack};
 use liora_components::{
-    CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeEditorOptions, CodeHover, CodeLanguage,
-    CodeTheme, Space, Text, toast_info,
+    CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeEditorHighlightTheme,
+    CodeEditorInlineDiagnostics, CodeEditorOptions, CodeEditorWhitespaceMode, CodeHover,
+    CodeLanguage, CodeTheme, Space, Text, toast_info,
 };
 
 pub fn render(cx: &mut App) -> AnyView {
@@ -14,6 +15,7 @@ struct CodeEditorDemo {
     diagnostics: Entity<CodeEditor>,
     advanced: Entity<CodeEditor>,
     configurable: Entity<CodeEditor>,
+    themed: Entity<CodeEditor>,
 }
 
 impl CodeEditorDemo {
@@ -69,6 +71,52 @@ impl CodeEditorDemo {
                 ))
         });
 
+        let themed = cx.new(|cx| {
+            CodeEditor::new(THEME_SAMPLE, cx)
+                .language(CodeLanguage::Rust)
+                .highlight_theme(
+                    CodeEditorHighlightTheme::new(CodeTheme::Nord)
+                        .surface(rgb(0x0f172a).into())
+                        .chrome_surface(rgb(0x111827).into())
+                        .gutter_surface(rgb(0x0b1220).into())
+                        .border(rgb(0x334155).into())
+                        .text(rgb(0xe5e7eb).into())
+                        .muted_text(rgb(0x94a3b8).into())
+                        .interaction(
+                            rgb(0x38bdf8).into(),
+                            rgb(0x2563eb).opacity(0.32).into(),
+                            rgb(0x1e293b).into(),
+                        )
+                        .ruler(rgb(0x475569).opacity(0.72).into())
+                        .whitespace(rgb(0x64748b).opacity(0.58).into())
+                        .diagnostics(
+                            rgb(0x22d3ee).into(),
+                            rgb(0xfacc15).into(),
+                            rgb(0xfb7185).into(),
+                        ),
+                )
+                .options(CodeEditorOptions {
+                    current_line_highlight: true,
+                    rulers: true,
+                    ruler_column: 88,
+                    whitespace: CodeEditorWhitespaceMode::Boundary,
+                    inline_diagnostics: CodeEditorInlineDiagnostics::WarningsAndErrors,
+                    diagnostics_limit: 4,
+                    completion_limit: 4,
+                    ..CodeEditorOptions::default()
+                })
+                .diagnostics([CodeDiagnostic::warning(
+                    4,
+                    5,
+                    "Theme overrides also recolor diagnostics.",
+                )])
+                .completions([
+                    CodeCompletionItem::new("highlight_theme(...)"),
+                    CodeCompletionItem::new("whitespace(CodeEditorWhitespaceMode::Boundary)"),
+                    CodeCompletionItem::new("ruler_column(88)"),
+                ])
+        });
+
         let configurable = cx.new(|cx| {
             CodeEditor::new(CONFIG_SAMPLE, cx)
                 .language(CodeLanguage::Rust)
@@ -83,6 +131,7 @@ impl CodeEditorDemo {
                     hover_panel: false,
                     current_line_highlight: true,
                     completion_limit: 3,
+                    ..CodeEditorOptions::default()
                 })
                 .completions([
                     CodeCompletionItem::new("CodeEditorOptions::default")
@@ -102,6 +151,7 @@ impl CodeEditorDemo {
             diagnostics,
             advanced,
             configurable,
+            themed,
         }
     }
 }
@@ -143,6 +193,12 @@ impl Render for CodeEditorDemo {
                         self.configurable.clone(),
                     )
                     .into_any_element(),
+                    showcase_card_wide(
+                        "自定义高亮主题和高级编辑行为",
+                        "CodeEditorHighlightTheme 可覆盖编辑器底色、gutter、selection、caret、ruler、whitespace、诊断色和语法 run。",
+                        self.themed.clone(),
+                    )
+                    .into_any_element(),
                 ]),
             )),
         )
@@ -172,6 +228,18 @@ let options = CodeEditorOptions::default();
 // Read-only mode still supports selection, copy, scroll and hover.
 "#;
 
+const THEME_SAMPLE: &str = r#"use liora_components::{
+    CodeEditorHighlightTheme, CodeEditorOptions, CodeEditorWhitespaceMode,
+};
+
+let options = CodeEditorOptions {
+    current_line_highlight: true,
+    rulers: true,
+    whitespace: CodeEditorWhitespaceMode::Boundary,
+    ..CodeEditorOptions::default()
+};
+"#;
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -188,5 +256,8 @@ mod tests {
         assert!(source.contains("CodeEditorOptions"));
         assert!(source.contains("read_only(true)"));
         assert!(source.contains("current_line_highlight(true)"));
+        assert!(source.contains("CodeEditorHighlightTheme"));
+        assert!(source.contains("CodeEditorWhitespaceMode"));
+        assert!(source.contains("ruler_column"));
     }
 }
