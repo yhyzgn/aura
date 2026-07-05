@@ -19,7 +19,7 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::{CodeLanguage, CodeTheme, VirtualScrollbar};
+use crate::{CodeLanguage, CodeTheme, VirtualScrollbar, gpui_compat::element_id};
 use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, HighlightStyle, Hsla,
@@ -576,19 +576,34 @@ impl CodeDisplayMap {
 pub struct CodeFold {
     /// Zero-based first line that remains visible as the fold header.
     pub start_line: usize,
-    /// Zero-based inclusive last line hidden by the fold.
+    /// Zero-based inclusive last line hidden when the fold is collapsed.
     pub end_line: usize,
     /// Label rendered next to the fold placeholder.
     pub label: SharedString,
+    /// Whether child rows are currently hidden.
+    pub collapsed: bool,
 }
 
 impl CodeFold {
-    /// Creates a folded source range. `end_line` is clamped above `start_line` by render helpers.
+    /// Creates a folded source range that starts collapsed.
+    ///
+    /// `end_line` is clamped above `start_line` by render helpers. Host
+    /// applications can set `collapsed` to `false` when they want the range to
+    /// be expandable but initially open.
     pub fn new(start_line: usize, end_line: usize, label: impl Into<SharedString>) -> Self {
         Self {
             start_line,
             end_line,
             label: label.into(),
+            collapsed: true,
+        }
+    }
+
+    /// Creates a fold range that starts expanded while still rendering a toggle affordance.
+    pub fn expanded(start_line: usize, end_line: usize, label: impl Into<SharedString>) -> Self {
+        Self {
+            collapsed: false,
+            ..Self::new(start_line, end_line, label)
         }
     }
 
@@ -665,7 +680,10 @@ fn visible_rows_for(line_count: usize, folds: &[CodeFold], enabled: bool) -> Vec
     let mut row = 0;
     while row < line_count {
         rows.push(row);
-        if let Some(fold) = folds.iter().find(|fold| fold.start_line == row) {
+        if let Some(fold) = folds
+            .iter()
+            .find(|fold| fold.start_line == row && fold.collapsed)
+        {
             row = fold.end_line.saturating_add(1).min(line_count);
         } else {
             row += 1;
@@ -2279,6 +2297,41 @@ impl CodeEditor {
         self.options.code_folding = enabled;
         self.sync_list_state();
         self
+    }
+
+    /// Sets the collapsed state for a configured fold header line.
+    pub fn set_fold_collapsed(
+        &mut self,
+        start_line: usize,
+        collapsed: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(fold) = self
+            .folds
+            .iter_mut()
+            .find(|fold| fold.start_line == start_line)
+        {
+            if fold.collapsed != collapsed {
+                fold.collapsed = collapsed;
+                self.sync_list_state();
+                if self.options.reveal_cursor {
+                    self.reveal_cursor();
+                }
+                cx.notify();
+            }
+        }
+    }
+
+    /// Toggles the collapsed state for a configured fold header line.
+    pub fn toggle_fold(&mut self, start_line: usize, cx: &mut Context<Self>) {
+        if let Some(collapsed) = self
+            .folds
+            .iter()
+            .find(|fold| fold.start_line == start_line)
+            .map(|fold| fold.collapsed)
+        {
+            self.set_fold_collapsed(start_line, !collapsed, cx);
+        }
     }
 
     /// Replaces configured fold ranges.
@@ -3972,11 +4025,19 @@ fn render_editor_row(
                     theme: theme.clone(),
                     editor_theme: editor_theme.clone(),
                     whitespace: options.whitespace,
-                    editor,
+                    editor: editor.clone(),
                 })
                 .when_some(fold.cloned(), |s, fold| {
+                    let toggle_editor = editor.clone();
+                    let icon = if fold.collapsed { "▶" } else { "▼" };
+                    let summary = if fold.collapsed {
+                        format!("{} · {} folded lines", fold.label, fold.hidden_count())
+                    } else {
+                        format!("{} · collapse {} lines", fold.label, fold.hidden_count())
+                    };
                     s.child(
                         div()
+                            .id(element_id(format!("code-editor-fold-toggle-{row}")))
                             .flex()
                             .items_center()
                             .gap_2()
@@ -3989,12 +4050,17 @@ fn render_editor_row(
                             .py_1()
                             .text_xs()
                             .text_color(editor_theme.muted_text)
-                            .child("↳")
-                            .child(format!(
-                                "{} · {} folded lines",
-                                fold.label,
-                                fold.hidden_count()
-                            )),
+                            .cursor_pointer()
+                            .hover(|s| {
+                                s.border_color(editor_theme.caret)
+                                    .text_color(editor_theme.caret)
+                            })
+                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                                toggle_editor.update(cx, |editor, cx| editor.toggle_fold(row, cx));
+                                cx.stop_propagation();
+                            })
+                            .child(icon)
+                            .child(summary),
                     )
                 })
                 .when(!line_diagnostics.is_empty(), |s| {
@@ -5063,11 +5129,24 @@ gamma",
         assert!(production_source.contains("pub fn line_height_units"));
         assert!(production_source.contains("pub fn indent_guides"));
         assert!(production_source.contains("pub fn fold_range"));
+        assert!(production_source.contains("pub fn toggle_fold"));
+        assert!(production_source.contains("pub fn set_fold_collapsed"));
         assert!(production_source.contains("fn visible_rows_for"));
         assert!(production_source.contains("fn indent_guide_quads"));
+        assert!(production_source.contains("code-editor-fold-toggle-{row}"));
+        assert!(production_source.contains(".cursor_pointer()"));
+        assert!(production_source.contains("editor.toggle_fold(row, cx)"));
         assert_eq!(
             visible_rows_for(8, &[CodeFold::new(2, 5, "body")], true),
             vec![0, 1, 2, 6, 7]
+        );
+        assert_eq!(
+            visible_rows_for(8, &[CodeFold::expanded(2, 5, "body")], true),
+            vec![0, 1, 2, 3, 4, 5, 6, 7]
+        );
+        assert_eq!(
+            visible_rows_for(8, &[CodeFold::new(2, 5, "body")], false),
+            vec![0, 1, 2, 3, 4, 5, 6, 7]
         );
         assert_eq!(leading_indent_columns("        let value = 1;", 4), 8);
     }

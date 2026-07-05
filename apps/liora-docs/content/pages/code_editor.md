@@ -69,7 +69,7 @@
 ```rust src="code_editor/indent_guides.rs"
 ```
 
-## 高级布局：代码块折叠
+## 高级布局：代码块折叠 / 点击展开
 
 ### 效果
 

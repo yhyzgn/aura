@@ -273,8 +273,8 @@ impl Render for CodeEditorDemo {
                     )
                     .into_any_element(),
                     showcase_card_wide(
-                        "高级布局：代码块折叠",
-                        "fold_range(...) 声明折叠区间，CodeEditor 会隐藏折叠行并展示折叠占位标签。",
+                        "高级布局：代码块折叠 / 点击展开",
+                        "fold_range(...) 声明可折叠区间；点击折叠标签可在展开和收起之间切换。",
                         self.folding_demo.clone(),
                     )
                     .into_any_element(),
