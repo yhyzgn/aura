@@ -174,7 +174,9 @@ impl RenderOnce for Card {
         // Body
         el = el.child(
             div()
-                .when(self.full_width, |s| s.w_full().min_w(px(0.0)))
+                .when(self.full_width, |s| {
+                    s.flex().flex_col().w_full().min_w(px(0.0))
+                })
                 .p_4()
                 .text_color(theme.neutral.text_2)
                 .child(self.body),
@@ -226,7 +228,7 @@ mod tests {
         assert!(card.full_width);
         assert_eq!(card.width, None);
         assert!(production.contains("s.w_full().min_w(px(0.0)).flex_shrink(1.0)"));
-        assert!(production.contains("s.w_full().min_w(px(0.0))"));
+        assert!(production.contains("s.flex().flex_col().w_full().min_w(px(0.0))"));
     }
 
     #[test]
