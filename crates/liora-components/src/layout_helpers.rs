@@ -65,7 +65,7 @@ pub fn showcase_card_wide(
             .child(header(title, description))
             .child(body),
     )
-    .width(px(760.0))
+    .full_width()
     .no_shadow()
 }
 
@@ -130,7 +130,7 @@ mod tests {
         assert!(source.contains("pub fn showcase_grid("));
         assert!(source.contains("pub fn showcase_stack("));
         assert!(source.contains(".width(px(360.0))"));
-        assert!(source.contains(".width(px(760.0))"));
+        assert!(source.contains(".full_width()"));
         assert!(source.contains(".align_start()"));
     }
 }

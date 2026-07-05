@@ -34,6 +34,7 @@ pub struct Card {
     hoverable: bool,
     shadow: bool,
     width: Option<Pixels>,
+    full_width: bool,
     shrink: bool,
 }
 
@@ -48,6 +49,7 @@ impl Card {
             hoverable: false,
             shadow: true,
             width: None,
+            full_width: false,
             shrink: true,
         }
     }
@@ -85,6 +87,14 @@ impl Card {
     /// Sets the component width token used during GPUI layout.
     pub fn width(mut self, width: impl Into<Pixels>) -> Self {
         self.width = Some(width.into());
+        self.full_width = false;
+        self
+    }
+
+    /// Expands the card to fill the available parent width.
+    pub fn full_width(mut self) -> Self {
+        self.width = None;
+        self.full_width = true;
         self
     }
 
@@ -119,6 +129,9 @@ impl RenderOnce for Card {
             .rounded(px(theme.radius.md))
             .overflow_hidden()
             .when(!self.shrink, |s| s.flex_none())
+            .when(self.full_width, |s| {
+                s.w_full().min_w(px(0.0)).flex_shrink(1.0)
+            })
             .when_some(self.width, |s, width| s.w(width));
 
         if self.shadow {
