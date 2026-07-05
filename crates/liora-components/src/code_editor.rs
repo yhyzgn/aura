@@ -19,13 +19,14 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::{CodeLanguage, CodeTheme, VirtualScrollbar, code_block::highlighted_code_text};
+use crate::{CodeLanguage, CodeTheme, VirtualScrollbar, code_block::highlighted_code_runs};
 use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton, MouseDownEvent,
-    MouseMoveEvent, MouseUpEvent, Pixels, Point, Render, SharedString, Style, UTF16Selection,
-    Window, actions, div, list, prelude::*, px, relative,
+    MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, ShapedLine, SharedString,
+    Style, TextAlign, TextRun, UTF16Selection, Window, actions, div, fill, list, point, prelude::*,
+    px, relative, size,
 };
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
@@ -607,6 +608,7 @@ pub struct CodeEditor {
     hover_provider: Option<Arc<CodeHoverProvider>>,
     search_query: Option<SharedString>,
     on_change: Option<Arc<CodeEditorChangeCallback>>,
+    row_layouts: Vec<Option<CodeEditorRowLayout>>,
 }
 
 impl CodeEditor {
@@ -641,6 +643,7 @@ impl CodeEditor {
             hover_provider: None,
             search_query: None,
             on_change: None,
+            row_layouts: vec![None; row_count],
         }
     }
 
@@ -663,6 +666,7 @@ impl CodeEditor {
         }
         self.buffer.set_text(value.to_string());
         self.selection.set_cursor(self.buffer.len());
+        self.invalidate_row_layouts();
         self.undo_stack.clear();
         self.redo_stack.clear();
         self.sync_list_state();
@@ -701,6 +705,7 @@ impl CodeEditor {
         let language = language.into();
         if self.language != language {
             self.language = language;
+            self.invalidate_row_layouts();
             cx.notify();
         }
     }
@@ -909,6 +914,10 @@ impl CodeEditor {
     }
 
     fn point_for_editor_position(&self, position: Point<Pixels>) -> usize {
+        if let Some(offset) = self.offset_for_shaped_position(position) {
+            return offset;
+        }
+
         let scroll_top = self.list_state.logical_scroll_top();
         self.display_map().offset_for_position(
             &self.buffer,
@@ -917,6 +926,42 @@ impl CodeEditor {
             scroll_top.offset_in_item,
             self.line_numbers,
         )
+    }
+
+    fn offset_for_shaped_position(&self, position: Point<Pixels>) -> Option<usize> {
+        let mut fallback_row = None;
+        for (row, layout) in self.row_layouts.iter().enumerate() {
+            let Some(layout) = layout else {
+                continue;
+            };
+            if position.y >= layout.bounds.top() && position.y <= layout.bounds.bottom() {
+                let local_x = (position.x - layout.bounds.left()).max(px(0.0));
+                let column = layout.shaped.closest_index_for_x(local_x);
+                return Some(self.buffer.point_to_offset(CodePoint::new(row, column)));
+            }
+            if position.y >= layout.bounds.top() {
+                fallback_row = Some(row);
+            }
+        }
+
+        fallback_row.map(|row| {
+            let line = self.buffer.line(row);
+            self.buffer.point_to_offset(CodePoint::new(row, line.len()))
+        })
+    }
+
+    fn invalidate_row_layouts(&mut self) {
+        self.row_layouts.clear();
+        self.row_layouts.resize(self.buffer.line_count(), None);
+    }
+
+    fn update_row_layout(&mut self, row: usize, bounds: Bounds<Pixels>, shaped: ShapedLine) {
+        if self.row_layouts.len() < self.buffer.line_count() {
+            self.row_layouts.resize(self.buffer.line_count(), None);
+        }
+        if row < self.row_layouts.len() {
+            self.row_layouts[row] = Some(CodeEditorRowLayout { bounds, shaped });
+        }
     }
 
     fn start_blink(&mut self, cx: &mut Context<Self>) {
@@ -995,7 +1040,7 @@ impl CodeEditor {
         }
     }
 
-    fn sync_list_state(&self) {
+    fn sync_list_state(&mut self) {
         let line_count = self.buffer.line_count();
         let current_count = self.list_state.item_count();
         if line_count > current_count {
@@ -1003,6 +1048,9 @@ impl CodeEditor {
                 .splice(current_count..current_count, line_count - current_count);
         } else if line_count < current_count {
             self.list_state.splice(line_count..current_count, 0);
+        }
+        if self.row_layouts.len() != line_count {
+            self.invalidate_row_layouts();
         }
     }
 
@@ -1066,6 +1114,7 @@ impl CodeEditor {
         }
         self.undo_stack.push(transaction);
         self.redo_stack.clear();
+        self.invalidate_row_layouts();
         self.sync_list_state();
         self.handle_buffer_change(cx);
     }
@@ -1077,6 +1126,7 @@ impl CodeEditor {
         cx: &mut Context<Self>,
     ) {
         self.buffer.set_text(text);
+        self.invalidate_row_layouts();
         self.selection = selection;
         self.selection.range =
             normalize_replace_range(self.buffer.as_str(), self.selection.range.clone());
@@ -1190,6 +1240,7 @@ impl CodeEditor {
         next.push_str(&source[line_bounds.end..]);
         let transaction = CodeTransaction::new(source.clone(), self.selection.clone());
         self.buffer.set_text(next);
+        self.invalidate_row_layouts();
         let start = apply_signed_delta(selection.start, selection_start_delta);
         let end = apply_signed_delta(selection.end, selection_end_delta).max(start);
         self.selection.range = self.buffer.clamp_offset(start)..self.buffer.clamp_offset(end);
@@ -1552,6 +1603,8 @@ impl Render for CodeEditor {
         let code_family_for_rows = code_family.clone();
         let theme_for_rows = theme.clone();
         let code_weight_for_rows = code_weight;
+        let editor_entity = cx.entity();
+        let editor_entity_for_rows = editor_entity.clone();
         let cursor_active = focused;
         let cursor_visible = focused && self.cursor_visible;
 
@@ -1649,6 +1702,7 @@ impl Render for CodeEditor {
                     .on_mouse_up_out(MouseButton::Left, cx.listener(Self::mouse_up_in_editor))
                     .child(
                         list(list_state.clone(), move |row, _window, _cx| {
+                            let editor_for_row = editor_entity_for_rows.clone();
                             render_editor_row(
                                 row,
                                 &buffer,
@@ -1663,6 +1717,7 @@ impl Render for CodeEditor {
                                 row_display_map,
                                 cursor_active,
                                 cursor_visible,
+                                editor_for_row,
                             )
                             .into_any_element()
                         })
@@ -1670,7 +1725,7 @@ impl Render for CodeEditor {
                         .into_any_element(),
                     )
                     .child(CodeEditorInputLayer {
-                        editor: cx.entity(),
+                        editor: editor_entity,
                     })
                     .child(VirtualScrollbar::new(list_state)),
             )
@@ -1684,6 +1739,12 @@ impl Render for CodeEditor {
                 s.child(render_hover(hover, &theme))
             })
     }
+}
+
+#[derive(Clone)]
+struct CodeEditorRowLayout {
+    bounds: Bounds<Pixels>,
+    shaped: ShapedLine,
 }
 
 fn render_editor_row(
@@ -1700,6 +1761,7 @@ fn render_editor_row(
     display_map: CodeDisplayMap,
     cursor_active: bool,
     cursor_visible: bool,
+    editor: Entity<CodeEditor>,
 ) -> gpui::Div {
     let line = buffer.line(row);
     let cursor_point = buffer.offset_to_point(selection.cursor());
@@ -1711,6 +1773,7 @@ fn render_editor_row(
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .collect::<Vec<_>>();
     let row_bg = theme.neutral.card.opacity(0.0);
+    let runs = highlighted_code_runs(line, language, code_theme, theme, &code_family, code_weight);
 
     div()
         .flex()
@@ -1749,18 +1812,17 @@ fn render_editor_row(
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
                 .text_sm()
                 .text_color(theme.neutral.text_1)
-                .child(render_line_text(
-                    line,
+                .child(CodeEditorLineElement {
+                    row,
+                    text: SharedString::from(line.to_string()),
+                    runs,
                     selection_range,
                     cursor_column,
-                    cursor_active,
-                    cursor_visible,
-                    language,
-                    code_theme,
-                    theme,
-                    &code_family,
-                    code_weight,
-                ))
+                    cursor_visible: cursor_active && cursor_visible && cursor_column.is_some(),
+                    line_height: display_map.row_height(),
+                    theme: theme.clone(),
+                    editor,
+                })
                 .when(!line_diagnostics.is_empty(), |s| {
                     let mut diagnostics_row = div().flex().flex_col().gap_1().mt_1();
                     for diagnostic in line_diagnostics {
@@ -1785,6 +1847,142 @@ fn render_editor_row(
         )
 }
 
+struct CodeEditorLineElement {
+    row: usize,
+    text: SharedString,
+    runs: Vec<TextRun>,
+    selection_range: Option<Range<usize>>,
+    cursor_column: Option<usize>,
+    cursor_visible: bool,
+    line_height: Pixels,
+    theme: liora_theme::Theme,
+    editor: Entity<CodeEditor>,
+}
+
+struct CodeEditorLinePrepaint {
+    shaped: ShapedLine,
+    selection: Vec<PaintQuad>,
+    caret: Option<PaintQuad>,
+}
+
+impl IntoElement for CodeEditorLineElement {
+    type Element = Self;
+
+    fn into_element(self) -> Self::Element {
+        self
+    }
+}
+
+impl Element for CodeEditorLineElement {
+    type RequestLayoutState = ShapedLine;
+    type PrepaintState = CodeEditorLinePrepaint;
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, Self::RequestLayoutState) {
+        let shaped = window.text_system().shape_line(
+            self.text.clone(),
+            px(self.theme.font_size.sm),
+            &self.runs,
+            None,
+        );
+        let mut style = Style::default();
+        style.size.width = relative(1.0).into();
+        style.size.height = self.line_height.into();
+        (window.request_layout(style, [], cx), shaped)
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        shaped: &mut Self::RequestLayoutState,
+        _window: &mut Window,
+        cx: &mut App,
+    ) -> Self::PrepaintState {
+        self.editor.update(cx, |editor, _| {
+            editor.update_row_layout(self.row, bounds, shaped.clone());
+        });
+
+        let mut selection = Vec::new();
+        if let Some(range) = self.selection_range.clone() {
+            let range = normalize_replace_range(self.text.as_ref(), range);
+            if range.start < range.end {
+                let x_start = shaped.x_for_index(range.start);
+                let x_end = shaped.x_for_index(range.end);
+                selection.push(fill(
+                    Bounds::new(
+                        point(bounds.left() + x_start, bounds.top()),
+                        size((x_end - x_start).max(px(1.0)), self.line_height),
+                    ),
+                    self.theme.primary.base.opacity(0.30),
+                ));
+            }
+        }
+
+        let caret = self.cursor_column.map(|column| {
+            let column = clamp_to_char_boundary(self.text.as_ref(), column);
+            let x = shaped.x_for_index(column);
+            fill(
+                Bounds::new(
+                    point(bounds.left() + x, bounds.top() + px(3.0)),
+                    size(px(2.0), (self.line_height - px(6.0)).max(px(1.0))),
+                ),
+                if self.cursor_visible {
+                    self.theme.primary.base
+                } else {
+                    self.theme.primary.base.opacity(0.0)
+                },
+            )
+        });
+
+        CodeEditorLinePrepaint {
+            shaped: shaped.clone(),
+            selection,
+            caret,
+        }
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _: &mut Self::RequestLayoutState,
+        prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        for quad in prepaint.selection.drain(..) {
+            window.paint_quad(quad);
+        }
+        let _ = prepaint.shaped.paint(
+            point(bounds.left(), bounds.top()),
+            self.line_height,
+            TextAlign::Left,
+            None,
+            window,
+            cx,
+        );
+        if let Some(caret) = prepaint.caret.take() {
+            window.paint_quad(caret);
+        }
+    }
+}
+
 fn line_selection_range(
     buffer: &CodeBuffer,
     selection: &CodeSelection,
@@ -1802,136 +2000,6 @@ fn line_selection_range(
     } else {
         None
     }
-}
-
-fn render_line_text(
-    line: &str,
-    selection_range: Option<Range<usize>>,
-    cursor_column: Option<usize>,
-    cursor_active: bool,
-    cursor_visible: bool,
-    language: CodeLanguage,
-    code_theme: CodeTheme,
-    theme: &liora_theme::Theme,
-    code_family: &SharedString,
-    code_weight: Option<gpui::FontWeight>,
-) -> gpui::Div {
-    render_line_segments(
-        line,
-        selection_range,
-        cursor_column,
-        cursor_active,
-        cursor_visible,
-        language,
-        code_theme,
-        theme,
-        code_family,
-        code_weight,
-    )
-}
-
-fn render_line_segments(
-    line: &str,
-    selection_range: Option<Range<usize>>,
-    cursor_column: Option<usize>,
-    cursor_active: bool,
-    cursor_visible: bool,
-    language: CodeLanguage,
-    code_theme: CodeTheme,
-    theme: &liora_theme::Theme,
-    code_family: &SharedString,
-    code_weight: Option<gpui::FontWeight>,
-) -> gpui::Div {
-    let cursor_column = cursor_column.map(|column| clamp_to_char_boundary(line, column));
-    let selection_range = selection_range.map(|range| normalize_replace_range(line, range));
-    let mut boundaries = vec![0, line.len()];
-    if let Some(column) = cursor_column {
-        boundaries.push(column);
-    }
-    if let Some(range) = selection_range.clone() {
-        boundaries.push(range.start);
-        boundaries.push(range.end);
-    }
-    boundaries.sort_unstable();
-    boundaries.dedup();
-
-    let mut row = div().flex().items_center().min_w_0();
-    let mut rendered_cursor = false;
-    for window in boundaries.windows(2) {
-        let start = window[0];
-        let end = window[1];
-        if cursor_column == Some(start) && cursor_active && !rendered_cursor {
-            row = row.child(cursor_element(theme, cursor_visible));
-            rendered_cursor = true;
-        }
-        if start == end {
-            continue;
-        }
-        let segment = &line[start..end];
-        let selected = selection_range
-            .as_ref()
-            .is_some_and(|range| start < range.end && end > range.start);
-        row = row.child(render_line_segment(
-            segment,
-            selected,
-            language,
-            code_theme,
-            theme,
-            code_family,
-            code_weight,
-        ));
-    }
-
-    if cursor_column == Some(line.len()) && cursor_active && !rendered_cursor {
-        row = row.child(cursor_element(theme, cursor_visible));
-        rendered_cursor = true;
-    }
-    if line.is_empty() {
-        if cursor_column.is_some() && cursor_active && !rendered_cursor {
-            row = row.child(cursor_element(theme, cursor_visible));
-        }
-        row = row.child(div().child(" "));
-    }
-    row
-}
-
-fn render_line_segment(
-    segment: &str,
-    selected: bool,
-    language: CodeLanguage,
-    code_theme: CodeTheme,
-    theme: &liora_theme::Theme,
-    code_family: &SharedString,
-    code_weight: Option<gpui::FontWeight>,
-) -> gpui::Div {
-    div()
-        .rounded(px(2.0))
-        .when(selected, |s| s.bg(theme.primary.base.opacity(0.30)))
-        .child(highlighted_code_text(
-            SharedString::from(segment.to_string()),
-            language,
-            code_theme,
-            theme,
-            code_family,
-            code_weight,
-        ))
-}
-
-fn cursor_element(theme: &liora_theme::Theme, visible: bool) -> gpui::Div {
-    div().relative().flex_none().w(px(0.0)).h(px(17.0)).child(
-        div()
-            .absolute()
-            .left_0()
-            .top_0()
-            .w(px(2.0))
-            .h(px(17.0))
-            .rounded(px(1.0))
-            .bg(if visible {
-                theme.primary.base
-            } else {
-                theme.primary.base.opacity(0.0)
-            }),
-    )
 }
 
 fn search_match_count(value: &str, query: &str) -> usize {
@@ -2144,7 +2212,8 @@ mod tests {
         assert!(source.contains("mouse_up_in_editor"));
         assert!(source.contains("point_for_editor_position"));
         assert!(source.contains("render_editor_row"));
-        assert!(source.contains("highlighted_code_text"));
+        assert!(source.contains("CodeEditorLineElement"));
+        assert!(source.contains("highlighted_code_runs"));
         assert!(
             !source
                 .lines()
@@ -2211,7 +2280,7 @@ mod tests {
             .split("#[cfg(test)]")
             .next()
             .expect("code editor source should have a production section");
-        assert!(production_source.contains("fn sync_list_state(&self)"));
+        assert!(production_source.contains("fn sync_list_state(&mut self)"));
         assert!(production_source.contains("self.list_state.item_count()"));
         assert!(production_source.contains(".splice(current_count..current_count"));
         assert!(production_source.contains(".splice(line_count..current_count, 0)"));
@@ -2298,22 +2367,21 @@ mod tests {
         assert!(production_source.contains("fn start_blink"));
         assert!(production_source.contains("fn line_selection_range"));
         assert!(production_source.contains("cursor_column"));
-        assert!(production_source.contains("render_line_segments"));
+        assert!(production_source.contains("CodeEditorLineElement"));
+        assert!(production_source.contains("window.text_system().shape_line"));
+        assert!(production_source.contains("shaped.x_for_index"));
+        assert!(production_source.contains("shaped.closest_index_for_x"));
+        assert!(production_source.contains("window.paint_quad"));
+        assert!(production_source.contains("prepaint.shaped.paint"));
         assert!(production_source.contains("on_mouse_up_out(MouseButton::Left"));
         assert!(production_source.contains("theme.neutral.card.opacity(0.0)"));
         assert!(production_source.contains("cursor_active"));
         assert!(production_source.contains("cursor_visible"));
-        assert!(
-            production_source
-                .contains("fn cursor_element(theme: &liora_theme::Theme, visible: bool)")
-        );
-        assert!(production_source.contains("theme.primary.base.opacity(0.0)"));
-        assert!(production_source.contains("cursor_column.is_some() && cursor_active"));
-        assert!(production_source.contains(".w(px(0.0))"));
-        assert!(production_source.contains(".absolute()"));
         assert!(!production_source.contains(
             "let selected = selection.range.start < row_end && selection.range.end > row_start;"
         ));
+        assert!(!production_source.contains("fn render_line_segments"));
+        assert!(!production_source.contains("fn cursor_element"));
         assert!(
             !production_source
                 .contains(".when(selected, |s| s.bg(theme.primary.base.opacity(0.22)))")
