@@ -30,7 +30,7 @@ use gpui::{
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
 use liora_icons_lucide::IconName;
-use std::{ops::Range, sync::Arc};
+use std::{ops::Range, sync::Arc, time::Duration};
 
 /// Type alias for code editor change callback values used by the code editor API.
 pub type CodeEditorChangeCallback = dyn Fn(&str, &mut Context<CodeEditor>) + 'static;
@@ -590,6 +590,8 @@ pub struct CodeEditor {
     viewport: CodeViewport,
     height: Option<Pixels>,
     editor_bounds: Option<Bounds<Pixels>>,
+    cursor_visible: bool,
+    blink_task: Option<gpui::Task<()>>,
     drag_selecting: bool,
     undo_stack: Vec<CodeTransaction>,
     redo_stack: Vec<CodeTransaction>,
@@ -622,6 +624,8 @@ impl CodeEditor {
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             height: None,
             editor_bounds: None,
+            cursor_visible: true,
+            blink_task: None,
             drag_selecting: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
@@ -679,7 +683,7 @@ impl CodeEditor {
         self.selection.reversed = false;
         self.selection.preferred_column = None;
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     /// Sets the language identifier used for code display.
@@ -911,6 +915,32 @@ impl CodeEditor {
         )
     }
 
+    fn start_blink(&mut self, cx: &mut Context<Self>) {
+        self.cursor_visible = true;
+        let executor = cx.background_executor().clone();
+        self.blink_task = Some(cx.spawn(async move |this, cx| {
+            loop {
+                executor.timer(Duration::from_millis(500)).await;
+                let result = this.update(cx, |this, cx| {
+                    this.cursor_visible = !this.cursor_visible;
+                    cx.notify();
+                });
+                if result.is_err() {
+                    break;
+                }
+            }
+        }));
+    }
+
+    fn reset_blink(&mut self, cx: &mut Context<Self>) {
+        self.cursor_visible = true;
+        if self.blink_task.is_none() {
+            self.start_blink(cx);
+        } else {
+            cx.notify();
+        }
+    }
+
     fn mouse_down_in_editor(
         &mut self,
         event: &MouseDownEvent,
@@ -926,7 +956,7 @@ impl CodeEditor {
         }
         self.drag_selecting = true;
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn mouse_move_in_editor(
@@ -941,7 +971,7 @@ impl CodeEditor {
         let offset = self.point_for_editor_position(event.position);
         self.selection.select_to(offset);
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn sync_list_state(&self) {
@@ -975,7 +1005,7 @@ impl CodeEditor {
             callback(&value, cx);
         }
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn offset_to_utf16(&self, offset: usize) -> usize {
@@ -1042,7 +1072,7 @@ impl CodeEditor {
             self.selection.set_cursor(offset);
         }
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn move_vertical(&mut self, delta: isize, select: bool, cx: &mut Context<Self>) {
@@ -1062,7 +1092,7 @@ impl CodeEditor {
             self.selection.preferred_column = Some(preferred);
         }
         self.reveal_cursor();
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn reveal_cursor(&self) {
@@ -1239,7 +1269,7 @@ impl CodeEditor {
         self.selection.range = 0..self.buffer.len();
         self.selection.reversed = false;
         self.selection.preferred_column = None;
-        cx.notify();
+        self.reset_blink(cx);
     }
 
     fn copy(&mut self, _: &CodeEditorCopy, _: &mut Window, cx: &mut Context<Self>) {
@@ -1363,7 +1393,7 @@ impl EntityInputHandler for CodeEditor {
             let end = replacement_start + selected.end;
             self.selection.range = normalize_replace_range(self.buffer.as_str(), start..end);
             self.selection.reversed = false;
-            cx.notify();
+            self.reset_blink(cx);
         }
     }
 
@@ -1467,6 +1497,13 @@ impl Focusable for CodeEditor {
 impl Render for CodeEditor {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.refresh_providers();
+        let focused = self.focus_handle(cx).is_focused(window);
+        if focused && self.blink_task.is_none() {
+            self.start_blink(cx);
+        } else if !focused && self.blink_task.is_some() {
+            self.blink_task = None;
+            self.cursor_visible = true;
+        }
 
         let theme = cx.global::<Config>().theme.clone();
         let code_family = code_font_family(cx);
@@ -1494,7 +1531,7 @@ impl Render for CodeEditor {
         let code_family_for_rows = code_family.clone();
         let theme_for_rows = theme.clone();
         let code_weight_for_rows = code_weight;
-        let focused = focus_handle.is_focused(window);
+        let show_cursor = focused && self.cursor_visible;
 
         div()
             .flex()
@@ -1600,6 +1637,7 @@ impl Render for CodeEditor {
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
                                 row_display_map,
+                                show_cursor,
                             )
                             .into_any_element()
                         })
@@ -1635,19 +1673,18 @@ fn render_editor_row(
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
     display_map: CodeDisplayMap,
+    show_cursor: bool,
 ) -> gpui::Div {
     let line = buffer.line(row);
-    let row_start = buffer.line_start(row);
-    let row_end = buffer.line_end(row);
-    let selected = selection.range.start < row_end && selection.range.end > row_start;
-    let cursor_row = buffer.offset_to_point(selection.cursor()).row == row;
+    let cursor_point = buffer.offset_to_point(selection.cursor());
+    let cursor_row = cursor_point.row == row;
+    let cursor_column = cursor_row.then_some(cursor_point.column);
+    let selection_range = line_selection_range(buffer, selection, row);
     let line_diagnostics = diagnostics
         .iter()
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .collect::<Vec<_>>();
     let row_bg = if cursor_row {
-        theme.primary.light_9.opacity(0.42)
-    } else if selected {
         theme.primary.light_9.opacity(0.24)
     } else {
         theme.neutral.card.opacity(0.0)
@@ -1692,8 +1729,9 @@ fn render_editor_row(
                 .text_color(theme.neutral.text_1)
                 .child(render_line_text(
                     line,
-                    selected,
-                    cursor_row,
+                    selection_range,
+                    cursor_column,
+                    show_cursor,
                     language,
                     code_theme,
                     theme,
@@ -1724,44 +1762,142 @@ fn render_editor_row(
         )
 }
 
+fn line_selection_range(
+    buffer: &CodeBuffer,
+    selection: &CodeSelection,
+    row: usize,
+) -> Option<Range<usize>> {
+    if selection.is_empty() {
+        return None;
+    }
+    let row_start = buffer.line_start(row);
+    let row_end = buffer.line_end(row);
+    let start = selection.range.start.max(row_start);
+    let end = selection.range.end.min(row_end);
+    if start < end {
+        Some(start - row_start..end - row_start)
+    } else {
+        None
+    }
+}
+
 fn render_line_text(
     line: &str,
-    selected: bool,
-    cursor_row: bool,
+    selection_range: Option<Range<usize>>,
+    cursor_column: Option<usize>,
+    show_cursor: bool,
     language: CodeLanguage,
     code_theme: CodeTheme,
     theme: &liora_theme::Theme,
     code_family: &SharedString,
     code_weight: Option<gpui::FontWeight>,
 ) -> gpui::Div {
-    let text = if line.is_empty() {
-        SharedString::from(" ")
-    } else {
-        SharedString::from(line.to_string())
-    };
-    let highlighted =
-        highlighted_code_text(text, language, code_theme, theme, code_family, code_weight);
+    render_line_segments(
+        line,
+        selection_range,
+        cursor_column,
+        show_cursor,
+        language,
+        code_theme,
+        theme,
+        code_family,
+        code_weight,
+    )
+}
+
+fn render_line_segments(
+    line: &str,
+    selection_range: Option<Range<usize>>,
+    cursor_column: Option<usize>,
+    show_cursor: bool,
+    language: CodeLanguage,
+    code_theme: CodeTheme,
+    theme: &liora_theme::Theme,
+    code_family: &SharedString,
+    code_weight: Option<gpui::FontWeight>,
+) -> gpui::Div {
+    let cursor_column = cursor_column.map(|column| clamp_to_char_boundary(line, column));
+    let selection_range = selection_range.map(|range| normalize_replace_range(line, range));
+    let mut boundaries = vec![0, line.len()];
+    if let Some(column) = cursor_column {
+        boundaries.push(column);
+    }
+    if let Some(range) = selection_range.clone() {
+        boundaries.push(range.start);
+        boundaries.push(range.end);
+    }
+    boundaries.sort_unstable();
+    boundaries.dedup();
+
+    let mut row = div().flex().items_center().min_w_0();
+    let mut rendered_cursor = false;
+    for window in boundaries.windows(2) {
+        let start = window[0];
+        let end = window[1];
+        if cursor_column == Some(start) && show_cursor && !rendered_cursor {
+            row = row.child(cursor_element(theme));
+            rendered_cursor = true;
+        }
+        if start == end {
+            continue;
+        }
+        let segment = &line[start..end];
+        let selected = selection_range
+            .as_ref()
+            .is_some_and(|range| start < range.end && end > range.start);
+        row = row.child(render_line_segment(
+            segment,
+            selected,
+            language,
+            code_theme,
+            theme,
+            code_family,
+            code_weight,
+        ));
+    }
+
+    if cursor_column == Some(line.len()) && show_cursor && !rendered_cursor {
+        row = row.child(cursor_element(theme));
+        rendered_cursor = true;
+    }
+    if line.is_empty() {
+        if show_cursor && !rendered_cursor {
+            row = row.child(cursor_element(theme));
+        }
+        row = row.child(div().child(" "));
+    }
+    row
+}
+
+fn render_line_segment(
+    segment: &str,
+    selected: bool,
+    language: CodeLanguage,
+    code_theme: CodeTheme,
+    theme: &liora_theme::Theme,
+    code_family: &SharedString,
+    code_weight: Option<gpui::FontWeight>,
+) -> gpui::Div {
     div()
-        .flex()
-        .items_center()
-        .gap_1()
-        .child(if cursor_row {
-            div()
-                .w(px(2.0))
-                .h(px(17.0))
-                .rounded(px(1.0))
-                .bg(theme.primary.base)
-                .into_any_element()
-        } else {
-            div().w(px(2.0)).into_any_element()
-        })
-        .child(
-            div()
-                .px_1()
-                .rounded(px(3.0))
-                .when(selected, |s| s.bg(theme.primary.base.opacity(0.22)))
-                .child(highlighted),
-        )
+        .rounded(px(2.0))
+        .when(selected, |s| s.bg(theme.primary.base.opacity(0.30)))
+        .child(highlighted_code_text(
+            SharedString::from(segment.to_string()),
+            language,
+            code_theme,
+            theme,
+            code_family,
+            code_weight,
+        ))
+}
+
+fn cursor_element(theme: &liora_theme::Theme) -> gpui::Div {
+    div()
+        .flex_none()
+        .w(px(2.0))
+        .h(px(17.0))
+        .rounded(px(1.0))
+        .bg(theme.primary.base)
 }
 
 fn search_match_count(value: &str, query: &str) -> usize {
@@ -2065,6 +2201,59 @@ mod tests {
         assert!(production_source.contains("position.y - bounds.top()"));
         assert!(production_source.contains("editor.editor_bounds = Some(bounds)"));
         assert!(production_source.contains("self.local_editor_position(position)"));
+    }
+
+    #[test]
+    fn code_display_map_maps_columns_beyond_line_start() {
+        let buffer = CodeBuffer::new("alpha\nbeta");
+        let display = CodeDisplayMap::default_for(true);
+
+        assert_eq!(
+            display.offset_for_position(
+                &buffer,
+                gpui::point(px(64.0 + 14.0 + 8.0 * 3.0), px(2.0)),
+                0,
+                px(0.0),
+                true,
+            ),
+            buffer.point_to_offset(CodePoint::new(0, 3))
+        );
+    }
+
+    #[test]
+    fn code_line_selection_range_is_column_scoped() {
+        let buffer = CodeBuffer::new("alpha\nbeta\ngamma");
+        let selection = CodeSelection {
+            range: 2..8,
+            reversed: false,
+            preferred_column: None,
+        };
+
+        assert_eq!(line_selection_range(&buffer, &selection, 0), Some(2..5));
+        assert_eq!(line_selection_range(&buffer, &selection, 1), Some(0..2));
+        assert_eq!(line_selection_range(&buffer, &selection, 2), None);
+    }
+
+    #[test]
+    fn code_editor_renders_column_level_caret_and_selection() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+        assert!(production_source.contains("cursor_visible: bool"));
+        assert!(production_source.contains("blink_task: Option<gpui::Task<()>>"));
+        assert!(production_source.contains("fn start_blink"));
+        assert!(production_source.contains("fn line_selection_range"));
+        assert!(production_source.contains("cursor_column"));
+        assert!(production_source.contains("render_line_segments"));
+        assert!(!production_source.contains(
+            "let selected = selection.range.start < row_end && selection.range.end > row_start;"
+        ));
+        assert!(
+            !production_source
+                .contains(".when(selected, |s| s.bg(theme.primary.base.opacity(0.22)))")
+        );
     }
 
     #[test]
