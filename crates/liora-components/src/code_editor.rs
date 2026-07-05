@@ -251,7 +251,7 @@ impl CodeHover {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-/// Zero-based point inside a [`CodeBuffer`].
+/// Zero-based point inside the editor buffer.
 pub struct CodePoint {
     /// Zero-based line index.
     pub row: usize,
@@ -1032,32 +1032,59 @@ impl CodeEditorConfig {
 #[derive(Clone, Debug, Default, Deserialize)]
 /// Serializable subset of CodeEditorOptions used by config files.
 pub struct CodeEditorOptionsConfig {
+    /// Enables read-only mode when `true`.
     pub read_only: Option<bool>,
+    /// Shows the editor header/chrome row when `true`.
     pub header: Option<bool>,
+    /// Shows the status bar when `true`.
     pub status_bar: Option<bool>,
+    /// Shows the line-number gutter when `true`.
     pub line_numbers: Option<bool>,
+    /// Shows the diagnostics panel when `true`.
     pub diagnostics_panel: Option<bool>,
+    /// Shows the completions panel when `true`.
     pub completions_panel: Option<bool>,
+    /// Shows the hover/help panel when `true`.
     pub hover_panel: Option<bool>,
+    /// Highlights the active cursor line when `true`.
     pub current_line_highlight: Option<bool>,
+    /// Draws indentation guide lines when `true`.
     pub indent_guides: Option<bool>,
+    /// Enables fold detection and gutter fold toggles when `true`.
     pub code_folding: Option<bool>,
+    /// Draws vertical ruler guides when `true`.
     pub rulers: Option<bool>,
+    /// One-based column used for the primary ruler.
     pub ruler_column: Option<usize>,
+    /// Inline diagnostic style, for example `off`, `gutter`, or `inline`.
     pub inline_diagnostics: Option<String>,
+    /// Whitespace rendering mode, for example `none`, `boundary`, or `all`.
     pub whitespace: Option<String>,
+    /// Enables text selection when `true`.
     pub selection: Option<bool>,
+    /// Enables copy operations when `true`.
     pub copy: Option<bool>,
+    /// Enables clipboard editing operations when `true`.
     pub clipboard_editing: Option<bool>,
+    /// Enables caret blinking when `true`.
     pub cursor_blink: Option<bool>,
+    /// Enables drag-to-select when `true`.
     pub drag_selection: Option<bool>,
+    /// Enables word selection gestures when `true`.
     pub word_selection: Option<bool>,
+    /// Enables whole-line selection gestures when `true`.
     pub line_selection: Option<bool>,
+    /// Enables indentation helpers such as tab handling when `true`.
     pub indentation: Option<bool>,
+    /// Enables undo/redo history when `true`.
     pub history: Option<bool>,
+    /// Keeps the caret visible after edits and navigation when `true`.
     pub reveal_cursor: Option<bool>,
+    /// Shows the editor scrollbar when `true`.
     pub scrollbar: Option<bool>,
+    /// Maximum number of completion items rendered by the sample panel.
     pub completion_limit: Option<usize>,
+    /// Maximum number of diagnostics rendered by the diagnostics panel.
     pub diagnostics_limit: Option<usize>,
 }
 
@@ -1113,21 +1140,37 @@ impl CodeEditorOptionsConfig {
 #[derive(Clone, Debug, Default, Deserialize)]
 /// Serializable editor appearance overrides. Color values use `#rrggbb` or `#rrggbbaa`.
 pub struct CodeEditorAppearanceConfig {
+    /// Built-in fallback theme name used before applying explicit color overrides.
     pub base: Option<String>,
+    /// Main editor surface color.
     pub surface: Option<String>,
+    /// Header, footer, and auxiliary chrome surface color.
     pub chrome_surface: Option<String>,
+    /// Line-number and folding gutter surface color.
     pub gutter_surface: Option<String>,
+    /// Border color for the editor shell and panels.
     pub border: Option<String>,
+    /// Default source text color.
     pub text: Option<String>,
+    /// Secondary text color used for gutter labels and metadata.
     pub muted_text: Option<String>,
+    /// Caret color.
     pub caret: Option<String>,
+    /// Selection highlight color.
     pub selection: Option<String>,
+    /// Current-line highlight color.
     pub current_line: Option<String>,
+    /// Ruler guide color.
     pub ruler: Option<String>,
+    /// Whitespace marker color.
     pub whitespace: Option<String>,
+    /// Informational diagnostic accent color.
     pub info: Option<String>,
+    /// Warning diagnostic accent color.
     pub warning: Option<String>,
+    /// Error diagnostic accent color.
     pub error: Option<String>,
+    /// Syntax capture style map keyed by tree-sitter/Zed-style capture names.
     pub syntax: Option<BTreeMap<String, CodeEditorSyntaxStyleConfig>>,
 }
 
@@ -1192,9 +1235,13 @@ impl CodeEditorAppearanceConfig {
 #[derive(Clone, Debug, Default, Deserialize)]
 /// One Zed-style syntax style entry loaded from a config or theme JSON.
 pub struct CodeEditorSyntaxStyleConfig {
+    /// Foreground color for matching syntax captures.
     pub color: Option<String>,
+    /// Optional background color for matching syntax captures.
     pub background_color: Option<String>,
+    /// Numeric font weight forwarded to GPUI when present.
     pub font_weight: Option<f32>,
+    /// Font style name, usually `normal`, `italic`, or `oblique`.
     pub font_style: Option<String>,
 }
 
