@@ -20,7 +20,7 @@
 //! crate.
 
 use crate::{Card, Paragraph, Space, Title};
-use gpui::{AnyElement, IntoElement, px};
+use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px};
 
 /// Performs the page operation used by this component.
 pub fn page(
@@ -47,7 +47,7 @@ pub fn showcase_card(
             .gap_md()
             .w_full()
             .child(header(title, description))
-            .child(body),
+            .child(div().w_full().child(body)),
     )
     .width(px(360.0))
     .no_shadow()
@@ -65,7 +65,7 @@ pub fn showcase_card_wide(
             .gap_md()
             .w_full()
             .child(header(title, description))
-            .child(body),
+            .child(div().w_full().child(body)),
     )
     .w_full()
     .no_shadow()
