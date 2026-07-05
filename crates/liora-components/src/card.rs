@@ -149,6 +149,7 @@ impl RenderOnce for Card {
         if let Some(title) = self.title {
             el = el.child(
                 div()
+                    .when(self.full_width, |s| s.w_full())
                     .p_4()
                     .border_b_1()
                     .border_color(theme.neutral.border)
@@ -162,6 +163,7 @@ impl RenderOnce for Card {
         } else if let Some(header) = self.header {
             el = el.child(
                 div()
+                    .when(self.full_width, |s| s.w_full())
                     .p_4()
                     .border_b_1()
                     .border_color(theme.neutral.border)
@@ -172,6 +174,7 @@ impl RenderOnce for Card {
         // Body
         el = el.child(
             div()
+                .when(self.full_width, |s| s.w_full().min_w(px(0.0)))
                 .p_4()
                 .text_color(theme.neutral.text_2)
                 .child(self.body),
@@ -181,6 +184,7 @@ impl RenderOnce for Card {
         if let Some(footer) = self.footer {
             el = el.child(
                 div()
+                    .when(self.full_width, |s| s.w_full())
                     .p_4()
                     .border_t_1()
                     .border_color(theme.neutral.border)
@@ -209,6 +213,20 @@ mod tests {
     fn card_width_helpers_set_demo_widths() {
         assert_eq!(Card::new("body").width_md().width, Some(px(300.0)));
         assert_eq!(Card::new("body").width_lg().width, Some(px(400.0)));
+    }
+
+    #[test]
+    fn card_full_width_stretches_internal_regions() {
+        let card = Card::new("body").full_width();
+        let production = include_str!("card.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap_or_default();
+
+        assert!(card.full_width);
+        assert_eq!(card.width, None);
+        assert!(production.contains("s.w_full().min_w(px(0.0)).flex_shrink(1.0)"));
+        assert!(production.contains("s.w_full().min_w(px(0.0))"));
     }
 
     #[test]
