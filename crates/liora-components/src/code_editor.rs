@@ -24,8 +24,8 @@ use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton, MouseDownEvent,
-    MouseMoveEvent, Pixels, Point, Render, ScrollWheelEvent, SharedString, Style, UTF16Selection,
-    Window, actions, div, list, prelude::*, px, relative,
+    MouseMoveEvent, Pixels, Point, Render, SharedString, Style, UTF16Selection, Window, actions,
+    div, list, prelude::*, px, relative,
 };
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
@@ -483,9 +483,17 @@ impl CodeDisplayMap {
         }
     }
 
-    fn row_for_y(self, y: Pixels, scroll_row: usize, line_count: usize) -> usize {
+    fn row_for_y(
+        self,
+        y: Pixels,
+        scroll_row: usize,
+        scroll_offset_in_row: Pixels,
+        line_count: usize,
+    ) -> usize {
         let max_row = line_count.saturating_sub(1);
-        let row_delta = (y.as_f32() / self.row_height.as_f32()).floor().max(0.0) as usize;
+        let row_delta = ((y + scroll_offset_in_row).as_f32() / self.row_height.as_f32())
+            .floor()
+            .max(0.0) as usize;
         scroll_row.saturating_add(row_delta).min(max_row)
     }
 
@@ -504,9 +512,15 @@ impl CodeDisplayMap {
         buffer: &CodeBuffer,
         position: Point<Pixels>,
         scroll_row: usize,
+        scroll_offset_in_row: Pixels,
         line_numbers: bool,
     ) -> usize {
-        let row = self.row_for_y(position.y, scroll_row, buffer.line_count());
+        let row = self.row_for_y(
+            position.y,
+            scroll_row,
+            scroll_offset_in_row,
+            buffer.line_count(),
+        );
         let column = self.column_for_x(position.x, line_numbers);
         buffer.point_to_offset(CodePoint::new(row, column))
     }
@@ -575,7 +589,7 @@ pub struct CodeEditor {
     soft_tabs: bool,
     viewport: CodeViewport,
     height: Option<Pixels>,
-    scroll_row: usize,
+    editor_bounds: Option<Bounds<Pixels>>,
     drag_selecting: bool,
     undo_stack: Vec<CodeTransaction>,
     redo_stack: Vec<CodeTransaction>,
@@ -607,7 +621,7 @@ impl CodeEditor {
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             height: None,
-            scroll_row: 0,
+            editor_bounds: None,
             drag_selecting: false,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
@@ -875,29 +889,26 @@ impl CodeEditor {
         CodeDisplayMap::default_for(self.line_numbers)
     }
 
-    fn point_for_editor_position(&self, position: Point<Pixels>) -> usize {
-        self.display_map().offset_for_position(
-            &self.buffer,
-            position,
-            self.scroll_row,
-            self.line_numbers,
-        )
+    fn local_editor_position(&self, position: Point<Pixels>) -> Point<Pixels> {
+        if let Some(bounds) = self.editor_bounds {
+            gpui::point(
+                (position.x - bounds.left()).max(px(0.0)),
+                (position.y - bounds.top()).max(px(0.0)),
+            )
+        } else {
+            position
+        }
     }
 
-    fn update_scroll_row_from_wheel(&mut self, event: &ScrollWheelEvent, window: &Window) {
-        let delta = event.delta.pixel_delta(window.line_height()).y.as_f32();
-        if delta == 0.0 {
-            return;
-        }
-        let rows = (delta.abs() / self.display_map().row_height().as_f32())
-            .ceil()
-            .max(1.0) as usize;
-        if delta < 0.0 {
-            self.scroll_row =
-                (self.scroll_row + rows).min(self.buffer.line_count().saturating_sub(1));
-        } else {
-            self.scroll_row = self.scroll_row.saturating_sub(rows);
-        }
+    fn point_for_editor_position(&self, position: Point<Pixels>) -> usize {
+        let scroll_top = self.list_state.logical_scroll_top();
+        self.display_map().offset_for_position(
+            &self.buffer,
+            self.local_editor_position(position),
+            scroll_top.item_ix,
+            scroll_top.offset_in_item,
+            self.line_numbers,
+        )
     }
 
     fn mouse_down_in_editor(
@@ -933,18 +944,15 @@ impl CodeEditor {
         cx.notify();
     }
 
-    fn scroll_wheel_in_editor(
-        &mut self,
-        event: &ScrollWheelEvent,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.update_scroll_row_from_wheel(event, window);
-        cx.notify();
-    }
-
     fn sync_list_state(&self) {
-        self.list_state.reset(self.buffer.line_count());
+        let line_count = self.buffer.line_count();
+        let current_count = self.list_state.item_count();
+        if line_count > current_count {
+            self.list_state
+                .splice(current_count..current_count, line_count - current_count);
+        } else if line_count < current_count {
+            self.list_state.splice(line_count..current_count, 0);
+        }
     }
 
     fn refresh_providers(&mut self) {
@@ -1371,11 +1379,11 @@ impl EntityInputHandler for CodeEditor {
 
     fn character_index_for_point(
         &mut self,
-        _pt: Point<Pixels>,
+        pt: Point<Pixels>,
         _window: &mut Window,
         _: &mut Context<Self>,
     ) -> Option<usize> {
-        Some(self.offset_to_utf16(self.selection.cursor()))
+        Some(self.offset_to_utf16(self.point_for_editor_position(pt)))
     }
 }
 
@@ -1439,6 +1447,9 @@ impl Element for CodeEditorInputLayer {
         cx: &mut App,
     ) {
         let focus_handle = self.editor.read(cx).focus_handle.clone();
+        self.editor.update(cx, |editor, _| {
+            editor.editor_bounds = Some(bounds);
+        });
         window.handle_input(
             &focus_handle,
             ElementInputHandler::new(bounds, self.editor.clone()),
@@ -1455,7 +1466,6 @@ impl Focusable for CodeEditor {
 
 impl Render for CodeEditor {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.sync_list_state();
         self.refresh_providers();
 
         let theme = cx.global::<Config>().theme.clone();
@@ -1576,7 +1586,6 @@ impl Render for CodeEditor {
                     .cursor_text()
                     .on_mouse_down(MouseButton::Left, cx.listener(Self::mouse_down_in_editor))
                     .on_mouse_move(cx.listener(Self::mouse_move_in_editor))
-                    .on_scroll_wheel(cx.listener(Self::scroll_wheel_in_editor))
                     .child(
                         list(list_state.clone(), move |row, _window, _cx| {
                             render_editor_row(
@@ -1998,13 +2007,64 @@ mod tests {
         let display = CodeDisplayMap::default_for(true);
 
         assert_eq!(
-            display.offset_for_position(&buffer, gpui::point(px(84.0), px(30.0)), 0, true),
+            display.offset_for_position(&buffer, gpui::point(px(84.0), px(30.0)), 0, px(0.0), true),
             buffer.point_to_offset(CodePoint::new(1, 1))
         );
         assert_eq!(
-            display.offset_for_position(&buffer, gpui::point(px(10.0), px(72.0)), 1, true),
+            display.offset_for_position(&buffer, gpui::point(px(10.0), px(72.0)), 1, px(0.0), true),
             buffer.point_to_offset(CodePoint::new(2, 0))
         );
+    }
+
+    #[test]
+    fn code_display_map_accounts_for_list_scroll_offset() {
+        let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
+        let display = CodeDisplayMap::default_for(true);
+
+        assert_eq!(
+            display.offset_for_position(
+                &buffer,
+                gpui::point(px(84.0), px(20.0)),
+                1,
+                px(12.0),
+                true
+            ),
+            buffer.point_to_offset(CodePoint::new(2, 1))
+        );
+    }
+
+    #[test]
+    fn code_editor_preserves_gpui_list_scroll_state_between_renders() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+        assert!(production_source.contains("fn sync_list_state(&self)"));
+        assert!(production_source.contains("self.list_state.item_count()"));
+        assert!(production_source.contains(".splice(current_count..current_count"));
+        assert!(production_source.contains(".splice(line_count..current_count, 0)"));
+        assert!(production_source.contains("self.list_state.logical_scroll_top()"));
+        assert!(!production_source.contains("fn scroll_wheel_in_editor"));
+        assert!(
+            !production_source
+                .contains(".on_scroll_wheel(cx.listener(Self::scroll_wheel_in_editor))")
+        );
+    }
+
+    #[test]
+    fn code_editor_pointer_hit_testing_uses_editor_bounds() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+        assert!(production_source.contains("editor_bounds: Option<Bounds<Pixels>>"));
+        assert!(production_source.contains("fn local_editor_position"));
+        assert!(production_source.contains("position.x - bounds.left()"));
+        assert!(production_source.contains("position.y - bounds.top()"));
+        assert!(production_source.contains("editor.editor_bounds = Some(bounds)"));
+        assert!(production_source.contains("self.local_editor_position(position)"));
     }
 
     #[test]
