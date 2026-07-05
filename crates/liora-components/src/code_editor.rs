@@ -1037,8 +1037,15 @@ impl CodeEditor {
         code_word_range_at_offset(&self.buffer, offset)
     }
 
-    fn line_range_at_offset(&self, offset: usize) -> Range<usize> {
-        code_line_range_at_offset(&self.buffer, offset)
+    fn line_content_range_at_offset(&self, offset: usize) -> Range<usize> {
+        code_line_content_range_at_offset(&self.buffer, offset)
+    }
+
+    fn position_hits_scrollbar(&self, position: Point<Pixels>) -> bool {
+        self.editor_bounds.is_some_and(|bounds| {
+            let hit_width = crate::virtual_scrollbar_hit_width();
+            position.x >= bounds.right() - hit_width && position.x <= bounds.right()
+        })
     }
 
     fn smart_line_start_at_offset(&self, offset: usize) -> usize {
@@ -1109,13 +1116,17 @@ impl CodeEditor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.position_hits_scrollbar(event.position) {
+            self.drag_selecting = false;
+            return;
+        }
         window.focus(&self.focus_handle, cx);
         let offset = self.point_for_editor_position(event.position);
         if event.modifiers.shift {
             self.selection.select_to(offset);
         } else if event.click_count >= 3 {
-            self.selection.range = self.line_range_at_offset(offset);
-            self.selection.reversed = true;
+            self.selection.range = self.line_content_range_at_offset(offset);
+            self.selection.reversed = false;
             self.selection.preferred_column = None;
         } else if event.click_count == 2 {
             self.selection.range = self.word_range_at_offset(offset);
@@ -1136,6 +1147,9 @@ impl CodeEditor {
         cx: &mut Context<Self>,
     ) {
         if !self.drag_selecting {
+            return;
+        }
+        if self.position_hits_scrollbar(event.position) {
             return;
         }
         if event.pressed_button != Some(MouseButton::Left) {
@@ -1828,14 +1842,26 @@ impl Element for CodeEditorInputLayer {
         cx: &mut App,
     ) {
         let focus_handle = self.editor.read(cx).focus_handle.clone();
+        let input_bounds = editor_text_input_bounds(bounds);
         self.editor.update(cx, |editor, _| {
             editor.editor_bounds = Some(bounds);
         });
         window.handle_input(
             &focus_handle,
-            ElementInputHandler::new(bounds, self.editor.clone()),
+            ElementInputHandler::new(input_bounds, self.editor.clone()),
             cx,
         );
+    }
+}
+
+fn editor_text_input_bounds(bounds: Bounds<Pixels>) -> Bounds<Pixels> {
+    let hit_width = crate::virtual_scrollbar_hit_width();
+    Bounds {
+        origin: bounds.origin,
+        size: size(
+            (bounds.size.width - hit_width).max(px(1.0)),
+            bounds.size.height,
+        ),
     }
 }
 
@@ -2394,15 +2420,9 @@ fn code_word_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize>
     start..end
 }
 
-fn code_line_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize> {
+fn code_line_content_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize> {
     let point = buffer.offset_to_point(offset);
-    let start = buffer.line_start(point.row);
-    let end = if point.row + 1 < buffer.line_count() {
-        buffer.line_start(point.row + 1)
-    } else {
-        buffer.line_end(point.row)
-    };
-    start..end
+    buffer.line_start(point.row)..buffer.line_end(point.row)
 }
 
 fn utf16_offset_in_text(text: &str, target: usize) -> usize {
@@ -2697,27 +2717,30 @@ println!("ok");"#,
             "alpha_beta"
         );
         assert_eq!(code_word_range_at_offset(&buffer, 15), 15..16);
-        assert_eq!(code_line_range_at_offset(&buffer, 6), 0..21);
+        assert_eq!(code_line_content_range_at_offset(&buffer, 6), 0..20);
         assert_eq!(
-            &buffer.as_str()[code_line_range_at_offset(&buffer, 24)],
+            &buffer.as_str()[code_line_content_range_at_offset(&buffer, 24)],
             r#"println!("ok");"#
         );
     }
 
     #[test]
-    fn code_editor_triple_click_line_selection_keeps_cursor_on_clicked_line() {
+    fn code_editor_triple_click_line_selection_keeps_cursor_at_clicked_line_end() {
         let buffer = CodeBuffer::new(
             "alpha
 beta
 gamma",
         );
         let mut selection = CodeSelection::new(0);
-        selection.range = code_line_range_at_offset(&buffer, 2);
-        selection.reversed = true;
+        selection.range = code_line_content_range_at_offset(&buffer, 2);
+        selection.reversed = false;
 
-        assert_eq!(selection.range, 0..6);
-        assert_eq!(buffer.offset_to_point(selection.cursor()).row, 0);
-        assert_eq!(buffer.offset_to_point(selection.range.end).row, 1);
+        assert_eq!(selection.range, 0..5);
+        assert_eq!(selection.cursor(), 5);
+        assert_eq!(
+            buffer.offset_to_point(selection.cursor()),
+            CodePoint::new(0, 5)
+        );
     }
 
     #[test]
@@ -2927,5 +2950,17 @@ gamma",
         assert!(source.contains("fn marked_text_range"));
         assert!(source.contains("replace_and_mark_text_in_range"));
         assert!(source.contains("utf16_offset_in_text"));
+    }
+
+    #[test]
+    fn code_editor_input_layer_leaves_virtual_scrollbar_hit_area_interactive() {
+        let bounds = Bounds::new(point(px(0.0), px(0.0)), size(px(200.0), px(100.0)));
+        let input_bounds = editor_text_input_bounds(bounds);
+
+        assert!(input_bounds.right() < bounds.right());
+        assert_eq!(
+            bounds.right() - input_bounds.right(),
+            crate::virtual_scrollbar_hit_width()
+        );
     }
 }

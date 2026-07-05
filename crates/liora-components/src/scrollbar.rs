@@ -38,6 +38,11 @@ const SCROLLBAR_THUMB_HOVER_WIDTH: Pixels = px(12.0);
 const SCROLLBAR_HIT_WIDTH: Pixels = px(20.0);
 const SCROLLBAR_MIN_THUMB_HEIGHT: Pixels = px(24.0);
 
+/// Returns the interactive width reserved for a virtual scrollbar track.
+pub fn virtual_scrollbar_hit_width() -> Pixels {
+    SCROLLBAR_HIT_WIDTH + px(2.0)
+}
+
 /// Fluent native GPUI component for rendering Liora scrollbar.
 pub struct Scrollbar {
     scroll_handle: ScrollHandle,
@@ -348,7 +353,7 @@ fn scrollbar_thumb_bounds_for_width(target: Bounds<Pixels>, width: Pixels) -> Bo
 fn scrollbar_track_hitbox(bounds: Bounds<Pixels>) -> Bounds<Pixels> {
     Bounds {
         origin: point(bounds.right() - SCROLLBAR_HIT_WIDTH - px(2.0), bounds.top()),
-        size: size(SCROLLBAR_HIT_WIDTH + px(2.0), bounds.size.height),
+        size: size(virtual_scrollbar_hit_width(), bounds.size.height),
     }
 }
 
@@ -721,7 +726,7 @@ mod tests {
 
         assert_eq!(hitbox.top(), px(20.0));
         assert_eq!(hitbox.size.height, px(200.0));
-        assert_eq!(hitbox.size.width, SCROLLBAR_HIT_WIDTH + px(2.0));
+        assert_eq!(hitbox.size.width, virtual_scrollbar_hit_width());
         assert_eq!(SCROLLBAR_THUMB_HOVER_WIDTH, px(12.0));
     }
 
