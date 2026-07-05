@@ -45,8 +45,9 @@
 ## 能力边界
 
 - 支持行号、语言、主题、缩进配置、编辑回调，`Tab` / `Shift+Tab` 可按当前缩进配置缩进或反缩进。
-- 支持基础导航、键盘选择、鼠标点击定位、拖拽选择、复制、粘贴、剪切、回车换行、缩进/反缩进、`Ctrl/Cmd+Z` undo 与 `Ctrl/Cmd+Shift+Z` redo。
+- 支持基础导航、键盘选择、鼠标点击定位、列级光标、拖拽选择、复制、粘贴、剪切、回车换行、缩进/反缩进、`Ctrl/Cmd+Z` undo 与 `Ctrl/Cmd+Shift+Z` redo。
 - 支持搜索命中统计、静态/动态 completion candidates、hover/help provider 扩展点；这些 API 是语言服务接入点，不会把 SDK 绑定到某个 LSP 进程。
 - 支持 `CodeDiagnostic` 静态注入，也支持 `diagnostics_provider` 根据最新文本动态生成诊断结果，用于展示语法检查、lint、业务规则检查等结果。
-- 语法高亮已经进入编辑行内部，输入变化会驱动同一区域重新渲染；编辑事务栈已经可恢复文本和选区快照，后续增强重点是事务合并、更精确 glyph hit-test、增量高亮和 LSP 语义 token。
+- 语法高亮已经进入编辑行内部，输入变化会驱动同一区域重新渲染；光标闪烁会保留稳定布局槽位，避免文字在闪烁时横向抖动；点击定位会按当前行内容估算列位置并保持 UTF-8 边界安全。
+- 编辑事务栈已经可恢复文本和选区快照，后续增强重点是事务分组合并、基于 GPUI shaped line 的精确 glyph hit-test、增量高亮和 LSP 语义 token。
 - 后续企业级增强应优先补 piece table/rope 后端、事务分组合并、Tree-sitter 可选后端和 LSP bridge traits。
