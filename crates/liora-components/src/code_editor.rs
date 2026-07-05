@@ -49,10 +49,26 @@ actions!(
         CodeEditorBackspace,
         #[doc = "Keyboard action that deletes the character after the caret."]
         CodeEditorDelete,
+        #[doc = "Keyboard action that deletes to the previous code word boundary."]
+        CodeEditorDeleteWordLeft,
+        #[doc = "Keyboard action that deletes to the next code word boundary."]
+        CodeEditorDeleteWordRight,
         #[doc = "Keyboard action that moves the caret one character left."]
         CodeEditorLeft,
         #[doc = "Keyboard action that moves the caret one character right."]
         CodeEditorRight,
+        #[doc = "Keyboard action that moves the caret to the previous code word boundary."]
+        CodeEditorWordLeft,
+        #[doc = "Keyboard action that moves the caret to the next code word boundary."]
+        CodeEditorWordRight,
+        #[doc = "Keyboard action that moves the caret one page up."]
+        CodeEditorPageUp,
+        #[doc = "Keyboard action that moves the caret one page down."]
+        CodeEditorPageDown,
+        #[doc = "Keyboard action that moves the caret to the beginning of the buffer."]
+        CodeEditorDocumentStart,
+        #[doc = "Keyboard action that moves the caret to the end of the buffer."]
+        CodeEditorDocumentEnd,
         #[doc = "Keyboard action that moves the caret one visual row up."]
         CodeEditorUp,
         #[doc = "Keyboard action that moves the caret one visual row down."]
@@ -75,6 +91,18 @@ actions!(
         CodeEditorSelectLeft,
         #[doc = "Keyboard action that extends selection one character right."]
         CodeEditorSelectRight,
+        #[doc = "Keyboard action that extends selection to the previous code word boundary."]
+        CodeEditorSelectWordLeft,
+        #[doc = "Keyboard action that extends selection to the next code word boundary."]
+        CodeEditorSelectWordRight,
+        #[doc = "Keyboard action that extends selection one page up."]
+        CodeEditorSelectPageUp,
+        #[doc = "Keyboard action that extends selection one page down."]
+        CodeEditorSelectPageDown,
+        #[doc = "Keyboard action that extends selection to the beginning of the buffer."]
+        CodeEditorSelectDocumentStart,
+        #[doc = "Keyboard action that extends selection to the end of the buffer."]
+        CodeEditorSelectDocumentEnd,
         #[doc = "Keyboard action that extends selection one visual row up."]
         CodeEditorSelectUp,
         #[doc = "Keyboard action that extends selection one visual row down."]
@@ -365,6 +393,17 @@ impl CodeBuffer {
         self.line_end(point.row)
     }
 
+    fn first_non_whitespace_at_offset(&self, offset: usize) -> usize {
+        let point = self.offset_to_point(offset);
+        let line_start = self.line_start(point.row);
+        let line = self.line(point.row);
+        let relative = line
+            .char_indices()
+            .find_map(|(index, ch)| (!ch.is_whitespace()).then_some(index))
+            .unwrap_or(line.len());
+        self.clamp_offset(line_start + relative)
+    }
+
     fn selected_line_bounds(&self, selection: Range<usize>) -> Range<usize> {
         if self.is_empty() {
             return 0..0;
@@ -585,6 +624,7 @@ impl CodeViewport {
 pub struct CodeEditor {
     buffer: CodeBuffer,
     selection: CodeSelection,
+    marked_range: Option<Range<usize>>,
     focus_handle: FocusHandle,
     list_state: ListState,
     language: CodeLanguage,
@@ -619,6 +659,7 @@ impl CodeEditor {
         let row_count = buffer.line_count();
         Self {
             selection: CodeSelection::new(buffer.len()),
+            marked_range: None,
             buffer,
             focus_handle: cx.focus_handle(),
             list_state: ListState::new(row_count, ListAlignment::Top, px(160.0)),
@@ -666,6 +707,7 @@ impl CodeEditor {
         }
         self.buffer.set_text(value.to_string());
         self.selection.set_cursor(self.buffer.len());
+        self.marked_range = None;
         self.invalidate_row_layouts();
         self.undo_stack.clear();
         self.redo_stack.clear();
@@ -690,6 +732,7 @@ impl CodeEditor {
         self.selection.range = start.min(end)..start.max(end);
         self.selection.reversed = false;
         self.selection.preferred_column = None;
+        self.marked_range = None;
         self.reveal_cursor();
         self.reset_blink(cx);
     }
@@ -868,10 +911,34 @@ impl CodeEditor {
         cx.bind_keys([
             KeyBinding::new("backspace", CodeEditorBackspace, None),
             KeyBinding::new("delete", CodeEditorDelete, None),
+            KeyBinding::new("ctrl-backspace", CodeEditorDeleteWordLeft, None),
+            KeyBinding::new("alt-backspace", CodeEditorDeleteWordLeft, None),
+            KeyBinding::new("ctrl-delete", CodeEditorDeleteWordRight, None),
+            KeyBinding::new("alt-delete", CodeEditorDeleteWordRight, None),
             KeyBinding::new("left", CodeEditorLeft, None),
             KeyBinding::new("shift-left", CodeEditorSelectLeft, None),
             KeyBinding::new("right", CodeEditorRight, None),
             KeyBinding::new("shift-right", CodeEditorSelectRight, None),
+            KeyBinding::new("ctrl-left", CodeEditorWordLeft, None),
+            KeyBinding::new("alt-left", CodeEditorWordLeft, None),
+            KeyBinding::new("ctrl-shift-left", CodeEditorSelectWordLeft, None),
+            KeyBinding::new("alt-shift-left", CodeEditorSelectWordLeft, None),
+            KeyBinding::new("ctrl-right", CodeEditorWordRight, None),
+            KeyBinding::new("alt-right", CodeEditorWordRight, None),
+            KeyBinding::new("ctrl-shift-right", CodeEditorSelectWordRight, None),
+            KeyBinding::new("alt-shift-right", CodeEditorSelectWordRight, None),
+            KeyBinding::new("pageup", CodeEditorPageUp, None),
+            KeyBinding::new("shift-pageup", CodeEditorSelectPageUp, None),
+            KeyBinding::new("pagedown", CodeEditorPageDown, None),
+            KeyBinding::new("shift-pagedown", CodeEditorSelectPageDown, None),
+            KeyBinding::new("ctrl-home", CodeEditorDocumentStart, None),
+            KeyBinding::new("cmd-up", CodeEditorDocumentStart, None),
+            KeyBinding::new("ctrl-shift-home", CodeEditorSelectDocumentStart, None),
+            KeyBinding::new("cmd-shift-up", CodeEditorSelectDocumentStart, None),
+            KeyBinding::new("ctrl-end", CodeEditorDocumentEnd, None),
+            KeyBinding::new("cmd-down", CodeEditorDocumentEnd, None),
+            KeyBinding::new("ctrl-shift-end", CodeEditorSelectDocumentEnd, None),
+            KeyBinding::new("cmd-shift-down", CodeEditorSelectDocumentEnd, None),
             KeyBinding::new("up", CodeEditorUp, None),
             KeyBinding::new("shift-up", CodeEditorSelectUp, None),
             KeyBinding::new("down", CodeEditorDown, None),
@@ -972,6 +1039,28 @@ impl CodeEditor {
 
     fn line_range_at_offset(&self, offset: usize) -> Range<usize> {
         code_line_range_at_offset(&self.buffer, offset)
+    }
+
+    fn smart_line_start_at_offset(&self, offset: usize) -> usize {
+        let line_start = self.buffer.line_start_at_offset(offset);
+        let first_text = self.buffer.first_non_whitespace_at_offset(offset);
+        if offset == first_text {
+            line_start
+        } else {
+            first_text
+        }
+    }
+
+    fn previous_word_boundary(&self, offset: usize) -> usize {
+        code_previous_word_boundary(&self.buffer, offset)
+    }
+
+    fn next_word_boundary(&self, offset: usize) -> usize {
+        code_next_word_boundary(&self.buffer, offset)
+    }
+
+    fn page_row_delta(&self) -> isize {
+        self.viewport.rows.saturating_sub(1).max(1) as isize
     }
 
     fn invalidate_row_layouts(&mut self) {
@@ -1174,6 +1263,7 @@ impl CodeEditor {
         } else {
             self.selection.set_cursor(offset);
         }
+        self.marked_range = None;
         self.reveal_cursor();
         self.reset_blink(cx);
     }
@@ -1194,6 +1284,7 @@ impl CodeEditor {
             self.selection.set_cursor(target);
             self.selection.preferred_column = Some(preferred);
         }
+        self.marked_range = None;
         self.reveal_cursor();
         self.reset_blink(cx);
     }
@@ -1305,6 +1396,40 @@ impl CodeEditor {
         self.replace_selection("", cx);
     }
 
+    fn delete_word_left(
+        &mut self,
+        _: &CodeEditorDeleteWordLeft,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selection.is_empty() {
+            let cursor = self.selection.cursor();
+            let previous = self.previous_word_boundary(cursor);
+            if previous == cursor {
+                return;
+            }
+            self.selection.range = previous..cursor;
+        }
+        self.replace_selection("", cx);
+    }
+
+    fn delete_word_right(
+        &mut self,
+        _: &CodeEditorDeleteWordRight,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selection.is_empty() {
+            let cursor = self.selection.cursor();
+            let next = self.next_word_boundary(cursor);
+            if next == cursor {
+                return;
+            }
+            self.selection.range = cursor..next;
+        }
+        self.replace_selection("", cx);
+    }
+
     fn left(&mut self, _: &CodeEditorLeft, _: &mut Window, cx: &mut Context<Self>) {
         if self.selection.is_empty() {
             self.move_to(self.buffer.prev_char(self.selection.cursor()), false, cx);
@@ -1329,6 +1454,103 @@ impl CodeEditor {
         self.move_to(self.buffer.next_char(self.selection.cursor()), true, cx);
     }
 
+    fn word_left(&mut self, _: &CodeEditorWordLeft, _: &mut Window, cx: &mut Context<Self>) {
+        let target = if self.selection.is_empty() {
+            self.previous_word_boundary(self.selection.cursor())
+        } else {
+            self.selection.range.start
+        };
+        self.move_to(target, false, cx);
+    }
+
+    fn select_word_left(
+        &mut self,
+        _: &CodeEditorSelectWordLeft,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_to(
+            self.previous_word_boundary(self.selection.cursor()),
+            true,
+            cx,
+        );
+    }
+
+    fn word_right(&mut self, _: &CodeEditorWordRight, _: &mut Window, cx: &mut Context<Self>) {
+        let target = if self.selection.is_empty() {
+            self.next_word_boundary(self.selection.cursor())
+        } else {
+            self.selection.range.end
+        };
+        self.move_to(target, false, cx);
+    }
+
+    fn select_word_right(
+        &mut self,
+        _: &CodeEditorSelectWordRight,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_to(self.next_word_boundary(self.selection.cursor()), true, cx);
+    }
+
+    fn page_up(&mut self, _: &CodeEditorPageUp, _: &mut Window, cx: &mut Context<Self>) {
+        self.move_vertical(-self.page_row_delta(), false, cx);
+    }
+
+    fn select_page_up(
+        &mut self,
+        _: &CodeEditorSelectPageUp,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_vertical(-self.page_row_delta(), true, cx);
+    }
+
+    fn page_down(&mut self, _: &CodeEditorPageDown, _: &mut Window, cx: &mut Context<Self>) {
+        self.move_vertical(self.page_row_delta(), false, cx);
+    }
+
+    fn select_page_down(
+        &mut self,
+        _: &CodeEditorSelectPageDown,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_vertical(self.page_row_delta(), true, cx);
+    }
+
+    fn document_start(
+        &mut self,
+        _: &CodeEditorDocumentStart,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_to(0, false, cx);
+    }
+
+    fn select_document_start(
+        &mut self,
+        _: &CodeEditorSelectDocumentStart,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_to(0, true, cx);
+    }
+
+    fn document_end(&mut self, _: &CodeEditorDocumentEnd, _: &mut Window, cx: &mut Context<Self>) {
+        self.move_to(self.buffer.len(), false, cx);
+    }
+
+    fn select_document_end(
+        &mut self,
+        _: &CodeEditorSelectDocumentEnd,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.move_to(self.buffer.len(), true, cx);
+    }
+
     fn up(&mut self, _: &CodeEditorUp, _: &mut Window, cx: &mut Context<Self>) {
         self.move_vertical(-1, false, cx);
     }
@@ -1347,7 +1569,7 @@ impl CodeEditor {
 
     fn home(&mut self, _: &CodeEditorHome, _: &mut Window, cx: &mut Context<Self>) {
         self.move_to(
-            self.buffer.line_start_at_offset(self.selection.cursor()),
+            self.smart_line_start_at_offset(self.selection.cursor()),
             false,
             cx,
         );
@@ -1355,7 +1577,7 @@ impl CodeEditor {
 
     fn select_home(&mut self, _: &CodeEditorSelectHome, _: &mut Window, cx: &mut Context<Self>) {
         self.move_to(
-            self.buffer.line_start_at_offset(self.selection.cursor()),
+            self.smart_line_start_at_offset(self.selection.cursor()),
             true,
             cx,
         );
@@ -1462,10 +1684,15 @@ impl EntityInputHandler for CodeEditor {
     }
 
     fn marked_text_range(&self, _: &mut Window, _: &mut Context<Self>) -> Option<Range<usize>> {
-        None
+        self.marked_range
+            .as_ref()
+            .map(|range| self.offset_to_utf16(range.start)..self.offset_to_utf16(range.end))
     }
 
-    fn unmark_text(&mut self, _: &mut Window, _: &mut Context<Self>) {}
+    fn unmark_text(&mut self, _: &mut Window, cx: &mut Context<Self>) {
+        self.marked_range = None;
+        self.reset_blink(cx);
+    }
 
     fn replace_text_in_range(
         &mut self,
@@ -1476,9 +1703,11 @@ impl EntityInputHandler for CodeEditor {
     ) {
         let range = range_utf16
             .map(|range| self.offset_from_utf16(range.start)..self.offset_from_utf16(range.end))
+            .or_else(|| self.marked_range.clone())
             .unwrap_or_else(|| self.selection.range.clone());
         self.selection.range = normalize_replace_range(self.buffer.as_str(), range);
         self.selection.reversed = false;
+        self.marked_range = None;
         self.replace_selection(new_text, cx);
     }
 
@@ -1493,16 +1722,24 @@ impl EntityInputHandler for CodeEditor {
         let replacement_start = range_utf16
             .as_ref()
             .map(|range| self.offset_from_utf16(range.start))
+            .or_else(|| self.marked_range.as_ref().map(|range| range.start))
             .unwrap_or_else(|| self.selection.range.start);
         let range = range_utf16
             .map(|range| self.offset_from_utf16(range.start)..self.offset_from_utf16(range.end))
+            .or_else(|| self.marked_range.clone())
             .unwrap_or_else(|| self.selection.range.clone());
         self.selection.range = normalize_replace_range(self.buffer.as_str(), range);
         self.selection.reversed = false;
+        self.marked_range = None;
         self.replace_selection(new_text, cx);
+        self.marked_range = (!new_text.is_empty()).then_some(
+            replacement_start..self.buffer.clamp_offset(replacement_start + new_text.len()),
+        );
         if let Some(selected) = new_selected {
-            let start = replacement_start + selected.start;
-            let end = replacement_start + selected.end;
+            let selected_start = utf16_offset_in_text(new_text, selected.start);
+            let selected_end = utf16_offset_in_text(new_text, selected.end);
+            let start = replacement_start + selected_start;
+            let end = replacement_start + selected_end;
             self.selection.range = normalize_replace_range(self.buffer.as_str(), start..end);
             self.selection.reversed = false;
             self.reset_blink(cx);
@@ -1637,6 +1874,7 @@ impl Render for CodeEditor {
         let list_state = self.list_state.clone();
         let buffer = self.buffer.clone();
         let selection = self.selection.clone();
+        let marked_range = self.marked_range.clone();
         let diagnostics = self.diagnostics.clone();
         let show_line_numbers = self.line_numbers;
         let row_display_map = display_map;
@@ -1666,10 +1904,24 @@ impl Render for CodeEditor {
             .track_focus(&focus_handle)
             .on_action(cx.listener(Self::backspace))
             .on_action(cx.listener(Self::delete))
+            .on_action(cx.listener(Self::delete_word_left))
+            .on_action(cx.listener(Self::delete_word_right))
             .on_action(cx.listener(Self::left))
             .on_action(cx.listener(Self::select_left))
             .on_action(cx.listener(Self::right))
             .on_action(cx.listener(Self::select_right))
+            .on_action(cx.listener(Self::word_left))
+            .on_action(cx.listener(Self::select_word_left))
+            .on_action(cx.listener(Self::word_right))
+            .on_action(cx.listener(Self::select_word_right))
+            .on_action(cx.listener(Self::page_up))
+            .on_action(cx.listener(Self::select_page_up))
+            .on_action(cx.listener(Self::page_down))
+            .on_action(cx.listener(Self::select_page_down))
+            .on_action(cx.listener(Self::document_start))
+            .on_action(cx.listener(Self::select_document_start))
+            .on_action(cx.listener(Self::document_end))
+            .on_action(cx.listener(Self::select_document_end))
             .on_action(cx.listener(Self::up))
             .on_action(cx.listener(Self::select_up))
             .on_action(cx.listener(Self::down))
@@ -1749,6 +2001,7 @@ impl Render for CodeEditor {
                                 row,
                                 &buffer,
                                 &selection,
+                                marked_range.as_ref(),
                                 &diagnostics,
                                 show_line_numbers,
                                 row_language,
@@ -1793,6 +2046,7 @@ fn render_editor_row(
     row: usize,
     buffer: &CodeBuffer,
     selection: &CodeSelection,
+    marked_range: Option<&Range<usize>>,
     diagnostics: &[CodeDiagnostic],
     line_numbers: bool,
     language: CodeLanguage,
@@ -1810,6 +2064,7 @@ fn render_editor_row(
     let cursor_row = cursor_point.row == row;
     let cursor_column = cursor_row.then_some(cursor_point.column);
     let selection_range = line_selection_range(buffer, selection, row);
+    let marked_range = marked_range.and_then(|range| line_offset_range(buffer, range, row));
     let line_diagnostics = diagnostics
         .iter()
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
@@ -1854,11 +2109,13 @@ fn render_editor_row(
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
                 .text_sm()
                 .text_color(theme.neutral.text_1)
+                .when(cursor_row, |s| s.bg(theme.primary.base.opacity(0.055)))
                 .child(CodeEditorLineElement {
                     row,
                     text: SharedString::from(line.to_string()),
                     runs,
                     selection_range,
+                    marked_range,
                     cursor_column,
                     cursor_visible: cursor_active && cursor_visible && cursor_column.is_some(),
                     line_height: display_map.row_height(),
@@ -1894,6 +2151,7 @@ struct CodeEditorLineElement {
     text: SharedString,
     runs: Vec<TextRun>,
     selection_range: Option<Range<usize>>,
+    marked_range: Option<Range<usize>>,
     cursor_column: Option<usize>,
     cursor_visible: bool,
     line_height: Pixels,
@@ -1904,6 +2162,7 @@ struct CodeEditorLineElement {
 struct CodeEditorLinePrepaint {
     shaped: ShapedLine,
     selection: Vec<PaintQuad>,
+    marked: Option<PaintQuad>,
     caret: Option<PaintQuad>,
 }
 
@@ -1975,6 +2234,21 @@ impl Element for CodeEditorLineElement {
             }
         }
 
+        let marked = self.marked_range.clone().and_then(|range| {
+            let range = normalize_replace_range(self.text.as_ref(), range);
+            (range.start < range.end).then(|| {
+                let x_start = shaped.x_for_index(range.start);
+                let x_end = shaped.x_for_index(range.end);
+                fill(
+                    Bounds::new(
+                        point(bounds.left() + x_start, bounds.bottom() - px(2.0)),
+                        size((x_end - x_start).max(px(1.0)), px(2.0)),
+                    ),
+                    self.theme.primary.base.opacity(0.78),
+                )
+            })
+        });
+
         let caret = self.cursor_column.map(|column| {
             let column = clamp_to_char_boundary(self.text.as_ref(), column);
             let x = shaped.x_for_index(column);
@@ -1994,6 +2268,7 @@ impl Element for CodeEditorLineElement {
         CodeEditorLinePrepaint {
             shaped: shaped.clone(),
             selection,
+            marked,
             caret,
         }
     }
@@ -2019,6 +2294,9 @@ impl Element for CodeEditorLineElement {
             window,
             cx,
         );
+        if let Some(marked) = prepaint.marked.take() {
+            window.paint_quad(marked);
+        }
         if let Some(caret) = prepaint.caret.take() {
             window.paint_quad(caret);
         }
@@ -2033,10 +2311,18 @@ fn line_selection_range(
     if selection.is_empty() {
         return None;
     }
+    line_offset_range(buffer, &selection.range, row)
+}
+
+fn line_offset_range(
+    buffer: &CodeBuffer,
+    range: &Range<usize>,
+    row: usize,
+) -> Option<Range<usize>> {
     let row_start = buffer.line_start(row);
     let row_end = buffer.line_end(row);
-    let start = selection.range.start.max(row_start);
-    let end = selection.range.end.min(row_end);
+    let start = range.start.max(row_start);
+    let end = range.end.min(row_end);
     if start < end {
         Some(start - row_start..end - row_start)
     } else {
@@ -2118,6 +2404,63 @@ fn code_line_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize>
         buffer.line_end(point.row)
     };
     start..end
+}
+
+fn utf16_offset_in_text(text: &str, target: usize) -> usize {
+    let mut utf8 = 0;
+    let mut utf16 = 0;
+    for ch in text.chars() {
+        if utf16 >= target {
+            break;
+        }
+        utf16 += ch.len_utf16();
+        utf8 += ch.len_utf8();
+    }
+    clamp_to_char_boundary(text, utf8)
+}
+
+fn code_previous_word_boundary(buffer: &CodeBuffer, offset: usize) -> usize {
+    let text = buffer.as_str();
+    let mut cursor = buffer.clamp_offset(offset);
+    while cursor > 0 {
+        let previous = buffer.prev_char(cursor);
+        let ch = text[previous..cursor].chars().next().unwrap_or(' ');
+        if is_code_word_char(ch) {
+            break;
+        }
+        cursor = previous;
+    }
+    while cursor > 0 {
+        let previous = buffer.prev_char(cursor);
+        let ch = text[previous..cursor].chars().next().unwrap_or(' ');
+        if !is_code_word_char(ch) {
+            break;
+        }
+        cursor = previous;
+    }
+    cursor
+}
+
+fn code_next_word_boundary(buffer: &CodeBuffer, offset: usize) -> usize {
+    let text = buffer.as_str();
+    let mut cursor = buffer.clamp_offset(offset);
+    while cursor < text.len() {
+        let next = buffer.next_char(cursor);
+        let ch = text[cursor..next].chars().next().unwrap_or(' ');
+        if is_code_word_char(ch) {
+            break;
+        }
+        cursor = next;
+    }
+    while cursor < text.len() {
+        let next = buffer.next_char(cursor);
+        let ch = text[cursor..next].chars().next().unwrap_or(' ');
+        if !is_code_word_char(ch) {
+            break;
+        }
+        cursor = next;
+    }
+    cursor
 }
 
 fn is_code_word_char(ch: char) -> bool {
@@ -2363,6 +2706,25 @@ println!("ok");"#,
     }
 
     #[test]
+    fn code_editor_word_boundaries_skip_symbols_and_whitespace() {
+        let buffer = CodeBuffer::new("let alpha_beta = call_next();");
+        let alpha_start = buffer.as_str().find("alpha_beta").unwrap();
+        let call_start = buffer.as_str().find("call_next").unwrap();
+        let after_alpha = alpha_start + "alpha_beta".len();
+
+        assert_eq!(code_next_word_boundary(&buffer, alpha_start), after_alpha);
+        assert_eq!(
+            code_next_word_boundary(&buffer, after_alpha),
+            call_start + "call_next".len()
+        );
+        assert_eq!(
+            code_previous_word_boundary(&buffer, call_start),
+            alpha_start
+        );
+        assert_eq!(utf16_offset_in_text("a😀b", 2), "a😀".len());
+    }
+
+    #[test]
     fn code_display_map_maps_pointer_positions_to_buffer_offsets() {
         let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
         let display = CodeDisplayMap::default_for(true);
@@ -2532,5 +2894,23 @@ println!("ok");"#,
         assert!(source.contains("KeyBinding::new(\"ctrl-z\""));
         assert!(source.contains("undo_stack"));
         assert!(source.contains("redo_stack"));
+    }
+
+    #[test]
+    fn code_editor_exposes_navigation_and_ime_foundation() {
+        let source = include_str!("code_editor.rs");
+        assert!(source.contains("CodeEditorWordLeft"));
+        assert!(source.contains("CodeEditorDeleteWordLeft"));
+        assert!(source.contains("CodeEditorPageDown"));
+        assert!(source.contains("CodeEditorDocumentStart"));
+        assert!(source.contains(r#"KeyBinding::new("ctrl-left""#));
+        assert!(source.contains(r#"KeyBinding::new("alt-left""#));
+        assert!(source.contains(r#"KeyBinding::new("ctrl-backspace""#));
+        assert!(source.contains(r#"KeyBinding::new("pagedown""#));
+        assert!(source.contains(r#"KeyBinding::new("cmd-down""#));
+        assert!(source.contains("marked_range: Option<Range<usize>>"));
+        assert!(source.contains("fn marked_text_range"));
+        assert!(source.contains("replace_and_mark_text_in_range"));
+        assert!(source.contains("utf16_offset_in_text"));
     }
 }
