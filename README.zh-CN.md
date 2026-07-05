@@ -1181,19 +1181,17 @@ let editor = CodeEditor::new(source, cx).config(config);
 
 内置 tree-sitter 高亮目前覆盖 Rust、TypeScript/JavaScript、SQL、Shell、XML、TOML、YAML、INI/conf、JSON 和 Markdown；未知语言 label 会安全回退为纯文本。
 
-高级布局 builder 是真实渲染输入，不是文档占位。高密度编辑器、审阅面板和大段代码片段可以直接配置行高、缩进指示线和可折叠区间：
+高级布局 builder 是真实渲染输入，不是文档占位。高密度编辑器、审阅面板和大段代码片段可以直接配置行高、缩进指示线和代码块折叠：
 
 ```rust
 let editor = CodeEditor::new(source, cx)
     .line_height_units(32.0)
     .indent_guides(true)
     .whitespace(CodeEditorWhitespaceMode::Boundary)
-    .fold_range(3, 18, "impl Workspace")
-    .fold_range(24, 32, "tests")
     .code_folding(true);
 ```
 
-折叠区间默认收起，并渲染可点击的 toggle。点击折叠标签会展开隐藏行，再次点击会重新收起。需要默认展开但仍保留可切换能力时，用 `CodeFold::expanded(...)` 搭配 `.folds(...)`。
+启用 `code_folding` 后，CodeEditor 会自动识别常见多行 `{ ... }` 代码块，并在行号旁的 gutter 区渲染折叠箭头。自动识别的折叠块默认展开；点击 gutter 箭头会收起该块，再次点击会展开。只有业务需要额外范围或默认收起范围时，才需要使用 `.fold_range(...)` 或 `.folds(...)` 手动补充。
 
 
 ### 二维码、上传、图片与预览

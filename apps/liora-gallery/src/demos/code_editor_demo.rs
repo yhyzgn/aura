@@ -163,8 +163,6 @@ impl CodeEditorDemo {
                 .theme(CodeTheme::OneDark)
                 .rows(8)
                 .indent_guides(true)
-                .fold_range(3, 9, "impl block")
-                .fold_range(13, 17, "test module")
                 .code_folding(true)
         });
         let configurable = cx.new(|cx| {
@@ -273,8 +271,8 @@ impl Render for CodeEditorDemo {
                     )
                     .into_any_element(),
                     showcase_card_wide(
-                        "高级布局：代码块折叠 / 点击展开",
-                        "fold_range(...) 声明可折叠区间；点击折叠标签可在展开和收起之间切换。",
+                        "高级布局：自动代码块折叠",
+                        "CodeEditor 会自动识别多行代码块，在 gutter/行号区显示折叠箭头；点击箭头可展开或收起。",
                         self.folding_demo.clone(),
                     )
                     .into_any_element(),
@@ -485,8 +483,8 @@ mod tests {
         assert!(source.contains("CodeEditorWhitespaceMode"));
         assert!(source.contains("line_height_units"));
         assert!(source.contains("indent_guides"));
-        assert!(source.contains("fold_range"));
-        assert!(source.contains("CodeFold") || source.contains("fold_range"));
+        assert!(source.contains("code_folding(true)"));
+        assert!(source.contains("自动识别"));
         assert!(source.contains("ruler_column"));
     }
 }

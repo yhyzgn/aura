@@ -1182,19 +1182,17 @@ let editor = CodeEditor::new(source, cx).config(config);
 
 Built-in tree-sitter highlighting currently covers Rust, TypeScript/JavaScript, SQL, Shell, XML, TOML, YAML, INI/conf, JSON, and Markdown. Unknown language labels safely fall back to plain text.
 
-Advanced layout builders are real render inputs, not documentation-only flags. Use them for dense editors, review panels, and large snippets with explicit fold regions:
+Advanced layout builders are real render inputs, not documentation-only flags. Use them for dense editors, review panels, and large snippets:
 
 ```rust
 let editor = CodeEditor::new(source, cx)
     .line_height_units(32.0)
     .indent_guides(true)
     .whitespace(CodeEditorWhitespaceMode::Boundary)
-    .fold_range(3, 18, "impl Workspace")
-    .fold_range(24, 32, "tests")
     .code_folding(true);
 ```
 
-Fold ranges start collapsed by default and render a clickable toggle. Clicking the fold label expands the hidden rows; clicking it again collapses the range. Use `CodeFold::expanded(...)` with `.folds(...)` when a range should start open but remain toggleable.
+When `code_folding` is enabled, CodeEditor automatically detects common multi-line `{ ... }` blocks and renders fold arrows in the gutter beside the line number. Auto-detected folds start expanded; clicking the gutter arrow collapses the block and clicking it again expands it. Use `.fold_range(...)` or `.folds(...)` only when host code needs additional product-specific ranges or default-collapsed ranges.
 
 
 ### QR code, upload, image, and preview

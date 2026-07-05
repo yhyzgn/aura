@@ -578,14 +578,16 @@ pub struct CodeFold {
     pub start_line: usize,
     /// Zero-based inclusive last line hidden when the fold is collapsed.
     pub end_line: usize,
-    /// Label rendered next to the fold placeholder.
+    /// Label rendered in accessibility-oriented metadata and tests.
     pub label: SharedString,
     /// Whether child rows are currently hidden.
     pub collapsed: bool,
+    /// Whether this fold was detected from source structure instead of added by host code.
+    pub automatic: bool,
 }
 
 impl CodeFold {
-    /// Creates a folded source range that starts collapsed.
+    /// Creates a host-declared folded source range that starts collapsed.
     ///
     /// `end_line` is clamped above `start_line` by render helpers. Host
     /// applications can set `collapsed` to `false` when they want the range to
@@ -596,10 +598,11 @@ impl CodeFold {
             end_line,
             label: label.into(),
             collapsed: true,
+            automatic: false,
         }
     }
 
-    /// Creates a fold range that starts expanded while still rendering a toggle affordance.
+    /// Creates a host-declared fold range that starts expanded while still rendering a toggle affordance.
     pub fn expanded(start_line: usize, end_line: usize, label: impl Into<SharedString>) -> Self {
         Self {
             collapsed: false,
@@ -607,8 +610,18 @@ impl CodeFold {
         }
     }
 
-    fn hidden_count(&self) -> usize {
-        self.end_line.saturating_sub(self.start_line)
+    fn automatic(start_line: usize, end_line: usize, label: impl Into<SharedString>) -> Self {
+        Self {
+            start_line,
+            end_line,
+            label: label.into(),
+            collapsed: false,
+            automatic: true,
+        }
+    }
+
+    fn same_range(&self, other: &Self) -> bool {
+        self.start_line == other.start_line && self.end_line == other.end_line
     }
 }
 
@@ -668,8 +681,48 @@ fn normalize_folds(folds: impl IntoIterator<Item = CodeFold>, line_count: usize)
             (fold.end_line > fold.start_line).then_some(fold)
         })
         .collect::<Vec<_>>();
-    folds.sort_by_key(|fold| (fold.start_line, fold.end_line));
+    folds.sort_by_key(|fold| (fold.start_line, fold.end_line, fold.automatic));
+    folds.dedup_by(|left, right| {
+        left.start_line == right.start_line && left.end_line == right.end_line
+    });
     folds
+}
+
+fn detect_brace_folds(source: &str) -> Vec<CodeFold> {
+    let lines = source.lines().collect::<Vec<_>>();
+    let mut stack: Vec<usize> = Vec::new();
+    let mut folds = Vec::new();
+
+    for (line_index, line) in lines.iter().enumerate() {
+        for ch in line.chars() {
+            match ch {
+                '{' => stack.push(line_index),
+                '}' => {
+                    if let Some(start_line) = stack.pop() {
+                        if line_index > start_line {
+                            let label =
+                                fold_label_for_line(lines.get(start_line).copied().unwrap_or(""));
+                            folds.push(CodeFold::automatic(start_line, line_index, label));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    normalize_folds(folds, lines.len().max(1))
+}
+
+fn fold_label_for_line(line: &str) -> SharedString {
+    let trimmed = line.trim();
+    let label = trimmed
+        .split('{')
+        .next()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("block");
+    SharedString::from(label.to_string())
 }
 
 fn visible_rows_for(line_count: usize, folds: &[CodeFold], enabled: bool) -> Vec<usize> {
@@ -1924,6 +1977,7 @@ impl CodeEditor {
         let value = value.into();
         let buffer = CodeBuffer::new(value.to_string());
         let row_count = buffer.line_count();
+        let folds = detect_brace_folds(buffer.as_str());
         Self {
             selection: CodeSelection::new(buffer.len()),
             marked_range: None,
@@ -1938,7 +1992,7 @@ impl CodeEditor {
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             line_height: None,
-            folds: Vec::new(),
+            folds,
             height: None,
             width: None,
             full_width: true,
@@ -1986,6 +2040,7 @@ impl CodeEditor {
         self.invalidate_row_layouts();
         self.undo_stack.clear();
         self.redo_stack.clear();
+        self.refresh_automatic_folds();
         self.sync_list_state();
         self.handle_buffer_change(cx);
     }
@@ -2639,6 +2694,24 @@ impl CodeEditor {
         )
     }
 
+    fn refresh_automatic_folds(&mut self) {
+        let existing = self.folds.clone();
+        let mut folds = existing
+            .iter()
+            .filter(|fold| !fold.automatic)
+            .cloned()
+            .collect::<Vec<_>>();
+        for mut detected in detect_brace_folds(self.buffer.as_str()) {
+            if let Some(previous) = existing.iter().find(|fold| fold.same_range(&detected)) {
+                detected.collapsed = previous.collapsed;
+            }
+            if !folds.iter().any(|fold| fold.same_range(&detected)) {
+                folds.push(detected);
+            }
+        }
+        self.folds = normalize_folds(folds, self.buffer.line_count());
+    }
+
     fn display_row_for_buffer_row(&self, row: usize) -> usize {
         let visible_rows = self.visible_rows();
         visible_rows
@@ -2937,6 +3010,8 @@ impl CodeEditor {
     }
 
     fn handle_buffer_change(&mut self, cx: &mut Context<Self>) {
+        self.refresh_automatic_folds();
+        self.sync_list_state();
         self.refresh_providers();
         if let Some(callback) = self.on_change.clone() {
             let value = self.buffer.as_str().to_string();
@@ -3978,10 +4053,17 @@ fn render_editor_row(
         .items_start()
         .min_h(display_map.row_height())
         .child(if line_numbers {
+            let fold_for_gutter = fold.cloned();
+            let row_number_color = if cursor_row {
+                editor_theme.caret
+            } else {
+                editor_theme.muted_text
+            };
+            let toggle_editor = editor.clone();
             div()
                 .flex_none()
                 .w(display_map.gutter_width(line_numbers))
-                .px_3()
+                .px_2()
                 .py_1()
                 .border_r_1()
                 .border_color(editor_theme.border)
@@ -3989,13 +4071,40 @@ fn render_editor_row(
                 .font_family(code_family.clone())
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
                 .text_xs()
-                .text_color(if cursor_row {
-                    editor_theme.caret
-                } else {
-                    editor_theme.muted_text
+                .text_color(row_number_color)
+                .flex()
+                .items_center()
+                .gap_1()
+                .child(match fold_for_gutter {
+                    Some(fold) => div()
+                        .id(element_id(format!("code-editor-fold-toggle-{row}")))
+                        .w(px(14.0))
+                        .h(px(16.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_sm()
+                        .cursor_pointer()
+                        .text_color(editor_theme.muted_text)
+                        .hover(|s| {
+                            s.bg(editor_theme.chrome_surface)
+                                .text_color(editor_theme.caret)
+                        })
+                        .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                            toggle_editor.update(cx, |editor, cx| editor.toggle_fold(row, cx));
+                            cx.stop_propagation();
+                        })
+                        .child(if fold.collapsed { "▶" } else { "▼" })
+                        .into_any_element(),
+                    None => div().w(px(14.0)).h(px(16.0)).into_any_element(),
                 })
-                .text_right()
-                .child(format!("{}", row + 1))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .text_right()
+                        .child(format!("{}", row + 1)),
+                )
                 .into_any_element()
         } else {
             div().into_any_element()
@@ -4026,42 +4135,6 @@ fn render_editor_row(
                     editor_theme: editor_theme.clone(),
                     whitespace: options.whitespace,
                     editor: editor.clone(),
-                })
-                .when_some(fold.cloned(), |s, fold| {
-                    let toggle_editor = editor.clone();
-                    let icon = if fold.collapsed { "▶" } else { "▼" };
-                    let summary = if fold.collapsed {
-                        format!("{} · {} folded lines", fold.label, fold.hidden_count())
-                    } else {
-                        format!("{} · collapse {} lines", fold.label, fold.hidden_count())
-                    };
-                    s.child(
-                        div()
-                            .id(element_id(format!("code-editor-fold-toggle-{row}")))
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .mt_1()
-                            .rounded_md()
-                            .border_1()
-                            .border_color(editor_theme.border)
-                            .bg(editor_theme.chrome_surface)
-                            .px_2()
-                            .py_1()
-                            .text_xs()
-                            .text_color(editor_theme.muted_text)
-                            .cursor_pointer()
-                            .hover(|s| {
-                                s.border_color(editor_theme.caret)
-                                    .text_color(editor_theme.caret)
-                            })
-                            .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                                toggle_editor.update(cx, |editor, cx| editor.toggle_fold(row, cx));
-                                cx.stop_propagation();
-                            })
-                            .child(icon)
-                            .child(summary),
-                    )
                 })
                 .when(!line_diagnostics.is_empty(), |s| {
                     let mut diagnostics_row = div().flex().flex_col().gap_1().mt_1();
@@ -5134,8 +5207,10 @@ gamma",
         assert!(production_source.contains("fn visible_rows_for"));
         assert!(production_source.contains("fn indent_guide_quads"));
         assert!(production_source.contains("code-editor-fold-toggle-{row}"));
+        assert!(production_source.contains("let fold_for_gutter = fold.cloned()"));
         assert!(production_source.contains(".cursor_pointer()"));
         assert!(production_source.contains("editor.toggle_fold(row, cx)"));
+        assert!(!production_source.contains("folded lines"));
         assert_eq!(
             visible_rows_for(8, &[CodeFold::new(2, 5, "body")], true),
             vec![0, 1, 2, 6, 7]
@@ -5147,6 +5222,21 @@ gamma",
         assert_eq!(
             visible_rows_for(8, &[CodeFold::new(2, 5, "body")], false),
             vec![0, 1, 2, 3, 4, 5, 6, 7]
+        );
+        let detected =
+            detect_brace_folds("fn main() {\n    if ready {\n        run();\n    }\n}\n");
+        assert_eq!(detected.len(), 2);
+        assert!(detected.iter().all(|fold| fold.automatic));
+        assert!(detected.iter().all(|fold| !fold.collapsed));
+        assert!(
+            detected
+                .iter()
+                .any(|fold| fold.start_line == 0 && fold.end_line == 4)
+        );
+        assert!(
+            detected
+                .iter()
+                .any(|fold| fold.start_line == 1 && fold.end_line == 3)
         );
         assert_eq!(leading_indent_columns("        let value = 1;", 4), 8);
     }
