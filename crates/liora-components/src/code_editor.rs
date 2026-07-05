@@ -1115,7 +1115,7 @@ impl CodeEditor {
             self.selection.select_to(offset);
         } else if event.click_count >= 3 {
             self.selection.range = self.line_range_at_offset(offset);
-            self.selection.reversed = false;
+            self.selection.reversed = true;
             self.selection.preferred_column = None;
         } else if event.click_count == 2 {
             self.selection.range = self.word_range_at_offset(offset);
@@ -2109,7 +2109,6 @@ fn render_editor_row(
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
                 .text_sm()
                 .text_color(theme.neutral.text_1)
-                .when(cursor_row, |s| s.bg(theme.primary.base.opacity(0.055)))
                 .child(CodeEditorLineElement {
                     row,
                     text: SharedString::from(line.to_string()),
@@ -2703,6 +2702,22 @@ println!("ok");"#,
             &buffer.as_str()[code_line_range_at_offset(&buffer, 24)],
             r#"println!("ok");"#
         );
+    }
+
+    #[test]
+    fn code_editor_triple_click_line_selection_keeps_cursor_on_clicked_line() {
+        let buffer = CodeBuffer::new(
+            "alpha
+beta
+gamma",
+        );
+        let mut selection = CodeSelection::new(0);
+        selection.range = code_line_range_at_offset(&buffer, 2);
+        selection.reversed = true;
+
+        assert_eq!(selection.range, 0..6);
+        assert_eq!(buffer.offset_to_point(selection.cursor()).row, 0);
+        assert_eq!(buffer.offset_to_point(selection.range.end).row, 1);
     }
 
     #[test]

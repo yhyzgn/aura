@@ -45,7 +45,7 @@
 ## 能力边界
 
 - 支持行号、语言、主题、缩进配置、编辑回调，`Tab` / `Shift+Tab` 可按当前缩进配置缩进或反缩进。
-- 支持基础导航、键盘选择、鼠标点击定位、双击选词、三击选行、列级光标、当前行高亮、拖拽选择、选区左右键折叠、词级跳转/选择/删除、智能 Home、PageUp/PageDown、文档首尾跳转/选择、复制、粘贴、剪切、回车换行、缩进/反缩进、`Ctrl/Cmd+Z` undo 与 `Ctrl/Cmd+Shift+Z` redo。
+- 支持基础导航、键盘选择、鼠标点击定位、双击选词、三击选行、列级光标、拖拽选择、选区左右键折叠、词级跳转/选择/删除、智能 Home、PageUp/PageDown、文档首尾跳转/选择、复制、粘贴、剪切、回车换行、缩进/反缩进、`Ctrl/Cmd+Z` undo 与 `Ctrl/Cmd+Shift+Z` redo。
 - 支持搜索命中统计、静态/动态 completion candidates、hover/help provider 扩展点；这些 API 是语言服务接入点，不会把 SDK 绑定到某个 LSP 进程。
 - 支持 `CodeDiagnostic` 静态注入，也支持 `diagnostics_provider` 根据最新文本动态生成诊断结果，用于展示语法检查、lint、业务规则检查等结果。
 - 语法高亮已经进入编辑行内部，输入变化会驱动同一区域重新渲染；光标、选区和 IME marked text 下划线都在行级 GPUI shaped-line paint 阶段绘制，不参与文本 flex 布局，避免把后续文本挤开；点击定位、IME bounds 和选区矩形使用同一个 glyph layout 反查 offset/坐标并保持 UTF-8 边界安全。
