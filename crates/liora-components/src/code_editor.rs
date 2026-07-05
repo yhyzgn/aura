@@ -24,8 +24,8 @@ use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
     IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton, MouseDownEvent,
-    MouseMoveEvent, Pixels, Point, Render, SharedString, Style, UTF16Selection, Window, actions,
-    div, list, prelude::*, px, relative,
+    MouseMoveEvent, MouseUpEvent, Pixels, Point, Render, SharedString, Style, UTF16Selection,
+    Window, actions, div, list, prelude::*, px, relative,
 };
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
@@ -965,13 +965,30 @@ impl CodeEditor {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if event.pressed_button != Some(MouseButton::Left) || !self.drag_selecting {
+        if !self.drag_selecting {
+            return;
+        }
+        if event.pressed_button != Some(MouseButton::Left) {
+            self.drag_selecting = false;
+            cx.notify();
             return;
         }
         let offset = self.point_for_editor_position(event.position);
         self.selection.select_to(offset);
         self.reveal_cursor();
         self.reset_blink(cx);
+    }
+
+    fn mouse_up_in_editor(
+        &mut self,
+        event: &MouseUpEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if event.button == MouseButton::Left && self.drag_selecting {
+            self.drag_selecting = false;
+            self.reset_blink(cx);
+        }
     }
 
     fn sync_list_state(&self) {
@@ -1624,6 +1641,8 @@ impl Render for CodeEditor {
                     .cursor_text()
                     .on_mouse_down(MouseButton::Left, cx.listener(Self::mouse_down_in_editor))
                     .on_mouse_move(cx.listener(Self::mouse_move_in_editor))
+                    .on_mouse_up(MouseButton::Left, cx.listener(Self::mouse_up_in_editor))
+                    .on_mouse_up_out(MouseButton::Left, cx.listener(Self::mouse_up_in_editor))
                     .child(
                         list(list_state.clone(), move |row, _window, _cx| {
                             render_editor_row(
@@ -1687,11 +1706,7 @@ fn render_editor_row(
         .iter()
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .collect::<Vec<_>>();
-    let row_bg = if cursor_row {
-        theme.primary.light_9.opacity(0.24)
-    } else {
-        theme.neutral.card.opacity(0.0)
-    };
+    let row_bg = theme.neutral.card.opacity(0.0);
 
     div()
         .flex()
@@ -2118,6 +2133,7 @@ mod tests {
         assert!(source.contains("ListState::new"));
         assert!(source.contains("VirtualScrollbar::new"));
         assert!(source.contains("mouse_down_in_editor"));
+        assert!(source.contains("mouse_up_in_editor"));
         assert!(source.contains("point_for_editor_position"));
         assert!(source.contains("render_editor_row"));
         assert!(source.contains("highlighted_code_text"));
@@ -2258,6 +2274,8 @@ mod tests {
         assert!(production_source.contains("fn line_selection_range"));
         assert!(production_source.contains("cursor_column"));
         assert!(production_source.contains("render_line_segments"));
+        assert!(production_source.contains("on_mouse_up_out(MouseButton::Left"));
+        assert!(production_source.contains("theme.neutral.card.opacity(0.0)"));
         assert!(production_source.contains("cursor_active"));
         assert!(production_source.contains("cursor_visible"));
         assert!(
