@@ -497,14 +497,18 @@ impl CodeDisplayMap {
         scroll_row.saturating_add(row_delta).min(max_row)
     }
 
-    fn column_for_x(self, x: Pixels, line_numbers: bool) -> usize {
+    fn column_for_x(self, x: Pixels, line: &str, line_numbers: bool) -> usize {
         let content_x = (x.as_f32()
             - self.gutter_width(line_numbers).as_f32()
             - self.content_left_padding.as_f32())
         .max(0.0);
-        (content_x / self.average_char_width.as_f32())
-            .round()
-            .max(0.0) as usize
+        let grapheme_like_columns = line.chars().count().max(1) as f32;
+        let measured_char_width = if line.is_empty() {
+            self.average_char_width.as_f32()
+        } else {
+            (line.len() as f32 * self.average_char_width.as_f32() / grapheme_like_columns).max(1.0)
+        };
+        (content_x / measured_char_width).round().max(0.0) as usize
     }
 
     fn offset_for_position(
@@ -521,7 +525,7 @@ impl CodeDisplayMap {
             scroll_offset_in_row,
             buffer.line_count(),
         );
-        let column = self.column_for_x(position.x, line_numbers);
+        let column = self.column_for_x(position.x, buffer.line(row), line_numbers);
         buffer.point_to_offset(CodePoint::new(row, column))
     }
 }
@@ -2245,6 +2249,23 @@ mod tests {
             ),
             buffer.point_to_offset(CodePoint::new(0, 3))
         );
+    }
+
+    #[test]
+    fn code_display_map_keeps_multibyte_hit_testing_on_char_boundaries() {
+        let buffer = CodeBuffer::new("αβγ\nhello");
+        let display = CodeDisplayMap::default_for(true);
+
+        let offset = display.offset_for_position(
+            &buffer,
+            gpui::point(px(64.0 + 14.0 + 8.0 * 2.0), px(2.0)),
+            0,
+            px(0.0),
+            true,
+        );
+
+        assert!(buffer.as_str().is_char_boundary(offset));
+        assert_eq!(buffer.offset_to_point(offset).row, 0);
     }
 
     #[test]
