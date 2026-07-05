@@ -1555,6 +1555,13 @@ struct CodeEditorSyntaxRun {
     capture: String,
 }
 
+#[derive(Clone, Debug)]
+struct CodeEditorSyntaxCache {
+    language: CodeLanguage,
+    text_revision: u64,
+    runs: Arc<Vec<CodeEditorSyntaxRun>>,
+}
+
 fn tree_sitter_language(language: CodeLanguage) -> Option<TreeSitterLanguage> {
     match language {
         CodeLanguage::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
@@ -1801,6 +1808,8 @@ pub struct CodeEditor {
     search_query: Option<SharedString>,
     on_change: Option<Arc<CodeEditorChangeCallback>>,
     row_layouts: Vec<Option<CodeEditorRowLayout>>,
+    text_revision: u64,
+    syntax_cache: Option<CodeEditorSyntaxCache>,
 }
 
 impl CodeEditor {
@@ -1838,6 +1847,8 @@ impl CodeEditor {
             search_query: None,
             on_change: None,
             row_layouts: vec![None; row_count],
+            text_revision: 0,
+            syntax_cache: None,
         }
     }
 
@@ -1859,6 +1870,7 @@ impl CodeEditor {
             return;
         }
         self.buffer.set_text(value.to_string());
+        self.bump_text_revision();
         self.selection.set_cursor(self.buffer.len());
         self.marked_range = None;
         self.invalidate_row_layouts();
@@ -1903,6 +1915,7 @@ impl CodeEditor {
         let language = language.into();
         if self.language != language {
             self.language = language;
+            self.syntax_cache = None;
             self.invalidate_row_layouts();
             cx.notify();
         }
@@ -2488,6 +2501,30 @@ impl CodeEditor {
         self.row_layouts.resize(self.buffer.line_count(), None);
     }
 
+    fn bump_text_revision(&mut self) {
+        self.text_revision = self.text_revision.wrapping_add(1);
+        self.syntax_cache = None;
+    }
+
+    fn syntax_runs(&mut self) -> Arc<Vec<CodeEditorSyntaxRun>> {
+        if let Some(cache) = &self.syntax_cache {
+            if cache.language == self.language && cache.text_revision == self.text_revision {
+                return cache.runs.clone();
+            }
+        }
+
+        let runs = Arc::new(zed_tree_sitter_syntax_runs(
+            self.buffer.as_str(),
+            self.language,
+        ));
+        self.syntax_cache = Some(CodeEditorSyntaxCache {
+            language: self.language,
+            text_revision: self.text_revision,
+            runs: runs.clone(),
+        });
+        runs
+    }
+
     fn update_row_layout(&mut self, row: usize, bounds: Bounds<Pixels>, shaped: ShapedLine) {
         if self.row_layouts.len() < self.buffer.line_count() {
             self.row_layouts.resize(self.buffer.line_count(), None);
@@ -2681,6 +2718,7 @@ impl CodeEditor {
             self.undo_stack.push(transaction);
             self.redo_stack.clear();
         }
+        self.bump_text_revision();
         self.invalidate_row_layouts();
         self.sync_list_state();
         self.handle_buffer_change(cx);
@@ -2693,6 +2731,7 @@ impl CodeEditor {
         cx: &mut Context<Self>,
     ) {
         self.buffer.set_text(text);
+        self.bump_text_revision();
         self.invalidate_row_layouts();
         self.selection = selection;
         self.selection.range =
@@ -3392,12 +3431,11 @@ impl Render for CodeEditor {
         let theme_for_rows = theme.clone();
         let editor_theme_for_rows = editor_theme.clone();
         let code_weight_for_rows = code_weight;
-        let syntax_runs = zed_tree_sitter_syntax_runs(self.buffer.as_str(), self.language);
+        let syntax_runs_for_rows = self.syntax_runs();
         let editor_entity = cx.entity();
         let editor_entity_for_rows = editor_entity.clone();
         let cursor_active = focused;
         let cursor_visible = focused && self.cursor_visible;
-        let syntax_runs_for_rows = Arc::new(syntax_runs);
 
         div()
             .flex()
@@ -4674,6 +4712,24 @@ gamma",
         assert!(theme.surface.is_some());
         assert!(theme.syntax.style_for_capture("keyword.control").is_some());
         assert!(theme.chrome_surface.is_none());
+    }
+
+    #[test]
+    fn code_editor_caches_tree_sitter_runs_between_renders() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+
+        assert!(production_source.contains("syntax_cache: Option<CodeEditorSyntaxCache>"));
+        assert!(production_source.contains("text_revision: u64"));
+        assert!(production_source.contains("fn syntax_runs(&mut self)"));
+        assert!(production_source.contains("cache.text_revision == self.text_revision"));
+        assert!(production_source.contains("self.bump_text_revision()"));
+        assert!(!production_source.contains(
+            "let syntax_runs = zed_tree_sitter_syntax_runs(self.buffer.as_str(), self.language);"
+        ));
     }
 
     #[test]

@@ -65,7 +65,7 @@ pub fn showcase_card_wide(
             .child(header(title, description))
             .child(body),
     )
-    .width(px(760.0))
+    .w_full()
     .no_shadow()
 }
 
@@ -84,6 +84,7 @@ pub fn showcase_stack(children: Vec<AnyElement>) -> impl IntoElement {
         .vertical()
         .gap_lg()
         .align_start()
+        .w_full()
         .children(children)
 }
 

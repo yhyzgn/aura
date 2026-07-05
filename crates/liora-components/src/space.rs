@@ -32,6 +32,7 @@ pub struct Space {
     align: Option<SpaceAlign>,
     grow: bool,
     shrink: bool,
+    full_width: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,6 +57,7 @@ impl Space {
             align: None,
             grow: false,
             shrink: false,
+            full_width: false,
         }
     }
 
@@ -135,6 +137,12 @@ impl Space {
         self
     }
 
+    /// Expands the space container to the full available parent width.
+    pub fn w_full(mut self) -> Self {
+        self.full_width = true;
+        self
+    }
+
     /// Adds a child element to the component body.
     pub fn child(mut self, child: impl IntoElement) -> Self {
         self.children.push(child.into_any_element());
@@ -157,6 +165,9 @@ impl RenderOnce for Space {
         }
         if self.shrink {
             div = div.min_w(px(0.0)).flex_shrink(1.0);
+        }
+        if self.full_width {
+            div = div.w_full();
         }
 
         if self.vertical {
@@ -214,6 +225,17 @@ mod tests {
     #[test]
     fn space_grow_tracks_flex_growth() {
         assert!(Space::new().grow().grow);
+    }
+
+    #[test]
+    fn space_w_full_tracks_full_width() {
+        let source = include_str!("space.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(Space::new().w_full().full_width);
+        assert!(source.contains("div = div.w_full()"));
     }
 
     #[test]

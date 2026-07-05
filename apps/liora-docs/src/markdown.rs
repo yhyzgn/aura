@@ -10492,6 +10492,7 @@ fn demo_stack(children: Vec<AnyElement>) -> AnyElement {
     Space::new()
         .vertical()
         .gap_md()
+        .w_full()
         .children(children)
         .into_any_element()
 }
