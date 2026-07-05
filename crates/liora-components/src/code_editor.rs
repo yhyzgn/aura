@@ -950,6 +950,30 @@ impl CodeEditor {
         })
     }
 
+    fn bounds_for_offset_range(&self, range: Range<usize>) -> Option<Bounds<Pixels>> {
+        let range = normalize_replace_range(self.buffer.as_str(), range);
+        let code_point = self.buffer.offset_to_point(range.start);
+        let layout = self.row_layouts.get(code_point.row)?.as_ref()?;
+        let row_start = self.buffer.line_start(code_point.row);
+        let row_end = self.buffer.line_end(code_point.row);
+        let start = range.start.clamp(row_start, row_end) - row_start;
+        let end = range.end.clamp(row_start, row_end) - row_start;
+        let x_start = layout.shaped.x_for_index(start);
+        let x_end = layout.shaped.x_for_index(end).max(x_start + px(1.0));
+        Some(Bounds::new(
+            point(layout.bounds.left() + x_start, layout.bounds.top()),
+            size(x_end - x_start, layout.bounds.size.height),
+        ))
+    }
+
+    fn word_range_at_offset(&self, offset: usize) -> Range<usize> {
+        code_word_range_at_offset(&self.buffer, offset)
+    }
+
+    fn line_range_at_offset(&self, offset: usize) -> Range<usize> {
+        code_line_range_at_offset(&self.buffer, offset)
+    }
+
     fn invalidate_row_layouts(&mut self) {
         self.row_layouts.clear();
         self.row_layouts.resize(self.buffer.line_count(), None);
@@ -1000,6 +1024,14 @@ impl CodeEditor {
         let offset = self.point_for_editor_position(event.position);
         if event.modifiers.shift {
             self.selection.select_to(offset);
+        } else if event.click_count >= 3 {
+            self.selection.range = self.line_range_at_offset(offset);
+            self.selection.reversed = false;
+            self.selection.preferred_column = None;
+        } else if event.click_count == 2 {
+            self.selection.range = self.word_range_at_offset(offset);
+            self.selection.reversed = false;
+            self.selection.preferred_column = None;
         } else {
             self.selection.set_cursor(offset);
         }
@@ -1274,7 +1306,11 @@ impl CodeEditor {
     }
 
     fn left(&mut self, _: &CodeEditorLeft, _: &mut Window, cx: &mut Context<Self>) {
-        self.move_to(self.buffer.prev_char(self.selection.cursor()), false, cx);
+        if self.selection.is_empty() {
+            self.move_to(self.buffer.prev_char(self.selection.cursor()), false, cx);
+        } else {
+            self.move_to(self.selection.range.start, false, cx);
+        }
     }
 
     fn select_left(&mut self, _: &CodeEditorSelectLeft, _: &mut Window, cx: &mut Context<Self>) {
@@ -1282,7 +1318,11 @@ impl CodeEditor {
     }
 
     fn right(&mut self, _: &CodeEditorRight, _: &mut Window, cx: &mut Context<Self>) {
-        self.move_to(self.buffer.next_char(self.selection.cursor()), false, cx);
+        if self.selection.is_empty() {
+            self.move_to(self.buffer.next_char(self.selection.cursor()), false, cx);
+        } else {
+            self.move_to(self.selection.range.end, false, cx);
+        }
     }
 
     fn select_right(&mut self, _: &CodeEditorSelectRight, _: &mut Window, cx: &mut Context<Self>) {
@@ -1471,12 +1511,14 @@ impl EntityInputHandler for CodeEditor {
 
     fn bounds_for_range(
         &mut self,
-        _range_utf16: Range<usize>,
+        range_utf16: Range<usize>,
         _bounds: Bounds<Pixels>,
         _window: &mut Window,
         _: &mut Context<Self>,
     ) -> Option<Bounds<Pixels>> {
-        None
+        let start = self.offset_from_utf16(range_utf16.start);
+        let end = self.offset_from_utf16(range_utf16.end);
+        self.bounds_for_offset_range(start..end)
     }
 
     fn character_index_for_point(
@@ -2023,6 +2065,65 @@ fn normalize_replace_range(text: &str, range: Range<usize>) -> Range<usize> {
     start.min(end)..start.max(end)
 }
 
+fn code_word_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize> {
+    let text = buffer.as_str();
+    if text.is_empty() {
+        return 0..0;
+    }
+    let offset = buffer.clamp_offset(offset);
+    let candidate = if offset < text.len() {
+        offset
+    } else {
+        buffer.prev_char(offset)
+    };
+    let next = buffer.next_char(candidate);
+    let Some(ch) = text
+        .get(candidate..next)
+        .and_then(|value| value.chars().next())
+    else {
+        return offset..offset;
+    };
+    if !is_code_word_char(ch) {
+        return candidate..next;
+    }
+
+    let mut start = candidate;
+    while start > 0 {
+        let previous = buffer.prev_char(start);
+        let ch = text[previous..start].chars().next().unwrap_or(' ');
+        if !is_code_word_char(ch) {
+            break;
+        }
+        start = previous;
+    }
+
+    let mut end = next;
+    while end < text.len() {
+        let following = buffer.next_char(end);
+        let ch = text[end..following].chars().next().unwrap_or(' ');
+        if !is_code_word_char(ch) {
+            break;
+        }
+        end = following;
+    }
+    start..end
+}
+
+fn code_line_range_at_offset(buffer: &CodeBuffer, offset: usize) -> Range<usize> {
+    let point = buffer.offset_to_point(offset);
+    let start = buffer.line_start(point.row);
+    let end = if point.row + 1 < buffer.line_count() {
+        buffer.line_start(point.row + 1)
+    } else {
+        buffer.line_end(point.row)
+    };
+    start..end
+}
+
+fn is_code_word_char(ch: char) -> bool {
+    ch.is_alphanumeric() || ch == '_'
+}
+
 fn removable_indent_len(line: &str, indent: &str) -> Option<usize> {
     if line.starts_with(indent) {
         return Some(indent.len());
@@ -2239,6 +2340,26 @@ mod tests {
         let buffer = CodeBuffer::new("one\ntwo\nthree");
         assert_eq!(buffer.selected_line_bounds(5..6), 4..7);
         assert_eq!(buffer.selected_line_bounds(1..6), 0..7);
+    }
+
+    #[test]
+    fn code_editor_selection_units_cover_words_lines_and_symbols() {
+        let buffer = CodeBuffer::new(
+            r#"let alpha_beta = 42;
+println!("ok");"#,
+        );
+
+        assert_eq!(code_word_range_at_offset(&buffer, 5), 4..14);
+        assert_eq!(
+            &buffer.as_str()[code_word_range_at_offset(&buffer, 5)],
+            "alpha_beta"
+        );
+        assert_eq!(code_word_range_at_offset(&buffer, 15), 15..16);
+        assert_eq!(code_line_range_at_offset(&buffer, 6), 0..21);
+        assert_eq!(
+            &buffer.as_str()[code_line_range_at_offset(&buffer, 24)],
+            r#"println!("ok");"#
+        );
     }
 
     #[test]
