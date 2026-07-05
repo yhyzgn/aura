@@ -19,12 +19,13 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use crate::{CodeBlock, CodeLanguage, CodeTheme, VirtualScrollbar};
+use crate::{CodeLanguage, CodeTheme, VirtualScrollbar, code_block::highlighted_code_text};
 use gpui::{
     App, Bounds, ClipboardItem, Context, Element, ElementId, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, GlobalElementId, Hsla, InspectorElementId,
-    IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, Pixels, Point, Render,
-    SharedString, Style, UTF16Selection, Window, actions, div, list, prelude::*, px, relative,
+    IntoElement, KeyBinding, LayoutId, ListAlignment, ListState, MouseButton, MouseDownEvent,
+    MouseMoveEvent, Pixels, Point, Render, ScrollWheelEvent, SharedString, Style, UTF16Selection,
+    Window, actions, div, list, prelude::*, px, relative,
 };
 use liora_core::{Config, code_font_family, code_font_weight};
 use liora_icons::Icon;
@@ -462,7 +463,7 @@ impl CodeViewport {
 }
 
 /// Native code editing surface with virtualized rows, line numbers, indentation metadata,
-/// syntax-highlight preview and pluggable diagnostics.
+/// live syntax highlighting and pluggable diagnostics.
 ///
 /// The v2 foundation follows Zed's public architecture lessons without copying or
 /// depending on GPL editor crates: buffer state, selection state, viewport state,
@@ -480,7 +481,8 @@ pub struct CodeEditor {
     soft_tabs: bool,
     viewport: CodeViewport,
     height: Option<Pixels>,
-    preview: bool,
+    scroll_row: usize,
+    drag_selecting: bool,
     diagnostics: Vec<CodeDiagnostic>,
     diagnostics_provider: Option<Arc<CodeDiagnosticsProvider>>,
     completion_items: Vec<CodeCompletionItem>,
@@ -509,7 +511,8 @@ impl CodeEditor {
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             height: None,
-            preview: true,
+            scroll_row: 0,
+            drag_selecting: false,
             diagnostics: Vec::new(),
             diagnostics_provider: None,
             completion_items: Vec::new(),
@@ -616,9 +619,13 @@ impl CodeEditor {
         self
     }
 
-    /// Sets the preview value used by the component.
-    pub fn preview(mut self, preview: bool) -> Self {
-        self.preview = preview;
+    /// Preserves source compatibility with earlier CodeEditor versions.
+    ///
+    /// CodeEditor v2 renders syntax highlighting inside the editable virtual rows,
+    /// so there is no separate preview panel to toggle. This builder intentionally
+    /// remains a no-op to avoid breaking existing applications while keeping the
+    /// editing surface and the live visual result unified.
+    pub fn preview(self, _preview: bool) -> Self {
         self
     }
 
@@ -758,6 +765,80 @@ impl CodeEditor {
             KeyBinding::new("tab", CodeEditorIndent, None),
             KeyBinding::new("shift-tab", CodeEditorOutdent, None),
         ]);
+    }
+
+    fn point_for_editor_position(&self, position: Point<Pixels>, viewport_height: Pixels) -> usize {
+        const ROW_HEIGHT: f32 = 24.0;
+        const GUTTER_WIDTH: f32 = 64.0;
+        const CHAR_WIDTH: f32 = 8.0;
+
+        let row_delta = (position.y.as_f32() / ROW_HEIGHT).floor().max(0.0) as usize;
+        let row = (self.scroll_row + row_delta).min(self.buffer.line_count().saturating_sub(1));
+        let gutter = if self.line_numbers { GUTTER_WIDTH } else { 0.0 };
+        let column_px = (position.x.as_f32() - gutter - 14.0).max(0.0);
+        let column = (column_px / CHAR_WIDTH).round().max(0.0) as usize;
+        let _ = viewport_height;
+        self.buffer.point_to_offset(CodePoint::new(row, column))
+    }
+
+    fn update_scroll_row_from_wheel(&mut self, event: &ScrollWheelEvent, window: &Window) {
+        const ROW_HEIGHT: f32 = 24.0;
+        let delta = event.delta.pixel_delta(window.line_height()).y.as_f32();
+        if delta == 0.0 {
+            return;
+        }
+        let rows = (delta.abs() / ROW_HEIGHT).ceil().max(1.0) as usize;
+        if delta < 0.0 {
+            self.scroll_row =
+                (self.scroll_row + rows).min(self.buffer.line_count().saturating_sub(1));
+        } else {
+            self.scroll_row = self.scroll_row.saturating_sub(rows);
+        }
+    }
+
+    fn mouse_down_in_editor(
+        &mut self,
+        event: &MouseDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        window.focus(&self.focus_handle, cx);
+        let viewport_height = self.height.unwrap_or_else(|| self.viewport.height());
+        let offset = self.point_for_editor_position(event.position, viewport_height);
+        if event.modifiers.shift {
+            self.selection.select_to(offset);
+        } else {
+            self.selection.set_cursor(offset);
+        }
+        self.drag_selecting = true;
+        self.reveal_cursor();
+        cx.notify();
+    }
+
+    fn mouse_move_in_editor(
+        &mut self,
+        event: &MouseMoveEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if event.pressed_button != Some(MouseButton::Left) || !self.drag_selecting {
+            return;
+        }
+        let viewport_height = self.height.unwrap_or_else(|| self.viewport.height());
+        let offset = self.point_for_editor_position(event.position, viewport_height);
+        self.selection.select_to(offset);
+        self.reveal_cursor();
+        cx.notify();
+    }
+
+    fn scroll_wheel_in_editor(
+        &mut self,
+        event: &ScrollWheelEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.update_scroll_row_from_wheel(event, window);
+        cx.notify();
     }
 
     fn sync_list_state(&self) {
@@ -1245,6 +1326,8 @@ impl Render for CodeEditor {
         let selection = self.selection.clone();
         let diagnostics = self.diagnostics.clone();
         let show_line_numbers = self.line_numbers;
+        let row_language = self.language;
+        let row_code_theme = self.theme;
         let code_family_for_rows = code_family.clone();
         let theme_for_rows = theme.clone();
         let code_weight_for_rows = code_weight;
@@ -1336,10 +1419,9 @@ impl Render for CodeEditor {
                     .h(editor_height)
                     .bg(theme.neutral.hover.opacity(0.18))
                     .cursor_text()
-                    .on_mouse_down(gpui::MouseButton::Left, {
-                        let focus_handle = focus_handle.clone();
-                        move |_, window, cx| window.focus(&focus_handle, cx)
-                    })
+                    .on_mouse_down(MouseButton::Left, cx.listener(Self::mouse_down_in_editor))
+                    .on_mouse_move(cx.listener(Self::mouse_move_in_editor))
+                    .on_scroll_wheel(cx.listener(Self::scroll_wheel_in_editor))
                     .child(
                         list(list_state.clone(), move |row, _window, _cx| {
                             render_editor_row(
@@ -1348,6 +1430,8 @@ impl Render for CodeEditor {
                                 &selection,
                                 &diagnostics,
                                 show_line_numbers,
+                                row_language,
+                                row_code_theme,
                                 &theme_for_rows,
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
@@ -1371,29 +1455,6 @@ impl Render for CodeEditor {
             .when_some(self.hover.clone(), |s, hover| {
                 s.child(render_hover(hover, &theme))
             })
-            .when(self.preview, |s| {
-                s.child(
-                    div()
-                        .border_t_1()
-                        .border_color(theme.neutral.border)
-                        .p_3()
-                        .child(
-                            div()
-                                .mb_2()
-                                .text_xs()
-                                .font_weight(gpui::FontWeight::BOLD)
-                                .text_color(theme.neutral.text_3)
-                                .child("Syntax preview"),
-                        )
-                        .child(
-                            CodeBlock::new(SharedString::from(self.buffer.as_str().to_string()))
-                                .language(self.language)
-                                .theme(self.theme)
-                                .copyable(false)
-                                .selectable(true),
-                        ),
-                )
-            })
     }
 }
 
@@ -1403,6 +1464,8 @@ fn render_editor_row(
     selection: &CodeSelection,
     diagnostics: &[CodeDiagnostic],
     line_numbers: bool,
+    language: CodeLanguage,
+    code_theme: CodeTheme,
     theme: &liora_theme::Theme,
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
@@ -1457,11 +1520,20 @@ fn render_editor_row(
                 .min_w_0()
                 .px_3()
                 .py_1()
-                .font_family(code_family)
+                .font_family(code_family.clone())
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
                 .text_sm()
                 .text_color(theme.neutral.text_1)
-                .child(render_line_text(line, selected, cursor_row, theme))
+                .child(render_line_text(
+                    line,
+                    selected,
+                    cursor_row,
+                    language,
+                    code_theme,
+                    theme,
+                    &code_family,
+                    code_weight,
+                ))
                 .when(!line_diagnostics.is_empty(), |s| {
                     let mut diagnostics_row = div().flex().flex_col().gap_1().mt_1();
                     for diagnostic in line_diagnostics {
@@ -1490,13 +1562,19 @@ fn render_line_text(
     line: &str,
     selected: bool,
     cursor_row: bool,
+    language: CodeLanguage,
+    code_theme: CodeTheme,
     theme: &liora_theme::Theme,
+    code_family: &SharedString,
+    code_weight: Option<gpui::FontWeight>,
 ) -> gpui::Div {
     let text = if line.is_empty() {
         SharedString::from(" ")
     } else {
         SharedString::from(line.to_string())
     };
+    let highlighted =
+        highlighted_code_text(text, language, code_theme, theme, code_family, code_weight);
     div()
         .flex()
         .items_center()
@@ -1516,7 +1594,7 @@ fn render_line_text(
                 .px_1()
                 .rounded(px(3.0))
                 .when(selected, |s| s.bg(theme.primary.base.opacity(0.22)))
-                .child(text),
+                .child(highlighted),
         )
 }
 
@@ -1726,8 +1804,10 @@ mod tests {
         assert!(source.contains("struct CodeViewport"));
         assert!(source.contains("ListState::new"));
         assert!(source.contains("VirtualScrollbar::new"));
+        assert!(source.contains("mouse_down_in_editor"));
+        assert!(source.contains("point_for_editor_position"));
         assert!(source.contains("render_editor_row"));
-        assert!(source.contains("CodeBlock::new"));
+        assert!(source.contains("highlighted_code_text"));
         assert!(
             !source
                 .lines()

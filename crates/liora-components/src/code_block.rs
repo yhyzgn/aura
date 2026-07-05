@@ -782,6 +782,33 @@ fn render_highlighted_text(
     StyledText::new(code).with_runs(runs.to_vec())
 }
 
+/// Builds syntax-highlighted text without adding a CodeBlock frame.
+///
+/// This crate-local helper lets higher-level editing components render live
+/// highlighted code inside their own virtualized rows instead of showing a
+/// separate preview block. The helper keeps the highlighter cache centralized in
+/// `CodeBlock`, so editor rows and standalone code blocks share the same theme
+/// and syntax resolution path.
+pub(crate) fn highlighted_code_text(
+    code: SharedString,
+    language: CodeLanguage,
+    code_theme: CodeTheme,
+    theme: &liora_theme::Theme,
+    code_family: &SharedString,
+    code_weight: Option<FontWeight>,
+) -> StyledText {
+    render_highlighted_text(
+        code,
+        language,
+        CodeHighlighter::Syntect,
+        resolve_code_theme(code_theme, theme),
+        theme,
+        code_family,
+        code_weight,
+        false,
+    )
+}
+
 fn render_code_content(
     id: ElementId,
     code: SharedString,

@@ -80,7 +80,7 @@ impl Render for CodeEditorDemo {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         page(
             "CodeEditor 代码编辑器",
-            "原生 GPUI 代码编辑控件 v2 基座，支持独立 buffer/selection/viewport、可见行渲染、行号、缩进配置、语法高亮预览和 diagnostics 扩展点。",
+            "原生 GPUI 代码编辑控件 v2 基座，支持独立 buffer/selection/viewport、可见行渲染、行内实时语法高亮和 diagnostics 扩展点。",
             Space::new().vertical().gap_xl().child(section(
                 "Editor showcase",
                 "代码编辑示例统一使用宽卡片展示，避免编辑器高度和说明文本打散页面节奏。",

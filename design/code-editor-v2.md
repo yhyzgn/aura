@@ -2,7 +2,7 @@
 
 ## Goal
 
-CodeEditor v2 turns the old `Input + CodeBlock preview` composition into a real native editor foundation that can grow into enterprise editing scenarios without adopting a WebView runtime or coupling Liora to Zed's GPL editor crates.
+CodeEditor v2 turns the old `Input + separated CodeBlock preview` composition into a real native editor foundation that can grow into enterprise editing scenarios without adopting a WebView runtime or coupling Liora to Zed's GPL editor crates.
 
 The design is based on the official `zed-industries/zed` source at the GPUI revision used by this repository. Zed's editor is fast because it separates text storage, snapshots, display mapping, visible-row rendering, language services, and UI painting. Liora follows the same architectural direction while keeping its implementation independent and license-safe.
 
@@ -75,8 +75,8 @@ Diagnostics, completions, and hover data remain provider-driven. This keeps Lior
 
 - `CodeEditor` no longer stores an `Entity<Input>` editing core.
 - Editing state is held by `CodeBuffer` and `CodeSelection`.
-- Rows render through GPUI `list`, so large documents no longer require rendering every source line into a single element tree.
-- Existing public builder methods remain available: `language`, `theme`, `line_numbers`, `tab_size`, `soft_tabs`, `rows`, `height`, `preview`, `diagnostics`, `diagnostics_provider`, `completion_provider`, `hover_provider`, `search_query`, `on_change`.
+- Rows render through GPUI `list`, so large documents no longer require rendering every source line into a single element tree. Each visible row renders highlighted code directly; the editing area and the live visual result are unified.
+- Existing public builder methods remain available: `language`, `theme`, `line_numbers`, `tab_size`, `soft_tabs`, `rows`, `height`, `preview`, `diagnostics`, `diagnostics_provider`, `completion_provider`, `hover_provider`, `search_query`, `on_change`. `preview` is retained as a no-op compatibility builder because v2 renders highlighting directly inside editable rows.
 - Existing keybindings are expanded to editor-owned copy/paste/cut, navigation, selection, enter, indent, and outdent actions.
 
 ## Next phases
