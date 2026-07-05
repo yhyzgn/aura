@@ -47,6 +47,39 @@
 ```rust src="code_editor/advanced.rs"
 ```
 
+## 高级布局：行高自定义
+
+### 效果
+
+::Demo{component="CodeEditorLineHeight"}::
+
+### 代码
+
+```rust src="code_editor/line_height.rs"
+```
+
+## 高级布局：缩进指示线
+
+### 效果
+
+::Demo{component="CodeEditorIndentGuides"}::
+
+### 代码
+
+```rust src="code_editor/indent_guides.rs"
+```
+
+## 高级布局：代码块折叠
+
+### 效果
+
+::Demo{component="CodeEditorFolding"}::
+
+### 代码
+
+```rust src="code_editor/folding.rs"
+```
+
 ## 配置矩阵：只读、Chrome 和扩展面板
 
 ### 效果
@@ -80,7 +113,7 @@
 
 - 支持行号、语言、主题、缩进配置、编辑回调，`Tab` / `Shift+Tab` 可按当前缩进配置缩进或反缩进。
 - 支持基础导航、键盘选择、鼠标点击定位、双击选词、三击选行、列级光标、拖拽选择、选区左右键折叠、词级跳转/选择/删除、智能 Home、PageUp/PageDown、文档首尾跳转/选择、复制、粘贴、剪切、回车换行、缩进/反缩进、`Ctrl/Cmd+Z` undo 与 `Ctrl/Cmd+Shift+Z` redo。
-- 支持 `CodeEditorOptions` 统一配置：`read_only`、`header`、`status_bar`、`line_numbers`、`diagnostics_panel`、`completions_panel`、`hover_panel`、`current_line_highlight`、`rulers`、`ruler_column`、`inline_diagnostics`、`whitespace`、`selection`、`copy`、`clipboard_editing`、`cursor_blink`、`drag_selection`、`word_selection`、`line_selection`、`indentation`、`history`、`reveal_cursor`、`scrollbar`、`completion_limit` 与 `diagnostics_limit`；也可用 builder 快速配置常用单项。
+- 支持 `CodeEditorOptions` 统一配置：`read_only`、`header`、`status_bar`、`line_numbers`、`diagnostics_panel`、`completions_panel`、`hover_panel`、`current_line_highlight`、`indent_guides`、`code_folding`、`rulers`、`ruler_column`、`inline_diagnostics`、`whitespace`、`selection`、`copy`、`clipboard_editing`、`cursor_blink`、`drag_selection`、`word_selection`、`line_selection`、`indentation`、`history`、`reveal_cursor`、`scrollbar`、`completion_limit` 与 `diagnostics_limit`；也可用 builder 快速配置常用单项。
 - 支持 `CodeEditorHighlightTheme` 与 `CodeEditorSyntaxTheme` 自定义编辑器主题：可覆盖 base `CodeTheme`、surface、chrome/gutter、border、text/muted text、caret、selection、current line、ruler、whitespace、diagnostic semantic colors，也可用 Zed-style syntax capture 配置每类 token 的颜色、字重和 italic。
 - 支持搜索命中统计、静态/动态 completion candidates、hover/help provider 扩展点；这些 API 是语言服务接入点，不会把 SDK 绑定到某个 LSP 进程。
 - 支持 `CodeDiagnostic` 静态注入，也支持 `diagnostics_provider` 根据最新文本动态生成诊断结果，用于展示语法检查、lint、业务规则检查等结果。

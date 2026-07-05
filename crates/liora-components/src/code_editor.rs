@@ -498,9 +498,9 @@ struct CodeDisplayMap {
 }
 
 impl CodeDisplayMap {
-    fn default_for(line_numbers: bool) -> Self {
+    fn default_for(line_numbers: bool, row_height: Option<Pixels>) -> Self {
         Self {
-            row_height: px(24.0),
+            row_height: row_height.unwrap_or_else(|| px(24.0)),
             gutter_width: if line_numbers { px(64.0) } else { px(0.0) },
             content_left_padding: px(14.0),
             average_char_width: px(8.0),
@@ -572,6 +572,32 @@ impl CodeDisplayMap {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// Declarative folded source range for CodeEditor block-folding demos and host state.
+pub struct CodeFold {
+    /// Zero-based first line that remains visible as the fold header.
+    pub start_line: usize,
+    /// Zero-based inclusive last line hidden by the fold.
+    pub end_line: usize,
+    /// Label rendered next to the fold placeholder.
+    pub label: SharedString,
+}
+
+impl CodeFold {
+    /// Creates a folded source range. `end_line` is clamped above `start_line` by render helpers.
+    pub fn new(start_line: usize, end_line: usize, label: impl Into<SharedString>) -> Self {
+        Self {
+            start_line,
+            end_line,
+            label: label.into(),
+        }
+    }
+
+    fn hidden_count(&self) -> usize {
+        self.end_line.saturating_sub(self.start_line)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct CodeTransaction {
     before_text: String,
     after_text: String,
@@ -613,6 +639,52 @@ impl CodeViewport {
     fn height(self, display: CodeDisplayMap) -> Pixels {
         display.viewport_height(self.rows)
     }
+}
+
+fn normalize_folds(folds: impl IntoIterator<Item = CodeFold>, line_count: usize) -> Vec<CodeFold> {
+    let mut folds = folds
+        .into_iter()
+        .filter_map(|mut fold| {
+            if line_count == 0 {
+                return None;
+            }
+            fold.start_line = fold.start_line.min(line_count.saturating_sub(1));
+            fold.end_line = fold.end_line.min(line_count.saturating_sub(1));
+            (fold.end_line > fold.start_line).then_some(fold)
+        })
+        .collect::<Vec<_>>();
+    folds.sort_by_key(|fold| (fold.start_line, fold.end_line));
+    folds
+}
+
+fn visible_rows_for(line_count: usize, folds: &[CodeFold], enabled: bool) -> Vec<usize> {
+    if !enabled || folds.is_empty() {
+        return (0..line_count).collect();
+    }
+    let mut rows = Vec::with_capacity(line_count);
+    let mut row = 0;
+    while row < line_count {
+        rows.push(row);
+        if let Some(fold) = folds.iter().find(|fold| fold.start_line == row) {
+            row = fold.end_line.saturating_add(1).min(line_count);
+        } else {
+            row += 1;
+        }
+    }
+    rows
+}
+
+fn fold_at_row<'a>(folds: &'a [CodeFold], row: usize, enabled: bool) -> Option<&'a CodeFold> {
+    enabled
+        .then(|| folds.iter().find(|fold| fold.start_line == row))
+        .flatten()
+}
+
+fn leading_indent_columns(line: &str, tab_size: usize) -> usize {
+    line.chars()
+        .take_while(|ch| *ch == ' ' || *ch == '\t')
+        .map(|ch| if ch == '\t' { tab_size } else { 1 })
+        .sum()
 }
 
 fn parse_code_theme(value: &str) -> Option<CodeTheme> {
@@ -719,6 +791,10 @@ pub struct CodeEditorOptions {
     pub hover_panel: bool,
     /// Whether the current row receives a subtle background highlight.
     pub current_line_highlight: bool,
+    /// Whether vertical indentation guide lines are painted for leading whitespace.
+    pub indent_guides: bool,
+    /// Whether configured fold ranges hide child rows and render fold placeholders.
+    pub code_folding: bool,
     /// Whether the editor should render a thin right-edge guide column.
     pub rulers: bool,
     /// Target column for the primary ruler guide.
@@ -766,6 +842,8 @@ impl Default for CodeEditorOptions {
             completions_panel: true,
             hover_panel: true,
             current_line_highlight: false,
+            indent_guides: false,
+            code_folding: true,
             rulers: false,
             ruler_column: 80,
             inline_diagnostics: CodeEditorInlineDiagnostics::All,
@@ -803,6 +881,8 @@ pub struct CodeEditorConfig {
     pub rows: Option<usize>,
     /// Optional fixed height in pixels.
     pub height_px: Option<f32>,
+    /// Optional editor line height in pixels.
+    pub line_height_px: Option<f32>,
     /// Optional indentation width.
     pub tab_size: Option<usize>,
     /// Optional soft-tabs toggle.
@@ -889,6 +969,8 @@ pub struct CodeEditorOptionsConfig {
     pub completions_panel: Option<bool>,
     pub hover_panel: Option<bool>,
     pub current_line_highlight: Option<bool>,
+    pub indent_guides: Option<bool>,
+    pub code_folding: Option<bool>,
     pub rulers: Option<bool>,
     pub ruler_column: Option<usize>,
     pub inline_diagnostics: Option<String>,
@@ -925,6 +1007,8 @@ impl CodeEditorOptionsConfig {
         set_bool!(completions_panel);
         set_bool!(hover_panel);
         set_bool!(current_line_highlight);
+        set_bool!(indent_guides);
+        set_bool!(code_folding);
         set_bool!(rulers);
         set_bool!(selection);
         set_bool!(copy);
@@ -1792,6 +1876,8 @@ pub struct CodeEditor {
     tab_size: usize,
     soft_tabs: bool,
     viewport: CodeViewport,
+    line_height: Option<Pixels>,
+    folds: Vec<CodeFold>,
     height: Option<Pixels>,
     width: Option<Pixels>,
     full_width: bool,
@@ -1833,6 +1919,8 @@ impl CodeEditor {
             tab_size: 4,
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
+            line_height: None,
+            folds: Vec::new(),
             height: None,
             width: None,
             full_width: true,
@@ -1958,6 +2046,9 @@ impl CodeEditor {
         if let Some(height) = config.height_px {
             self.height = Some(px(height));
         }
+        if let Some(line_height) = config.line_height_px {
+            self.line_height = Some(px(line_height.max(12.0)));
+        }
         if let Some(tab_size) = config.tab_size {
             self.tab_size = tab_size.max(1);
         }
@@ -1988,6 +2079,9 @@ impl CodeEditor {
         }
         if let Some(height) = config.height_px {
             self.height = Some(px(height));
+        }
+        if let Some(line_height) = config.line_height_px {
+            self.line_height = Some(px(line_height.max(12.0)));
         }
         if let Some(tab_size) = config.tab_size {
             self.tab_size = tab_size.max(1);
@@ -2160,6 +2254,50 @@ impl CodeEditor {
     /// Sets the soft tabs value used by the component.
     pub fn soft_tabs(mut self, enabled: bool) -> Self {
         self.soft_tabs = enabled;
+        self
+    }
+
+    /// Sets the row line height used by visible editor rows.
+    pub fn line_height(mut self, height: impl Into<Pixels>) -> Self {
+        self.line_height = Some(height.into());
+        self
+    }
+
+    /// Sets the row line height using plain pixel units.
+    pub fn line_height_units(self, height: f32) -> Self {
+        self.line_height(px(height.max(12.0)))
+    }
+
+    /// Controls whether leading indentation guide lines are painted.
+    pub fn indent_guides(mut self, enabled: bool) -> Self {
+        self.options.indent_guides = enabled;
+        self
+    }
+
+    /// Controls whether configured fold ranges hide child rows.
+    pub fn code_folding(mut self, enabled: bool) -> Self {
+        self.options.code_folding = enabled;
+        self.sync_list_state();
+        self
+    }
+
+    /// Replaces configured fold ranges.
+    pub fn folds(mut self, folds: impl IntoIterator<Item = CodeFold>) -> Self {
+        self.folds = normalize_folds(folds, self.buffer.line_count());
+        self.sync_list_state();
+        self
+    }
+
+    /// Adds one folded source range.
+    pub fn fold_range(
+        mut self,
+        start_line: usize,
+        end_line: usize,
+        label: impl Into<SharedString>,
+    ) -> Self {
+        self.folds.push(CodeFold::new(start_line, end_line, label));
+        self.folds = normalize_folds(self.folds, self.buffer.line_count());
+        self.sync_list_state();
         self
     }
 
@@ -2437,7 +2575,23 @@ impl CodeEditor {
     }
 
     fn display_map(&self) -> CodeDisplayMap {
-        CodeDisplayMap::default_for(self.options.line_numbers)
+        CodeDisplayMap::default_for(self.options.line_numbers, self.line_height)
+    }
+
+    fn visible_rows(&self) -> Vec<usize> {
+        visible_rows_for(
+            self.buffer.line_count(),
+            &self.folds,
+            self.options.code_folding,
+        )
+    }
+
+    fn display_row_for_buffer_row(&self, row: usize) -> usize {
+        let visible_rows = self.visible_rows();
+        visible_rows
+            .iter()
+            .position(|visible| *visible >= row)
+            .unwrap_or_else(|| visible_rows.len().saturating_sub(1))
     }
 
     fn local_editor_position(&self, position: Point<Pixels>) -> Point<Pixels> {
@@ -2457,13 +2611,32 @@ impl CodeEditor {
         }
 
         let scroll_top = self.list_state.logical_scroll_top();
-        self.display_map().offset_for_position(
-            &self.buffer,
-            self.local_editor_position(position),
+        let local = self.local_editor_position(position);
+        if !self.options.code_folding || self.folds.is_empty() {
+            return self.display_map().offset_for_position(
+                &self.buffer,
+                local,
+                scroll_top.item_ix,
+                scroll_top.offset_in_item,
+                self.options.line_numbers,
+            );
+        }
+
+        let visible_rows = self.visible_rows();
+        let visible_row = self.display_map().row_for_y(
+            local.y,
             scroll_top.item_ix,
             scroll_top.offset_in_item,
+            visible_rows.len(),
+        );
+        let buffer_row = visible_rows.get(visible_row).copied().unwrap_or(0);
+        let column = self.display_map().column_for_x(
+            local.x,
+            self.buffer.line(buffer_row),
             self.options.line_numbers,
-        )
+        );
+        self.buffer
+            .point_to_offset(CodePoint::new(buffer_row, column))
     }
 
     fn offset_for_shaped_position(&self, position: Point<Pixels>) -> Option<usize> {
@@ -2684,12 +2857,13 @@ impl CodeEditor {
 
     fn sync_list_state(&mut self) {
         let line_count = self.buffer.line_count();
+        let visible_count = self.visible_rows().len();
         let current_count = self.list_state.item_count();
-        if line_count > current_count {
+        if visible_count > current_count {
             self.list_state
-                .splice(current_count..current_count, line_count - current_count);
-        } else if line_count < current_count {
-            self.list_state.splice(line_count..current_count, 0);
+                .splice(current_count..current_count, visible_count - current_count);
+        } else if visible_count < current_count {
+            self.list_state.splice(visible_count..current_count, 0);
         }
         if self.row_layouts.len() != line_count {
             self.invalidate_row_layouts();
@@ -2823,7 +2997,8 @@ impl CodeEditor {
 
     fn reveal_cursor(&self) {
         let point = self.buffer.offset_to_point(self.selection.cursor());
-        self.list_state.scroll_to_reveal_item(point.row);
+        self.list_state
+            .scroll_to_reveal_item(self.display_row_for_buffer_row(point.row));
     }
 
     fn indent(&mut self, _: &CodeEditorIndent, _: &mut Window, cx: &mut Context<Self>) {
@@ -3465,9 +3640,11 @@ impl Render for CodeEditor {
         let focus_handle = self.focus_handle(cx);
         let list_state = self.list_state.clone();
         let buffer = self.buffer.clone();
+        let visible_rows = Arc::new(self.visible_rows());
         let selection = self.selection.clone();
         let marked_range = self.marked_range.clone();
         let diagnostics = self.diagnostics.clone();
+        let self_folds_for_rows = self.folds.clone();
         let show_line_numbers = options.line_numbers;
         let row_display_map = display_map;
         let row_language = self.language;
@@ -3608,12 +3785,14 @@ impl Render for CodeEditor {
                     .child(
                         list(list_state.clone(), move |row, _window, _cx| {
                             let editor_for_row = editor_entity_for_rows.clone();
+                            let buffer_row = visible_rows.get(row).copied().unwrap_or(row);
                             render_editor_row(
-                                row,
+                                buffer_row,
                                 &buffer,
                                 &selection,
                                 marked_range.as_ref(),
                                 &diagnostics,
+                                &self_folds_for_rows,
                                 show_line_numbers,
                                 row_language,
                                 row_code_theme,
@@ -3698,6 +3877,7 @@ fn render_editor_row(
     selection: &CodeSelection,
     marked_range: Option<&Range<usize>>,
     diagnostics: &[CodeDiagnostic],
+    folds: &[CodeFold],
     line_numbers: bool,
     language: CodeLanguage,
     code_theme: CodeTheme,
@@ -3726,6 +3906,7 @@ fn render_editor_row(
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
         .filter(|diagnostic| options.inline_diagnostics.includes(diagnostic.severity))
         .collect::<Vec<_>>();
+    let fold = fold_at_row(folds, row, options.code_folding);
     let highlight_current_line = options.current_line_highlight && cursor_row;
     let line_start = buffer.line_start(row);
     let runs = zed_tree_sitter_line_runs(
@@ -3786,10 +3967,35 @@ fn render_editor_row(
                     cursor_visible: cursor_active && cursor_visible && cursor_column.is_some(),
                     line_height: display_map.row_height(),
                     current_line_highlight: highlight_current_line,
+                    indent_guides: options.indent_guides,
+                    indent_columns: leading_indent_columns(line, 4),
                     theme: theme.clone(),
                     editor_theme: editor_theme.clone(),
                     whitespace: options.whitespace,
                     editor,
+                })
+                .when_some(fold.cloned(), |s, fold| {
+                    s.child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .mt_1()
+                            .rounded_md()
+                            .border_1()
+                            .border_color(editor_theme.border)
+                            .bg(editor_theme.chrome_surface)
+                            .px_2()
+                            .py_1()
+                            .text_xs()
+                            .text_color(editor_theme.muted_text)
+                            .child("↳")
+                            .child(format!(
+                                "{} · {} folded lines",
+                                fold.label,
+                                fold.hidden_count()
+                            )),
+                    )
                 })
                 .when(!line_diagnostics.is_empty(), |s| {
                     let mut diagnostics_row = div().flex().flex_col().gap_1().mt_1();
@@ -3821,6 +4027,8 @@ struct CodeEditorLineElement {
     cursor_visible: bool,
     line_height: Pixels,
     current_line_highlight: bool,
+    indent_guides: bool,
+    indent_columns: usize,
     theme: liora_theme::Theme,
     editor_theme: ResolvedCodeEditorTheme,
     whitespace: CodeEditorWhitespaceMode,
@@ -3832,6 +4040,7 @@ struct CodeEditorLinePrepaint {
     current_line: Option<PaintQuad>,
     selection: Vec<PaintQuad>,
     whitespace: Vec<PaintQuad>,
+    indent_guides: Vec<PaintQuad>,
     marked: Option<PaintQuad>,
     caret: Option<PaintQuad>,
 }
@@ -3923,6 +4132,15 @@ impl Element for CodeEditorLineElement {
             self.editor_theme.whitespace,
         );
 
+        let indent_guides = indent_guide_quads(
+            self.indent_guides,
+            self.indent_columns,
+            shaped,
+            bounds,
+            self.line_height,
+            self.editor_theme.ruler.opacity(0.45),
+        );
+
         let marked = self.marked_range.clone().and_then(|range| {
             let range = normalize_replace_range(self.text.as_ref(), range);
             (range.start < range.end).then(|| {
@@ -3959,6 +4177,7 @@ impl Element for CodeEditorLineElement {
             current_line,
             selection,
             whitespace,
+            indent_guides,
             marked,
             caret,
         }
@@ -3976,6 +4195,9 @@ impl Element for CodeEditorLineElement {
     ) {
         if let Some(current_line) = prepaint.current_line.take() {
             window.paint_quad(current_line);
+        }
+        for quad in prepaint.indent_guides.drain(..) {
+            window.paint_quad(quad);
         }
         for quad in prepaint.selection.drain(..) {
             window.paint_quad(quad);
@@ -4220,6 +4442,32 @@ fn apply_signed_delta(value: usize, delta: isize) -> usize {
     } else {
         value.saturating_add(delta as usize)
     }
+}
+
+fn indent_guide_quads(
+    enabled: bool,
+    indent_columns: usize,
+    shaped: &ShapedLine,
+    bounds: Bounds<Pixels>,
+    line_height: Pixels,
+    color: Hsla,
+) -> Vec<PaintQuad> {
+    if !enabled || indent_columns < 2 {
+        return Vec::new();
+    }
+    (4..=indent_columns)
+        .step_by(4)
+        .map(|column| {
+            let x = shaped.x_for_index(column.min(shaped.len()));
+            fill(
+                Bounds::new(
+                    point(bounds.left() + x, bounds.top() + px(4.0)),
+                    size(px(1.0), (line_height - px(8.0)).max(px(1.0))),
+                ),
+                color,
+            )
+        })
+        .collect()
 }
 
 fn render_ruler(
@@ -4543,7 +4791,7 @@ gamma",
     #[test]
     fn code_display_map_maps_pointer_positions_to_buffer_offsets() {
         let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
-        let display = CodeDisplayMap::default_for(true);
+        let display = CodeDisplayMap::default_for(true, None);
 
         assert_eq!(
             display.offset_for_position(&buffer, gpui::point(px(84.0), px(30.0)), 0, px(0.0), true),
@@ -4558,7 +4806,7 @@ gamma",
     #[test]
     fn code_display_map_accounts_for_list_scroll_offset() {
         let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
-        let display = CodeDisplayMap::default_for(true);
+        let display = CodeDisplayMap::default_for(true, None);
 
         assert_eq!(
             display.offset_for_position(
@@ -4581,8 +4829,9 @@ gamma",
             .expect("code editor source should have a production section");
         assert!(production_source.contains("fn sync_list_state(&mut self)"));
         assert!(production_source.contains("self.list_state.item_count()"));
+        assert!(production_source.contains("visible_count = self.visible_rows().len()"));
         assert!(production_source.contains(".splice(current_count..current_count"));
-        assert!(production_source.contains(".splice(line_count..current_count, 0)"));
+        assert!(production_source.contains(".splice(visible_count..current_count, 0)"));
         assert!(production_source.contains("self.list_state.logical_scroll_top()"));
         assert!(!production_source.contains("fn scroll_wheel_in_editor"));
         assert!(
@@ -4609,7 +4858,7 @@ gamma",
     #[test]
     fn code_display_map_maps_columns_beyond_line_start() {
         let buffer = CodeBuffer::new("alpha\nbeta");
-        let display = CodeDisplayMap::default_for(true);
+        let display = CodeDisplayMap::default_for(true, None);
 
         assert_eq!(
             display.offset_for_position(
@@ -4626,7 +4875,7 @@ gamma",
     #[test]
     fn code_display_map_keeps_multibyte_hit_testing_on_char_boundaries() {
         let buffer = CodeBuffer::new("αβγ\nhello");
-        let display = CodeDisplayMap::default_for(true);
+        let display = CodeDisplayMap::default_for(true, None);
 
         let offset = display.offset_for_position(
             &buffer,
@@ -4725,6 +4974,8 @@ gamma",
         assert!(options.completions_panel);
         assert!(options.hover_panel);
         assert!(!options.current_line_highlight);
+        assert!(!options.indent_guides);
+        assert!(options.code_folding);
         assert!(!options.rulers);
         assert_eq!(options.ruler_column, 80);
         assert_eq!(options.inline_diagnostics, CodeEditorInlineDiagnostics::All);
@@ -4799,6 +5050,26 @@ gamma",
         assert!(!production_source.contains(
             "let syntax_runs = zed_tree_sitter_syntax_runs(self.buffer.as_str(), self.language);"
         ));
+    }
+
+    #[test]
+    fn code_editor_advanced_layout_options_are_real_render_inputs() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+
+        assert!(production_source.contains("pub fn line_height_units"));
+        assert!(production_source.contains("pub fn indent_guides"));
+        assert!(production_source.contains("pub fn fold_range"));
+        assert!(production_source.contains("fn visible_rows_for"));
+        assert!(production_source.contains("fn indent_guide_quads"));
+        assert_eq!(
+            visible_rows_for(8, &[CodeFold::new(2, 5, "body")], true),
+            vec![0, 1, 2, 6, 7]
+        );
+        assert_eq!(leading_indent_columns("        let value = 1;", 4), 8);
     }
 
     #[test]

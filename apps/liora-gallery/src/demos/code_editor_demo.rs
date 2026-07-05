@@ -16,6 +16,9 @@ struct CodeEditorDemo {
     advanced: Entity<CodeEditor>,
     configurable: Entity<CodeEditor>,
     themed: Entity<CodeEditor>,
+    line_height_demo: Entity<CodeEditor>,
+    indent_guides_demo: Entity<CodeEditor>,
+    folding_demo: Entity<CodeEditor>,
     language_matrix: Vec<Entity<CodeEditor>>,
 }
 
@@ -133,6 +136,37 @@ impl CodeEditorDemo {
             })
             .collect::<Vec<_>>();
 
+        let line_height_demo = cx.new(|cx| {
+            CodeEditor::new(ADVANCED_LAYOUT_SAMPLE, cx)
+                .language(CodeLanguage::Rust)
+                .theme(CodeTheme::OneDark)
+                .rows(8)
+                .line_height_units(32.0)
+                .current_line_highlight(true)
+                .rulers(true)
+                .ruler_column(96)
+        });
+
+        let indent_guides_demo = cx.new(|cx| {
+            CodeEditor::new(ADVANCED_LAYOUT_SAMPLE, cx)
+                .language(CodeLanguage::Rust)
+                .theme(CodeTheme::OneDark)
+                .rows(8)
+                .indent_guides(true)
+                .whitespace(CodeEditorWhitespaceMode::Boundary)
+                .current_line_highlight(true)
+        });
+
+        let folding_demo = cx.new(|cx| {
+            CodeEditor::new(FOLDING_SAMPLE, cx)
+                .language(CodeLanguage::Rust)
+                .theme(CodeTheme::OneDark)
+                .rows(8)
+                .indent_guides(true)
+                .fold_range(3, 9, "impl block")
+                .fold_range(13, 17, "test module")
+                .code_folding(true)
+        });
         let configurable = cx.new(|cx| {
             CodeEditor::new(CONFIG_SAMPLE, cx)
                 .language(CodeLanguage::Rust)
@@ -168,6 +202,9 @@ impl CodeEditorDemo {
             advanced,
             configurable,
             themed,
+            line_height_demo,
+            indent_guides_demo,
+            folding_demo,
             language_matrix,
         }
     }
@@ -222,6 +259,25 @@ impl Render for CodeEditorDemo {
                             )),
                     )
                     .into_any_element(),
+
+                    showcase_card_wide(
+                        "高级布局：行高自定义",
+                        "line_height_units(...) 调整可见行高度，适合审计、演示和高密度/低密度编辑场景。",
+                        self.line_height_demo.clone(),
+                    )
+                    .into_any_element(),
+                    showcase_card_wide(
+                        "高级布局：缩进指示线",
+                        "indent_guides(true) 会按缩进层级绘制纵向 guide，并可搭配 whitespace(...) 展示缩进空白。",
+                        self.indent_guides_demo.clone(),
+                    )
+                    .into_any_element(),
+                    showcase_card_wide(
+                        "高级布局：代码块折叠",
+                        "fold_range(...) 声明折叠区间，CodeEditor 会隐藏折叠行并展示折叠占位标签。",
+                        self.folding_demo.clone(),
+                    )
+                    .into_any_element(),
                     showcase_card_wide(
                         "配置矩阵：只读、Chrome 和扩展面板",
                         "通过 CodeEditorOptions 或 builder 控制 header/status、行号、只读、当前行高亮、诊断/补全/hover 面板和补全数量。",
@@ -256,6 +312,46 @@ export function summarize(items: Metric[]) {
 }
 "#;
 
+const ADVANCED_LAYOUT_SAMPLE: &str = r#"pub fn build_panel() {
+    let root = Shell::new()
+        .sidebar(|sidebar| {
+            sidebar
+                .brand("Liora")
+                .item("CodeEditor")
+                .item("Diagnostics")
+        })
+        .content(|cx| {
+            CodeEditor::new("fn main() {}", cx)
+                .line_height_units(32.0)
+                .indent_guides(true)
+        });
+}
+"#;
+
+const FOLDING_SAMPLE: &str = r#"pub struct Workspace {
+    name: String,
+}
+
+impl Workspace {
+    pub fn open(path: &str) -> Self {
+        Self {
+            name: path.to_string(),
+        }
+    }
+
+    pub fn render(&self) {
+        println!("{}", self.name);
+    }
+}
+
+mod tests {
+    #[test]
+    fn opens_workspace() {
+        let workspace = Workspace::open("liora");
+        assert_eq!(workspace.name, "liora");
+    }
+}
+"#;
 const CONFIG_SAMPLE: &str = r#"use liora_components::{CodeEditor, CodeEditorOptions};
 
 let options = CodeEditorOptions::default();
@@ -387,6 +483,10 @@ mod tests {
         assert!(source.contains("current_line_highlight(true)"));
         assert!(source.contains("CodeEditorHighlightTheme"));
         assert!(source.contains("CodeEditorWhitespaceMode"));
+        assert!(source.contains("line_height_units"));
+        assert!(source.contains("indent_guides"));
+        assert!(source.contains("fold_range"));
+        assert!(source.contains("CodeFold") || source.contains("fold_range"));
         assert!(source.contains("ruler_column"));
     }
 }

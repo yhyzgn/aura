@@ -1553,6 +1553,15 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "code_editor/configuration.rs" => Some(include_str!(
             "../content/snippets/code_editor/configuration.rs"
         )),
+        "code_editor/line_height.rs" => Some(include_str!(
+            "../content/snippets/code_editor/line_height.rs"
+        )),
+        "code_editor/indent_guides.rs" => Some(include_str!(
+            "../content/snippets/code_editor/indent_guides.rs"
+        )),
+        "code_editor/folding.rs" => {
+            Some(include_str!("../content/snippets/code_editor/folding.rs"))
+        }
         "code_editor/theme.rs" => Some(include_str!("../content/snippets/code_editor/theme.rs")),
         "code_editor/diagnostics.rs" => Some(include_str!(
             "../content/snippets/code_editor/diagnostics.rs"
@@ -2557,6 +2566,41 @@ impl LiveDemoContent {
                             5,
                             "Theme overrides also recolor diagnostics.",
                         )])
+                }));
+            }
+            "CodeEditorLineHeight" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_ADVANCED_LAYOUT_SAMPLE, cx)
+                        .language(CodeLanguage::Rust)
+                        .theme(CodeTheme::OneDark)
+                        .rows(8)
+                        .line_height_units(32.0)
+                        .current_line_highlight(true)
+                        .rulers(true)
+                        .ruler_column(96)
+                }));
+            }
+            "CodeEditorIndentGuides" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_ADVANCED_LAYOUT_SAMPLE, cx)
+                        .language(CodeLanguage::Rust)
+                        .theme(CodeTheme::OneDark)
+                        .rows(8)
+                        .indent_guides(true)
+                        .whitespace(liora_components::CodeEditorWhitespaceMode::Boundary)
+                        .current_line_highlight(true)
+                }));
+            }
+            "CodeEditorFolding" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_FOLDING_SAMPLE, cx)
+                        .language(CodeLanguage::Rust)
+                        .theme(CodeTheme::OneDark)
+                        .rows(8)
+                        .indent_guides(true)
+                        .fold_range(3, 9, "impl block")
+                        .fold_range(13, 17, "test module")
+                        .code_folding(true)
                 }));
             }
             "CodeEditorDiagnostics" => {
@@ -3817,7 +3861,10 @@ impl Render for LiveDemoContent {
             | "CodeEditorDiagnostics"
             | "CodeEditorAdvanced"
             | "CodeEditorConfiguration"
-            | "CodeEditorTheme" => demo_stack(
+            | "CodeEditorTheme"
+            | "CodeEditorLineHeight"
+            | "CodeEditorIndentGuides"
+            | "CodeEditorFolding" => demo_stack(
                 self.code_editors
                     .iter()
                     .cloned()
@@ -8037,6 +8084,46 @@ let options = CodeEditorOptions {
 };
 "#;
 
+const DOCS_CODE_EDITOR_ADVANCED_LAYOUT_SAMPLE: &str = r#"pub fn build_panel() {
+    let root = Shell::new()
+        .sidebar(|sidebar| {
+            sidebar
+                .brand("Liora")
+                .item("CodeEditor")
+                .item("Diagnostics")
+        })
+        .content(|cx| {
+            CodeEditor::new("fn main() {}", cx)
+                .line_height_units(32.0)
+                .indent_guides(true)
+        });
+}
+"#;
+
+const DOCS_CODE_EDITOR_FOLDING_SAMPLE: &str = r#"pub struct Workspace {
+    name: String,
+}
+
+impl Workspace {
+    pub fn open(path: &str) -> Self {
+        Self {
+            name: path.to_string(),
+        }
+    }
+
+    pub fn render(&self) {
+        println!("{}", self.name);
+    }
+}
+
+mod tests {
+    #[test]
+    fn opens_workspace() {
+        let workspace = Workspace::open("liora");
+        assert_eq!(workspace.name, "liora");
+    }
+}
+"#;
 const DOCS_HORIZONTAL_STEPS: &[(&str, &str)] =
     &[("01", "Discover"), ("02", "Design"), ("03", "Build")];
 const DOCS_HORIZONTAL_FLOW: &[&str] = &["Input", "Validate", "Transform", "Export"];
