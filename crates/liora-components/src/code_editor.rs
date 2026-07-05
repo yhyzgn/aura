@@ -1794,6 +1794,7 @@ pub struct CodeEditor {
     viewport: CodeViewport,
     height: Option<Pixels>,
     width: Option<Pixels>,
+    full_width: bool,
     editor_bounds: Option<Bounds<Pixels>>,
     cursor_visible: bool,
     blink_task: Option<gpui::Task<()>>,
@@ -1833,7 +1834,8 @@ impl CodeEditor {
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             height: None,
-            width: Some(px(720.0)),
+            width: None,
+            full_width: true,
             editor_bounds: None,
             cursor_visible: true,
             blink_task: None,
@@ -2174,8 +2176,12 @@ impl CodeEditor {
     }
 
     /// Sets the component width token used during GPUI layout.
+    ///
+    /// Calling this switches the editor from its default parent-filling behavior
+    /// to an explicit fixed-width surface.
     pub fn width(mut self, width: impl Into<Pixels>) -> Self {
         self.width = Some(width.into());
+        self.full_width = false;
         self
     }
 
@@ -2184,7 +2190,14 @@ impl CodeEditor {
         self.width(px(width))
     }
 
-    /// Uses the built-in wide editor width suitable for showcase and docs pages.
+    /// Restores the default behavior where the editor fills the parent width.
+    pub fn full_width(mut self) -> Self {
+        self.width = None;
+        self.full_width = true;
+        self
+    }
+
+    /// Uses the built-in wide editor width suitable for constrained showcase cards.
     pub fn width_wide(self) -> Self {
         self.width(px(720.0))
     }
@@ -2192,6 +2205,14 @@ impl CodeEditor {
     /// Updates the stored width value and keeps the existing component identity.
     pub fn set_width(&mut self, width: impl Into<Pixels>, cx: &mut Context<Self>) {
         self.width = Some(width.into());
+        self.full_width = false;
+        cx.notify();
+    }
+
+    /// Updates the editor to fill the parent width and keeps the existing component identity.
+    pub fn set_full_width(&mut self, cx: &mut Context<Self>) {
+        self.width = None;
+        self.full_width = true;
         cx.notify();
     }
 
@@ -3464,7 +3485,10 @@ impl Render for CodeEditor {
         div()
             .flex()
             .flex_col()
-            .w(self.width.unwrap_or_else(|| px(720.0)))
+            .when(self.full_width, |s| {
+                s.w_full().min_w(px(0.0)).flex_shrink(1.0)
+            })
+            .when_some(self.width, |s, width| s.w(width))
             .rounded(px(theme.radius.lg))
             .border_1()
             .border_color(if focused {
@@ -4739,7 +4763,7 @@ gamma",
     }
 
     #[test]
-    fn code_editor_defaults_to_explicit_showcase_width() {
+    fn code_editor_defaults_to_parent_width() {
         let source = include_str!("code_editor.rs");
         let production_source = source
             .split("#[cfg(test)]")
@@ -4747,10 +4771,16 @@ gamma",
             .expect("code editor source should have a production section");
 
         assert!(production_source.contains("width: Option<Pixels>"));
-        assert!(production_source.contains("width: Some(px(720.0))"));
+        assert!(production_source.contains("full_width: bool"));
+        assert!(production_source.contains("width: None"));
+        assert!(production_source.contains("full_width: true"));
         assert!(production_source.contains("pub fn width(mut self"));
         assert!(production_source.contains("pub fn width_units(self"));
-        assert!(production_source.contains(".w(self.width.unwrap_or_else(|| px(720.0)))"));
+        assert!(production_source.contains("pub fn full_width(mut self)"));
+        assert!(production_source.contains("pub fn set_full_width"));
+        assert!(production_source.contains(".when(self.full_width, |s|"));
+        assert!(production_source.contains("s.w_full().min_w(px(0.0)).flex_shrink(1.0)"));
+        assert!(production_source.contains(".when_some(self.width, |s, width| s.w(width))"));
     }
 
     #[test]
