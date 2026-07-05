@@ -98,7 +98,7 @@ impl Render for CodeEditorDemo {
                             .vertical()
                             .gap_md()
                             .child(self.diagnostics.clone())
-                            .child(Text::new("v2 基座已完成基础输入、导航、选择、行号、缩进元数据、虚拟行渲染和诊断渲染；后续继续增强 undo/redo、display map、Tree-sitter 与 LSP bridge。")),
+                            .child(Text::new("v2 基座已完成基础输入、导航、选择、行号、缩进元数据、虚拟行渲染、诊断渲染、display map 与 undo/redo 事务基座；后续继续增强 Tree-sitter、LSP bridge 与精确 glyph hit-test。")),
                     )
                     .into_any_element(),
                     showcase_card_wide(

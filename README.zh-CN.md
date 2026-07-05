@@ -1102,7 +1102,7 @@ impl Render for EditorView {
 }
 ```
 
-`CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
+`CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染实时高亮的可见行。当前已用内部 display map 统一行高、gutter 和鼠标命中映射，并提供基础编辑事务，支持 `Ctrl/Cmd+Z` 撤销与 `Ctrl/Cmd+Shift+Z` 重做。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
 
 
 ### 二维码、上传、图片与预览

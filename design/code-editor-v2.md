@@ -74,20 +74,19 @@ Diagnostics, completions, and hover data remain provider-driven. This keeps Lior
 ## Current deliverable
 
 - `CodeEditor` no longer stores an `Entity<Input>` editing core.
-- Editing state is held by `CodeBuffer` and `CodeSelection`.
-- Rows render through GPUI `list`, so large documents no longer require rendering every source line into a single element tree. Each visible row renders highlighted code directly; the editing area and the live visual result are unified.
+- Editing state is held by `CodeBuffer`, `CodeSelection`, and an internal transaction stack that snapshots text plus selection for undo/redo.
+- Rows render through GPUI `list`, so large documents no longer require rendering every source line into a single element tree. Each visible row renders highlighted code directly; the editing area and the live visual result are unified. `CodeDisplayMap` centralizes row height, gutter width, content padding, and pointer-to-offset mapping so later soft-wrap/fold/inlay work has one geometry seam.
 - Existing public builder methods remain available: `language`, `theme`, `line_numbers`, `tab_size`, `soft_tabs`, `rows`, `height`, `preview`, `diagnostics`, `diagnostics_provider`, `completion_provider`, `hover_provider`, `search_query`, `on_change`. `preview` is retained as a no-op compatibility builder because v2 renders highlighting directly inside editable rows.
-- Existing keybindings are expanded to editor-owned copy/paste/cut, navigation, selection, enter, indent, and outdent actions.
+- Existing keybindings are expanded to editor-owned copy/paste/cut, navigation, selection, enter, indent, outdent, undo, and redo actions.
 
 ## Next phases
 
 1. Replace `String + line index` with a rope-like backend or an internal piece table.
-2. Add an explicit transaction log for undo/redo and grouped edits.
-3. Add a display map layer for soft wrap, folds, inlays, code lens, and block widgets.
+2. Add transaction grouping/merge heuristics for typed runs, IME composition, paste, indent, and multi-line edits.
+3. Extend the display map for soft wrap, folds, inlays, code lens, block widgets, and exact glyph hit-testing.
 4. Add optional Tree-sitter feature gates for incremental syntax highlighting.
 5. Add LSP bridge traits without hard-coding a server implementation.
-6. Add true cursor hit-testing and mouse drag selection on virtualized rows.
-7. Add minimap, bracket matching, inline completion, and diff gutters.
+6. Add minimap, bracket matching, inline completion, and diff gutters.
 
 ## Verification expectations
 

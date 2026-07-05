@@ -1103,7 +1103,7 @@ impl Render for EditorView {
 }
 ```
 
-`CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
+`CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders live-highlighted visible rows through GPUI `list`. It now centralizes row metrics and pointer hit-testing in an internal display map and includes basic edit transactions for `Ctrl/Cmd+Z` undo plus `Ctrl/Cmd+Shift+Z` redo. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
 
 
 ### QR code, upload, image, and preview

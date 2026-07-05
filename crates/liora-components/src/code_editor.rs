@@ -85,7 +85,11 @@ actions!(
         #[doc = "Keyboard action that indents the selected code editor lines."]
         CodeEditorIndent,
         #[doc = "Keyboard action that outdents the selected code editor lines."]
-        CodeEditorOutdent
+        CodeEditorOutdent,
+        #[doc = "Keyboard action that restores the previous edit transaction."]
+        CodeEditorUndo,
+        #[doc = "Keyboard action that reapplies the next edit transaction."]
+        CodeEditorRedo
     ]
 );
 
@@ -304,10 +308,6 @@ impl CodeBuffer {
         self.clamp_offset(cursor)
     }
 
-    fn insert(&mut self, offset: usize, text: &str) -> usize {
-        self.replace_range(offset..offset, text)
-    }
-
     fn point_to_offset(&self, point: CodePoint) -> usize {
         let row = point.row.min(self.line_count().saturating_sub(1));
         let line = self.line(row);
@@ -447,6 +447,100 @@ impl CodeSelection {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct CodeDisplayMap {
+    row_height: Pixels,
+    gutter_width: Pixels,
+    content_left_padding: Pixels,
+    average_char_width: Pixels,
+    viewport_padding: Pixels,
+}
+
+impl CodeDisplayMap {
+    fn default_for(line_numbers: bool) -> Self {
+        Self {
+            row_height: px(24.0),
+            gutter_width: if line_numbers { px(64.0) } else { px(0.0) },
+            content_left_padding: px(14.0),
+            average_char_width: px(8.0),
+            viewport_padding: px(24.0),
+        }
+    }
+
+    fn viewport_height(self, rows: usize) -> Pixels {
+        px(self.row_height.as_f32() * rows.max(1) as f32 + self.viewport_padding.as_f32())
+    }
+
+    fn row_height(self) -> Pixels {
+        self.row_height
+    }
+
+    fn gutter_width(self, line_numbers: bool) -> Pixels {
+        if line_numbers {
+            self.gutter_width
+        } else {
+            px(0.0)
+        }
+    }
+
+    fn row_for_y(self, y: Pixels, scroll_row: usize, line_count: usize) -> usize {
+        let max_row = line_count.saturating_sub(1);
+        let row_delta = (y.as_f32() / self.row_height.as_f32()).floor().max(0.0) as usize;
+        scroll_row.saturating_add(row_delta).min(max_row)
+    }
+
+    fn column_for_x(self, x: Pixels, line_numbers: bool) -> usize {
+        let content_x = (x.as_f32()
+            - self.gutter_width(line_numbers).as_f32()
+            - self.content_left_padding.as_f32())
+        .max(0.0);
+        (content_x / self.average_char_width.as_f32())
+            .round()
+            .max(0.0) as usize
+    }
+
+    fn offset_for_position(
+        self,
+        buffer: &CodeBuffer,
+        position: Point<Pixels>,
+        scroll_row: usize,
+        line_numbers: bool,
+    ) -> usize {
+        let row = self.row_for_y(position.y, scroll_row, buffer.line_count());
+        let column = self.column_for_x(position.x, line_numbers);
+        buffer.point_to_offset(CodePoint::new(row, column))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CodeTransaction {
+    before_text: String,
+    after_text: String,
+    before_selection: CodeSelection,
+    after_selection: CodeSelection,
+}
+
+impl CodeTransaction {
+    fn new(before_text: String, before_selection: CodeSelection) -> Self {
+        Self {
+            before_text,
+            after_text: String::new(),
+            before_selection,
+            after_selection: CodeSelection::new(0),
+        }
+    }
+
+    fn finish(mut self, after_text: String, after_selection: CodeSelection) -> Self {
+        self.after_text = after_text;
+        self.after_selection = after_selection;
+        self
+    }
+
+    fn changed(&self) -> bool {
+        self.before_text != self.after_text || self.before_selection != self.after_selection
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct CodeViewport {
     rows: usize,
@@ -457,8 +551,8 @@ impl CodeViewport {
         Self { rows: rows.max(1) }
     }
 
-    fn height(self) -> Pixels {
-        px(24.0 * self.rows as f32 + 24.0)
+    fn height(self, display: CodeDisplayMap) -> Pixels {
+        display.viewport_height(self.rows)
     }
 }
 
@@ -483,6 +577,8 @@ pub struct CodeEditor {
     height: Option<Pixels>,
     scroll_row: usize,
     drag_selecting: bool,
+    undo_stack: Vec<CodeTransaction>,
+    redo_stack: Vec<CodeTransaction>,
     diagnostics: Vec<CodeDiagnostic>,
     diagnostics_provider: Option<Arc<CodeDiagnosticsProvider>>,
     completion_items: Vec<CodeCompletionItem>,
@@ -513,6 +609,8 @@ impl CodeEditor {
             height: None,
             scroll_row: 0,
             drag_selecting: false,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
             diagnostics: Vec::new(),
             diagnostics_provider: None,
             completion_items: Vec::new(),
@@ -543,6 +641,8 @@ impl CodeEditor {
         }
         self.buffer.set_text(value.to_string());
         self.selection.set_cursor(self.buffer.len());
+        self.undo_stack.clear();
+        self.redo_stack.clear();
         self.sync_list_state();
         self.handle_buffer_change(cx);
     }
@@ -764,30 +864,34 @@ impl CodeEditor {
             KeyBinding::new("enter", CodeEditorEnter, None),
             KeyBinding::new("tab", CodeEditorIndent, None),
             KeyBinding::new("shift-tab", CodeEditorOutdent, None),
+            KeyBinding::new("cmd-z", CodeEditorUndo, None),
+            KeyBinding::new("ctrl-z", CodeEditorUndo, None),
+            KeyBinding::new("cmd-shift-z", CodeEditorRedo, None),
+            KeyBinding::new("ctrl-shift-z", CodeEditorRedo, None),
         ]);
     }
 
-    fn point_for_editor_position(&self, position: Point<Pixels>, viewport_height: Pixels) -> usize {
-        const ROW_HEIGHT: f32 = 24.0;
-        const GUTTER_WIDTH: f32 = 64.0;
-        const CHAR_WIDTH: f32 = 8.0;
+    fn display_map(&self) -> CodeDisplayMap {
+        CodeDisplayMap::default_for(self.line_numbers)
+    }
 
-        let row_delta = (position.y.as_f32() / ROW_HEIGHT).floor().max(0.0) as usize;
-        let row = (self.scroll_row + row_delta).min(self.buffer.line_count().saturating_sub(1));
-        let gutter = if self.line_numbers { GUTTER_WIDTH } else { 0.0 };
-        let column_px = (position.x.as_f32() - gutter - 14.0).max(0.0);
-        let column = (column_px / CHAR_WIDTH).round().max(0.0) as usize;
-        let _ = viewport_height;
-        self.buffer.point_to_offset(CodePoint::new(row, column))
+    fn point_for_editor_position(&self, position: Point<Pixels>) -> usize {
+        self.display_map().offset_for_position(
+            &self.buffer,
+            position,
+            self.scroll_row,
+            self.line_numbers,
+        )
     }
 
     fn update_scroll_row_from_wheel(&mut self, event: &ScrollWheelEvent, window: &Window) {
-        const ROW_HEIGHT: f32 = 24.0;
         let delta = event.delta.pixel_delta(window.line_height()).y.as_f32();
         if delta == 0.0 {
             return;
         }
-        let rows = (delta.abs() / ROW_HEIGHT).ceil().max(1.0) as usize;
+        let rows = (delta.abs() / self.display_map().row_height().as_f32())
+            .ceil()
+            .max(1.0) as usize;
         if delta < 0.0 {
             self.scroll_row =
                 (self.scroll_row + rows).min(self.buffer.line_count().saturating_sub(1));
@@ -803,8 +907,7 @@ impl CodeEditor {
         cx: &mut Context<Self>,
     ) {
         window.focus(&self.focus_handle, cx);
-        let viewport_height = self.height.unwrap_or_else(|| self.viewport.height());
-        let offset = self.point_for_editor_position(event.position, viewport_height);
+        let offset = self.point_for_editor_position(event.position);
         if event.modifiers.shift {
             self.selection.select_to(offset);
         } else {
@@ -824,8 +927,7 @@ impl CodeEditor {
         if event.pressed_button != Some(MouseButton::Left) || !self.drag_selecting {
             return;
         }
-        let viewport_height = self.height.unwrap_or_else(|| self.viewport.height());
-        let offset = self.point_for_editor_position(event.position, viewport_height);
+        let offset = self.point_for_editor_position(event.position);
         self.selection.select_to(offset);
         self.reveal_cursor();
         cx.notify();
@@ -889,9 +991,37 @@ impl CodeEditor {
     }
 
     fn replace_selection(&mut self, replacement: &str, cx: &mut Context<Self>) {
+        let transaction =
+            CodeTransaction::new(self.buffer.as_str().to_string(), self.selection.clone());
         let range = self.selection.range.clone();
         let cursor = self.buffer.replace_range(range, replacement);
         self.selection.set_cursor(cursor);
+        self.commit_transaction(transaction, cx);
+    }
+
+    fn commit_transaction(&mut self, transaction: CodeTransaction, cx: &mut Context<Self>) {
+        let transaction =
+            transaction.finish(self.buffer.as_str().to_string(), self.selection.clone());
+        if !transaction.changed() {
+            return;
+        }
+        self.undo_stack.push(transaction);
+        self.redo_stack.clear();
+        self.sync_list_state();
+        self.handle_buffer_change(cx);
+    }
+
+    fn restore_transaction_snapshot(
+        &mut self,
+        text: String,
+        selection: CodeSelection,
+        cx: &mut Context<Self>,
+    ) {
+        self.buffer.set_text(text);
+        self.selection = selection;
+        self.selection.range =
+            normalize_replace_range(self.buffer.as_str(), self.selection.range.clone());
+        self.selection.preferred_column = None;
         self.sync_list_state();
         self.handle_buffer_change(cx);
     }
@@ -938,10 +1068,7 @@ impl CodeEditor {
             return;
         }
         if self.selection.is_empty() {
-            let cursor = self.buffer.insert(self.selection.cursor(), &indent);
-            self.selection.set_cursor(cursor);
-            self.sync_list_state();
-            self.handle_buffer_change(cx);
+            self.replace_selection(&indent, cx);
             return;
         }
         self.reindent_selected_lines(&indent, true, cx);
@@ -1002,14 +1129,14 @@ impl CodeEditor {
         }
 
         next.push_str(&source[line_bounds.end..]);
+        let transaction = CodeTransaction::new(source.clone(), self.selection.clone());
         self.buffer.set_text(next);
         let start = apply_signed_delta(selection.start, selection_start_delta);
         let end = apply_signed_delta(selection.end, selection_end_delta).max(start);
         self.selection.range = self.buffer.clamp_offset(start)..self.buffer.clamp_offset(end);
         self.selection.reversed = false;
         self.selection.preferred_column = None;
-        self.sync_list_state();
-        self.handle_buffer_change(cx);
+        self.commit_transaction(transaction, cx);
     }
 
     fn backspace(&mut self, _: &CodeEditorBackspace, _: &mut Window, cx: &mut Context<Self>) {
@@ -1132,6 +1259,28 @@ impl CodeEditor {
 
     fn enter(&mut self, _: &CodeEditorEnter, _: &mut Window, cx: &mut Context<Self>) {
         self.replace_selection("\n", cx);
+    }
+
+    fn undo(&mut self, _: &CodeEditorUndo, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(transaction) = self.undo_stack.pop() {
+            self.restore_transaction_snapshot(
+                transaction.before_text.clone(),
+                transaction.before_selection.clone(),
+                cx,
+            );
+            self.redo_stack.push(transaction);
+        }
+    }
+
+    fn redo(&mut self, _: &CodeEditorRedo, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(transaction) = self.redo_stack.pop() {
+            self.restore_transaction_snapshot(
+                transaction.after_text.clone(),
+                transaction.after_selection.clone(),
+                cx,
+            );
+            self.undo_stack.push(transaction);
+        }
     }
 }
 
@@ -1319,13 +1468,17 @@ impl Render for CodeEditor {
         } else {
             "tabs".to_string()
         };
-        let editor_height = self.height.unwrap_or_else(|| self.viewport.height());
+        let display_map = self.display_map();
+        let editor_height = self
+            .height
+            .unwrap_or_else(|| self.viewport.height(display_map));
         let focus_handle = self.focus_handle(cx);
         let list_state = self.list_state.clone();
         let buffer = self.buffer.clone();
         let selection = self.selection.clone();
         let diagnostics = self.diagnostics.clone();
         let show_line_numbers = self.line_numbers;
+        let row_display_map = display_map;
         let row_language = self.language;
         let row_code_theme = self.theme;
         let code_family_for_rows = code_family.clone();
@@ -1368,6 +1521,8 @@ impl Render for CodeEditor {
             .on_action(cx.listener(Self::enter))
             .on_action(cx.listener(Self::indent))
             .on_action(cx.listener(Self::outdent))
+            .on_action(cx.listener(Self::undo))
+            .on_action(cx.listener(Self::redo))
             .child(
                 div()
                     .flex()
@@ -1435,6 +1590,7 @@ impl Render for CodeEditor {
                                 &theme_for_rows,
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
+                                row_display_map,
                             )
                             .into_any_element()
                         })
@@ -1469,6 +1625,7 @@ fn render_editor_row(
     theme: &liora_theme::Theme,
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
+    display_map: CodeDisplayMap,
 ) -> gpui::Div {
     let line = buffer.line(row);
     let row_start = buffer.line_start(row);
@@ -1490,12 +1647,12 @@ fn render_editor_row(
     div()
         .flex()
         .items_start()
-        .min_h(px(24.0))
+        .min_h(display_map.row_height())
         .bg(row_bg)
         .child(if line_numbers {
             div()
                 .flex_none()
-                .w(px(64.0))
+                .w(display_map.gutter_width(line_numbers))
                 .px_3()
                 .py_1()
                 .border_r_1()
@@ -1833,5 +1990,45 @@ mod tests {
         let buffer = CodeBuffer::new("one\ntwo\nthree");
         assert_eq!(buffer.selected_line_bounds(5..6), 4..7);
         assert_eq!(buffer.selected_line_bounds(1..6), 0..7);
+    }
+
+    #[test]
+    fn code_display_map_maps_pointer_positions_to_buffer_offsets() {
+        let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
+        let display = CodeDisplayMap::default_for(true);
+
+        assert_eq!(
+            display.offset_for_position(&buffer, gpui::point(px(84.0), px(30.0)), 0, true),
+            buffer.point_to_offset(CodePoint::new(1, 1))
+        );
+        assert_eq!(
+            display.offset_for_position(&buffer, gpui::point(px(10.0), px(72.0)), 1, true),
+            buffer.point_to_offset(CodePoint::new(2, 0))
+        );
+    }
+
+    #[test]
+    fn code_transactions_restore_text_and_selection_snapshots() {
+        let before = CodeSelection::new(0);
+        let mut after = CodeSelection::new(5);
+        after.select_to(9);
+        let transaction = CodeTransaction::new("alpha".to_string(), before.clone());
+        let transaction = transaction.finish("alpha beta".to_string(), after.clone());
+
+        assert_eq!(transaction.before_text, "alpha");
+        assert_eq!(transaction.after_text, "alpha beta");
+        assert_eq!(transaction.before_selection, before);
+        assert_eq!(transaction.after_selection, after);
+    }
+
+    #[test]
+    fn code_editor_exposes_undo_redo_actions_and_bindings() {
+        let source = include_str!("code_editor.rs");
+        assert!(source.contains("CodeEditorUndo"));
+        assert!(source.contains("CodeEditorRedo"));
+        assert!(source.contains("KeyBinding::new(\"cmd-z\""));
+        assert!(source.contains("KeyBinding::new(\"ctrl-z\""));
+        assert!(source.contains("undo_stack"));
+        assert!(source.contains("redo_stack"));
     }
 }
