@@ -1179,6 +1179,8 @@ let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
 let editor = CodeEditor::new(source, cx).config(config);
 ```
 
+内置 tree-sitter 高亮目前覆盖 Rust、TypeScript/JavaScript、SQL、Shell、XML、TOML、YAML、INI/conf、JSON 和 Markdown；未知语言 label 会安全回退为纯文本。
+
 
 ### 二维码、上传、图片与预览
 

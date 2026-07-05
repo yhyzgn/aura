@@ -13,6 +13,18 @@
 ```rust src="code_editor/basic.rs"
 ```
 
+
+## 默认语言矩阵
+
+### 效果
+
+::Demo{component="CodeEditorLanguages"}::
+
+### 代码
+
+```rust src="code_editor/languages.rs"
+```
+
 ## Diagnostics 扩展点
 
 ### 效果
@@ -108,4 +120,4 @@ let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
 let editor = CodeEditor::new(source, cx).config(config);
 ```
 
-当前内置 tree-sitter grammar 覆盖 Rust、TypeScript/JavaScript、JSON 和 Markdown；TOML、Shell 等语言会先回退为安全纯文本，后续再逐步补充对应 grammar。
+当前内置 tree-sitter grammar 覆盖 Rust、TypeScript/JavaScript、SQL、Shell、XML、TOML、YAML、INI/conf、JSON 和 Markdown；不认识的语言会安全回退为纯文本。

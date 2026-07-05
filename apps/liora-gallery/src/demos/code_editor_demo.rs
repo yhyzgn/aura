@@ -16,6 +16,7 @@ struct CodeEditorDemo {
     advanced: Entity<CodeEditor>,
     configurable: Entity<CodeEditor>,
     themed: Entity<CodeEditor>,
+    language_matrix: Vec<Entity<CodeEditor>>,
 }
 
 impl CodeEditorDemo {
@@ -117,6 +118,21 @@ impl CodeEditorDemo {
                 ])
         });
 
+        let language_matrix = LANGUAGE_SAMPLES
+            .iter()
+            .map(|sample| {
+                cx.new(move |cx| {
+                    CodeEditor::new(sample.source, cx)
+                        .language(sample.language)
+                        .theme(CodeTheme::OneDark)
+                        .rows(7)
+                        .line_numbers(true)
+                        .status_bar(true)
+                        .header(true)
+                })
+            })
+            .collect::<Vec<_>>();
+
         let configurable = cx.new(|cx| {
             CodeEditor::new(CONFIG_SAMPLE, cx)
                 .language(CodeLanguage::Rust)
@@ -152,6 +168,7 @@ impl CodeEditorDemo {
             advanced,
             configurable,
             themed,
+            language_matrix,
         }
     }
 }
@@ -185,6 +202,24 @@ impl Render for CodeEditorDemo {
                         "高级扩展点：搜索、补全和 hover",
                         "Provider-ready 的搜索、补全候选和 hover/help 数据模型可接入语言服务。",
                         self.advanced.clone(),
+                    )
+                    .into_any_element(),
+                    showcase_card_wide(
+                        "默认语言矩阵",
+                        "内置 tree-sitter grammar 覆盖 Rust、TypeScript、SQL、Shell、XML、TOML、YAML、INI/conf、JSON 和 Markdown。",
+                        Space::new()
+                            .vertical()
+                            .gap_lg()
+                            .children(LANGUAGE_SAMPLES.iter().zip(self.language_matrix.iter()).map(
+                                |(sample, editor)| {
+                                    Space::new()
+                                        .vertical()
+                                        .gap_sm()
+                                        .child(Text::new(sample.title).bold())
+                                        .child(editor.clone())
+                                        .into_any_element()
+                                },
+                            )),
                     )
                     .into_any_element(),
                     showcase_card_wide(
@@ -239,6 +274,100 @@ let options = CodeEditorOptions {
     ..CodeEditorOptions::default()
 };
 "#;
+
+struct LanguageSample {
+    title: &'static str,
+    language: CodeLanguage,
+    source: &'static str,
+}
+
+const LANGUAGE_SAMPLES: &[LanguageSample] = &[
+    LanguageSample {
+        title: "SQL",
+        language: CodeLanguage::Sql,
+        source: r#"select user_id, count(*) as sessions
+from analytics.sessions
+where started_at >= now() - interval '7 days'
+group by user_id
+order by sessions desc
+limit 20;
+"#,
+    },
+    LanguageSample {
+        title: "Shell",
+        language: CodeLanguage::Shell,
+        source: r#"#!/usr/bin/env bash
+set -euo pipefail
+cargo check -p liora-components
+printf 'release=%s\n' "$LIORA_VERSION"
+"#,
+    },
+    LanguageSample {
+        title: "XML",
+        language: CodeLanguage::Xml,
+        source: r#"<?xml version="1.0" encoding="UTF-8"?>
+<window title="Liora">
+  <sidebar collapsed="false" />
+  <content kind="docs" />
+</window>
+"#,
+    },
+    LanguageSample {
+        title: "TOML",
+        language: CodeLanguage::Toml,
+        source: r#"[package]
+name = "liora-app"
+edition = "2024"
+
+[features]
+default = ["tray", "updater"]
+"#,
+    },
+    LanguageSample {
+        title: "YAML",
+        language: CodeLanguage::Yaml,
+        source: r#"name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  package:
+    runs-on: ubuntu-latest
+"#,
+    },
+    LanguageSample {
+        title: "INI / conf",
+        language: CodeLanguage::Conf,
+        source: r#"[window]
+theme=system
+remember_choice=true
+
+[updates]
+channel=stable
+auto_check=true
+"#,
+    },
+    LanguageSample {
+        title: "JSON",
+        language: CodeLanguage::Json,
+        source: r#"{
+  "theme": "One Dark",
+  "lineNumbers": true,
+  "languages": ["rust", "sql", "yaml"]
+}
+"#,
+    },
+    LanguageSample {
+        title: "Markdown",
+        language: CodeLanguage::Markdown,
+        source: r#"# Liora
+
+- Native GPUI components
+- Tree-sitter code editor
+- Zed-style syntax themes
+"#,
+    },
+];
 
 #[cfg(test)]
 mod tests {

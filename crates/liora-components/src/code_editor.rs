@@ -1267,6 +1267,11 @@ fn default_zed_syntax_styles_for_mode(dark: bool) -> Vec<(String, HighlightStyle
             ("emphasis", italic(0xabb2bf)),
             ("function", color(0x61afef)),
             ("function.method", color(0x61afef)),
+            ("field", color(0xe06c75)),
+            ("parameter", color(0xd19a66)),
+            ("storageclass", color(0xc678dd)),
+            ("conditional", color(0xc678dd)),
+            ("float", color(0xd19a66)),
             ("keyword", color(0xc678dd)),
             ("label", color(0xe5c07b)),
             ("link_uri", color(0x56b6c2)),
@@ -1294,6 +1299,11 @@ fn default_zed_syntax_styles_for_mode(dark: bool) -> Vec<(String, HighlightStyle
             ("emphasis", italic(0x24292f)),
             ("function", color(0x8250df)),
             ("function.method", color(0x8250df)),
+            ("field", color(0x116329)),
+            ("parameter", color(0x953800)),
+            ("storageclass", color(0xcf222e)),
+            ("conditional", color(0xcf222e)),
+            ("float", color(0x0550ae)),
             ("keyword", color(0xcf222e)),
             ("label", color(0x953800)),
             ("link_uri", color(0x0969da)),
@@ -1548,12 +1558,18 @@ struct CodeEditorSyntaxRun {
 fn tree_sitter_language(language: CodeLanguage) -> Option<TreeSitterLanguage> {
     match language {
         CodeLanguage::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
+        CodeLanguage::Sql => Some(tree_sitter_sequel::LANGUAGE.into()),
+        CodeLanguage::Shell => Some(tree_sitter_bash::LANGUAGE.into()),
+        CodeLanguage::Xml => Some(tree_sitter_xml::LANGUAGE_XML.into()),
+        CodeLanguage::Toml => Some(tree_sitter_toml_ng::LANGUAGE.into()),
+        CodeLanguage::Yaml => Some(tree_sitter_yaml::LANGUAGE.into()),
+        CodeLanguage::Conf => Some(tree_sitter_ini::LANGUAGE.into()),
         CodeLanguage::Json => Some(tree_sitter_json::LANGUAGE.into()),
         CodeLanguage::Markdown => Some(tree_sitter_md::LANGUAGE.into()),
         CodeLanguage::TypeScript | CodeLanguage::JavaScript => {
             Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into())
         }
-        CodeLanguage::Shell | CodeLanguage::Toml | CodeLanguage::PlainText => None,
+        CodeLanguage::PlainText => None,
     }
 }
 
@@ -1563,6 +1579,12 @@ fn tree_sitter_highlight_query(language: CodeLanguage) -> Option<&'static str> {
             env!("CARGO_MANIFEST_DIR"),
             "/../../assets/liora/queries/rust/highlights.scm"
         ))),
+        CodeLanguage::Sql => Some(tree_sitter_sequel::HIGHLIGHTS_QUERY),
+        CodeLanguage::Shell => Some(tree_sitter_bash::HIGHLIGHT_QUERY),
+        CodeLanguage::Xml => Some(tree_sitter_xml::XML_HIGHLIGHT_QUERY),
+        CodeLanguage::Toml => Some(tree_sitter_toml_ng::HIGHLIGHTS_QUERY),
+        CodeLanguage::Yaml => Some(tree_sitter_yaml::HIGHLIGHTS_QUERY),
+        CodeLanguage::Conf => Some(tree_sitter_ini::HIGHLIGHTS_QUERY),
         CodeLanguage::Json => Some(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../assets/liora/queries/json/highlights.scm"
@@ -1579,7 +1601,7 @@ fn tree_sitter_highlight_query(language: CodeLanguage) -> Option<&'static str> {
             env!("CARGO_MANIFEST_DIR"),
             "/../../assets/liora/queries/javascript/highlights.scm"
         ))),
-        CodeLanguage::Shell | CodeLanguage::Toml | CodeLanguage::PlainText => None,
+        CodeLanguage::PlainText => None,
     }
 }
 
@@ -4665,6 +4687,50 @@ gamma",
                 |run| run.capture.starts_with("keyword") || run.capture.starts_with("function")
             )
         );
+    }
+
+    #[test]
+    fn zed_tree_sitter_highlighter_supports_common_config_and_script_languages() {
+        let samples = [
+            (
+                CodeLanguage::Sql,
+                "select * from users where active = true;",
+            ),
+            (
+                CodeLanguage::Shell,
+                "#!/usr/bin/env bash
+echo \"ok\"",
+            ),
+            (
+                CodeLanguage::Xml,
+                "<window title=\"Liora\"><content /></window>",
+            ),
+            (
+                CodeLanguage::Toml,
+                "[package]
+name = \"liora\"",
+            ),
+            (
+                CodeLanguage::Yaml,
+                "name: liora
+features:
+  - gpui",
+            ),
+            (
+                CodeLanguage::Conf,
+                "[window]
+theme=system",
+            ),
+        ];
+
+        for (language, source) in samples {
+            let runs = zed_tree_sitter_syntax_runs(source, language);
+            assert!(
+                !runs.is_empty(),
+                "{} should produce syntax runs",
+                language.label()
+            );
+        }
     }
 
     #[test]

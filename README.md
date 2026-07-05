@@ -1180,6 +1180,8 @@ let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
 let editor = CodeEditor::new(source, cx).config(config);
 ```
 
+Built-in tree-sitter highlighting currently covers Rust, TypeScript/JavaScript, SQL, Shell, XML, TOML, YAML, INI/conf, JSON, and Markdown. Unknown language labels safely fall back to plain text.
+
 
 ### QR code, upload, image, and preview
 

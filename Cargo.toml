@@ -77,6 +77,12 @@ strum = { version = "0.27.2", features = ["derive"] }
 thiserror = "2.0.12"
 toml = "0.8"
 tree-sitter = "=0.26.9"
+tree-sitter-bash = "0.25.1"
+tree-sitter-ini = "1.4.0"
+tree-sitter-sequel = "0.3.11"
+tree-sitter-toml-ng = "0.7.0"
+tree-sitter-xml = "0.7.0"
+tree-sitter-yaml = "0.7.2"
 tree-sitter-json = "0.24"
 tree-sitter-md = { git = "https://github.com/tree-sitter-grammars/tree-sitter-markdown", rev = "9a23c1a96c0513d8fc6520972beedd419a973539" }
 tree-sitter-rust = "0.24.2"

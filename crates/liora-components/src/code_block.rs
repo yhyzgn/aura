@@ -62,14 +62,22 @@ pub enum CodeLanguage {
     PlainText,
     /// Treats code content as Rust source for labeling and highlighting.
     Rust,
+    /// Treats code content as SQL source.
+    Sql,
+    /// Treats code content as shell commands.
+    Shell,
+    /// Treats code content as XML markup.
+    Xml,
     /// Treats code content as TOML configuration.
     Toml,
-    /// Reports a json failure.
+    /// Treats code content as YAML configuration.
+    Yaml,
+    /// Treats code content as INI/conf style configuration.
+    Conf,
+    /// Treats code content as JSON data.
     Json,
     /// Treats code content as Markdown prose.
     Markdown,
-    /// Treats code content as shell commands.
-    Shell,
     /// Treats code content as TypeScript source.
     TypeScript,
     /// Treats code content as JavaScript source.
@@ -82,10 +90,14 @@ impl CodeLanguage {
         match self {
             Self::PlainText => "text",
             Self::Rust => "rust",
+            Self::Sql => "sql",
+            Self::Shell => "shell",
+            Self::Xml => "xml",
             Self::Toml => "toml",
+            Self::Yaml => "yaml",
+            Self::Conf => "conf",
             Self::Json => "json",
             Self::Markdown => "markdown",
-            Self::Shell => "shell",
             Self::TypeScript => "typescript",
             Self::JavaScript => "javascript",
         }
@@ -95,10 +107,14 @@ impl CodeLanguage {
         match self {
             Self::PlainText => "txt",
             Self::Rust => "rs",
+            Self::Sql => "sql",
+            Self::Shell => "sh",
+            Self::Xml => "xml",
             Self::Toml => "toml",
+            Self::Yaml => "yaml",
+            Self::Conf => "ini",
             Self::Json => "json",
             Self::Markdown => "md",
-            Self::Shell => "sh",
             Self::TypeScript => "ts",
             Self::JavaScript => "js",
         }
@@ -108,10 +124,14 @@ impl CodeLanguage {
     pub fn from_label(label: &str) -> Self {
         match label.trim().to_ascii_lowercase().as_str() {
             "rs" | "rust" => Self::Rust,
+            "sql" | "postgres" | "postgresql" | "mysql" | "sqlite" => Self::Sql,
+            "sh" | "bash" | "shell" | "zsh" => Self::Shell,
+            "xml" | "svg" | "plist" => Self::Xml,
             "toml" => Self::Toml,
+            "yaml" | "yml" => Self::Yaml,
+            "conf" | "config" | "ini" | "properties" | "env" | "dotenv" => Self::Conf,
             "json" => Self::Json,
             "md" | "markdown" => Self::Markdown,
-            "sh" | "bash" | "shell" | "zsh" => Self::Shell,
             "ts" | "tsx" | "typescript" => Self::TypeScript,
             "js" | "jsx" | "javascript" => Self::JavaScript,
             _ => Self::PlainText,

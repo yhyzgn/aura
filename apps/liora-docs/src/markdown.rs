@@ -1547,6 +1547,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
         "code_editor/advanced.rs" => {
             Some(include_str!("../content/snippets/code_editor/advanced.rs"))
         }
+        "code_editor/languages.rs" => {
+            Some(include_str!("../content/snippets/code_editor/languages.rs"))
+        }
         "code_editor/configuration.rs" => Some(include_str!(
             "../content/snippets/code_editor/configuration.rs"
         )),
@@ -2446,6 +2449,17 @@ impl LiveDemoContent {
                         .tab_size(4)
                         .soft_tabs(true)
                 }));
+            }
+            "CodeEditorLanguages" => {
+                for sample in DOCS_CODE_EDITOR_LANGUAGE_SAMPLES {
+                    code_editors.push(cx.new(move |cx| {
+                        CodeEditor::new(sample.source, cx)
+                            .language(sample.language)
+                            .theme(CodeTheme::OneDark)
+                            .rows(7)
+                            .line_numbers(true)
+                    }));
+                }
             }
             "CodeEditorAdvanced" => {
                 code_editors.push(cx.new(|cx| {
@@ -3799,6 +3813,7 @@ impl Render for LiveDemoContent {
                     .collect(),
             ),
             "CodeEditorBasic"
+            | "CodeEditorLanguages"
             | "CodeEditorDiagnostics"
             | "CodeEditorAdvanced"
             | "CodeEditorConfiguration"
@@ -7930,6 +7945,69 @@ fn virtualized_table_cell(row: usize, key: &SharedString, reverse: bool) -> gpui
         _ => Text::new("-").into_any_element(),
     }
 }
+
+struct DocsCodeEditorLanguageSample {
+    language: CodeLanguage,
+    source: &'static str,
+}
+
+const DOCS_CODE_EDITOR_LANGUAGE_SAMPLES: &[DocsCodeEditorLanguageSample] = &[
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Sql,
+        source: r#"select component, count(*) as usage_count
+from ui_events
+where created_at >= now() - interval '30 days'
+group by component
+order by usage_count desc;
+"#,
+    },
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Shell,
+        source: r#"#!/usr/bin/env bash
+set -euo pipefail
+cargo test -p liora-components code_editor
+"#,
+    },
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Xml,
+        source: r#"<?xml version="1.0" encoding="UTF-8"?>
+<layout name="docs">
+  <sidebar width="280" />
+  <content scrollable="true" />
+</layout>
+"#,
+    },
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Toml,
+        source: r#"[editor]
+language = "rust"
+theme_name = "One Dark"
+rows = 18
+
+[options]
+line_numbers = true
+"#,
+    },
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Yaml,
+        source: r#"name: liora
+features:
+  - native-gpui
+  - tree-sitter
+  - zed-theme
+"#,
+    },
+    DocsCodeEditorLanguageSample {
+        language: CodeLanguage::Conf,
+        source: r#"[liora]
+theme=system
+locale=zh-CN
+
+[updates]
+auto_check=true
+"#,
+    },
+];
 
 const DOCS_CODE_EDITOR_RUST_SAMPLE: &str = r#"fn main() {
     println!("Hello Liora");
