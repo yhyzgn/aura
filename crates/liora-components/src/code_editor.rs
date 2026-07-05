@@ -1793,6 +1793,7 @@ pub struct CodeEditor {
     soft_tabs: bool,
     viewport: CodeViewport,
     height: Option<Pixels>,
+    width: Option<Pixels>,
     editor_bounds: Option<Bounds<Pixels>>,
     cursor_visible: bool,
     blink_task: Option<gpui::Task<()>>,
@@ -1832,6 +1833,7 @@ impl CodeEditor {
             soft_tabs: true,
             viewport: CodeViewport::new(row_count.max(8).min(24)),
             height: None,
+            width: Some(px(720.0)),
             editor_bounds: None,
             cursor_visible: true,
             blink_task: None,
@@ -2169,6 +2171,28 @@ impl CodeEditor {
     pub fn height(mut self, height: impl Into<Pixels>) -> Self {
         self.height = Some(height.into());
         self
+    }
+
+    /// Sets the component width token used during GPUI layout.
+    pub fn width(mut self, width: impl Into<Pixels>) -> Self {
+        self.width = Some(width.into());
+        self
+    }
+
+    /// Sets the component width using plain pixel units for demo and config code.
+    pub fn width_units(self, width: f32) -> Self {
+        self.width(px(width))
+    }
+
+    /// Uses the built-in wide editor width suitable for showcase and docs pages.
+    pub fn width_wide(self) -> Self {
+        self.width(px(720.0))
+    }
+
+    /// Updates the stored width value and keeps the existing component identity.
+    pub fn set_width(&mut self, width: impl Into<Pixels>, cx: &mut Context<Self>) {
+        self.width = Some(width.into());
+        cx.notify();
     }
 
     /// Preserves source compatibility with earlier CodeEditor versions.
@@ -3440,7 +3464,7 @@ impl Render for CodeEditor {
         div()
             .flex()
             .flex_col()
-            .w_full()
+            .w(self.width.unwrap_or_else(|| px(720.0)))
             .rounded(px(theme.radius.lg))
             .border_1()
             .border_color(if focused {
@@ -4712,6 +4736,21 @@ gamma",
         assert!(theme.surface.is_some());
         assert!(theme.syntax.style_for_capture("keyword.control").is_some());
         assert!(theme.chrome_surface.is_none());
+    }
+
+    #[test]
+    fn code_editor_defaults_to_explicit_showcase_width() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+
+        assert!(production_source.contains("width: Option<Pixels>"));
+        assert!(production_source.contains("width: Some(px(720.0))"));
+        assert!(production_source.contains("pub fn width(mut self"));
+        assert!(production_source.contains("pub fn width_units(self"));
+        assert!(production_source.contains(".w(self.width.unwrap_or_else(|| px(720.0)))"));
     }
 
     #[test]

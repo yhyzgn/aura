@@ -34,8 +34,6 @@ pub struct Card {
     hoverable: bool,
     shadow: bool,
     width: Option<Pixels>,
-    max_width: Option<Pixels>,
-    full_width: bool,
     shrink: bool,
 }
 
@@ -50,8 +48,6 @@ impl Card {
             hoverable: false,
             shadow: true,
             width: None,
-            max_width: None,
-            full_width: false,
             shrink: true,
         }
     }
@@ -102,18 +98,6 @@ impl Card {
         self.width(px(400.0))
     }
 
-    /// Expands the card to the full available parent width.
-    pub fn w_full(mut self) -> Self {
-        self.full_width = true;
-        self
-    }
-
-    /// Caps the rendered card width while allowing it to shrink responsively.
-    pub fn max_width(mut self, width: impl Into<Pixels>) -> Self {
-        self.max_width = Some(width.into());
-        self
-    }
-
     /// Prevents the component from shrinking in flex layouts.
     pub fn no_shrink(mut self) -> Self {
         self.shrink = false;
@@ -135,9 +119,7 @@ impl RenderOnce for Card {
             .rounded(px(theme.radius.md))
             .overflow_hidden()
             .when(!self.shrink, |s| s.flex_none())
-            .when(self.full_width, |s| s.w_full())
-            .when_some(self.width, |s, width| s.w(width))
-            .when_some(self.max_width, |s, width| s.max_w(width));
+            .when_some(self.width, |s, width| s.w(width));
 
         if self.shadow {
             el = el.shadow_md();
@@ -177,7 +159,6 @@ impl RenderOnce for Card {
         // Body
         el = el.child(
             div()
-                .w_full()
                 .p_4()
                 .text_color(theme.neutral.text_2)
                 .child(self.body),

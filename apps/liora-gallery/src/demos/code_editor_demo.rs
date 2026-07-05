@@ -210,13 +210,11 @@ impl Render for CodeEditorDemo {
                         Space::new()
                             .vertical()
                             .gap_lg()
-                            .w_full()
                             .children(LANGUAGE_SAMPLES.iter().zip(self.language_matrix.iter()).map(
                                 |(sample, editor)| {
                                     Space::new()
                                         .vertical()
                                         .gap_sm()
-                                        .w_full()
                                         .child(Text::new(sample.title).bold())
                                         .child(editor.clone())
                                         .into_any_element()

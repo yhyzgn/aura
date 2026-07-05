@@ -20,7 +20,7 @@
 //! crate.
 
 use crate::{Card, Paragraph, Space, Title};
-use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px};
+use gpui::{AnyElement, IntoElement, px};
 
 /// Performs the page operation used by this component.
 pub fn page(
@@ -45,9 +45,8 @@ pub fn showcase_card(
         Space::new()
             .vertical()
             .gap_md()
-            .w_full()
             .child(header(title, description))
-            .child(div().w_full().child(body)),
+            .child(body),
     )
     .width(px(360.0))
     .no_shadow()
@@ -63,11 +62,10 @@ pub fn showcase_card_wide(
         Space::new()
             .vertical()
             .gap_md()
-            .w_full()
             .child(header(title, description))
-            .child(div().w_full().child(body)),
+            .child(body),
     )
-    .w_full()
+    .width(px(760.0))
     .no_shadow()
 }
 
@@ -86,7 +84,6 @@ pub fn showcase_stack(children: Vec<AnyElement>) -> impl IntoElement {
         .vertical()
         .gap_lg()
         .align_start()
-        .w_full()
         .children(children)
 }
 
