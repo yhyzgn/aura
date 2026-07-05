@@ -1103,6 +1103,9 @@ impl Render for EditorView {
 }
 ```
 
+`CodeEditor` v2 keeps editing state in its own native buffer/selection/viewport layers and renders visible rows through GPUI `list`. Keep it inside an entity, and use provider callbacks for diagnostics, completions, and hover data instead of binding the SDK to a specific LSP process.
+
+
 ### QR code, upload, image, and preview
 
 ```rust
@@ -1841,7 +1844,7 @@ Use `liora::init_liora_with_mode(cx, ThemeMode::Light | ThemeMode::Dark | ThemeM
 
 Typography defaults are system-native: Liora does not load branded fonts by default and does not map the whole UI to Zed-specific font aliases. Custom fonts are opt-in via ordered `FontConfig` fallback lists, `Options`, `load_app_fonts`, `load_fonts_from_dir`, `load_font_assets`, `load_embedded_fonts`, the low-level `load_custom_fonts`, and `set_font_config`.
 
-Stateful controls such as `Input`, `Switch`, `Select`, `TreeSelect`, `CodeEditor`, and virtualized views should live in `gpui::Entity<T>` fields so focus, open state, selections, scroll state, and text values survive re-rendering.
+Stateful controls such as `Input`, `Switch`, `Select`, `TreeSelect`, `CodeEditor`, and virtualized views should live in `gpui::Entity<T>` fields so focus, open state, selections, scroll state, and text values survive re-rendering. `CodeEditor` v2 owns its own buffer/selection/viewport state and uses visible-row rendering; keep it as an entity rather than rebuilding it inline.
 
 ## Technical differentiators
 

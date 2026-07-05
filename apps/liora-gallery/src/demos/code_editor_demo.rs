@@ -80,14 +80,14 @@ impl Render for CodeEditorDemo {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         page(
             "CodeEditor 代码编辑器",
-            "原生 GPUI 代码编辑控件基础版，支持行号、缩进配置、语法高亮预览、编辑和 diagnostics 扩展点。",
+            "原生 GPUI 代码编辑控件 v2 基座，支持独立 buffer/selection/viewport、可见行渲染、行号、缩进配置、语法高亮预览和 diagnostics 扩展点。",
             Space::new().vertical().gap_xl().child(section(
                 "Editor showcase",
                 "代码编辑示例统一使用宽卡片展示，避免编辑器高度和说明文本打散页面节奏。",
                 showcase_stack(vec![
                     showcase_card_wide(
                         "Rust 编辑器",
-                        "使用 Liora Input 作为编辑核心，保留纯 Rust + GPUI 原生渲染。",
+                        "使用独立 CodeBuffer 与 GPUI list 可见行渲染，不再把 Input 当作编辑核心。",
                         self.basic.clone(),
                     )
                     .into_any_element(),
@@ -98,7 +98,7 @@ impl Render for CodeEditorDemo {
                             .vertical()
                             .gap_md()
                             .child(self.diagnostics.clone())
-                            .child(Text::new("MVP 阶段先完成编辑、行号、缩进元数据和诊断渲染；Tab/Shift+Tab 多行缩进和 provider trait 后续继续增强。")),
+                            .child(Text::new("v2 基座已完成基础输入、导航、选择、行号、缩进元数据、虚拟行渲染和诊断渲染；后续继续增强 undo/redo、display map、Tree-sitter 与 LSP bridge。")),
                     )
                     .into_any_element(),
                     showcase_card_wide(

@@ -1102,6 +1102,9 @@ impl Render for EditorView {
 }
 ```
 
+`CodeEditor` v2 将编辑状态放在自己的 native buffer / selection / viewport 分层中，并通过 GPUI `list` 渲染可见行。请把它保存在 entity 中；diagnostics、completion 和 hover 建议通过 provider 回调接入，而不是把 SDK 绑定到某个固定 LSP 进程。
+
+
 ### 二维码、上传、图片与预览
 
 ```rust
@@ -1830,7 +1833,7 @@ cargo run --release -p xtask -- package release-readiness
 
 字体默认保持系统原生：Liora 不默认加载品牌字体，也不会把整个 UI 映射到 Zed 专用字体别名。自定义字体通过有序 `FontConfig` 兜底列表、`Options`、`load_app_fonts`、`load_fonts_from_dir`、`load_font_assets`、`load_embedded_fonts`、底层 `load_custom_fonts` 和 `set_font_config` 显式启用。
 
-`Input`、`Switch`、`Select`、`TreeSelect`、`CodeEditor` 和虚拟化视图等有状态控件应放在 `gpui::Entity<T>` 字段中，以便焦点、展开状态、选区、滚动状态和文本值在重渲染后保持稳定。
+`Input`、`Switch`、`Select`、`TreeSelect`、`CodeEditor` 和虚拟化视图等有状态控件应放在 `gpui::Entity<T>` 字段中，以便焦点、展开状态、选区、滚动状态和文本值在重渲染后保持稳定。`CodeEditor` v2 自己持有 buffer / selection / viewport 状态并使用可见行渲染，不要在 render 中临时重建。
 
 ## 技术创新点
 
