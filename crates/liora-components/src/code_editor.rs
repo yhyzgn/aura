@@ -1531,7 +1531,8 @@ impl Render for CodeEditor {
         let code_family_for_rows = code_family.clone();
         let theme_for_rows = theme.clone();
         let code_weight_for_rows = code_weight;
-        let show_cursor = focused && self.cursor_visible;
+        let cursor_active = focused;
+        let cursor_visible = focused && self.cursor_visible;
 
         div()
             .flex()
@@ -1637,7 +1638,8 @@ impl Render for CodeEditor {
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
                                 row_display_map,
-                                show_cursor,
+                                cursor_active,
+                                cursor_visible,
                             )
                             .into_any_element()
                         })
@@ -1673,7 +1675,8 @@ fn render_editor_row(
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
     display_map: CodeDisplayMap,
-    show_cursor: bool,
+    cursor_active: bool,
+    cursor_visible: bool,
 ) -> gpui::Div {
     let line = buffer.line(row);
     let cursor_point = buffer.offset_to_point(selection.cursor());
@@ -1731,7 +1734,8 @@ fn render_editor_row(
                     line,
                     selection_range,
                     cursor_column,
-                    show_cursor,
+                    cursor_active,
+                    cursor_visible,
                     language,
                     code_theme,
                     theme,
@@ -1785,7 +1789,8 @@ fn render_line_text(
     line: &str,
     selection_range: Option<Range<usize>>,
     cursor_column: Option<usize>,
-    show_cursor: bool,
+    cursor_active: bool,
+    cursor_visible: bool,
     language: CodeLanguage,
     code_theme: CodeTheme,
     theme: &liora_theme::Theme,
@@ -1796,7 +1801,8 @@ fn render_line_text(
         line,
         selection_range,
         cursor_column,
-        show_cursor,
+        cursor_active,
+        cursor_visible,
         language,
         code_theme,
         theme,
@@ -1809,7 +1815,8 @@ fn render_line_segments(
     line: &str,
     selection_range: Option<Range<usize>>,
     cursor_column: Option<usize>,
-    show_cursor: bool,
+    cursor_active: bool,
+    cursor_visible: bool,
     language: CodeLanguage,
     code_theme: CodeTheme,
     theme: &liora_theme::Theme,
@@ -1834,8 +1841,8 @@ fn render_line_segments(
     for window in boundaries.windows(2) {
         let start = window[0];
         let end = window[1];
-        if cursor_column == Some(start) && show_cursor && !rendered_cursor {
-            row = row.child(cursor_element(theme));
+        if cursor_column == Some(start) && cursor_active && !rendered_cursor {
+            row = row.child(cursor_element(theme, cursor_visible));
             rendered_cursor = true;
         }
         if start == end {
@@ -1856,13 +1863,13 @@ fn render_line_segments(
         ));
     }
 
-    if cursor_column == Some(line.len()) && show_cursor && !rendered_cursor {
-        row = row.child(cursor_element(theme));
+    if cursor_column == Some(line.len()) && cursor_active && !rendered_cursor {
+        row = row.child(cursor_element(theme, cursor_visible));
         rendered_cursor = true;
     }
     if line.is_empty() {
-        if show_cursor && !rendered_cursor {
-            row = row.child(cursor_element(theme));
+        if cursor_active && !rendered_cursor {
+            row = row.child(cursor_element(theme, cursor_visible));
         }
         row = row.child(div().child(" "));
     }
@@ -1891,13 +1898,17 @@ fn render_line_segment(
         ))
 }
 
-fn cursor_element(theme: &liora_theme::Theme) -> gpui::Div {
+fn cursor_element(theme: &liora_theme::Theme, visible: bool) -> gpui::Div {
     div()
         .flex_none()
         .w(px(2.0))
         .h(px(17.0))
         .rounded(px(1.0))
-        .bg(theme.primary.base)
+        .bg(if visible {
+            theme.primary.base
+        } else {
+            theme.primary.base.opacity(0.0)
+        })
 }
 
 fn search_match_count(value: &str, query: &str) -> usize {
@@ -2247,6 +2258,13 @@ mod tests {
         assert!(production_source.contains("fn line_selection_range"));
         assert!(production_source.contains("cursor_column"));
         assert!(production_source.contains("render_line_segments"));
+        assert!(production_source.contains("cursor_active"));
+        assert!(production_source.contains("cursor_visible"));
+        assert!(
+            production_source
+                .contains("fn cursor_element(theme: &liora_theme::Theme, visible: bool)")
+        );
+        assert!(production_source.contains("theme.primary.base.opacity(0.0)"));
         assert!(!production_source.contains(
             "let selected = selection.range.start < row_end && selection.range.end > row_start;"
         ));
