@@ -84,9 +84,9 @@ tree-sitter-toml-ng = "0.7.0"
 tree-sitter-xml = "0.7.0"
 tree-sitter-yaml = "0.7.2"
 tree-sitter-json = "0.24"
-tree-sitter-md = { git = "https://github.com/tree-sitter-grammars/tree-sitter-markdown", rev = "9a23c1a96c0513d8fc6520972beedd419a973539" }
+tree-sitter-md = { version = "0.3.2", git = "https://github.com/tree-sitter-grammars/tree-sitter-markdown", rev = "9a23c1a96c0513d8fc6520972beedd419a973539" }
 tree-sitter-rust = "0.24.2"
-tree-sitter-typescript = { git = "https://github.com/zed-industries/tree-sitter-typescript", rev = "e2c53597d6a5d9cf7bbe8dccde576fe1e46c5899" }
+tree-sitter-typescript = { version = "0.23.2", git = "https://github.com/zed-industries/tree-sitter-typescript", rev = "e2c53597d6a5d9cf7bbe8dccde576fe1e46c5899" }
 unicode-segmentation = "1.10"
 url = "2.2"
 uuid = { version = "1.1.2", features = ["v4", "v5", "v7", "serde"] }
