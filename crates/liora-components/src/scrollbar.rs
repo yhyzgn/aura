@@ -108,6 +108,7 @@ pub struct VirtualScrollbarPrepaint {
 #[derive(Clone, Copy)]
 struct ThumbMetrics {
     bounds: Bounds<Pixels>,
+    viewport_bounds: Bounds<Pixels>,
     max_offset: Pixels,
     track_height: Pixels,
     track_top: Pixels,
@@ -156,7 +157,9 @@ impl Element for VirtualScrollbar {
     ) -> Self::PrepaintState {
         let metrics = virtual_thumb_metrics(&self.list_state, SCROLLBAR_THUMB_WIDTH);
         let thumb = metrics.map(|metrics| metrics.bounds);
-        let hitbox_bounds = scrollbar_track_hitbox(bounds);
+        let hitbox_bounds = metrics
+            .map(|metrics| scrollbar_track_hitbox(metrics.viewport_bounds))
+            .unwrap_or_else(|| scrollbar_track_hitbox(bounds));
         let hitbox = window.insert_hitbox(hitbox_bounds, HitboxBehavior::Normal);
         let owner = scrollbar_owner(window.current_view(), hitbox_bounds);
         let dragging = virtual_scrollbar_drag_state().is_some_and(|state| state.owner == owner);
@@ -337,6 +340,7 @@ fn thumb_metrics_from_values(
 
     Some(ThumbMetrics {
         bounds,
+        viewport_bounds,
         max_offset: max_offset_y,
         track_height,
         track_top: viewport_bounds.top(),
@@ -518,7 +522,9 @@ impl gpui::Element for ScrollbarThumb {
     ) -> Self::PrepaintState {
         let metrics = scroll_handle_thumb_metrics(&self.scroll_handle, SCROLLBAR_THUMB_WIDTH);
         let thumb = metrics.map(|metrics| metrics.bounds);
-        let hover_bounds = scrollbar_track_hitbox(bounds);
+        let hover_bounds = metrics
+            .map(|metrics| scrollbar_track_hitbox(metrics.viewport_bounds))
+            .unwrap_or_else(|| scrollbar_track_hitbox(bounds));
         let hitbox = window.insert_hitbox(hover_bounds, HitboxBehavior::Normal);
         let owner = scrollbar_owner(window.current_view(), hover_bounds);
         let dragging = scrollbar_drag_state().is_some_and(|state| state.owner == owner);
@@ -657,6 +663,7 @@ mod tests {
         assert!(source.contains("scroll_px_offset_for_scrollbar"));
         assert!(source.contains("max_offset_for_scrollbar"));
         assert!(source.contains("set_offset_from_scrollbar"));
+        assert!(source.contains("scrollbar_track_hitbox(metrics.viewport_bounds)"));
         assert!(source.contains("scrollbar_drag_started"));
         assert!(source.contains("scrollbar_drag_ended"));
         assert!(source.contains("virtual_scrollbar_drag_state"));
@@ -673,6 +680,7 @@ mod tests {
         .expect("scrollable content should produce a thumb");
 
         assert_eq!(metrics.bounds.size.height, px(80.0));
+        assert_eq!(metrics.viewport_bounds, test_viewport(200.0));
         assert_eq!(metrics.track_height, px(120.0));
         assert_eq!(metrics.bounds.top(), px(80.0));
         assert_eq!(metrics.bounds.right(), px(108.0));
