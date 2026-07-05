@@ -45,6 +45,7 @@ pub fn showcase_card(
         Space::new()
             .vertical()
             .gap_md()
+            .w_full()
             .child(header(title, description))
             .child(body),
     )
@@ -62,6 +63,7 @@ pub fn showcase_card_wide(
         Space::new()
             .vertical()
             .gap_md()
+            .w_full()
             .child(header(title, description))
             .child(body),
     )
