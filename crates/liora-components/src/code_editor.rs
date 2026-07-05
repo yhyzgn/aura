@@ -1887,7 +1887,7 @@ fn render_line_segments(
         rendered_cursor = true;
     }
     if line.is_empty() {
-        if cursor_active && !rendered_cursor {
+        if cursor_column.is_some() && cursor_active && !rendered_cursor {
             row = row.child(cursor_element(theme, cursor_visible));
         }
         row = row.child(div().child(" "));
@@ -1918,16 +1918,20 @@ fn render_line_segment(
 }
 
 fn cursor_element(theme: &liora_theme::Theme, visible: bool) -> gpui::Div {
-    div()
-        .flex_none()
-        .w(px(2.0))
-        .h(px(17.0))
-        .rounded(px(1.0))
-        .bg(if visible {
-            theme.primary.base
-        } else {
-            theme.primary.base.opacity(0.0)
-        })
+    div().relative().flex_none().w(px(0.0)).h(px(17.0)).child(
+        div()
+            .absolute()
+            .left_0()
+            .top_0()
+            .w(px(2.0))
+            .h(px(17.0))
+            .rounded(px(1.0))
+            .bg(if visible {
+                theme.primary.base
+            } else {
+                theme.primary.base.opacity(0.0)
+            }),
+    )
 }
 
 fn search_match_count(value: &str, query: &str) -> usize {
@@ -2304,6 +2308,9 @@ mod tests {
                 .contains("fn cursor_element(theme: &liora_theme::Theme, visible: bool)")
         );
         assert!(production_source.contains("theme.primary.base.opacity(0.0)"));
+        assert!(production_source.contains("cursor_column.is_some() && cursor_active"));
+        assert!(production_source.contains(".w(px(0.0))"));
+        assert!(production_source.contains(".absolute()"));
         assert!(!production_source.contains(
             "let selected = selection.range.start < row_end && selection.range.end > row_start;"
         ));
