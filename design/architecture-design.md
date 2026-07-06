@@ -73,7 +73,7 @@ liora/
 │       └── src/
 │           ├── main.rs
 │           └── markdown.rs       # Markdown AST → Liora 原生元素树
-└── architecture-design.md
+└── design/architecture-design.md
 ```
 
 ### 2.2 Crate 职责矩阵
@@ -919,6 +919,6 @@ pub struct FormRule {
 | `crates/liora-components/src/button.rs` | Button 组件 |
 | `crates/liora-icons/src/lib.rs` | Icon trait, IconSize |
 | `apps/liora-gallery/src/main.rs` | Gallery 展示应用 |
-| `architecture-design.md` | 本文档 |
+| `design/architecture-design.md` | 本文档 |
 | `structure.txt` | 目录结构速览 |
 | `chat.txt` | 初始调研对话记录 |
