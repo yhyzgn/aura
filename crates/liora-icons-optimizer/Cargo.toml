@@ -1,6 +1,6 @@
 [package]
 name = "liora-icons-optimizer"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2024"
 description = "Build-time icon bundle optimizer for Liora native GPUI applications."
 license-file = "../../LICENSE.md"

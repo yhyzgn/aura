@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.9 - 2026-07-06
+
+- Added Docs navigation search and kept the Gallery navigation search constrained to a single line.
+- Improved CodeEditor configuration demos and cursor/selection behavior, including tab rendering and explicit config application.
+- Fixed stale selectable CodeBlock ranges across Docs so normal text/code selection clears without requiring multi-select modifiers.
+- Fixed Gallery and Docs Windows executable resources to embed their app-specific icons instead of the generic repository icon.
+- Consolidated design documents under `design/` and refreshed the icon system design document for all bundled icon libraries and the icon optimizer.
+
 ## 0.1.13 - 2026-06-28
 
 - Renamed the old navigation/sidebar `Menu` API to `NavigationMenu`, `NavigationMenuItem`, `NavigationMenuNode`, `NavigationMenuGroup`, `NavigationMenuMode`, and `NavigationSubMenu`. This is the required migration path for apps that used the previous Menu navigation component.
