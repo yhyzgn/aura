@@ -1545,6 +1545,30 @@ fn selectable_state_snapshot(id: &ElementId) -> SelectableCodeState {
         .unwrap_or_default()
 }
 
+fn clear_other_selectable_code_states(active_id: &ElementId) -> bool {
+    let active_key = selectable_key(active_id);
+    clear_selectable_code_states(|key| key != active_key)
+}
+
+fn clear_selectable_code_state_for(id: &ElementId) -> bool {
+    let target_key = selectable_key(id);
+    clear_selectable_code_states(|key| key == target_key)
+}
+
+fn clear_selectable_code_states(mut should_clear: impl FnMut(&str) -> bool) -> bool {
+    let mut changed = false;
+    let mut states = lock_selectable_state_map();
+    for (key, state) in states.iter_mut() {
+        if should_clear(key.as_str()) && (!state.selected_range.is_empty() || state.selecting) {
+            state.selected_range = 0..0;
+            state.selection_reversed = false;
+            state.selecting = false;
+            changed = true;
+        }
+    }
+    changed
+}
+
 struct SelectableCodeText {
     id: ElementId,
     focus_handle: FocusHandle,
@@ -1710,6 +1734,12 @@ impl SelectableCodeText {
         cx: &mut Context<Self>,
     ) {
         window.focus(&self.focus_handle, cx);
+        let preserve_other_selections = event.modifiers.control || event.modifiers.platform;
+        let cleared_other_selection = if preserve_other_selections {
+            false
+        } else {
+            clear_other_selectable_code_states(&self.id)
+        };
         let idx = self.index_for_point(event.position);
         let changed = with_selectable_state(&self.id, |state| {
             let was_selecting = state.selecting;
@@ -1734,7 +1764,10 @@ impl SelectableCodeText {
                 self.move_to(state, idx) || !was_selecting
             }
         });
-        if changed {
+        if cleared_other_selection {
+            window.refresh();
+        }
+        if changed || cleared_other_selection {
             cx.notify();
         }
     }
@@ -1765,6 +1798,12 @@ impl SelectableCodeText {
             changed
         });
         if changed {
+            cx.notify();
+        }
+    }
+
+    fn clear_selection(&mut self, cx: &mut Context<Self>) {
+        if clear_selectable_code_state_for(&self.id) {
             cx.notify();
         }
     }
@@ -1961,23 +2000,35 @@ impl Element for SelectableCodeElement {
         let focus_handle_for_down = focus_handle.clone();
         let hitbox = prepaint.hitbox.clone();
         window.on_mouse_event(move |event: &MouseDownEvent, phase, window, cx| {
+            if phase.capture()
+                && event.button == MouseButton::Left
+                && !bounds.contains(&event.position)
+            {
+                let input_id = input.read(cx).id.clone();
+                if clear_selectable_code_state_for(&input_id) {
+                    window.refresh();
+                }
+            }
             if phase.bubble() && event.button == MouseButton::Left && hitbox.is_hovered(window) {
                 window.focus(&focus_handle_for_down, cx);
+                window.capture_pointer(hitbox.id);
                 input.update(cx, |input, cx| input.on_mouse_down(event, window, cx));
                 cx.stop_propagation();
             }
         });
 
         let input = self.input.clone();
-        window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
-            if phase.capture() {
+        let hitbox = prepaint.hitbox.clone();
+        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
+            if phase.capture() && hitbox.is_hovered(window) {
                 input.update(cx, |input, cx| input.on_mouse_move(event, cx));
             }
         });
 
         let input = self.input.clone();
+        let hitbox = prepaint.hitbox.clone();
         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
-            if phase.capture() && event.button == MouseButton::Left {
+            if phase.capture() && event.button == MouseButton::Left && hitbox.is_hovered(window) {
                 input.update(cx, |input, cx| input.on_mouse_up(event, window, cx));
             }
         });
@@ -2000,7 +2051,12 @@ impl Element for SelectableCodeElement {
 }
 
 impl Render for SelectableCodeText {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        cx.on_blur(&self.focus_handle, window, |this, _, cx| {
+            this.clear_selection(cx);
+        })
+        .detach();
+
         div()
             .id(element_id(format!("{}-selectable", self.id)))
             .key_context("CodeBlock")
