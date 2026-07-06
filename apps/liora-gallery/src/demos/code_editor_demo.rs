@@ -1,10 +1,12 @@
 use gpui::{AnyView, App, Context, Entity, IntoElement, Render, Window, prelude::*, rgb};
 use liora_components::layout_helpers::{page, section, showcase_card_wide, showcase_stack};
 use liora_components::{
-    CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeEditorHighlightTheme,
-    CodeEditorInlineDiagnostics, CodeEditorOptions, CodeEditorWhitespaceMode, CodeHover,
-    CodeLanguage, CodeTheme, Space, Text, toast_info,
+    Button, CodeCompletionItem, CodeDiagnostic, CodeEditor, CodeEditorConfig,
+    CodeEditorHighlightTheme, CodeEditorInlineDiagnostics, CodeEditorOptions,
+    CodeEditorWhitespaceMode, CodeHover, CodeLanguage, CodeTheme, Flex, Space, Text, toast_error,
+    toast_info,
 };
+use std::{fs, path::PathBuf};
 
 pub fn render(cx: &mut App) -> AnyView {
     cx.new(|cx| CodeEditorDemo::new(cx)).into()
@@ -15,6 +17,9 @@ struct CodeEditorDemo {
     diagnostics: Entity<CodeEditor>,
     advanced: Entity<CodeEditor>,
     configurable: Entity<CodeEditor>,
+    file_config_source: Entity<CodeEditor>,
+    file_config_preview: Entity<CodeEditor>,
+    file_config_path: PathBuf,
     themed: Entity<CodeEditor>,
     line_height_demo: Entity<CodeEditor>,
     indent_guides_demo: Entity<CodeEditor>,
@@ -194,11 +199,65 @@ impl CodeEditorDemo {
                 ])
         });
 
+        let file_config_path = gallery_code_editor_config_path();
+        if let Some(parent) = file_config_path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(&file_config_path, CONFIG_FILE_TOML);
+        let config_source =
+            fs::read_to_string(&file_config_path).unwrap_or_else(|_| CONFIG_FILE_TOML.to_string());
+        let file_config_preview_path = file_config_path.clone();
+        let initial_preview_source = config_preview_source(&config_source);
+        let file_config_preview = cx.new(move |cx| {
+            let mut editor = CodeEditor::new(initial_preview_source, cx)
+                .language(CodeLanguage::Rust)
+                .theme(CodeTheme::OneDark)
+                .diagnostics([
+                    CodeDiagnostic::info(2, 5, "Edit the TOML file on the left to update chrome."),
+                    CodeDiagnostic::warning(
+                        9,
+                        9,
+                        "Invalid TOML keeps the last valid editor config.",
+                    ),
+                ])
+                .completions([
+                    CodeCompletionItem::new("CodeEditorConfig::load_from_path")
+                        .kind("api")
+                        .detail("load TOML/JSON once"),
+                    CodeCompletionItem::new("set_config")
+                        .kind("api")
+                        .detail("explicitly apply saved settings"),
+                    CodeCompletionItem::new("appearance.syntax.keyword")
+                        .kind("toml")
+                        .detail("override syntax captures"),
+                ]);
+            if let Ok(config) = CodeEditorConfig::load_from_path(&file_config_preview_path) {
+                editor = editor.config(config);
+            }
+            editor
+        });
+        let file_config_source_path = file_config_path.clone();
+        let file_config_source = cx.new(move |cx| {
+            CodeEditor::new(config_source, cx)
+                .language(CodeLanguage::Toml)
+                .theme(CodeTheme::OneDark)
+                .rows(16)
+                .line_numbers(true)
+                .status_bar(true)
+                .current_line_highlight(true)
+                .on_change(move |value, _cx| {
+                    let _ = fs::write(&file_config_source_path, value);
+                })
+        });
+
         Self {
             basic,
             diagnostics,
             advanced,
             configurable,
+            file_config_source,
+            file_config_preview,
+            file_config_path,
             themed,
             line_height_demo,
             indent_guides_demo,
@@ -283,6 +342,68 @@ impl Render for CodeEditorDemo {
                     )
                     .into_any_element(),
                     showcase_card_wide(
+                        "配置文件显式应用：TOML 驱动编辑器",
+                        "左侧是实际写入的配置文件。编辑会保存 TOML，但右侧不会自动套用视觉配置；点击“应用 set_config”后才 load_from_path(...) 并显式 set_config(...) 到右侧，外部编辑配置文件同理不需要后台 watcher。",
+                        Space::new()
+                            .vertical()
+                            .gap_md()
+                            .child(Text::new(format!(
+                                "当前配置文件：{}",
+                                self.file_config_path.display()
+                            )))
+                            .child({
+                                let source = self.file_config_source.clone();
+                                let preview = self.file_config_preview.clone();
+                                let path = self.file_config_path.clone();
+                                Button::new("应用 set_config")
+                                    .primary()
+                                    .small()
+                                    .on_click(move |_, _, cx| {
+                                        let source_text = source.read(cx).value(cx).to_string();
+                                        if let Err(error) = fs::write(&path, &source_text) {
+                                            toast_error!("写入配置失败: {}", error);
+                                            return;
+                                        }
+                                        match CodeEditorConfig::load_from_path(&path) {
+                                            Ok(config) => {
+                                                let preview_source = config_preview_source(&source_text);
+                                                preview.update(cx, |preview, cx| {
+                                                    preview.set_value(preview_source, cx);
+                                                    preview.set_config(config, cx);
+                                                });
+                                                toast_info!("已显式应用 CodeEditorConfig::set_config");
+                                            }
+                                            Err(error) => {
+                                                preview.update(cx, |preview, cx| {
+                                                    preview.set_value(config_preview_source(&source_text), cx);
+                                                });
+                                                toast_error!("配置解析失败，保留当前视觉配置: {}", error);
+                                            }
+                                        }
+                                    })
+                            })
+                            .child(
+                                Flex::new()
+                                    .row()
+                                    .gap_lg()
+                                    .child(
+                                        Space::new()
+                                            .vertical()
+                                            .gap_sm()
+                                            .child(Text::new("editor.toml（可直接编辑）").bold())
+                                            .child(self.file_config_source.clone()),
+                                    )
+                                    .child(
+                                        Space::new()
+                                            .vertical()
+                                            .gap_sm()
+                                            .child(Text::new("应用结果 CodeEditor").bold())
+                                            .child(self.file_config_preview.clone()),
+                                    ),
+                            ),
+                    )
+                    .into_any_element(),
+                    showcase_card_wide(
                         "自定义高亮主题和高级编辑行为",
                         "CodeEditorHighlightTheme 可覆盖编辑器底色、gutter、selection、caret、ruler、whitespace、诊断色，并可装载 Zed-style syntax capture 主题。",
                         self.themed.clone(),
@@ -356,6 +477,130 @@ let options = CodeEditorOptions::default();
 // Turn panels on/off per product surface.
 // Read-only mode still supports selection, copy, scroll and hover.
 "#;
+
+fn gallery_code_editor_config_path() -> PathBuf {
+    std::env::temp_dir()
+        .join("liora-gallery")
+        .join("code-editor-config.toml")
+}
+
+const CONFIG_FILE_TOML: &str = r##"language = "rust"
+theme = "one-dark"
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 360
+tab_size = 2
+soft_tabs = true
+
+[options]
+header = true
+status_bar = true
+line_numbers = true
+current_line_highlight = true
+indent_guides = true
+rulers = true
+ruler_column = 72
+whitespace = "boundary"
+completion_limit = 4
+diagnostics_limit = 4
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
+
+[appearance]
+surface = "#0f172aff"
+chrome_surface = "#111827ff"
+gutter_surface = "#0b1220ff"
+border = "#334155ff"
+text = "#e5e7ebff"
+muted_text = "#94a3b8ff"
+caret = "#38bdf8ff"
+selection = "#2563eb52"
+current_line = "#1e293bff"
+ruler = "#475569b8"
+whitespace = "#64748b94"
+warning = "#facc15ff"
+error = "#fb7185ff"
+
+[appearance.syntax.keyword]
+color = "#ff79c6ff"
+font_style = "italic"
+
+[appearance.syntax.string]
+color = "#a7f3d0ff"
+"##;
+
+fn config_preview_source(source: &str) -> String {
+    match CodeEditorConfig::load_toml(source) {
+        Ok(config) => {
+            let layout = config.layout.unwrap_or_default();
+            format!(
+                r#"// This preview content is generated from the TOML on the left.
+// Editing the config file is the explicit trigger that updates this source and styling.
+
+pub struct EffectiveEditorConfig {{
+    pub language: &'static str,
+    pub theme: &'static str,
+    pub font_family: &'static str,
+    pub font_size_px: f32,
+    pub font_weight: f32,
+    pub line_height_px: f32,
+    pub height_px: f32,
+    pub tab_size: usize,
+    pub content_padding_x_px: f32,
+    pub row_padding_y_px: f32,
+    pub panel_gap_px: f32,
+}}
+
+let effective = EffectiveEditorConfig {{
+    language: {language:?},
+    theme: {theme:?},
+    font_family: {font_family:?},
+    font_size_px: {font_size_px:.1},
+    font_weight: {font_weight:.1},
+    line_height_px: {line_height_px:.1},
+    height_px: {height_px:.1},
+    tab_size: {tab_size},
+    content_padding_x_px: {content_padding_x_px:.1},
+    row_padding_y_px: {row_padding_y_px:.1},
+    panel_gap_px: {panel_gap_px:.1},
+}};
+"#,
+                language = config.language.unwrap_or_else(|| "plain-text".to_string()),
+                theme = config.theme.unwrap_or_else(|| "auto".to_string()),
+                font_family = config
+                    .font_family
+                    .unwrap_or_else(|| "global code font".to_string()),
+                font_size_px = config.font_size_px.unwrap_or(14.0),
+                font_weight = config.font_weight.unwrap_or(400.0),
+                line_height_px = config.line_height_px.unwrap_or(24.0),
+                height_px = config.height_px.unwrap_or(0.0),
+                tab_size = config.tab_size.unwrap_or(4),
+                content_padding_x_px = layout.content_padding_x_px.unwrap_or(14.0),
+                row_padding_y_px = layout.row_padding_y_px.unwrap_or(0.0),
+                panel_gap_px = layout.panel_gap_px.unwrap_or(4.0),
+            )
+        }
+        Err(error) => format!(
+            r#"// The TOML on the left is currently invalid.
+// The visual preview keeps the last valid CodeEditor config until this parses again.
+
+pub const CONFIG_ERROR: &str = {error:?};
+"#
+        ),
+    }
+}
 
 const THEME_SAMPLE: &str = r#"use liora_components::{
     CodeEditorHighlightTheme, CodeEditorOptions, CodeEditorWhitespaceMode,
@@ -486,5 +731,18 @@ mod tests {
         assert!(source.contains("code_folding(true)"));
         assert!(source.contains("自动识别"));
         assert!(source.contains("ruler_column"));
+        assert!(source.contains("set_config"));
+        assert!(source.contains("CodeEditorConfig"));
+        assert!(source.contains("liora-gallery"));
+        assert!(source.contains("appearance.syntax.keyword"));
+        assert!(source.contains("font_size_px"));
+        assert!(source.contains("row_padding_y_px"));
+        assert!(source.contains("height_px"));
+        assert!(source.contains("content_padding_x_px"));
+        assert!(source.contains("config_preview_source"));
+        assert!(source.contains("EffectiveEditorConfig"));
+        assert!(source.contains("Button::new(\"应用 set_config\")"));
+        assert!(source.contains("CodeEditorConfig::load_from_path(&path)"));
+        assert!(source.contains("preview.set_config(config, cx)"));
     }
 }

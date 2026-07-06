@@ -29,8 +29,10 @@ use gpui::{
 };
 use liora_core::Config;
 use std::{
+    cell::RefCell,
     collections::HashMap,
     ops::Range,
+    rc::Rc,
     sync::{Arc, Mutex, MutexGuard, OnceLock},
 };
 
@@ -174,6 +176,34 @@ impl Default for SelectableTextSelectionState {
     }
 }
 
+type SelectableTextLayoutCacheStore = Rc<RefCell<Vec<SelectableTextLayoutCache>>>;
+
+struct SelectableTextLayoutCache {
+    text: SharedString,
+    runs: Vec<TextRun>,
+    font_size: Pixels,
+    line_height: Pixels,
+    wrap_width: Option<Pixels>,
+    layout: Arc<SelectableTextLayout>,
+}
+
+impl SelectableTextLayoutCache {
+    fn matches(
+        &self,
+        text: &SharedString,
+        runs: &[TextRun],
+        font_size: Pixels,
+        line_height: Pixels,
+        wrap_width: Option<Pixels>,
+    ) -> bool {
+        self.text == *text
+            && self.runs == runs
+            && self.font_size == font_size
+            && self.line_height == line_height
+            && self.wrap_width == wrap_width
+    }
+}
+
 fn selection_state_map() -> &'static Mutex<HashMap<String, SelectableTextSelectionState>> {
     static STATES: OnceLock<Mutex<HashMap<String, SelectableTextSelectionState>>> = OnceLock::new();
     STATES.get_or_init(|| Mutex::new(HashMap::new()))
@@ -205,6 +235,30 @@ fn selected_range_snapshot(id: &ElementId) -> Range<usize> {
         .unwrap_or(0..0)
 }
 
+fn clear_other_selection_states(active_id: &ElementId) -> bool {
+    let active_key = selection_key(active_id);
+    clear_selection_states(|key| key != active_key)
+}
+
+fn clear_selection_state_for(id: &ElementId) -> bool {
+    let target_key = selection_key(id);
+    clear_selection_states(|key| key == target_key)
+}
+
+fn clear_selection_states(mut should_clear: impl FnMut(&str) -> bool) -> bool {
+    let mut changed = false;
+    let mut states = lock_selection_state_map();
+    for (key, state) in states.iter_mut() {
+        if should_clear(key.as_str()) && (!state.selected_range.is_empty() || state.selecting) {
+            state.selected_range = 0..0;
+            state.selection_reversed = false;
+            state.selecting = false;
+            changed = true;
+        }
+    }
+    changed
+}
+
 fn set_layout_state(
     id: &ElementId,
     layout: Arc<SelectableTextLayout>,
@@ -229,6 +283,7 @@ struct SelectableTextState {
     key_context: &'static str,
     fill_width: bool,
     font_family: Option<SharedString>,
+    layout_caches: SelectableTextLayoutCacheStore,
     focus_handle: FocusHandle,
 }
 
@@ -245,6 +300,7 @@ impl SelectableTextState {
             key_context: options.key_context,
             fill_width: options.fill_width,
             font_family: options.font_family,
+            layout_caches: Rc::new(RefCell::new(Vec::new())),
             focus_handle: cx.focus_handle(),
         }
     }
@@ -276,6 +332,7 @@ impl SelectableTextState {
         self.key_context = options.key_context;
         self.fill_width = options.fill_width;
         self.font_family = options.font_family;
+        self.layout_caches.borrow_mut().clear();
 
         if old_id != self.id {
             let old_range = selected_range_snapshot(&old_id);
@@ -402,6 +459,7 @@ impl SelectableTextState {
         cx: &mut Context<Self>,
     ) {
         window.focus(&self.focus_handle, cx);
+        let cleared_other_selection = clear_other_selection_states(&self.id);
         let idx = self.index_for_point(event.position);
         let changed = with_selection_state(&self.id, |state| {
             let was_selecting = state.selecting;
@@ -426,7 +484,10 @@ impl SelectableTextState {
                 self.move_to(state, idx) || !was_selecting
             }
         });
-        if changed {
+        if cleared_other_selection {
+            window.refresh();
+        }
+        if changed || cleared_other_selection {
             cx.notify();
         }
     }
@@ -594,12 +655,14 @@ impl Render for SelectableTextState {
             .child(SelectableTextElement {
                 id: element_id(format!("{:?}-text", self.id)),
                 input: cx.entity(),
+                layout_caches: self.layout_caches.clone(),
             })
     }
 }
 
 struct SelectableTextLayout {
     lines: Vec<gpui::WrappedLine>,
+    line_offsets: Vec<usize>,
     width: Pixels,
     height: Pixels,
 }
@@ -607,6 +670,7 @@ struct SelectableTextLayout {
 struct SelectableTextElement {
     id: ElementId,
     input: Entity<SelectableTextState>,
+    layout_caches: SelectableTextLayoutCacheStore,
 }
 
 struct SelectableTextPrepaint {
@@ -642,13 +706,18 @@ impl Element for SelectableTextElement {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, Arc<SelectableTextLayout>) {
-        let input = self.input.read(cx);
-        let text = input.text.clone();
-        let runs = input.runs.clone();
-        let font_size = input.font_size;
-        let line_height = input.line_height;
-        let wrap = input.wrap;
-        let fill_width = input.fill_width;
+        let layout_caches = self.layout_caches.clone();
+        let (text, runs, font_size, line_height, wrap, fill_width) = {
+            let input = self.input.read(cx);
+            (
+                input.text.clone(),
+                input.runs.clone(),
+                input.font_size,
+                input.line_height,
+                input.wrap,
+                input.fill_width,
+            )
+        };
 
         let mut style = Style::default();
         if fill_width {
@@ -656,14 +725,17 @@ impl Element for SelectableTextElement {
             style.min_size.width = px(0.0).into();
         }
 
+        let text_for_measure = text.clone();
+        let runs_for_measure = runs.clone();
         let layout_id =
             window.request_measured_layout(style, move |known, available, window, _cx| {
                 let wrap_width = selectable_wrap_width(wrap, known.width, available.width);
-                let layout = build_selectable_layout_from_parts(
-                    text.clone(),
+                let layout = cached_selectable_layout(
+                    &layout_caches,
+                    text_for_measure.clone(),
                     font_size,
                     line_height,
-                    runs.clone(),
+                    runs_for_measure.clone(),
                     wrap_width,
                     window,
                 );
@@ -681,7 +753,15 @@ impl Element for SelectableTextElement {
                 )
             });
 
-        let layout = Arc::new(build_selectable_layout(input, None, window));
+        let layout = cached_selectable_layout(
+            &self.layout_caches,
+            text,
+            font_size,
+            line_height,
+            runs,
+            None,
+            window,
+        );
         (layout_id, layout)
     }
 
@@ -694,23 +774,36 @@ impl Element for SelectableTextElement {
         window: &mut Window,
         cx: &mut App,
     ) -> SelectableTextPrepaint {
-        let input = self.input.read(cx);
+        let wrap = self.input.read(cx).wrap;
         let actual_wrap_width =
-            (input.wrap == SelectableTextWrap::Normal).then_some(bounds.size.width.max(px(1.0)));
-        let actual_layout = Arc::new(build_selectable_layout(input, actual_wrap_width, window));
+            (wrap == SelectableTextWrap::Normal).then_some(bounds.size.width.max(px(1.0)));
+        let (text, runs, font_size, line_height) = {
+            let input = self.input.read(cx);
+            (
+                input.text.clone(),
+                input.runs.clone(),
+                input.font_size,
+                input.line_height,
+            )
+        };
+        let actual_layout = cached_selectable_layout(
+            &self.layout_caches,
+            text,
+            font_size,
+            line_height,
+            runs,
+            actual_wrap_width,
+            window,
+        );
         *layout = actual_layout;
+        let input = self.input.read(cx);
         let mut selection_quads = Vec::new();
         let selected_range = selected_range_snapshot(&input.id);
         let mut y = bounds.top();
         let mut line_starts = Vec::new();
         let selection_color = cx.global::<Config>().theme.primary.base.opacity(0.28);
 
-        let source_text = input.text.clone();
-        let line_offsets = shaped_line_start_offsets(
-            source_text.as_ref(),
-            layout.lines.iter().map(|line| line.text.as_ref()),
-        );
-        for (line, line_start) in layout.lines.iter().zip(line_offsets.into_iter()) {
+        for (line, line_start) in layout.lines.iter().zip(layout.line_offsets.iter().copied()) {
             if !selected_range.is_empty() {
                 let line_end = line_start + line.len();
                 let start = selected_range.start.max(line_start);
@@ -763,7 +856,10 @@ impl Element for SelectableTextElement {
                 && event.button == MouseButton::Left
                 && !bounds.contains(&event.position)
             {
-                input.update(cx, |input, cx| input.clear_selection(cx));
+                let input_id = input.read(cx).id.clone();
+                if clear_selection_state_for(&input_id) {
+                    window.refresh();
+                }
             }
             if phase.bubble() && event.button == MouseButton::Left && hitbox.is_hovered(window) {
                 window.focus(&focus_handle_for_down, cx);
@@ -774,15 +870,17 @@ impl Element for SelectableTextElement {
         });
 
         let input = self.input.clone();
-        window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
-            if phase.capture() {
+        let hitbox = prepaint.hitbox.clone();
+        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
+            if phase.capture() && hitbox.is_hovered(window) {
                 input.update(cx, |input, cx| input.on_mouse_move(event, cx));
             }
         });
 
         let input = self.input.clone();
+        let hitbox = prepaint.hitbox.clone();
         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
-            if phase.capture() && event.button == MouseButton::Left {
+            if phase.capture() && event.button == MouseButton::Left && hitbox.is_hovered(window) {
                 input.update(cx, |input, cx| input.on_mouse_up(event, window, cx));
             }
         });
@@ -851,19 +949,45 @@ fn consume_line_ending(source_text: &str, cursor: usize) -> usize {
     }
 }
 
-fn build_selectable_layout(
-    input: &SelectableTextState,
+fn cached_selectable_layout(
+    layout_caches: &SelectableTextLayoutCacheStore,
+    text: SharedString,
+    font_size: Pixels,
+    line_height: Pixels,
+    runs: Vec<TextRun>,
     wrap_width: Option<Pixels>,
     window: &mut Window,
-) -> SelectableTextLayout {
-    build_selectable_layout_from_parts(
-        input.text.clone(),
-        input.font_size,
-        input.line_height,
-        input.runs.clone(),
+) -> Arc<SelectableTextLayout> {
+    if let Some(layout) = layout_caches
+        .borrow()
+        .iter()
+        .find(|cache| cache.matches(&text, &runs, font_size, line_height, wrap_width))
+        .map(|cache| cache.layout.clone())
+    {
+        return layout;
+    }
+
+    let layout = Arc::new(build_selectable_layout_from_parts(
+        text.clone(),
+        font_size,
+        line_height,
+        runs.clone(),
         wrap_width,
         window,
-    )
+    ));
+    let mut caches = layout_caches.borrow_mut();
+    if caches.len() >= 4 {
+        caches.remove(0);
+    }
+    caches.push(SelectableTextLayoutCache {
+        text,
+        runs,
+        font_size,
+        line_height,
+        wrap_width,
+        layout: layout.clone(),
+    });
+    layout
 }
 
 fn build_selectable_layout_from_parts(
@@ -874,11 +998,16 @@ fn build_selectable_layout_from_parts(
     wrap_width: Option<Pixels>,
     window: &mut Window,
 ) -> SelectableTextLayout {
+    let source_text = text.clone();
     let lines: Vec<gpui::WrappedLine> = window
         .text_system()
         .shape_text(text, font_size, &runs, wrap_width, None)
         .map(|lines| lines.into_iter().collect())
         .unwrap_or_default();
+    let line_offsets = shaped_line_start_offsets(
+        source_text.as_ref(),
+        lines.iter().map(|line| line.text.as_ref()),
+    );
 
     let mut width = px(1.0);
     let mut height = px(0.0);
@@ -890,6 +1019,7 @@ fn build_selectable_layout_from_parts(
 
     SelectableTextLayout {
         lines,
+        line_offsets,
         width,
         height,
     }
@@ -1031,6 +1161,11 @@ mod tests {
             .unwrap();
 
         assert!(source.contains("request_measured_layout"));
+        assert!(source.contains("type SelectableTextLayoutCacheStore"));
+        assert!(source.contains("cached_selectable_layout"));
+        assert!(source.contains("cache.matches"));
+        assert!(source.contains("caches.len() >= 4"));
+        assert!(source.contains("line_offsets: Vec<usize>"));
         assert!(source.contains("selectable_wrap_width"));
         assert!(source.contains("AvailableSpace::Definite"));
         assert!(source.contains("wrapper = wrapper.w_full().flex_shrink(1.0)"));
@@ -1057,9 +1192,14 @@ mod tests {
         assert!(source.contains("event.keystroke.modifiers.platform"));
         assert!(source.contains("event.click_count == 2"));
         assert!(source.contains("window.capture_pointer(hitbox.id)"));
+        assert!(source.contains("fn clear_other_selection_states"));
+        assert!(source.contains("fn clear_selection_state_for"));
+        assert!(source.contains("window.refresh()"));
+        assert!(source.contains("phase.capture() && hitbox.is_hovered(window)"));
+        assert!(!source.contains("hitbox.is_hovered(window) || input.read(cx).is_selecting()"));
         assert!(source.contains("phase.capture()"));
         assert!(source.contains("!bounds.contains(&event.position)"));
-        assert!(source.contains("input.clear_selection(cx)"));
+        assert!(source.contains("clear_selection_state_for(&input_id)"));
     }
 
     #[test]

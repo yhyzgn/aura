@@ -1157,7 +1157,11 @@ let editor = CodeEditor::new(source, cx)
 language = "rust"
 theme_file = "themes/one.json"
 theme_name = "One Dark"
-rows = 18
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 420
 tab_size = 4
 soft_tabs = true
 
@@ -1166,6 +1170,18 @@ line_numbers = true
 rulers = true
 ruler_column = 100
 whitespace = "boundary"
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
 
 [appearance.syntax.keyword]
 color = "#ff79c6ff"
@@ -1178,6 +1194,15 @@ use liora::components::{CodeEditor, CodeEditorConfig};
 let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
 let editor = CodeEditor::new(source, cx).config(config);
 ```
+
+如果产品需要运行时配置面板，文件保存和重新加载触发应由业务应用管理。启动时加载一次；用户保存设置、点击“应用/重新加载”或重启编辑器时，再显式应用新配置：
+
+```rust
+let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
+editor.update(cx, |editor, cx| editor.set_config(config, cx));
+```
+
+组件不会在后台监视文件。配置解析失败时保留当前编辑器配置，并由业务 UI 提示错误。
 
 内置 tree-sitter 高亮目前覆盖 Rust、TypeScript/JavaScript、SQL、Shell、XML、TOML、YAML、INI/conf、JSON 和 Markdown；未知语言 label 会安全回退为纯文本。
 

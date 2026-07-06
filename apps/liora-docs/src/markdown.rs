@@ -9,19 +9,19 @@ use liora_components::{
     Autocomplete, AutocompleteItem, Avatar, Backtop, Badge, BadgeType, Button, ButtonColors,
     Calendar, CalendarDate, CalendarEvent, Card, Carousel, CarouselIndicatorPosition, CarouselItem,
     Checkbox, CheckboxGroup, CheckboxOptionStyle, CodeBlock as DocCodeBlock, CodeDiagnostic,
-    CodeEditor, CodeHighlighter, CodeLanguage, CodeTheme, Container, Dropdown, DropdownButton,
-    DropdownButtonItem, Flex, Form, FormItem, Grid, GridItem, HorizontalList, Image, Input,
-    InputNumber, InputNumberControlsPosition, Link, Loading, NavigationMenu, NavigationMenuMode,
-    NotificationType, Paragraph, Popconfirm, Popover, Preview, Progress, ProgressStatus, QrCode,
-    QrEcLevel, QrFinderStyle, QrGradientDirection, QrModuleStyle, Radio, RadioGroup,
-    RadioOptionStyle, Rate, Result as DocResult, ResultStatus, Segmented, SegmentedOption, Select,
-    SelectableTextGroup, Shell, Sidebar, Skeleton, SkeletonItem, SkeletonVariant, Slider, Space,
-    Statistic, Switch, Tag as DocTag, Text, Textarea, Timer, TimerFormat, TimerUnit, Title,
-    TitleBar, TitleBarContentAlign, Tooltip, Tour, TourPlacement, TourStep, Transfer, TransferItem,
-    Tree, TreeNode, TreeSelect, TreeSelectNode, Upload, UploadFile, UploadStatus, VirtualizedList,
-    VirtualizedTable, VirtualizedTree, Watermark, WindowControlsPosition, WindowFrameMode,
-    frame_mode_switch_row, show_notification, toast_error, toast_info, toast_success,
-    toast_warning,
+    CodeEditor, CodeEditorConfig, CodeHighlighter, CodeLanguage, CodeTheme, Container, Dropdown,
+    DropdownButton, DropdownButtonItem, Flex, Form, FormItem, Grid, GridItem, HorizontalList,
+    Image, Input, InputNumber, InputNumberControlsPosition, Link, Loading, NavigationMenu,
+    NavigationMenuMode, NotificationType, Paragraph, Popconfirm, Popover, Preview, Progress,
+    ProgressStatus, QrCode, QrEcLevel, QrFinderStyle, QrGradientDirection, QrModuleStyle, Radio,
+    RadioGroup, RadioOptionStyle, Rate, Result as DocResult, ResultStatus, Segmented,
+    SegmentedOption, Select, SelectableTextGroup, Shell, Sidebar, Skeleton, SkeletonItem,
+    SkeletonVariant, Slider, Space, Statistic, Switch, Tag as DocTag, Text, Textarea, Timer,
+    TimerFormat, TimerUnit, Title, TitleBar, TitleBarContentAlign, Tooltip, Tour, TourPlacement,
+    TourStep, Transfer, TransferItem, Tree, TreeNode, TreeSelect, TreeSelectNode, Upload,
+    UploadFile, UploadStatus, VirtualizedList, VirtualizedTable, VirtualizedTree, Watermark,
+    WindowControlsPosition, WindowFrameMode, frame_mode_switch_row, show_notification, toast_error,
+    toast_info, toast_success, toast_warning,
 };
 use liora_core::{
     Config, PassivePortal, Placement, Portal, ThemeMode, apply_locale, apply_theme_mode,
@@ -1563,6 +1563,9 @@ fn load_code_snippet(path: &str) -> Option<&'static str> {
             Some(include_str!("../content/snippets/code_editor/folding.rs"))
         }
         "code_editor/theme.rs" => Some(include_str!("../content/snippets/code_editor/theme.rs")),
+        "code_editor/config_file.rs" => Some(include_str!(
+            "../content/snippets/code_editor/config_file.rs"
+        )),
         "code_editor/diagnostics.rs" => Some(include_str!(
             "../content/snippets/code_editor/diagnostics.rs"
         )),
@@ -2566,6 +2569,37 @@ impl LiveDemoContent {
                             5,
                             "Theme overrides also recolor diagnostics.",
                         )])
+                }));
+            }
+            "CodeEditorConfigFile" => {
+                code_editors.push(cx.new(|cx| {
+                    CodeEditor::new(DOCS_CODE_EDITOR_CONFIG_FILE_TOML, cx)
+                        .language(CodeLanguage::Toml)
+                        .theme(CodeTheme::OneDark)
+                        .rows(14)
+                        .line_numbers(true)
+                        .status_bar(true)
+                        .current_line_highlight(true)
+                }));
+                code_editors.push(cx.new(|cx| {
+                    let config = CodeEditorConfig::load_toml(DOCS_CODE_EDITOR_CONFIG_FILE_TOML)
+                        .unwrap_or_default();
+                    CodeEditor::new(DOCS_CODE_EDITOR_CONFIG_FILE_PREVIEW, cx)
+                        .language(CodeLanguage::Rust)
+                        .theme(CodeTheme::OneDark)
+                        .config(config)
+                        .diagnostics([liora_components::CodeDiagnostic::info(
+                            2,
+                            5,
+                            "This preview is rendered from the TOML config above.",
+                        )])
+                        .completions([
+                            liora_components::CodeCompletionItem::new(
+                                "CodeEditorConfig::load_from_path",
+                            ),
+                            liora_components::CodeCompletionItem::new("set_config"),
+                            liora_components::CodeCompletionItem::new("load_from_path"),
+                        ])
                 }));
             }
             "CodeEditorLineHeight" => {
@@ -3861,6 +3895,7 @@ impl Render for LiveDemoContent {
             | "CodeEditorDiagnostics"
             | "CodeEditorAdvanced"
             | "CodeEditorConfiguration"
+            | "CodeEditorConfigFile"
             | "CodeEditorTheme"
             | "CodeEditorLineHeight"
             | "CodeEditorIndentGuides"
@@ -8029,7 +8064,7 @@ cargo test -p liora-components code_editor
         source: r#"[editor]
 language = "rust"
 theme_name = "One Dark"
-rows = 18
+height_px = 360
 
 [options]
 line_numbers = true
@@ -8082,6 +8117,78 @@ let options = CodeEditorOptions {
     whitespace: CodeEditorWhitespaceMode::Boundary,
     ..CodeEditorOptions::default()
 };
+"#;
+const DOCS_CODE_EDITOR_CONFIG_FILE_TOML: &str = r##"language = "rust"
+theme = "one-dark"
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 320
+tab_size = 2
+soft_tabs = true
+
+[options]
+header = true
+status_bar = true
+line_numbers = true
+current_line_highlight = true
+indent_guides = true
+rulers = true
+ruler_column = 72
+whitespace = "boundary"
+completion_limit = 4
+diagnostics_limit = 4
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
+
+[appearance]
+surface = "#0f172aff"
+chrome_surface = "#111827ff"
+gutter_surface = "#0b1220ff"
+border = "#334155ff"
+text = "#e5e7ebff"
+muted_text = "#94a3b8ff"
+caret = "#38bdf8ff"
+selection = "#2563eb52"
+current_line = "#1e293bff"
+ruler = "#475569b8"
+whitespace = "#64748b94"
+warning = "#facc15ff"
+error = "#fb7185ff"
+
+[appearance.syntax.keyword]
+color = "#ff79c6ff"
+font_style = "italic"
+
+[appearance.syntax.string]
+color = "#a7f3d0ff"
+"##;
+
+const DOCS_CODE_EDITOR_CONFIG_FILE_PREVIEW: &str = r#"// This preview is rendered with the TOML shown above.
+// Change font_size_px, height_px, line_height_px, tab_size, row_padding_y_px or content_padding_x_px, then explicitly reload/apply the config.
+
+pub struct EditorConfigPreview {
+    label: &'static str,
+    font_size_px: u32,
+    row_padding_y_px: u32,
+}
+
+impl EditorConfigPreview {
+    pub fn render(&self) {
+        println!("{} uses {}px code text", self.label, self.font_size_px);
+    }
+}
 "#;
 
 const DOCS_CODE_EDITOR_ADVANCED_LAYOUT_SAMPLE: &str = r#"pub fn build_panel() {
@@ -12751,6 +12858,7 @@ mod tests {
     fn loads_external_code_snippets_by_path() {
         assert!(load_code_snippet("button/types.rs").is_some());
         assert!(load_code_snippet("code_block/theme.rs").is_some());
+        assert!(load_code_snippet("code_editor/config_file.rs").is_some());
         assert!(load_code_snippet("quick_start/run.sh").is_some());
         assert!(load_code_snippet("missing.rs").is_none());
     }
@@ -12839,6 +12947,7 @@ mod tests {
             "bar_chart/custom.rs",
             "area_chart/custom.rs",
             "pie_chart/custom.rs",
+            "code_editor/config_file.rs",
         ] {
             assert!(harness.contains(&format!("../../content/snippets/{snippet}")));
             assert!(load_code_snippet(snippet).is_some());

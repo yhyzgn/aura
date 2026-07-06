@@ -1158,7 +1158,11 @@ File-driven configuration can load behavior plus a Zed JSON theme family:
 language = "rust"
 theme_file = "themes/one.json"
 theme_name = "One Dark"
-rows = 18
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 420
 tab_size = 4
 soft_tabs = true
 
@@ -1167,6 +1171,18 @@ line_numbers = true
 rulers = true
 ruler_column = 100
 whitespace = "boundary"
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
 
 [appearance.syntax.keyword]
 color = "#ff79c6ff"
@@ -1179,6 +1195,15 @@ use liora::components::{CodeEditor, CodeEditorConfig};
 let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
 let editor = CodeEditor::new(source, cx).config(config);
 ```
+
+For runtime configuration panels, keep file persistence and reload triggers in host application code. Load once on startup, then explicitly apply a new config when the user saves settings, clicks Apply/Reload, or restarts the editor:
+
+```rust
+let config = CodeEditorConfig::load_from_path("assets/editor.toml")?;
+editor.update(cx, |editor, cx| editor.set_config(config, cx));
+```
+
+The component does not watch files in the background. If parsing fails, keep the current editor config and surface the error in the host UI.
 
 Built-in tree-sitter highlighting currently covers Rust, TypeScript/JavaScript, SQL, Shell, XML, TOML, YAML, INI/conf, JSON, and Markdown. Unknown language labels safely fall back to plain text.
 

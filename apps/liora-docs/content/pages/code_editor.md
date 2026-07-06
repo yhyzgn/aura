@@ -91,6 +91,19 @@
 ```rust src="code_editor/configuration.rs"
 ```
 
+## 配置文件驱动：TOML/JSON 与显式应用
+
+### 效果
+
+::Demo{component="CodeEditorConfigFile"}::
+
+### 代码
+
+```rust src="code_editor/config_file.rs"
+```
+
+`CodeEditorConfig::load_from_path(...)` 用于启动时加载一次外部 TOML/JSON 配置；运行时修改配置时，推荐由业务触发动作显式重新加载，例如用户保存配置、点击“应用/重新加载”，或应用重启后重新读取文件。SDK 不在后台监视文件，避免把配置生命周期和业务状态耦合到组件内部。解析失败时业务侧可以提示错误，并保留当前编辑器配置不变。`theme_file` 会按配置文件所在目录解析相对路径。
+
 ## 自定义高亮主题和高级编辑行为
 
 ### 效果
@@ -125,13 +138,17 @@
 
 ## 配置文件和 Zed JSON 主题
 
-CodeEditor 支持用 `CodeEditorConfig` 从 TOML/JSON 文件加载配置。`theme_file` 指向 Zed JSON theme family，`theme_name` 指定其中一个主题；`appearance.syntax.*` 可以继续覆盖单个 capture。
+CodeEditor 支持用 `CodeEditorConfig` 从 TOML/JSON 文件加载配置。基础编辑体验配置覆盖语言、主题、字体族、字号、字重、显式高度、行高、缩进、header/status/panel 开关以及 gutter/content/row/header/panel 间距。编辑器真实内容行数来自 buffer；配置文件只用 `height_px` 表达显式视口高度；不提供 `rows` 配置，真实内容行数始终来自 buffer，父级布局仍可决定最终尺寸。`theme_file` 指向 Zed JSON theme family，`theme_name` 指定其中一个主题；`appearance.syntax.*` 可以继续覆盖单个 capture。配置文件既可以通过 `.config(config)` 启动时应用，也可以在业务触发 reload 时通过 `.set_config(config, cx)` 显式应用。
 
 ```toml
 language = "rust"
 theme_file = "themes/one.json"
 theme_name = "One Dark"
-rows = 18
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 420
 tab_size = 4
 soft_tabs = true
 
@@ -140,6 +157,18 @@ line_numbers = true
 rulers = true
 ruler_column = 100
 whitespace = "boundary"
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
 
 [appearance.syntax.keyword]
 color = "#ff79c6ff"

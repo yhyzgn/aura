@@ -33,7 +33,7 @@ use liora_icons::Icon;
 use liora_icons_lucide::IconName;
 use serde::Deserialize;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     fs,
     ops::Range,
     path::{Path, PathBuf},
@@ -491,20 +491,38 @@ impl CodeSelection {
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct CodeDisplayMap {
     row_height: Pixels,
+    text_line_height: Pixels,
     gutter_width: Pixels,
     content_left_padding: Pixels,
+    row_padding_y: Pixels,
     average_char_width: Pixels,
     viewport_padding: Pixels,
 }
 
 impl CodeDisplayMap {
-    fn default_for(line_numbers: bool, row_height: Option<Pixels>) -> Self {
+    fn default_for(
+        line_numbers: bool,
+        text_line_height: Option<Pixels>,
+        font_size: Pixels,
+        gutter_width: Option<Pixels>,
+        content_padding_x: Option<Pixels>,
+        row_padding_y: Option<Pixels>,
+        viewport_padding_y: Option<Pixels>,
+    ) -> Self {
+        let text_line_height = text_line_height.unwrap_or_else(|| px(24.0));
+        let row_padding_y = row_padding_y.unwrap_or_else(|| px(0.0));
         Self {
-            row_height: row_height.unwrap_or_else(|| px(24.0)),
-            gutter_width: if line_numbers { px(64.0) } else { px(0.0) },
-            content_left_padding: px(14.0),
-            average_char_width: px(8.0),
-            viewport_padding: px(24.0),
+            row_height: text_line_height + row_padding_y * 2.0,
+            text_line_height,
+            gutter_width: if line_numbers {
+                gutter_width.unwrap_or_else(|| px(64.0))
+            } else {
+                px(0.0)
+            },
+            content_left_padding: content_padding_x.unwrap_or_else(|| px(14.0)),
+            row_padding_y,
+            average_char_width: px((font_size.as_f32() / 14.0).max(0.5) * 8.0),
+            viewport_padding: viewport_padding_y.unwrap_or_else(|| px(24.0)),
         }
     }
 
@@ -516,58 +534,16 @@ impl CodeDisplayMap {
         self.row_height
     }
 
+    fn text_line_height(self) -> Pixels {
+        self.text_line_height
+    }
+
     fn gutter_width(self, line_numbers: bool) -> Pixels {
         if line_numbers {
             self.gutter_width
         } else {
             px(0.0)
         }
-    }
-
-    fn row_for_y(
-        self,
-        y: Pixels,
-        scroll_row: usize,
-        scroll_offset_in_row: Pixels,
-        line_count: usize,
-    ) -> usize {
-        let max_row = line_count.saturating_sub(1);
-        let row_delta = ((y + scroll_offset_in_row).as_f32() / self.row_height.as_f32())
-            .floor()
-            .max(0.0) as usize;
-        scroll_row.saturating_add(row_delta).min(max_row)
-    }
-
-    fn column_for_x(self, x: Pixels, line: &str, line_numbers: bool) -> usize {
-        let content_x = (x.as_f32()
-            - self.gutter_width(line_numbers).as_f32()
-            - self.content_left_padding.as_f32())
-        .max(0.0);
-        let grapheme_like_columns = line.chars().count().max(1) as f32;
-        let measured_char_width = if line.is_empty() {
-            self.average_char_width.as_f32()
-        } else {
-            (line.len() as f32 * self.average_char_width.as_f32() / grapheme_like_columns).max(1.0)
-        };
-        (content_x / measured_char_width).round().max(0.0) as usize
-    }
-
-    fn offset_for_position(
-        self,
-        buffer: &CodeBuffer,
-        position: Point<Pixels>,
-        scroll_row: usize,
-        scroll_offset_in_row: Pixels,
-        line_numbers: bool,
-    ) -> usize {
-        let row = self.row_for_y(
-            position.y,
-            scroll_row,
-            scroll_offset_in_row,
-            buffer.line_count(),
-        );
-        let column = self.column_for_x(position.x, buffer.line(row), line_numbers);
-        buffer.point_to_offset(CodePoint::new(row, column))
     }
 }
 
@@ -758,6 +734,73 @@ fn leading_indent_columns(line: &str, tab_size: usize) -> usize {
         .sum()
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CodeLineDisplay {
+    text: String,
+    source_to_display: Vec<usize>,
+    display_to_source: Vec<usize>,
+}
+
+impl CodeLineDisplay {
+    fn expand_tabs(line: &str, tab_size: usize) -> Self {
+        let tab_size = tab_size.max(1);
+        let mut text = String::with_capacity(line.len());
+        let mut source_to_display = vec![0; line.len() + 1];
+        let mut display_to_source = vec![0];
+        let mut visual_column = 0usize;
+
+        for (source_index, ch) in line.char_indices() {
+            source_to_display[source_index] = text.len();
+            if ch == '\t' {
+                let spaces = tab_size - (visual_column % tab_size);
+                for display_step in 1..=spaces {
+                    text.push(' ');
+                    let mapped_source = if display_step * 2 < spaces {
+                        source_index
+                    } else {
+                        source_index + ch.len_utf8()
+                    };
+                    display_to_source.push(mapped_source);
+                }
+                visual_column += spaces;
+                source_to_display[source_index + ch.len_utf8()] = text.len();
+            } else {
+                text.push(ch);
+                let source_end = source_index + ch.len_utf8();
+                for _ in 0..ch.len_utf8() {
+                    display_to_source.push(source_end);
+                }
+                visual_column += 1;
+                source_to_display[source_end] = text.len();
+            }
+        }
+        source_to_display[line.len()] = text.len();
+        Self {
+            text,
+            source_to_display,
+            display_to_source,
+        }
+    }
+
+    fn display_offset_for_source(&self, source_offset: usize) -> usize {
+        let source_offset = source_offset.min(self.source_to_display.len().saturating_sub(1));
+        if source_offset == 0 || self.source_to_display[source_offset] != 0 {
+            return self.source_to_display[source_offset];
+        }
+        (0..source_offset)
+            .rev()
+            .find_map(|index| {
+                (index == 0 || self.source_to_display[index] != 0)
+                    .then_some(self.source_to_display[index])
+            })
+            .unwrap_or(0)
+    }
+
+    fn display_range_for_source(&self, range: Range<usize>) -> Range<usize> {
+        self.display_offset_for_source(range.start)..self.display_offset_for_source(range.end)
+    }
+}
+
 fn parse_code_theme(value: &str) -> Option<CodeTheme> {
     match value.trim().to_ascii_lowercase().replace('_', "-").as_str() {
         "auto" => Some(CodeTheme::Auto),
@@ -943,17 +986,26 @@ impl Default for CodeEditorOptions {
 /// chrome live in this file, while syntax colors are loaded from a Zed theme JSON
 /// (`themes[].style.syntax`). It does not accept TextMate `.tmTheme` files; use a
 /// Zed-compatible JSON theme when product teams want portable code colors.
+///
+/// Apply a config once with [`CodeEditor::config`] or reload explicitly with
+/// [`CodeEditor::set_config`] when the host application saves or reloads settings.
 pub struct CodeEditorConfig {
     /// Optional language label, such as `rust`, `typescript`, or `json`.
     pub language: Option<String>,
     /// Optional built-in code theme label used as fallback for editor chrome.
     pub theme: Option<String>,
-    /// Optional visible row count.
-    pub rows: Option<usize>,
     /// Optional fixed height in pixels.
     pub height_px: Option<f32>,
+    /// Optional code font family for editor rows.
+    pub font_family: Option<String>,
+    /// Optional code font size in pixels.
+    pub font_size_px: Option<f32>,
+    /// Optional numeric code font weight, such as 400 or 600.
+    pub font_weight: Option<f32>,
     /// Optional editor line height in pixels.
     pub line_height_px: Option<f32>,
+    /// Optional editor spacing and layout metrics.
+    pub layout: Option<CodeEditorLayoutConfig>,
     /// Optional indentation width.
     pub tab_size: Option<usize>,
     /// Optional soft-tabs toggle.
@@ -1027,6 +1079,31 @@ impl CodeEditorConfig {
         });
         Ok(())
     }
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+/// Serializable CodeEditor layout metrics loaded from config files.
+pub struct CodeEditorLayoutConfig {
+    /// Width of the line-number gutter in pixels.
+    pub gutter_width_px: Option<f32>,
+    /// Horizontal padding before code content in pixels.
+    pub content_padding_x_px: Option<f32>,
+    /// Vertical padding around each visible code row in pixels.
+    pub row_padding_y_px: Option<f32>,
+    /// Extra vertical padding reserved by the viewport in pixels.
+    pub viewport_padding_y_px: Option<f32>,
+    /// Header horizontal padding in pixels.
+    pub header_padding_x_px: Option<f32>,
+    /// Header vertical padding in pixels.
+    pub header_padding_y_px: Option<f32>,
+    /// Header item gap in pixels.
+    pub header_gap_px: Option<f32>,
+    /// Diagnostics/completions/hover panel horizontal padding in pixels.
+    pub panel_padding_x_px: Option<f32>,
+    /// Diagnostics/completions/hover panel vertical padding in pixels.
+    pub panel_padding_y_px: Option<f32>,
+    /// Diagnostics/completions/hover panel row gap in pixels.
+    pub panel_gap_px: Option<f32>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -1859,8 +1936,8 @@ fn zed_tree_sitter_syntax_runs(source: &str, language: CodeLanguage) -> Vec<Code
     runs
 }
 
-fn zed_tree_sitter_line_runs(
-    line: &str,
+fn zed_tree_sitter_display_line_runs(
+    display_line: &CodeLineDisplay,
     line_start: usize,
     source_runs: &[CodeEditorSyntaxRun],
     syntax_theme: &CodeEditorSyntaxTheme,
@@ -1868,8 +1945,9 @@ fn zed_tree_sitter_line_runs(
     code_family: &SharedString,
     code_weight: Option<gpui::FontWeight>,
 ) -> Vec<TextRun> {
-    let line_end = line_start + line.len();
-    if line.is_empty() {
+    let source_line_len = display_line.source_to_display.len().saturating_sub(1);
+    let line_end = line_start + source_line_len;
+    if display_line.text.is_empty() {
         return vec![base_code_text_run(
             0,
             default_color,
@@ -1879,6 +1957,7 @@ fn zed_tree_sitter_line_runs(
             None,
         )];
     }
+
     let mut segments: Vec<(usize, usize, HighlightStyle)> = source_runs
         .iter()
         .filter_map(|run| {
@@ -1887,9 +1966,14 @@ fn zed_tree_sitter_line_runs(
             if start >= end {
                 return None;
             }
+            let display_start = display_line.display_offset_for_source(start - line_start);
+            let display_end = display_line.display_offset_for_source(end - line_start);
+            if display_start >= display_end {
+                return None;
+            }
             syntax_theme
                 .style_for_capture(&run.capture)
-                .map(|style| (start - line_start, end - line_start, style))
+                .map(|style| (display_start, display_end, style))
         })
         .collect();
     segments.sort_by(|left, right| {
@@ -1901,8 +1985,8 @@ fn zed_tree_sitter_line_runs(
     let mut runs = Vec::new();
     let mut cursor = 0;
     for (start, end, style) in segments {
-        let start = clamp_to_char_boundary(line, start);
-        let end = clamp_to_char_boundary(line, end);
+        let start = clamp_to_char_boundary(&display_line.text, start);
+        let end = clamp_to_char_boundary(&display_line.text, end);
         if end <= cursor || start >= end {
             continue;
         }
@@ -1926,9 +2010,9 @@ fn zed_tree_sitter_line_runs(
         ));
         cursor = end;
     }
-    if cursor < line.len() {
+    if cursor < display_line.text.len() {
         runs.push(base_code_text_run(
-            line.len() - cursor,
+            display_line.text.len() - cursor,
             default_color,
             None,
             code_family,
@@ -1938,7 +2022,7 @@ fn zed_tree_sitter_line_runs(
     }
     if runs.is_empty() {
         runs.push(base_code_text_run(
-            line.len(),
+            display_line.text.len(),
             default_color,
             None,
             code_family,
@@ -1999,6 +2083,19 @@ pub struct CodeEditor {
     height: Option<Pixels>,
     width: Option<Pixels>,
     full_width: bool,
+    font_family: Option<SharedString>,
+    font_size: Option<Pixels>,
+    font_weight: Option<gpui::FontWeight>,
+    gutter_width: Option<Pixels>,
+    content_padding_x: Option<Pixels>,
+    row_padding_y: Option<Pixels>,
+    viewport_padding_y: Option<Pixels>,
+    header_padding_x: Option<Pixels>,
+    header_padding_y: Option<Pixels>,
+    header_gap: Option<Pixels>,
+    panel_padding_x: Option<Pixels>,
+    panel_padding_y: Option<Pixels>,
+    panel_gap: Option<Pixels>,
     editor_bounds: Option<Bounds<Pixels>>,
     cursor_visible: bool,
     blink_task: Option<gpui::Task<()>>,
@@ -2043,6 +2140,19 @@ impl CodeEditor {
             height: None,
             width: None,
             full_width: true,
+            font_family: None,
+            font_size: None,
+            font_weight: None,
+            gutter_width: None,
+            content_padding_x: None,
+            row_padding_y: None,
+            viewport_padding_y: None,
+            header_padding_x: None,
+            header_padding_y: None,
+            header_gap: None,
+            panel_padding_x: None,
+            panel_padding_y: None,
+            panel_gap: None,
             editor_bounds: None,
             cursor_visible: true,
             blink_task: None,
@@ -2160,14 +2270,23 @@ impl CodeEditor {
         if let Some(theme) = config.theme.as_deref().and_then(parse_code_theme) {
             self.theme = theme;
         }
-        if let Some(rows) = config.rows {
-            self.viewport = CodeViewport::new(rows);
-        }
         if let Some(height) = config.height_px {
             self.height = Some(px(height));
         }
+        if let Some(font_family) = config.font_family {
+            self.font_family = Some(SharedString::from(font_family));
+        }
+        if let Some(font_size) = config.font_size_px {
+            self.font_size = Some(px(font_size.max(8.0)));
+        }
+        if let Some(font_weight) = config.font_weight {
+            self.font_weight = Some(gpui::FontWeight(font_weight));
+        }
         if let Some(line_height) = config.line_height_px {
             self.line_height = Some(px(line_height.max(12.0)));
+        }
+        if let Some(layout) = config.layout {
+            self.apply_layout_config(layout);
         }
         if let Some(tab_size) = config.tab_size {
             self.tab_size = tab_size.max(1);
@@ -2194,14 +2313,23 @@ impl CodeEditor {
         if let Some(theme) = config.theme.as_deref().and_then(parse_code_theme) {
             self.theme = theme;
         }
-        if let Some(rows) = config.rows {
-            self.viewport = CodeViewport::new(rows);
-        }
         if let Some(height) = config.height_px {
             self.height = Some(px(height));
         }
+        if let Some(font_family) = config.font_family {
+            self.font_family = Some(SharedString::from(font_family));
+        }
+        if let Some(font_size) = config.font_size_px {
+            self.font_size = Some(px(font_size.max(8.0)));
+        }
+        if let Some(font_weight) = config.font_weight {
+            self.font_weight = Some(gpui::FontWeight(font_weight));
+        }
         if let Some(line_height) = config.line_height_px {
             self.line_height = Some(px(line_height.max(12.0)));
+        }
+        if let Some(layout) = config.layout {
+            self.apply_layout_config(layout);
         }
         if let Some(tab_size) = config.tab_size {
             self.tab_size = tab_size.max(1);
@@ -2219,6 +2347,76 @@ impl CodeEditor {
         }
         self.invalidate_row_layouts();
         cx.notify();
+    }
+
+    /// Loads a config file once and applies it to this builder.
+    pub fn config_file(mut self, path: impl AsRef<Path>) -> Result<Self, CodeEditorConfigError> {
+        let config = CodeEditorConfig::load_from_path(path)?;
+        self = self.config(config);
+        Ok(self)
+    }
+
+    fn apply_layout_config(&mut self, layout: CodeEditorLayoutConfig) {
+        if let Some(value) = layout.gutter_width_px {
+            self.gutter_width = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.content_padding_x_px {
+            self.content_padding_x = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.row_padding_y_px {
+            self.row_padding_y = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.viewport_padding_y_px {
+            self.viewport_padding_y = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.header_padding_x_px {
+            self.header_padding_x = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.header_padding_y_px {
+            self.header_padding_y = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.header_gap_px {
+            self.header_gap = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.panel_padding_x_px {
+            self.panel_padding_x = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.panel_padding_y_px {
+            self.panel_padding_y = Some(px(value.max(0.0)));
+        }
+        if let Some(value) = layout.panel_gap_px {
+            self.panel_gap = Some(px(value.max(0.0)));
+        }
+    }
+
+    /// Sets the code font family used by visible editor rows.
+    pub fn font_family(mut self, family: impl Into<SharedString>) -> Self {
+        self.font_family = Some(family.into());
+        self
+    }
+
+    /// Sets the code font size using plain pixel units.
+    pub fn font_size_units(mut self, size: f32) -> Self {
+        self.font_size = Some(px(size.max(8.0)));
+        self
+    }
+
+    /// Sets the line-number gutter width using plain pixel units.
+    pub fn gutter_width_units(mut self, width: f32) -> Self {
+        self.gutter_width = Some(px(width.max(0.0)));
+        self
+    }
+
+    /// Sets horizontal code content padding using plain pixel units.
+    pub fn content_padding_x_units(mut self, padding: f32) -> Self {
+        self.content_padding_x = Some(px(padding.max(0.0)));
+        self
+    }
+
+    /// Sets vertical padding around each visible code row using plain pixel units.
+    pub fn row_padding_y_units(mut self, padding: f32) -> Self {
+        self.row_padding_y = Some(px(padding.max(0.0)));
+        self
     }
 
     /// Sets the line numbers value used by the component.
@@ -2729,8 +2927,16 @@ impl CodeEditor {
         ]);
     }
 
-    fn display_map(&self) -> CodeDisplayMap {
-        CodeDisplayMap::default_for(self.options.line_numbers, self.line_height)
+    fn display_map_for_font_size(&self, font_size: Pixels) -> CodeDisplayMap {
+        CodeDisplayMap::default_for(
+            self.options.line_numbers,
+            self.line_height,
+            font_size,
+            self.gutter_width,
+            self.content_padding_x,
+            self.row_padding_y,
+            self.viewport_padding_y,
+        )
     }
 
     fn visible_rows(&self) -> Vec<usize> {
@@ -2767,71 +2973,54 @@ impl CodeEditor {
             .unwrap_or_else(|| visible_rows.len().saturating_sub(1))
     }
 
-    fn local_editor_position(&self, position: Point<Pixels>) -> Point<Pixels> {
-        if let Some(bounds) = self.editor_bounds {
-            gpui::point(
-                (position.x - bounds.left()).max(px(0.0)),
-                (position.y - bounds.top()).max(px(0.0)),
-            )
-        } else {
-            position
-        }
-    }
-
     fn point_for_editor_position(&self, position: Point<Pixels>) -> usize {
         if let Some(offset) = self.offset_for_shaped_position(position) {
             return offset;
         }
 
-        let scroll_top = self.list_state.logical_scroll_top();
-        let local = self.local_editor_position(position);
-        if !self.options.code_folding || self.folds.is_empty() {
-            return self.display_map().offset_for_position(
-                &self.buffer,
-                local,
-                scroll_top.item_ix,
-                scroll_top.offset_in_item,
-                self.options.line_numbers,
-            );
+        // The shaped layout cache is normally populated for visible rows during
+        // prepaint. If a click arrives before a row has reported layout, use the
+        // current live row layouts rather than stale virtual-list history.
+        let mut fallback_row = 0;
+        for (row, layout) in self.row_layouts.iter().enumerate() {
+            let Some(layout) = layout else {
+                continue;
+            };
+            if position.y >= layout.bounds.top() {
+                fallback_row = row;
+            }
         }
-
-        let visible_rows = self.visible_rows();
-        let visible_row = self.display_map().row_for_y(
-            local.y,
-            scroll_top.item_ix,
-            scroll_top.offset_in_item,
-            visible_rows.len(),
-        );
-        let buffer_row = visible_rows.get(visible_row).copied().unwrap_or(0);
-        let column = self.display_map().column_for_x(
-            local.x,
-            self.buffer.line(buffer_row),
-            self.options.line_numbers,
-        );
+        let line = self.buffer.line(fallback_row);
         self.buffer
-            .point_to_offset(CodePoint::new(buffer_row, column))
+            .point_to_offset(CodePoint::new(fallback_row, line.len()))
     }
 
     fn offset_for_shaped_position(&self, position: Point<Pixels>) -> Option<usize> {
-        let mut fallback_row = None;
         for (row, layout) in self.row_layouts.iter().enumerate() {
             let Some(layout) = layout else {
                 continue;
             };
             if position.y >= layout.bounds.top() && position.y <= layout.bounds.bottom() {
                 let local_x = (position.x - layout.bounds.left()).max(px(0.0));
-                let column = layout.shaped.closest_index_for_x(local_x);
-                return Some(self.buffer.point_to_offset(CodePoint::new(row, column)));
-            }
-            if position.y >= layout.bounds.top() {
-                fallback_row = Some(row);
+                let display_column = layout.shaped.closest_index_for_x(local_x);
+                let source_column = layout.source_offset_for_display(display_column);
+                return Some(
+                    self.buffer
+                        .point_to_offset(CodePoint::new(row, source_column)),
+                );
             }
         }
 
-        fallback_row.map(|row| {
-            let line = self.buffer.line(row);
-            self.buffer.point_to_offset(CodePoint::new(row, line.len()))
-        })
+        None
+    }
+
+    fn retain_visible_row_layouts(&mut self, visible_rows: &[usize]) {
+        let visible_rows = visible_rows.iter().copied().collect::<HashSet<_>>();
+        for (row, layout) in self.row_layouts.iter_mut().enumerate() {
+            if layout.is_some() && !visible_rows.contains(&row) {
+                *layout = None;
+            }
+        }
     }
 
     fn bounds_for_offset_range(&self, range: Range<usize>) -> Option<Bounds<Pixels>> {
@@ -2842,8 +3031,13 @@ impl CodeEditor {
         let row_end = self.buffer.line_end(code_point.row);
         let start = range.start.clamp(row_start, row_end) - row_start;
         let end = range.end.clamp(row_start, row_end) - row_start;
-        let x_start = layout.shaped.x_for_index(start);
-        let x_end = layout.shaped.x_for_index(end).max(x_start + px(1.0));
+        let display_start = layout.display_offset_for_source(start);
+        let display_end = layout.display_offset_for_source(end);
+        let x_start = layout.shaped.x_for_index(display_start);
+        let x_end = layout
+            .shaped
+            .x_for_index(display_end)
+            .max(x_start + px(1.0));
         Some(Bounds::new(
             point(layout.bounds.left() + x_start, layout.bounds.top()),
             size(x_end - x_start, layout.bounds.size.height),
@@ -2916,12 +3110,24 @@ impl CodeEditor {
         runs
     }
 
-    fn update_row_layout(&mut self, row: usize, bounds: Bounds<Pixels>, shaped: ShapedLine) {
+    fn update_row_layout(
+        &mut self,
+        row: usize,
+        bounds: Bounds<Pixels>,
+        shaped: ShapedLine,
+        source_to_display: Vec<usize>,
+        display_to_source: Vec<usize>,
+    ) {
         if self.row_layouts.len() < self.buffer.line_count() {
             self.row_layouts.resize(self.buffer.line_count(), None);
         }
         if row < self.row_layouts.len() {
-            self.row_layouts[row] = Some(CodeEditorRowLayout { bounds, shaped });
+            self.row_layouts[row] = Some(CodeEditorRowLayout {
+                bounds,
+                shaped,
+                source_to_display,
+                display_to_source,
+            });
         }
     }
 
@@ -2954,6 +3160,14 @@ impl CodeEditor {
         } else if self.blink_task.is_none() {
             self.start_blink(cx);
         } else {
+            cx.notify();
+        }
+    }
+
+    fn clear_selection_on_blur(&mut self, cx: &mut Context<Self>) {
+        if !self.selection.is_empty() || self.drag_selecting {
+            self.selection.set_cursor(self.selection.cursor());
+            self.drag_selecting = false;
             cx.notify();
         }
     }
@@ -3756,9 +3970,11 @@ impl Element for CodeEditorInputLayer {
     ) {
         let focus_handle = self.editor.read(cx).focus_handle.clone();
         let input_bounds = editor_text_input_bounds(bounds);
-        self.editor.update(cx, |editor, _| {
-            editor.editor_bounds = Some(bounds);
-        });
+        if self.editor.read(cx).editor_bounds != Some(bounds) {
+            self.editor.update(cx, |editor, _| {
+                editor.editor_bounds = Some(bounds);
+            });
+        }
         window.handle_input(
             &focus_handle,
             ElementInputHandler::new(input_bounds, self.editor.clone()),
@@ -3786,6 +4002,11 @@ impl Focusable for CodeEditor {
 
 impl Render for CodeEditor {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        cx.on_blur(&self.focus_handle, window, |this, _, cx| {
+            this.clear_selection_on_blur(cx);
+        })
+        .detach();
+
         self.refresh_providers();
         let focused = self.focus_handle(cx).is_focused(window);
         if focused && self.blink_task.is_none() {
@@ -3796,8 +4017,12 @@ impl Render for CodeEditor {
         }
 
         let theme = cx.global::<Config>().theme.clone();
-        let code_family = code_font_family(cx);
-        let code_weight = code_font_weight(cx);
+        let code_family = self
+            .font_family
+            .clone()
+            .unwrap_or_else(|| code_font_family(cx));
+        let code_weight = self.font_weight.or_else(|| code_font_weight(cx));
+        let code_font_size = self.font_size.unwrap_or_else(|| px(theme.font_size.sm));
         let line_count = self.buffer.line_count();
         let cursor = self.cursor_point();
         let indent_label = if self.soft_tabs {
@@ -3808,20 +4033,23 @@ impl Render for CodeEditor {
         let options = self.options;
         let editor_theme =
             ResolvedCodeEditorTheme::resolve(self.highlight_theme.as_ref(), self.theme, &theme);
-        let display_map = self.display_map();
+        let display_map = self.display_map_for_font_size(code_font_size);
         let editor_height = self
             .height
             .unwrap_or_else(|| self.viewport.height(display_map));
         let focus_handle = self.focus_handle(cx);
         let list_state = self.list_state.clone();
         let buffer = self.buffer.clone();
-        let visible_rows = Arc::new(self.visible_rows());
+        let visible_rows_for_layout = self.visible_rows();
+        self.retain_visible_row_layouts(&visible_rows_for_layout);
+        let visible_rows = Arc::new(visible_rows_for_layout);
         let selection = self.selection.clone();
         let marked_range = self.marked_range.clone();
         let diagnostics = self.diagnostics.clone();
         let self_folds_for_rows = self.folds.clone();
         let show_line_numbers = options.line_numbers;
         let row_display_map = display_map;
+        let row_tab_size = self.tab_size;
         let row_language = self.language;
         let row_code_theme = self.theme;
         let code_family_for_rows = code_family.clone();
@@ -3833,6 +4061,12 @@ impl Render for CodeEditor {
         let editor_entity_for_rows = editor_entity.clone();
         let cursor_active = focused;
         let cursor_visible = focused && self.cursor_visible;
+        let header_padding_x = self.header_padding_x.unwrap_or_else(|| px(16.0));
+        let header_padding_y = self.header_padding_y.unwrap_or_else(|| px(8.0));
+        let header_gap = self.header_gap.unwrap_or_else(|| px(12.0));
+        let panel_padding_x = self.panel_padding_x.unwrap_or_else(|| px(16.0));
+        let panel_padding_y = self.panel_padding_y.unwrap_or_else(|| px(12.0));
+        let panel_gap = self.panel_gap.unwrap_or_else(|| px(4.0));
 
         div()
             .flex()
@@ -3894,9 +4128,9 @@ impl Render for CodeEditor {
                         .flex()
                         .items_center()
                         .justify_between()
-                        .gap_3()
-                        .px_4()
-                        .py_2()
+                        .gap(header_gap)
+                        .px(header_padding_x)
+                        .py(header_padding_y)
                         .border_b_1()
                         .border_color(editor_theme.border)
                         .bg(editor_theme.chrome_surface)
@@ -3931,7 +4165,7 @@ impl Render for CodeEditor {
                             div()
                                 .flex()
                                 .items_center()
-                                .gap_3()
+                                .gap(header_gap)
                                 .text_xs()
                                 .text_color(editor_theme.muted_text)
                                 .child(self.language.label())
@@ -3976,7 +4210,9 @@ impl Render for CodeEditor {
                                 syntax_runs_for_rows.as_ref(),
                                 code_family_for_rows.clone(),
                                 code_weight_for_rows,
+                                code_font_size,
                                 row_display_map,
+                                row_tab_size,
                                 options,
                                 cursor_active,
                                 cursor_visible,
@@ -4009,6 +4245,8 @@ impl Render for CodeEditor {
                     options,
                     &theme,
                     &editor_theme,
+                    panel_padding_x,
+                    panel_padding_y,
                 ))
             })
             .when(
@@ -4019,6 +4257,9 @@ impl Render for CodeEditor {
                         options.diagnostics_limit,
                         &theme,
                         &editor_theme,
+                        panel_padding_x,
+                        panel_padding_y,
+                        panel_gap,
                     ))
                 },
             )
@@ -4030,12 +4271,23 @@ impl Render for CodeEditor {
                         options.completion_limit,
                         &theme,
                         &editor_theme,
+                        panel_padding_x,
+                        panel_padding_y,
+                        panel_gap,
                     ))
                 },
             )
             .when_some(
                 options.hover_panel.then(|| self.hover.clone()).flatten(),
-                |s, hover| s.child(render_hover(hover, &theme, &editor_theme)),
+                |s, hover| {
+                    s.child(render_hover(
+                        hover,
+                        &theme,
+                        &editor_theme,
+                        panel_padding_x,
+                        panel_padding_y,
+                    ))
+                },
             )
     }
 }
@@ -4044,6 +4296,24 @@ impl Render for CodeEditor {
 struct CodeEditorRowLayout {
     bounds: Bounds<Pixels>,
     shaped: ShapedLine,
+    source_to_display: Vec<usize>,
+    display_to_source: Vec<usize>,
+}
+
+impl CodeEditorRowLayout {
+    fn display_offset_for_source(&self, source_offset: usize) -> usize {
+        self.source_to_display
+            .get(source_offset.min(self.source_to_display.len().saturating_sub(1)))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    fn source_offset_for_display(&self, display_offset: usize) -> usize {
+        self.display_to_source
+            .get(display_offset.min(self.display_to_source.len().saturating_sub(1)))
+            .copied()
+            .unwrap_or(0)
+    }
 }
 
 fn render_editor_row(
@@ -4061,21 +4331,28 @@ fn render_editor_row(
     syntax_runs: &[CodeEditorSyntaxRun],
     code_family: SharedString,
     code_weight: Option<gpui::FontWeight>,
+    code_font_size: Pixels,
     display_map: CodeDisplayMap,
+    tab_size: usize,
     options: CodeEditorOptions,
     cursor_active: bool,
     cursor_visible: bool,
     editor: Entity<CodeEditor>,
 ) -> gpui::Div {
     let line = buffer.line(row);
+    let display_line = CodeLineDisplay::expand_tabs(line, tab_size);
     let cursor_point = buffer.offset_to_point(selection.cursor());
     let cursor_row = cursor_point.row == row;
-    let cursor_column = cursor_row.then_some(cursor_point.column);
+    let cursor_column =
+        cursor_row.then(|| display_line.display_offset_for_source(cursor_point.column));
     let selection_range = options
         .selection
         .then(|| line_selection_range(buffer, selection, row))
-        .flatten();
-    let marked_range = marked_range.and_then(|range| line_offset_range(buffer, range, row));
+        .flatten()
+        .map(|range| display_line.display_range_for_source(range));
+    let marked_range = marked_range
+        .and_then(|range| line_offset_range(buffer, range, row))
+        .map(|range| display_line.display_range_for_source(range));
     let line_diagnostics = diagnostics
         .iter()
         .filter(|diagnostic| diagnostic.line.saturating_sub(1) == row)
@@ -4084,8 +4361,8 @@ fn render_editor_row(
     let fold = fold_at_row(folds, row, options.code_folding);
     let highlight_current_line = options.current_line_highlight && cursor_row;
     let line_start = buffer.line_start(row);
-    let runs = zed_tree_sitter_line_runs(
-        line,
+    let runs = zed_tree_sitter_display_line_runs(
+        &display_line,
         line_start,
         syntax_runs,
         &editor_theme.syntax,
@@ -4110,8 +4387,9 @@ fn render_editor_row(
             div()
                 .flex_none()
                 .w(display_map.gutter_width(line_numbers))
-                .px_2()
-                .py_1()
+                .min_h(display_map.row_height())
+                .px(px(8.0))
+                .py(display_map.row_padding_y)
                 .border_r_1()
                 .border_color(editor_theme.border)
                 .bg(editor_theme.gutter_surface)
@@ -4160,25 +4438,27 @@ fn render_editor_row(
             div()
                 .flex_1()
                 .min_w_0()
-                .px_3()
-                .py_1()
+                .px(display_map.content_left_padding)
+                .py(display_map.row_padding_y)
                 .font_family(code_family.clone())
                 .when_some(code_weight, |s, weight| s.font_weight(weight))
-                .text_sm()
+                .text_size(code_font_size)
                 .text_color(editor_theme.text)
                 .child(CodeEditorLineElement {
                     row,
-                    text: SharedString::from(line.to_string()),
+                    text: SharedString::from(display_line.text.clone()),
                     runs,
+                    source_to_display: display_line.source_to_display.clone(),
+                    display_to_source: display_line.display_to_source.clone(),
                     selection_range,
                     marked_range,
                     cursor_column,
                     cursor_visible: cursor_active && cursor_visible && cursor_column.is_some(),
-                    line_height: display_map.row_height(),
+                    font_size: code_font_size,
+                    line_height: display_map.text_line_height(),
                     current_line_highlight: highlight_current_line,
                     indent_guides: options.indent_guides,
-                    indent_columns: leading_indent_columns(line, 4),
-                    theme: theme.clone(),
+                    indent_columns: leading_indent_columns(line, tab_size),
                     editor_theme: editor_theme.clone(),
                     whitespace: options.whitespace,
                     editor: editor.clone(),
@@ -4207,15 +4487,17 @@ struct CodeEditorLineElement {
     row: usize,
     text: SharedString,
     runs: Vec<TextRun>,
+    source_to_display: Vec<usize>,
+    display_to_source: Vec<usize>,
     selection_range: Option<Range<usize>>,
     marked_range: Option<Range<usize>>,
     cursor_column: Option<usize>,
     cursor_visible: bool,
+    font_size: Pixels,
     line_height: Pixels,
     current_line_highlight: bool,
     indent_guides: bool,
     indent_columns: usize,
-    theme: liora_theme::Theme,
     editor_theme: ResolvedCodeEditorTheme,
     whitespace: CodeEditorWhitespaceMode,
     editor: Entity<CodeEditor>,
@@ -4258,12 +4540,10 @@ impl Element for CodeEditorLineElement {
         window: &mut Window,
         cx: &mut App,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        let shaped = window.text_system().shape_line(
-            self.text.clone(),
-            px(self.theme.font_size.sm),
-            &self.runs,
-            None,
-        );
+        let shaped =
+            window
+                .text_system()
+                .shape_line(self.text.clone(), self.font_size, &self.runs, None);
         let mut style = Style::default();
         style.size.width = relative(1.0).into();
         style.size.height = self.line_height.into();
@@ -4279,9 +4559,23 @@ impl Element for CodeEditorLineElement {
         _window: &mut Window,
         cx: &mut App,
     ) -> Self::PrepaintState {
-        self.editor.update(cx, |editor, _| {
-            editor.update_row_layout(self.row, bounds, shaped.clone());
-        });
+        let should_update_layout = self
+            .editor
+            .read(cx)
+            .row_layouts
+            .get(self.row)
+            .is_none_or(|layout| layout.as_ref().is_none_or(|layout| layout.bounds != bounds));
+        if should_update_layout {
+            self.editor.update(cx, |editor, _| {
+                editor.update_row_layout(
+                    self.row,
+                    bounds,
+                    shaped.clone(),
+                    self.source_to_display.clone(),
+                    self.display_to_source.clone(),
+                );
+            });
+        }
 
         let current_line = self.current_line_highlight.then(|| {
             fill(
@@ -4681,6 +4975,8 @@ fn render_status_bar(
     options: CodeEditorOptions,
     _theme: &liora_theme::Theme,
     editor_theme: &ResolvedCodeEditorTheme,
+    padding_x: Pixels,
+    padding_y: Pixels,
 ) -> gpui::Div {
     div()
         .flex()
@@ -4690,8 +4986,8 @@ fn render_status_bar(
         .border_t_1()
         .border_color(editor_theme.border)
         .bg(editor_theme.chrome_surface)
-        .px_4()
-        .py_1()
+        .px(padding_x)
+        .py(padding_y)
         .text_xs()
         .text_color(editor_theme.muted_text)
         .child(format!(
@@ -4713,16 +5009,19 @@ fn render_diagnostics(
     limit: usize,
     _theme: &liora_theme::Theme,
     editor_theme: &ResolvedCodeEditorTheme,
+    padding_x: Pixels,
+    padding_y: Pixels,
+    gap: Pixels,
 ) -> gpui::Div {
     let mut panel = div()
         .flex()
         .flex_col()
-        .gap_1()
+        .gap(gap)
         .border_t_1()
         .border_color(editor_theme.border)
         .bg(editor_theme.chrome_surface)
-        .px_4()
-        .py_3();
+        .px(padding_x)
+        .py(padding_y);
 
     for diagnostic in diagnostics.iter().take(limit) {
         let color = editor_theme.diagnostic_color(diagnostic.severity);
@@ -4765,16 +5064,19 @@ fn render_completions(
     limit: usize,
     _theme: &liora_theme::Theme,
     editor_theme: &ResolvedCodeEditorTheme,
+    padding_x: Pixels,
+    padding_y: Pixels,
+    gap: Pixels,
 ) -> gpui::Div {
     let mut panel = div()
         .flex()
         .flex_col()
-        .gap_1()
+        .gap(gap)
         .border_t_1()
         .border_color(editor_theme.border)
         .bg(editor_theme.surface)
-        .px_4()
-        .py_3()
+        .px(padding_x)
+        .py(padding_y)
         .child(
             div()
                 .text_xs()
@@ -4814,13 +5116,15 @@ fn render_hover(
     hover: CodeHover,
     _theme: &liora_theme::Theme,
     editor_theme: &ResolvedCodeEditorTheme,
+    padding_x: Pixels,
+    padding_y: Pixels,
 ) -> gpui::Div {
     div()
         .border_t_1()
         .border_color(editor_theme.border)
         .bg(editor_theme.chrome_surface)
-        .px_4()
-        .py_3()
+        .px(padding_x)
+        .py(padding_y)
         .child(
             div()
                 .text_sm()
@@ -4884,6 +5188,8 @@ mod tests {
         assert!(source.contains("VirtualScrollbar::new"));
         assert!(source.contains("mouse_down_in_editor"));
         assert!(source.contains("mouse_up_in_editor"));
+        assert!(source.contains("clear_selection_on_blur"));
+        assert!(source.contains("cx.on_blur(&self.focus_handle"));
         assert!(source.contains("point_for_editor_position"));
         assert!(source.contains("render_editor_row"));
         assert!(source.contains("CodeEditorLineElement"));
@@ -4975,107 +5281,6 @@ gamma",
     }
 
     #[test]
-    fn code_display_map_maps_pointer_positions_to_buffer_offsets() {
-        let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
-        let display = CodeDisplayMap::default_for(true, None);
-
-        assert_eq!(
-            display.offset_for_position(&buffer, gpui::point(px(84.0), px(30.0)), 0, px(0.0), true),
-            buffer.point_to_offset(CodePoint::new(1, 1))
-        );
-        assert_eq!(
-            display.offset_for_position(&buffer, gpui::point(px(10.0), px(72.0)), 1, px(0.0), true),
-            buffer.point_to_offset(CodePoint::new(2, 0))
-        );
-    }
-
-    #[test]
-    fn code_display_map_accounts_for_list_scroll_offset() {
-        let buffer = CodeBuffer::new("alpha\nbeta\ncharlie");
-        let display = CodeDisplayMap::default_for(true, None);
-
-        assert_eq!(
-            display.offset_for_position(
-                &buffer,
-                gpui::point(px(84.0), px(20.0)),
-                1,
-                px(12.0),
-                true
-            ),
-            buffer.point_to_offset(CodePoint::new(2, 1))
-        );
-    }
-
-    #[test]
-    fn code_editor_preserves_gpui_list_scroll_state_between_renders() {
-        let source = include_str!("code_editor.rs");
-        let production_source = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("code editor source should have a production section");
-        assert!(production_source.contains("fn sync_list_state(&mut self)"));
-        assert!(production_source.contains("self.list_state.item_count()"));
-        assert!(production_source.contains("visible_count = self.visible_rows().len()"));
-        assert!(production_source.contains(".splice(current_count..current_count"));
-        assert!(production_source.contains(".splice(visible_count..current_count, 0)"));
-        assert!(production_source.contains("self.list_state.logical_scroll_top()"));
-        assert!(!production_source.contains("fn scroll_wheel_in_editor"));
-        assert!(
-            !production_source
-                .contains(".on_scroll_wheel(cx.listener(Self::scroll_wheel_in_editor))")
-        );
-    }
-
-    #[test]
-    fn code_editor_pointer_hit_testing_uses_editor_bounds() {
-        let source = include_str!("code_editor.rs");
-        let production_source = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("code editor source should have a production section");
-        assert!(production_source.contains("editor_bounds: Option<Bounds<Pixels>>"));
-        assert!(production_source.contains("fn local_editor_position"));
-        assert!(production_source.contains("position.x - bounds.left()"));
-        assert!(production_source.contains("position.y - bounds.top()"));
-        assert!(production_source.contains("editor.editor_bounds = Some(bounds)"));
-        assert!(production_source.contains("self.local_editor_position(position)"));
-    }
-
-    #[test]
-    fn code_display_map_maps_columns_beyond_line_start() {
-        let buffer = CodeBuffer::new("alpha\nbeta");
-        let display = CodeDisplayMap::default_for(true, None);
-
-        assert_eq!(
-            display.offset_for_position(
-                &buffer,
-                gpui::point(px(64.0 + 14.0 + 8.0 * 3.0), px(2.0)),
-                0,
-                px(0.0),
-                true,
-            ),
-            buffer.point_to_offset(CodePoint::new(0, 3))
-        );
-    }
-
-    #[test]
-    fn code_display_map_keeps_multibyte_hit_testing_on_char_boundaries() {
-        let buffer = CodeBuffer::new("αβγ\nhello");
-        let display = CodeDisplayMap::default_for(true, None);
-
-        let offset = display.offset_for_position(
-            &buffer,
-            gpui::point(px(64.0 + 14.0 + 8.0 * 2.0), px(2.0)),
-            0,
-            px(0.0),
-            true,
-        );
-
-        assert!(buffer.as_str().is_char_boundary(offset));
-        assert_eq!(buffer.offset_to_point(offset).row, 0);
-    }
-
-    #[test]
     fn code_line_selection_range_is_column_scoped() {
         let buffer = CodeBuffer::new("alpha\nbeta\ngamma");
         let selection = CodeSelection {
@@ -5102,7 +5307,9 @@ gamma",
         assert!(production_source.contains("fn line_selection_range"));
         assert!(production_source.contains("cursor_column"));
         assert!(production_source.contains("CodeEditorLineElement"));
-        assert!(production_source.contains("window.text_system().shape_line"));
+        assert!(
+            production_source.contains("text_system") && production_source.contains("shape_line")
+        );
         assert!(production_source.contains("shaped.x_for_index"));
         assert!(production_source.contains("shaped.closest_index_for_x"));
         assert!(production_source.contains("window.paint_quad"));
@@ -5247,6 +5454,9 @@ gamma",
             .expect("code editor source should have a production section");
 
         assert!(production_source.contains("pub fn line_height_units"));
+        assert!(production_source.contains("pub fn font_size_units"));
+        assert!(production_source.contains("pub fn content_padding_x_units"));
+        assert!(production_source.contains("pub fn row_padding_y_units"));
         assert!(production_source.contains("pub fn indent_guides"));
         assert!(production_source.contains("pub fn fold_range"));
         assert!(production_source.contains("pub fn toggle_fold"));
@@ -5346,6 +5556,78 @@ theme=system",
     }
 
     #[test]
+    fn code_line_display_expands_tabs_by_configured_tab_size() {
+        let narrow = CodeLineDisplay::expand_tabs("a	b", 2);
+        let wide = CodeLineDisplay::expand_tabs("a	b", 4);
+
+        assert_eq!(narrow.text, "a b");
+        assert_eq!(wide.text, "a   b");
+        assert_eq!(wide.display_offset_for_source(2), 4);
+        assert_eq!(wide.display_to_source[1], 1);
+        assert_eq!(wide.display_to_source[3], 2);
+        assert_eq!(wide.display_range_for_source(0..2), 0..4);
+    }
+
+    #[test]
+    fn code_editor_config_loads_font_and_layout_metrics() {
+        let config = CodeEditorConfig::load_toml(
+            r##"language = "rust"
+font_family = "Monospace"
+font_size_px = 16
+font_weight = 500
+line_height_px = 26
+height_px = 320
+tab_size = 2
+
+[layout]
+gutter_width_px = 72
+content_padding_x_px = 18
+row_padding_y_px = 2
+viewport_padding_y_px = 18
+header_padding_x_px = 18
+header_padding_y_px = 10
+header_gap_px = 16
+panel_padding_x_px = 18
+panel_padding_y_px = 10
+panel_gap_px = 6
+"##,
+        )
+        .unwrap();
+
+        assert_eq!(config.font_family.as_deref(), Some("Monospace"));
+        assert_eq!(config.font_size_px, Some(16.0));
+        assert_eq!(config.font_weight, Some(500.0));
+        assert_eq!(config.line_height_px, Some(26.0));
+        assert_eq!(config.height_px, Some(320.0));
+        assert_eq!(config.tab_size, Some(2));
+        let layout = config.layout.expect("layout section should parse");
+        assert_eq!(layout.gutter_width_px, Some(72.0));
+        assert_eq!(layout.content_padding_x_px, Some(18.0));
+        assert_eq!(layout.row_padding_y_px, Some(2.0));
+        assert_eq!(layout.panel_gap_px, Some(6.0));
+    }
+
+    #[test]
+    fn code_editor_runtime_layout_avoids_unconditional_paint_updates() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+
+        assert!(
+            production_source.contains("row_layouts")
+                && production_source.contains("get(self.row)")
+                && production_source.contains("is_none_or")
+        );
+        assert!(production_source.contains("retain_visible_row_layouts"));
+        assert!(
+            production_source.contains("editor_bounds")
+                && production_source.contains("!= Some(bounds)")
+        );
+    }
+
+    #[test]
     fn code_editor_config_loads_zed_syntax_theme_json() {
         let theme_json = r##"{
           "themes": [{
@@ -5398,5 +5680,21 @@ theme=system",
             bounds.right() - input_bounds.right(),
             crate::virtual_scrollbar_hit_width()
         );
+    }
+
+    #[test]
+    fn code_editor_exposes_explicit_config_file_api_without_background_watcher() {
+        let source = include_str!("code_editor.rs");
+        let production_source = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("code editor source should have a production section");
+
+        assert!(production_source.contains("pub fn config_file(mut self"));
+        assert!(production_source.contains("pub fn set_config"));
+        assert!(!production_source.contains("pub rows: Option<usize>"));
+        assert!(!production_source.contains("watch_config_file"));
+        assert!(!production_source.contains("CodeEditorConfigFileWatcher"));
+        assert!(!production_source.contains("config_watch_task"));
     }
 }

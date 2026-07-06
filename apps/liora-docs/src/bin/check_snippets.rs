@@ -165,6 +165,8 @@ mod code_block_theme;
 mod code_editor_advanced;
 #[path = "../../content/snippets/code_editor/basic.rs"]
 mod code_editor_basic;
+#[path = "../../content/snippets/code_editor/config_file.rs"]
+mod code_editor_config_file;
 #[path = "../../content/snippets/code_editor/diagnostics.rs"]
 mod code_editor_diagnostics;
 #[path = "../../content/snippets/collapse/accordion.rs"]
