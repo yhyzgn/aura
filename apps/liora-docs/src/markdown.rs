@@ -10882,7 +10882,13 @@ pub fn render_docs_shell(
         let theme_mode = cx.global::<Config>().theme_mode;
         let shell = DocsShell {
             selected: 0,
+            nav_filter: cx.new(|cx| {
+                Input::new("", cx)
+                    .placeholder("Search docs")
+                    .filter(|value| !value.contains(['\n', '\r']))
+            }),
             nav_menu: None,
+            nav_query: String::new(),
             page_views: vec![None; DOC_PAGES.len()],
             update_status: UpdatePanelStatus::Idle,
             install_plan: None,
@@ -10940,7 +10946,9 @@ impl UpdatePanelStatus {
 
 pub struct DocsShell {
     selected: usize,
+    nav_filter: Entity<Input>,
     nav_menu: Option<Entity<NavigationMenu>>,
+    nav_query: String,
     page_views: Vec<Option<Entity<DocsPageView>>>,
     update_status: UpdatePanelStatus,
     install_plan: Option<InstallPlan>,
@@ -11065,6 +11073,7 @@ impl Render for DocsShell {
                     .id("docs-sidebar")
                     .expanded_width(px(280.0))
                     .scrollable()
+                    .header(div().w_full().p_2().child(self.nav_filter.clone()))
                     .child(nav_menu),
             )
             .aside_passthrough()
@@ -11532,6 +11541,19 @@ impl DocsShell {
 
     fn wire_shell_controls(&self, cx: &mut Context<Self>) {
         let docs = cx.entity().clone();
+        cx.update_entity(&self.nav_filter, |input, _cx| {
+            input.set_on_change({
+                let docs = docs.clone();
+                move |value, cx| {
+                    let query = value.trim().to_lowercase();
+                    let _ = docs.update(cx, |docs, cx| {
+                        docs.set_nav_query(query, cx);
+                    });
+                }
+            });
+        });
+
+        let docs = cx.entity().clone();
         cx.update_entity(&self.theme_mode_segmented, |segmented, _cx| {
             segmented.set_on_change(move |value, window, cx| {
                 let Some(mode) = ThemeMode::from_value(value.as_ref()) else {
@@ -11594,6 +11616,25 @@ impl DocsShell {
         page_view
     }
 
+    fn set_nav_query(&mut self, query: String, cx: &mut Context<Self>) {
+        if self.nav_query == query {
+            return;
+        }
+        self.nav_query = query;
+        self.refresh_nav_menu_for_current_query(cx);
+    }
+
+    fn refresh_nav_menu_for_current_query(&mut self, cx: &mut Context<Self>) {
+        let active_id = self.selected.to_string();
+        let items = docs_nav_menu_items(&self.nav_query);
+        if let Some(nav_menu) = &self.nav_menu {
+            cx.update_entity(nav_menu, |menu, cx| {
+                menu.set_items(items, cx);
+                menu.set_active_index(active_id, cx);
+            });
+        }
+    }
+
     fn nav_menu(&mut self, selected: usize, cx: &mut Context<Self>) -> Entity<NavigationMenu> {
         let active_id = selected.to_string();
         if let Some(nav_menu) = &self.nav_menu {
@@ -11604,18 +11645,19 @@ impl DocsShell {
         }
 
         let docs = cx.entity().downgrade();
-        let nav_menu = cx.new(move |_| build_docs_menu(selected, docs));
+        let query = self.nav_query.clone();
+        let nav_menu = cx.new(move |_| build_docs_menu(selected, docs, &query));
         self.nav_menu = Some(nav_menu.clone());
         nav_menu
     }
 }
 
-fn build_docs_menu(selected: usize, docs: WeakEntity<DocsShell>) -> NavigationMenu {
+fn build_docs_menu(selected: usize, docs: WeakEntity<DocsShell>, query: &str) -> NavigationMenu {
     NavigationMenu::new()
         .id("liora-docs-menu")
         .mode(NavigationMenuMode::Vertical)
         .default_active(selected.to_string())
-        .with_items(docs_nav_menu_items())
+        .with_items(docs_nav_menu_items(query))
         .on_select(move |id, _, cx| {
             let Ok(index) = id.parse::<usize>() else {
                 return;
@@ -11629,7 +11671,8 @@ fn build_docs_menu(selected: usize, docs: WeakEntity<DocsShell>) -> NavigationMe
         })
 }
 
-fn docs_nav_menu_items() -> Vec<liora_components::NavigationMenuNode> {
+fn docs_nav_menu_items(query: &str) -> Vec<liora_components::NavigationMenuNode> {
+    let query = query.trim().to_lowercase();
     let mut indices = (0..DOC_PAGES.len()).collect::<Vec<_>>();
     indices.sort_by(|left, right| {
         let left_page = &DOC_PAGES[*left];
@@ -11655,7 +11698,15 @@ fn docs_nav_menu_items() -> Vec<liora_components::NavigationMenuNode> {
             .iter()
             .filter_map(|page_index| {
                 let page = &DOC_PAGES[*page_index];
-                (docs_nav_category_for(page.title) == *group_category).then(|| {
+                let search_text = format!(
+                    "{} {}",
+                    page.title,
+                    docs_nav_category_for(page.title).name()
+                )
+                .to_lowercase();
+                (docs_nav_category_for(page.title) == *group_category
+                    && (query.is_empty() || search_text.contains(&query)))
+                .then(|| {
                     liora_components::NavigationMenuNode::Item(
                         liora_components::NavigationMenuItem {
                             id: page_index.to_string().into(),
@@ -11675,6 +11726,16 @@ fn docs_nav_menu_items() -> Vec<liora_components::NavigationMenuNode> {
                 },
             ));
         }
+    }
+
+    if groups.is_empty() {
+        return vec![liora_components::NavigationMenuNode::Item(
+            liora_components::NavigationMenuItem {
+                id: "docs-empty".into(),
+                label: "No matching docs".into(),
+                icon: None,
+            },
+        )];
     }
 
     groups
@@ -11944,8 +12005,23 @@ mod tests {
     }
 
     #[test]
+    fn docs_nav_menu_items_filters_pages_by_search_query() {
+        let items = docs_nav_menu_items("codeeditor");
+        let control_group = docs_menu_group(&items, "控件");
+        let labels = docs_menu_group_labels(control_group);
+        assert_eq!(labels, vec!["CodeEditor"]);
+
+        let empty_items = docs_nav_menu_items("definitely-missing-docs-page");
+        let liora_components::NavigationMenuNode::Item(empty_item) = &empty_items[0] else {
+            panic!("empty docs search should render a placeholder item");
+        };
+        assert_eq!(empty_item.id.as_ref(), "docs-empty");
+        assert_eq!(empty_item.label.as_ref(), "No matching docs");
+    }
+
+    #[test]
     fn docs_nav_menu_items_group_pages_by_category_then_title() {
-        let items = docs_nav_menu_items();
+        let items = docs_nav_menu_items("");
 
         let first_group_title = match &items[0] {
             liora_components::NavigationMenuNode::Group(group) => group.title.as_ref(),
@@ -13171,6 +13247,11 @@ mod tests {
         assert!(source.contains("frame_mode_switch"));
         assert!(source.contains("Sidebar::new()"));
         assert!(source.contains("NavigationMenu::new()"));
+        assert!(source.contains("nav_filter: Entity<Input>"));
+        assert!(source.contains("nav_query: String"));
+        assert!(source.contains("fn set_nav_query"));
+        assert!(source.contains("fn refresh_nav_menu_for_current_query"));
+        assert!(source.contains("menu.set_items(items, cx);"));
         assert!(source.contains("nav_menu: Option<Entity<NavigationMenu>>"));
         assert!(source.contains("menu.set_active_index(active_id, cx);"));
         assert!(source.contains("if docs.selected != index"));
@@ -13202,6 +13283,10 @@ mod tests {
         assert!(!docs_shell_render.contains(r#".id("liora-docs-nav-scroll")"#));
         assert!(!docs_shell_render.contains(".overflow_y_scroll()"));
         assert!(!docs_shell_render.contains(".track_scroll(&self.nav_scroll)"));
+        assert!(
+            docs_shell_render
+                .contains(".header(div().w_full().p_2().child(self.nav_filter.clone()))")
+        );
         assert!(docs_shell_render.contains(".child(nav_menu)"));
         assert!(!docs_shell_render.contains(".aside_scroll()"));
         assert!(!docs_shell_render.contains(".main_scroll()"));

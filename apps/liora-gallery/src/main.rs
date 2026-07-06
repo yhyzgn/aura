@@ -368,8 +368,11 @@ fn open_gallery_window(cx: &mut App) -> Option<gpui::AnyWindowHandle> {
                 pending_demo_index: None,
                 nav_index,
                 selected,
-                nav_filter: cx
-                    .new(|cx| Input::new("", cx).placeholder(locales::gallery::search_placeholder)),
+                nav_filter: cx.new(|cx| {
+                    Input::new("", cx)
+                        .placeholder(locales::gallery::search_placeholder)
+                        .filter(|value| !value.contains(['\n', '\r']))
+                }),
                 nav_menu: None,
                 nav_query: String::new(),
                 nav_refresh_pending: false,
@@ -937,6 +940,7 @@ mod shell_tests {
         assert!(source.contains("include_str!(\"../assets/locales/en-US.toml\")"));
         assert!(source.contains("include_str!(\"../assets/locales/zh-CN.toml\")"));
         assert!(source.contains("nav_filter"));
+        assert!(source.contains(".filter(|value| !value.contains(['\\n', '\\r']))"));
         assert!(source.contains("nav_menu: Option"));
         assert!(source.contains(r#".id("gallery-sidebar")"#));
         assert!(source.contains(".aside_passthrough()"));
