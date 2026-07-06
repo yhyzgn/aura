@@ -186,10 +186,21 @@ fn validate_windows_resources(
         ],
     );
 
+    let expected_icon = format!("../../packaging/icons/{}.ico", metadata.icon_stem);
+    let expected_original_filename = format!("{}.exe", metadata.binary);
     report.require_text_contains(
         format!("{} Windows resource build script", metadata.name),
         metadata.windows_resource_build_script_path(root),
-        &[".set_icon", "ProductName", "FileDescription", "CompanyName"],
+        &[
+            ".set_icon",
+            &expected_icon,
+            "ProductName",
+            &metadata.name,
+            "FileDescription",
+            "CompanyName",
+            "OriginalFilename",
+            &expected_original_filename,
+        ],
     );
 }
 
@@ -293,10 +304,11 @@ mod tests {
             br#"
 fn main() {
     let mut resource = winresource::WindowsResource::new();
-    resource.set_icon("icon.ico");
+    resource.set_icon("../../packaging/icons/sample-app.ico");
     resource.set("ProductName", "Sample App");
     resource.set("FileDescription", "Sample native app.");
     resource.set("CompanyName", "Example");
+    resource.set("OriginalFilename", "sample-app.exe");
 }
 "#,
         );
