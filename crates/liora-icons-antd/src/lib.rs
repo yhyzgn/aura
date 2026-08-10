@@ -39,7 +39,7 @@ impl liora_icons::IntoIconPath for IconName {
 }
 
 impl gpui::IntoElement for IconName {
-    type Element = gpui::Component<liora_icons::Icon>;
+    type Element = gpui::ViewElement<liora_icons::Icon>;
     fn into_element(self) -> Self::Element {
         liora_icons::Icon::new(self).into_element()
     }

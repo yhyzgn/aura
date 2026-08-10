@@ -6,8 +6,8 @@
 
 use crate::{Paragraph, SelectableText, SelectableTextOptions, SelectableTextWrap, Text};
 use gpui::{
-    App, Component, ElementId, IntoElement, RenderOnce, SharedString, TextRun, TextStyle, Window,
-    prelude::*, px,
+    App, ElementId, IntoElement, RenderOnce, SharedString, TextRun, TextStyle,
+    ViewElement as Component, Window, prelude::*, px,
 };
 use liora_core::{Config, code_font_family, code_font_weight, ui_font_family, ui_font_weight};
 use std::{

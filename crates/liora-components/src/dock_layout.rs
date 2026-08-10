@@ -21,8 +21,8 @@
 
 use crate::{Card, Space, Text};
 use gpui::{
-    AnyElement, App, Component, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels,
-    RenderOnce, SharedString, Styled, Window, div, prelude::*, px,
+    AnyElement, App, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels, RenderOnce,
+    SharedString, Styled, ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{Config, unique_id};
 

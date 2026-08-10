@@ -20,7 +20,8 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Component, Hsla, IntoElement, Pixels, RenderOnce, Window, div, prelude::*, px,
+    AnyElement, App, Hsla, IntoElement, Pixels, RenderOnce, ViewElement as Component, Window, div,
+    prelude::*, px,
 };
 use liora_core::{Config, LocalizedText};
 use liora_icons::Icon;

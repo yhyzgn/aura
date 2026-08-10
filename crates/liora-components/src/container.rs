@@ -19,7 +19,10 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use gpui::{AnyElement, App, Component, IntoElement, Pixels, RenderOnce, Window, prelude::*, px};
+use gpui::{
+    AnyElement, App, IntoElement, Pixels, RenderOnce, ViewElement as Component, Window, prelude::*,
+    px,
+};
 use liora_core::stable_unique_id;
 
 /// Fluent native GPUI component for rendering Liora container.

@@ -20,8 +20,8 @@
 
 use crate::{Button, Popover, gpui_compat::element_id};
 use gpui::{
-    AnyElement, App, Component, Hsla, IntoElement, MouseButton, RenderOnce, SharedString, Window,
-    div, prelude::*, px,
+    AnyElement, App, Hsla, IntoElement, MouseButton, RenderOnce, SharedString,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{Config, LocalizedText, Placement, clear_popover, stable_unique_id};
 use liora_icons::Icon;

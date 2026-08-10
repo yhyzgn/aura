@@ -28,6 +28,8 @@ TODAY = _dt.date.today().isoformat()
 
 CURRENT_PLAN = ".context/plans/001_ctx_takeover.md"
 CURRENT_TASK = ".context/tasks/001_ctx_takeover.md"
+CURRENT_PLAN_RE = re.compile(r"Current plan:\s+`(?P<path>\.context/plans/[^`]+)`")
+CURRENT_TASK_RE = re.compile(r"Current task:\s+`(?P<path>\.context/tasks/[^`]+)`")
 
 HEADER_RE = re.compile(r"^(#{1,6})\s+.+$", re.MULTILINE)
 MARKER_RE = re.compile(
@@ -589,18 +591,6 @@ def finalize(root: Path, apply: bool) -> None:
 
 def validate(root: Path) -> tuple[bool, list[str]]:
     errors: list[str] = []
-    required = [
-        "AGENTS.md",
-        ".context/README.md",
-        ".context/system/overview.md",
-        ".context/system/conventions.md",
-        ".context/system/risks.md",
-        CURRENT_PLAN,
-        CURRENT_TASK,
-    ]
-    for item in required:
-        if not (root / item).exists():
-            errors.append(f"missing required context file: {item}")
     agents = (root / "AGENTS.md").read_text(encoding="utf-8") if (root / "AGENTS.md").exists() else ""
     managed_stripped = re.sub(
         r"\n?<!-- ctx-managed-legacy-migration:start -->.*?<!-- ctx-managed-legacy-migration:end -->\n?",
@@ -608,6 +598,22 @@ def validate(root: Path) -> tuple[bool, list[str]]:
         agents,
         flags=re.S,
     )
+    plan_matches = CURRENT_PLAN_RE.findall(managed_stripped)
+    task_matches = CURRENT_TASK_RE.findall(managed_stripped)
+    current_plan = plan_matches[0] if len(plan_matches) == 1 else CURRENT_PLAN
+    current_task = task_matches[0] if len(task_matches) == 1 else CURRENT_TASK
+    required = [
+        "AGENTS.md",
+        ".context/README.md",
+        ".context/system/overview.md",
+        ".context/system/conventions.md",
+        ".context/system/risks.md",
+        current_plan,
+        current_task,
+    ]
+    for item in required:
+        if not (root / item).exists():
+            errors.append(f"missing required context file: {item}")
     for heading in [
         "Reading order",
         "Project summary",
@@ -626,11 +632,11 @@ def validate(root: Path) -> tuple[bool, list[str]]:
             errors.append(f"AGENTS.md missing heading: {heading}")
     if managed_stripped.count("Current plan:") != 1 or managed_stripped.count("Current task:") != 1:
         errors.append("AGENTS.md must contain exactly one Current plan and one Current task pointer outside the managed legacy block")
-    if CURRENT_PLAN not in agents or CURRENT_TASK not in agents:
+    if len(plan_matches) != 1 or len(task_matches) != 1:
         errors.append("AGENTS.md current pointers do not match canonical files")
-    if (root / CURRENT_PLAN).exists() and CURRENT_TASK not in (root / CURRENT_PLAN).read_text(encoding="utf-8"):
+    if (root / current_plan).exists() and current_task not in (root / current_plan).read_text(encoding="utf-8"):
         errors.append("current plan does not point to current task")
-    if (root / CURRENT_TASK).exists() and CURRENT_PLAN not in (root / CURRENT_TASK).read_text(encoding="utf-8"):
+    if (root / current_task).exists() and current_plan not in (root / current_task).read_text(encoding="utf-8"):
         errors.append("current task does not point to current plan")
     for item in LEGACY_ROOTS:
         if (root / item).exists():

@@ -7,8 +7,8 @@
 
 use crate::{Input, gpui_compat::element_id};
 use gpui::{
-    App, Component, Context, Entity, Hsla, IntoElement, MouseButton, Pixels, Render, RenderOnce,
-    SharedString, Window, div, prelude::*, px,
+    App, Context, Entity, Hsla, IntoElement, MouseButton, Pixels, Render, RenderOnce, SharedString,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

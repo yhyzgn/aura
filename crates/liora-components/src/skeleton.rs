@@ -146,9 +146,9 @@ impl RenderOnce for SkeletonItem {
 }
 
 impl IntoElement for SkeletonItem {
-    type Element = gpui::Component<Self>;
+    type Element = gpui::ViewElement<Self>;
     fn into_element(self) -> Self::Element {
-        gpui::Component::new(self)
+        gpui::ViewElement::new(self)
     }
 }
 
@@ -193,9 +193,9 @@ impl RenderOnce for Skeleton {
 }
 
 impl IntoElement for Skeleton {
-    type Element = gpui::Component<Self>;
+    type Element = gpui::ViewElement<Self>;
     fn into_element(self) -> Self::Element {
-        gpui::Component::new(self)
+        gpui::ViewElement::new(self)
     }
 }
 

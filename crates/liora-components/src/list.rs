@@ -8,8 +8,8 @@
 
 use crate::Text;
 use gpui::{
-    AnyElement, App, Component, Hsla, IntoElement, RenderOnce, SharedString, Window, div,
-    prelude::*, px,
+    AnyElement, App, Hsla, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window,
+    div, prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

@@ -20,7 +20,8 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Component, DefiniteLength, IntoElement, RenderOnce, Window, prelude::*, px,
+    AnyElement, App, DefiniteLength, IntoElement, RenderOnce, ViewElement as Component, Window,
+    prelude::*, px,
 };
 
 /// Fluent native GPUI component for rendering Liora space.

@@ -3,7 +3,7 @@
 //! This snippet intentionally keeps parser internals stubbed so the public
 //! contract is clear: Markdown becomes a GPUI-native element, not web markup.
 
-use gpui::{AnyElement, Component, IntoElement, RenderOnce, prelude::*};
+use gpui::{AnyElement, IntoElement, RenderOnce, ViewElement as Component, prelude::*};
 
 struct MarkdownDocument;
 

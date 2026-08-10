@@ -27,9 +27,9 @@ use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleLinear, ScalePoint};
 use crate::{Empty, Space, Text};
 use gpui::{
-    App, Background, Bounds, Component, ElementId, Hsla, InteractiveElement, IntoElement,
-    ParentElement, Pixels, RenderOnce, SharedString, Styled, Window, canvas, div, fill, point, px,
-    size,
+    App, Background, Bounds, ElementId, Hsla, InteractiveElement, IntoElement, ParentElement,
+    Pixels, RenderOnce, SharedString, Styled, ViewElement as Component, Window, canvas, div, fill,
+    point, px, size,
 };
 use liora_core::{Config, Placement, TooltipData, clear_tooltip, set_active_tooltip, unique_id};
 use std::cell::Cell;

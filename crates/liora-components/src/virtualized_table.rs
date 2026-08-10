@@ -23,8 +23,8 @@ use crate::VirtualScrollbar;
 use crate::gpui_compat::element_id;
 use crate::table::{TableAlign, TableColumn, TableColumnFixed, TableSortOrder, TableSortState};
 use gpui::{
-    AnyElement, App, Component, ElementId, IntoElement, ListAlignment, ListState, Pixels,
-    RenderOnce, SharedString, Window, div, list, prelude::*, px,
+    AnyElement, App, ElementId, IntoElement, ListAlignment, ListState, Pixels, RenderOnce,
+    SharedString, ViewElement as Component, Window, div, list, prelude::*, px,
 };
 use liora_core::{Config, stable_unique_id};
 use liora_icons::Icon;

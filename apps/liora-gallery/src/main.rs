@@ -1,8 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use gpui::{
-    AnyView, App, AssetSource, Component, Context, FontWeight, Global, Render, RenderImage,
-    SharedString, Window, WindowOptions, div, img, prelude::*, px, size,
+    AnyView, App, AssetSource, Context, FontWeight, Global, Render, RenderImage, SharedString,
+    ViewElement as Component, Window, WindowOptions, div, img, prelude::*, px, size,
 };
 use liora_components::{
     AppWindowFrame, Button, Card, Checkbox, Container, Dialog, Input, Menu, MenuBar, MenuItem,

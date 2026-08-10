@@ -19,7 +19,7 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use gpui::{App, Component, IntoElement, RenderOnce, Window, prelude::*, px};
+use gpui::{App, IntoElement, RenderOnce, ViewElement as Component, Window, prelude::*, px};
 
 /// Fluent native GPUI component for rendering Liora divider.
 pub struct Divider {

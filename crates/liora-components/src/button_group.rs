@@ -20,7 +20,7 @@
 //! crate.
 
 use crate::Button;
-use gpui::{App, Component, IntoElement, RenderOnce, Window, div, prelude::*};
+use gpui::{App, IntoElement, RenderOnce, ViewElement as Component, Window, div, prelude::*};
 
 /// Fluent native GPUI component for rendering Liora button group.
 pub struct ButtonGroup {

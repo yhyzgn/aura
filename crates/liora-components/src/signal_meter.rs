@@ -20,8 +20,8 @@
 //! crate.
 
 use gpui::{
-    App, Background, BorderStyle, Bounds, Component, Corners, Edges, Hsla, IntoElement, Pixels,
-    RenderOnce, Window, point, prelude::*, px, quad, size,
+    App, Background, BorderStyle, Bounds, Corners, Edges, Hsla, IntoElement, Pixels, RenderOnce,
+    ViewElement as Component, Window, point, prelude::*, px, quad, size,
 };
 use liora_core::Config;
 

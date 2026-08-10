@@ -21,9 +21,9 @@
 
 use crate::{gpui_compat::element_id, motion::pop_in};
 use gpui::{
-    AnyElement, App, Bounds, Component, Context, ElementId, GlobalElementId, InspectorElementId,
-    IntoElement, KeyBinding, LayoutId, MouseButton, Pixels, Render, RenderOnce, SharedString,
-    Window, actions, div, point, prelude::*, px,
+    AnyElement, App, Bounds, Context, ElementId, GlobalElementId, InspectorElementId, IntoElement,
+    KeyBinding, LayoutId, MouseButton, Pixels, Render, RenderOnce, SharedString,
+    ViewElement as Component, Window, actions, div, point, prelude::*, px,
 };
 use liora_core::{
     Config, Placement, clear_popover, is_popover_active, set_active_popover, stable_unique_id,

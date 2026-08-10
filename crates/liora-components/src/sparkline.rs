@@ -24,8 +24,8 @@ use crate::chart_shape::{
     area_path, line_path_with_style, smooth_area_path, smooth_line_path_with_style,
 };
 use gpui::{
-    App, Background, Component, ElementId, Hsla, IntoElement, Pixels, RenderOnce, SharedString,
-    Window, canvas, div, fill, point, prelude::*, px, size,
+    App, Background, ElementId, Hsla, IntoElement, Pixels, RenderOnce, SharedString,
+    ViewElement as Component, Window, canvas, div, fill, point, prelude::*, px, size,
 };
 use liora_core::{Config, unique_id};
 

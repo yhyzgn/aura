@@ -21,8 +21,8 @@
 
 use crate::{Popover, PopoverView};
 use gpui::{
-    AnyElement, App, Component, Context, IntoElement, ParentElement, Pixels, RenderOnce, Window,
-    div, px,
+    AnyElement, App, Context, IntoElement, ParentElement, Pixels, RenderOnce,
+    ViewElement as Component, Window, div, px,
 };
 use liora_core::Placement;
 use std::sync::Arc;

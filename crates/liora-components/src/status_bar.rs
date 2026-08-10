@@ -7,8 +7,8 @@
 
 use crate::{Spinner, Text};
 use gpui::{
-    AnyElement, App, Component, Hsla, IntoElement, MouseButton, Pixels, RenderOnce, SharedString,
-    Window, div, prelude::*, px,
+    AnyElement, App, Hsla, IntoElement, MouseButton, Pixels, RenderOnce, SharedString,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

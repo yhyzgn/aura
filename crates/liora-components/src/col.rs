@@ -20,7 +20,7 @@
 //! crate.
 
 use crate::Row;
-use gpui::{App, Component, IntoElement, RenderOnce, Window, prelude::*};
+use gpui::{App, IntoElement, RenderOnce, ViewElement as Component, Window, prelude::*};
 
 /// Fluent native GPUI component for rendering Liora col.
 pub struct Col {

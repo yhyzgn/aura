@@ -20,7 +20,10 @@
 //! crate.
 
 use crate::motion::{fade_in, spin_icon};
-use gpui::{App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
+use gpui::{
+    App, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window, div, prelude::*,
+    px,
+};
 use liora_core::Config;
 use liora_icons::Icon;
 use liora_icons_lucide::IconName;

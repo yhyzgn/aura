@@ -19,7 +19,9 @@
 //! the component, and avoid app-specific host-application resources in this SDK
 //! crate.
 
-use gpui::{AnyElement, App, Component, Pixels, SharedString, Window, div, prelude::*, px};
+use gpui::{
+    AnyElement, App, Pixels, SharedString, ViewElement as Component, Window, div, prelude::*, px,
+};
 use liora_core::Config;
 
 /// Fluent native GPUI component for rendering Liora form.

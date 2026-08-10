@@ -5,8 +5,8 @@
 //! require a web icon runtime.
 
 use gpui::{
-    App, AssetSource, Component, DefiniteLength, Hsla, IntoElement, Radians, RenderOnce,
-    SharedString, Transformation, Window, prelude::*, px,
+    App, AssetSource, DefiniteLength, Hsla, IntoElement, Radians, RenderOnce, SharedString,
+    Transformation, ViewElement as Component, Window, prelude::*, px,
 };
 use liora_core::Config;
 use std::{

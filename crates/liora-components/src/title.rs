@@ -21,8 +21,8 @@
 
 use crate::{SelectableText, SelectableTextOptions, SelectableTextWrap};
 use gpui::{
-    App, Component, ElementId, IntoElement, RenderOnce, SharedString, TextStyle, Window,
-    prelude::*, px,
+    App, ElementId, IntoElement, RenderOnce, SharedString, TextStyle, ViewElement as Component,
+    Window, prelude::*, px,
 };
 use liora_core::{Config, LocalizedText, ui_font_family};
 use std::{

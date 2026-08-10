@@ -2,7 +2,7 @@
 
 This directory contains a small repo-local Zed source patch used for Liora Gallery / Docs startup-window verification. It is **not** part of the published Liora SDK dependency surface.
 
-Upstream base: `zed-industries/zed` commit `2c346f60a76fe3f0367ef924927f50a6efdf5718` for current Liora dependency comparison; older patch experiments may have originated from earlier upstream commits.
+Upstream base: `zed-industries/zed` commit `492acd6c815cbe8c7366d54e6092341340afa6c7` for current Liora dependency comparison; older patch experiments may have originated from earlier upstream commits.
 
 Why this exists:
 

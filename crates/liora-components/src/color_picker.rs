@@ -806,7 +806,7 @@ impl Element for ColorSurfaceElement {
             ),
         });
 
-        let _ = window.paint_image(bounds, Corners::all(px(0.0)), image, 0, false);
+        let _ = window.paint_image(bounds, bounds, Corners::all(px(0.0)), image, 0, false);
         if let Some((ratio, horizontal)) = marker {
             paint_surface_marker(bounds, ratio, horizontal, window);
         }

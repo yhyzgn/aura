@@ -7,8 +7,8 @@
 
 use crate::{Button, Space, Text};
 use gpui::{
-    AnyElement, App, Component, Hsla, InteractiveElement, IntoElement, MouseButton, ParentElement,
-    Pixels, RenderOnce, SharedString, StatefulInteractiveElement, Styled, Window,
+    AnyElement, App, Hsla, InteractiveElement, IntoElement, MouseButton, ParentElement, Pixels,
+    RenderOnce, SharedString, StatefulInteractiveElement, Styled, ViewElement as Component, Window,
     WindowControlArea, div, prelude::*, px,
 };
 use liora_core::Config;

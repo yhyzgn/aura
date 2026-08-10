@@ -22,9 +22,9 @@
 use crate::preview::Preview;
 pub use crate::preview::render_image_preview;
 use gpui::{
-    AnyElement, App, Bounds, Component, Corners, Element, ElementId, GlobalElementId, Hsla,
+    AnyElement, App, Bounds, Corners, Element, ElementId, GlobalElementId, Hsla,
     InspectorElementId, IntoElement, LayoutId, ObjectFit, Pixels, RenderImage, RenderOnce,
-    SharedString, Style, Window, div, prelude::*, px, relative,
+    SharedString, Style, ViewElement as Component, Window, div, prelude::*, px, relative,
 };
 use liora_core::Config;
 use liora_icons::Icon;
@@ -656,7 +656,14 @@ impl Element for RasterImageElement {
             };
             (self.image.clone(), image_bounds, corner_radii)
         };
-        let _ = window.paint_image(image_bounds, corner_radii, image, 0, self.grayscale);
+        let _ = window.paint_image(
+            image_bounds,
+            image_bounds,
+            corner_radii,
+            image,
+            0,
+            self.grayscale,
+        );
     }
 }
 

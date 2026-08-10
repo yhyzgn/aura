@@ -22,8 +22,9 @@
 use crate::gpui_compat::element_id;
 use crate::motion::spin_icon;
 use gpui::{
-    AbsoluteLength, AnyElement, App, Background, Component, ElementId, Hsla, IntoElement,
-    RenderOnce, Rgba, SharedString, Window, linear_color_stop, linear_gradient, prelude::*, px,
+    AbsoluteLength, AnyElement, App, Background, ElementId, Hsla, IntoElement, RenderOnce, Rgba,
+    SharedString, ViewElement as Component, Window, linear_color_stop, linear_gradient, prelude::*,
+    px,
 };
 use liora_core::{Config, LocalizedText, stable_unique_id};
 use liora_icons::Icon;

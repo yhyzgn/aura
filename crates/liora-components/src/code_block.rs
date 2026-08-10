@@ -21,10 +21,10 @@
 
 use crate::gpui_compat::element_id;
 use gpui::{
-    App, Bounds, ClipboardItem, Component, Context, ElementId, Entity, FocusHandle, Focusable,
-    FontStyle, FontWeight, GlobalElementId, Hsla, IntoElement, LayoutId, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, RenderOnce,
-    Rgba, ShapedLine, SharedString, Style, StyledText, TextRun, TextStyle, UnderlineStyle,
+    App, Bounds, ClipboardItem, Context, ElementId, Entity, FocusHandle, Focusable, FontStyle,
+    FontWeight, GlobalElementId, Hsla, IntoElement, LayoutId, MouseButton, MouseDownEvent,
+    MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render, RenderOnce, Rgba, ShapedLine,
+    SharedString, Style, StyledText, TextRun, TextStyle, UnderlineStyle, ViewElement as Component,
     WhiteSpace, Window, actions, div, fill, point, prelude::*, px, relative, size,
 };
 use liora_core::{Config, code_font_family, code_font_weight, stable_unique_id};

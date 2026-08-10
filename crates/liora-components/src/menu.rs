@@ -22,9 +22,9 @@
 
 use crate::{Popover, Text};
 use gpui::{
-    AnyElement, App, Component, IntoElement, Menu as GpuiPlatformMenu,
-    MenuItem as GpuiPlatformMenuItem, MouseButton, OsAction, PathPromptOptions, RenderOnce,
-    SharedString, Window, div, prelude::*, px,
+    AnyElement, App, IntoElement, Menu as GpuiPlatformMenu, MenuItem as GpuiPlatformMenuItem,
+    MouseButton, OsAction, PathPromptOptions, RenderOnce, SharedString, ViewElement as Component,
+    Window, div, prelude::*, px,
 };
 use liora_core::{Config, LocalizedText};
 use liora_icons::Icon;

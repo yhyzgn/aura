@@ -3,8 +3,8 @@
 ## Reading order
 1. `AGENTS.md`
 2. `.context/README.md`
-3. Plan file: `.context/plans/001_ctx_takeover.md`
-4. Task file: `.context/tasks/001_ctx_takeover.md`
+3. Plan file: `.context/plans/002_gpui_latest_upgrade.md`
+4. Task file: `.context/tasks/002_gpui_latest_upgrade.md`
 5. `.context/system/overview.md`
 6. `.context/system/conventions.md`
 7. `.context/system/risks.md`
@@ -60,8 +60,8 @@ Liora is a Rust edition 2024 Cargo workspace for a pure Rust + GPUI native enter
 - Future work must use `.context/` pointers only.
 
 ## Current context pointers
-- Current plan: `.context/plans/001_ctx_takeover.md`
-- Current task: `.context/tasks/001_ctx_takeover.md`
+- Current plan: `.context/plans/002_gpui_latest_upgrade.md`
+- Current task: `.context/tasks/002_gpui_latest_upgrade.md`
 
 
 <claude-mem-context>

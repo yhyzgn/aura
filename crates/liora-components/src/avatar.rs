@@ -20,7 +20,8 @@
 //! crate.
 
 use gpui::{
-    App, Component, Hsla, IntoElement, RenderOnce, SharedString, Window, div, img, prelude::*, px,
+    App, Hsla, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window, div, img,
+    prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

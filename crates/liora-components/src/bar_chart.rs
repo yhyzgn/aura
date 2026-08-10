@@ -29,8 +29,8 @@ use crate::chart_frame::{paint_chart_frame, paint_chart_label_aligned};
 use crate::chart_scale::{ScaleBand, ScaleLinear, ScalePoint};
 use crate::{Empty, Space, Text};
 use gpui::{
-    App, Background, BorderStyle, Bounds, Component, Corners, Edges, ElementId, Hsla,
-    InteractiveElement, IntoElement, ParentElement, Pixels, RenderOnce, SharedString, Styled,
+    App, Background, BorderStyle, Bounds, Corners, Edges, ElementId, Hsla, InteractiveElement,
+    IntoElement, ParentElement, Pixels, RenderOnce, SharedString, Styled, ViewElement as Component,
     Window, canvas, div, fill, linear_color_stop, linear_gradient, point, prelude::*, px, quad,
     size,
 };

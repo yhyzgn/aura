@@ -20,8 +20,8 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Component, ElementId, InteractiveElement, IntoElement, Pixels, RenderOnce,
-    Styled, Window, div, prelude::*, px,
+    AnyElement, App, ElementId, InteractiveElement, IntoElement, Pixels, RenderOnce, Styled,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{Config, stable_unique_id};
 

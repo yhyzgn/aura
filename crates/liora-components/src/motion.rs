@@ -23,8 +23,6 @@ use gpui::{Animation, AnimationElement, AnimationExt, ElementId, IntoElement, St
 use liora_icons::Icon;
 use std::{f32::consts::TAU, time::Duration};
 
-const SMOOTH_SPIN_ANIMATION_SECS: f32 = 86_400.0;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Options that control motion duration behavior.
 pub enum MotionDuration {
@@ -221,15 +219,13 @@ pub fn spin_icon_with_duration(
     icon: Icon,
     cycle_duration: Duration,
 ) -> AnimationElement<Icon> {
-    let cycle_secs = cycle_duration.as_secs_f32().max(0.1);
     icon.with_animation(
         ElementId::from(id.into()),
-        Animation::new(Duration::from_secs_f32(SMOOTH_SPIN_ANIMATION_SECS))
-            .repeat()
+        Animation::new(cycle_duration.max(Duration::from_millis(100)))
+            .repeat_synced()
             .with_easing(|delta| delta),
         move |icon, delta| {
-            let elapsed_secs = delta * SMOOTH_SPIN_ANIMATION_SECS;
-            let turn = (elapsed_secs / cycle_secs).fract();
+            let turn = delta.fract();
             icon.rotation(radians(turn * TAU))
         },
     )
@@ -345,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn spin_icon_uses_the_long_cycle_slow_motion_preset() {
+    fn spin_icon_uses_the_slow_motion_preset() {
         assert_eq!(
             MotionDuration::Slow.as_duration(),
             Duration::from_millis(900)
@@ -353,11 +349,19 @@ mod tests {
     }
 
     #[test]
-    fn spin_icon_with_duration_keeps_the_rotation_helper_explicit() {
-        let custom = Animation::new(Duration::from_secs_f32(SMOOTH_SPIN_ANIMATION_SECS)).repeat();
+    fn spin_icon_with_duration_uses_gpui_synced_repeating_animation() {
+        let source = include_str!("motion.rs");
+        let body = source
+            .split("pub fn spin_icon_with_duration")
+            .nth(1)
+            .expect("spin_icon_with_duration should exist")
+            .split("/// Performs the elastic slide")
+            .next()
+            .expect("spin_icon_with_duration should end before elastic slide");
 
-        assert!(custom.duration >= Duration::from_secs(60));
-        assert!(!custom.oneshot);
+        assert!(body.contains(".repeat_synced()"));
+        assert!(!body.contains("SMOOTH_SPIN_ANIMATION_SECS"));
+        assert!(!body.contains(".repeat()"));
     }
 
     #[test]

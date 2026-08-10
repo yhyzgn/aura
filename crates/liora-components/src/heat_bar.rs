@@ -21,8 +21,8 @@
 
 use crate::Text;
 use gpui::{
-    App, Background, BorderStyle, Bounds, Component, Corners, Edges, Hsla, IntoElement, Pixels,
-    RenderOnce, SharedString, Window, div, point, prelude::*, px, quad, size,
+    App, Background, BorderStyle, Bounds, Corners, Edges, Hsla, IntoElement, Pixels, RenderOnce,
+    SharedString, ViewElement as Component, Window, div, point, prelude::*, px, quad, size,
 };
 use liora_core::Config;
 

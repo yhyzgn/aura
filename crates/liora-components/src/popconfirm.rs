@@ -21,7 +21,8 @@
 
 use crate::{Button, Popover};
 use gpui::{
-    AnyElement, App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*,
+    AnyElement, App, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window, div,
+    prelude::*,
 };
 use liora_core::{Config, Placement, clear_popover};
 use liora_icons::Icon;

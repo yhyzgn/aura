@@ -5,8 +5,8 @@
 //! collections. Use `Table` or `VirtualizedTable` for tabular data.
 
 use gpui::{
-    AnyElement, App, Component, IntoElement, MouseButton, Pixels, RenderOnce, SharedString, Window,
-    div, prelude::*, px,
+    AnyElement, App, IntoElement, MouseButton, Pixels, RenderOnce, SharedString,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{Config, stable_unique_id};
 use std::sync::Arc;

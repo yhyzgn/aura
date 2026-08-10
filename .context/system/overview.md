@@ -30,6 +30,10 @@ cargo run --release -p xtask -- package release-readiness
 git diff --check -- . ':(exclude).omx'
 ```
 
+## Current GPUI baseline
+
+Current upgrade branch target: official `zed-industries/zed` revision `492acd6c815cbe8c7366d54e6092341340afa6c7` for `gpui`/`gpui_platform` source dependencies. GPUI crate version remains `0.2.2`; re-verify before merging or releasing because this tracks an upstream git revision.
+
 ## Current release state
 
 Latest local release commit/tag before CTX takeover: `v0.2.9` pushed from `main` on 2026-07-06 session history. Re-verify with `git tag --sort=-v:refname | head` before future releases.

@@ -21,8 +21,8 @@
 
 use crate::{Spinner, gpui_compat::element_id};
 use gpui::{
-    AnyElement, App, Component, IntoElement, MouseButton, Pixels, RenderOnce, SharedString, Window,
-    div, prelude::*, px,
+    AnyElement, App, IntoElement, MouseButton, Pixels, RenderOnce, SharedString,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

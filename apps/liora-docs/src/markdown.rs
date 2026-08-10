@@ -1,8 +1,8 @@
 use crate::locales;
 use gpui::{
-    AnyElement, AnyView, App, Component, Context, Entity, FontWeight, Hsla, IntoElement, Render,
-    RenderImage, RenderOnce, ScrollHandle, SharedString, WeakEntity, Window, div, img, prelude::*,
-    px, rgb,
+    AnyElement, AnyView, App, Context, Entity, FontWeight, Hsla, IntoElement, Render, RenderImage,
+    RenderOnce, ScrollHandle, SharedString, ViewElement as Component, WeakEntity, Window, div, img,
+    prelude::*, px, rgb,
 };
 use liora_components::{
     Affix, AffixPosition, Alert, AlertType, Anchor, AnchorLink, AnchorTarget, AppWindowFrame,
@@ -12469,8 +12469,8 @@ mod tests {
         let changelog = include_str!("../../../CHANGELOG.md");
         let agents = include_str!("../../../AGENTS.md");
         let context_readme = include_str!("../../../.context/README.md");
-        let plan = include_str!("../../../.context/plans/001_ctx_takeover.md");
-        let task = include_str!("../../../.context/tasks/001_ctx_takeover.md");
+        let plan = include_str!("../../../.context/plans/002_gpui_latest_upgrade.md");
+        let task = include_str!("../../../.context/tasks/002_gpui_latest_upgrade.md");
         let cargo = include_str!("../../../Cargo.toml");
         let package_workflow = include_str!("../../../.github/workflows/package.yml");
         let sdk_workflow = include_str!("../../../.github/workflows/release-sdk.yml");
@@ -12545,10 +12545,10 @@ mod tests {
             assert!(!logo.contains(wrong_name));
         }
         assert!(changelog.contains("P21 release-candidate readiness"));
-        assert!(agents.contains(".context/plans/001_ctx_takeover.md"));
+        assert!(agents.contains(".context/plans/002_gpui_latest_upgrade.md"));
         assert!(context_readme.contains("Canonical reading order"));
-        assert!(plan.contains("CTX Takeover"));
-        assert!(task.contains("CTX Takeover Execution"));
+        assert!(plan.contains("GPUI Latest Upgrade"));
+        assert!(task.contains("GPUI Latest Upgrade Execution"));
         assert!(!cargo.contains("examples/minimal-app"));
         assert!(!cargo.contains("examples/dashboard-app"));
         assert!(!cargo.contains("[patch.crates-io]"));

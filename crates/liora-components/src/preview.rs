@@ -25,8 +25,9 @@ use crate::image::{
 };
 use crate::motion::{FadeDirection, MotionDuration, fade, pop_in};
 use gpui::{
-    AnyElement, App, BoxShadow, Component, Global, IntoElement, KeyBinding, ObjectFit, Pixels,
-    RenderImage, RenderOnce, SharedString, Size, Window, actions, div, prelude::*, px, size,
+    AnyElement, App, BoxShadow, Global, IntoElement, KeyBinding, ObjectFit, Pixels, RenderImage,
+    RenderOnce, SharedString, Size, ViewElement as Component, Window, actions, div, prelude::*, px,
+    size,
 };
 use liora_core::{Config, push_portal};
 use std::{path::PathBuf, sync::Arc, time::Duration};

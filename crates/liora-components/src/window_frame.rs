@@ -21,8 +21,8 @@
 
 use crate::{Space, Text, TitleBar};
 use gpui::{
-    AnyElement, App, Component, IntoElement, ParentElement, RenderOnce, SharedString, Styled,
-    Window, WindowDecorations, WindowOptions, div, point, px,
+    AnyElement, App, IntoElement, ParentElement, RenderOnce, SharedString, Styled,
+    ViewElement as Component, Window, WindowDecorations, WindowOptions, div, point, px,
 };
 use liora_core::Config;
 

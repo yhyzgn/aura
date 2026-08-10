@@ -885,9 +885,9 @@ fn polar_degrees(center: Point<Pixels>, radius: f32, degrees: f32) -> Point<Pixe
 }
 
 impl IntoElement for Progress {
-    type Element = gpui::Component<Self>;
+    type Element = gpui::ViewElement<Self>;
     fn into_element(self) -> Self::Element {
-        gpui::Component::new(self)
+        gpui::ViewElement::new(self)
     }
 }
 

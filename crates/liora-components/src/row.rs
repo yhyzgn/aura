@@ -20,7 +20,7 @@
 //! crate.
 
 use crate::Col;
-use gpui::{App, Component, IntoElement, RenderOnce, Window, prelude::*};
+use gpui::{App, IntoElement, RenderOnce, ViewElement as Component, Window, prelude::*};
 
 /// Data model used by row rendering.
 pub struct Row {

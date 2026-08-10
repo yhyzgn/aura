@@ -21,7 +21,8 @@
 
 use crate::gpui_compat::element_id;
 use gpui::{
-    App, Component, Hsla, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px,
+    App, Hsla, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window, div,
+    prelude::*, px,
 };
 use liora_core::Config;
 use liora_icons::Icon;

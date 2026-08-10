@@ -9,7 +9,7 @@
 //! gpui = { version = "0.2.2", default-features = false }
 //!
 //! [patch.crates-io]
-//! gpui = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718" }
+//! gpui = { git = "https://github.com/zed-industries/zed", rev = "492acd6c815cbe8c7366d54e6092341340afa6c7" }
 //! ```
 //!
 //! The published crates use Cargo's registry fallback for `gpui = 0.2.2`, then
@@ -21,7 +21,7 @@
 //! The facade keeps each domain available under a stable module name while also
 //! re-exporting the most common application setup entry points.
 
-pub use liora_components::{init_liora, init_liora_with_mode, init_liora_with_options};
+pub use liora_components::{Accessible, init_liora, init_liora_with_mode, init_liora_with_options};
 pub use liora_core::{
     EmbeddedFont, FontConfig, FontDiscoveryReport, FontLoadFailure, FontLoadMode, FontLoadOptions,
     FontLoadReport, FontWeight, LocaleId, Locales, LocalesConfig, LocalesLoadError, LocalesMap,
@@ -54,7 +54,9 @@ pub use liora_updater as updater;
 
 /// Prelude for applications that prefer a compact import surface.
 pub mod prelude {
-    pub use liora_components::{init_liora, init_liora_with_mode, init_liora_with_options};
+    pub use liora_components::{
+        Accessible, init_liora, init_liora_with_mode, init_liora_with_options,
+    };
     pub use liora_core::{
         FontConfig, FontWeight, LocaleId, Locales, LocalesConfig, LocalesMap, LocalizedText,
         Options, TextDirection, ThemeMode, Translator, apply_locale, current_locale,

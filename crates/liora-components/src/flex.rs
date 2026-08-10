@@ -20,8 +20,8 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Component, ElementId, Hsla, IntoElement, Pixels, RenderOnce, ScrollHandle,
-    Window, div, prelude::*, px,
+    AnyElement, App, ElementId, Hsla, IntoElement, Pixels, RenderOnce, ScrollHandle,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

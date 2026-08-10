@@ -21,8 +21,8 @@
 
 use crate::Text;
 use gpui::{
-    App, Component, Hsla, IntoElement, Pixels, RenderOnce, SharedString, Window, div, prelude::*,
-    px,
+    App, Hsla, IntoElement, Pixels, RenderOnce, SharedString, ViewElement as Component, Window,
+    div, prelude::*, px,
 };
 use liora_core::Config;
 

@@ -20,8 +20,8 @@
 //! crate.
 
 use gpui::{
-    AnyElement, App, Bounds, Component, ElementId, GlobalElementId, InspectorElementId,
-    IntoElement, LayoutId, Pixels, RenderOnce, SharedString, Window, div, prelude::*, px,
+    AnyElement, App, Bounds, ElementId, GlobalElementId, InspectorElementId, IntoElement, LayoutId,
+    Pixels, RenderOnce, SharedString, ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{
     Placement, TooltipData, clear_tooltip, set_exclusive_active_tooltip, stable_unique_id,

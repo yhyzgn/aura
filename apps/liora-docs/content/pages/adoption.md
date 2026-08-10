@@ -49,10 +49,10 @@ For a downstream project, use Liora from crates.io and patch Cargo's `gpui` regi
 [dependencies]
 liora = "0.2"
 gpui = { version = "0.2.2", default-features = false }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718", default-features = false }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "492acd6c815cbe8c7366d54e6092341340afa6c7", default-features = false }
 
 [patch.crates-io]
-gpui = { git = "https://github.com/zed-industries/zed", rev = "2c346f60a76fe3f0367ef924927f50a6efdf5718" }
+gpui = { git = "https://github.com/zed-industries/zed", rev = "492acd6c815cbe8c7366d54e6092341340afa6c7" }
 ```
 
 For local monorepo development, use `liora = { path = "../liora/crates/liora" }` while keeping `gpui` patched to the official Zed repository revision across the app and Liora. The published SDK crates rely on Cargo's supported registry fallback plus downstream `[patch.crates-io]` override so consumers can choose the matching official GPUI rev without using community forks.

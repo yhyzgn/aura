@@ -34,8 +34,8 @@ use crate::chart_shape::{
 };
 use crate::{Empty, Space, Text};
 use gpui::{
-    App, Bounds, Component, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels,
-    RenderOnce, SharedString, Styled, Window, canvas, div, point, px, size,
+    App, Bounds, ElementId, InteractiveElement, IntoElement, ParentElement, Pixels, RenderOnce,
+    SharedString, Styled, ViewElement as Component, Window, canvas, div, point, px, size,
 };
 use liora_core::{Config, Placement, TooltipData, clear_tooltip, set_active_tooltip, unique_id};
 use std::cell::Cell;

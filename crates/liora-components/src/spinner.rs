@@ -21,7 +21,8 @@
 
 use crate::motion::spin_icon;
 use gpui::{
-    App, Component, Hsla, IntoElement, ParentElement, Pixels, RenderOnce, Styled, Window, div, px,
+    App, Hsla, IntoElement, ParentElement, Pixels, RenderOnce, Styled, ViewElement as Component,
+    Window, div, px,
 };
 use liora_core::{Config, stable_unique_id};
 use liora_icons::Icon;

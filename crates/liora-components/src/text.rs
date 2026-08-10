@@ -24,9 +24,9 @@ use crate::{
     SelectableTextWrap, Space, Title,
 };
 use gpui::{
-    AnyElement, App, Component, ElementId, FontStyle, FontWeight, Hsla, IntoElement, ParentElement,
-    Pixels, RenderOnce, SharedString, StrikethroughStyle, Styled, TextRun, TextStyle,
-    UnderlineStyle, Window, div, prelude::*, px,
+    AnyElement, App, ElementId, FontStyle, FontWeight, Hsla, IntoElement, ParentElement, Pixels,
+    RenderOnce, SharedString, StrikethroughStyle, Styled, TextRun, TextStyle, UnderlineStyle,
+    ViewElement as Component, Window, div, prelude::*, px,
 };
 use liora_core::{
     Config, LocalizedText, code_font_family, code_font_weight, ui_font_family, ui_font_weight,

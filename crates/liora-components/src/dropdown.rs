@@ -22,7 +22,8 @@
 use crate::Popover;
 use crate::gpui_compat::element_id;
 use gpui::{
-    AnyElement, App, Component, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px,
+    AnyElement, App, IntoElement, RenderOnce, SharedString, ViewElement as Component, Window, div,
+    prelude::*, px,
 };
 use liora_core::{Config, Placement, clear_popover, stable_unique_id};
 use std::sync::Arc;

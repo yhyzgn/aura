@@ -21,11 +21,11 @@
 
 use crate::gpui_compat::element_id;
 use gpui::{
-    App, AvailableSpace, Bounds, ClipboardItem, Component, Context, Element, ElementId, Entity,
-    FocusHandle, Focusable, GlobalElementId, InspectorElementId, IntoElement, KeyDownEvent,
-    LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point,
-    Render, RenderOnce, SharedString, Style, TextRun, TextStyle, WhiteSpace, Window, actions, div,
-    fill, point, prelude::*, px, relative, size,
+    App, AvailableSpace, Bounds, ClipboardItem, Context, Element, ElementId, Entity, FocusHandle,
+    Focusable, GlobalElementId, InspectorElementId, IntoElement, KeyDownEvent, LayoutId,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, Render,
+    RenderOnce, SharedString, Style, TextRun, TextStyle, ViewElement as Component, WhiteSpace,
+    Window, actions, div, fill, point, prelude::*, px, relative, size,
 };
 use liora_core::Config;
 use std::{

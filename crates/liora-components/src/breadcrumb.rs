@@ -167,8 +167,8 @@ impl RenderOnce for Breadcrumb {
 }
 
 impl IntoElement for Breadcrumb {
-    type Element = gpui::Component<Self>;
+    type Element = gpui::ViewElement<Self>;
     fn into_element(self) -> Self::Element {
-        gpui::Component::new(self)
+        gpui::ViewElement::new(self)
     }
 }
