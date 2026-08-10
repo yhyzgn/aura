@@ -88,6 +88,7 @@ pub struct NavigationMenuGroup {
 pub struct NavigationMenu {
     id: SharedString,
     mode: NavigationMenuMode,
+    scrollable: bool,
     is_collapsed: bool,
     active_index: Option<SharedString>,
     opened_submenus: HashSet<SharedString>,
@@ -102,6 +103,7 @@ impl NavigationMenu {
         Self {
             id: liora_core::unique_id("menu"),
             mode: NavigationMenuMode::Vertical,
+            scrollable: false,
             is_collapsed: false,
             active_index: None,
             opened_submenus: HashSet::new(),
@@ -120,6 +122,16 @@ impl NavigationMenu {
     /// Selects the rendering mode used by this component.
     pub fn mode(mut self, mode: NavigationMenuMode) -> Self {
         self.mode = mode;
+        self
+    }
+
+    /// Enables an internal vertical scroll region.
+    ///
+    /// Leave this disabled when the menu is hosted by [`crate::Sidebar`], which
+    /// already owns the scrollable content region. This avoids nested scroll
+    /// hitboxes and keeps pointer/scroll dispatch on a single owner.
+    pub fn scrollable(mut self) -> Self {
+        self.scrollable = true;
         self
     }
 
@@ -924,8 +936,7 @@ impl Render for NavigationMenu {
                 .column()
                 .w_full()
                 .min_h_0()
-                .flex_1()
-                .overflow_y_scroll()
+                .when(self.scrollable, |s| s.flex_1().overflow_y_scroll())
                 .bg(theme.neutral.card)
                 .children(
                     self.items
@@ -998,7 +1009,7 @@ mod tests {
         assert!(source.contains(".id(self.id.clone())"));
         assert!(
             source.matches(".flex_none()").count() >= 4,
-            "vertical menu rows must opt out of flex shrinking so fixed-height items create real overflow for NavigationMenu-owned scrolling"
+            "vertical menu rows must opt out of flex shrinking so fixed-height items retain their row height"
         );
         assert!(
             !source.contains(
@@ -1006,6 +1017,26 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn vertical_menu_scroll_is_opt_in_for_parent_owned_scroll_regions() {
+        let source = include_str!("navigation_menu.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+
+        assert!(source.contains("scrollable: bool"));
+        assert!(source.contains("scrollable: false"));
+        assert!(source.contains(".when(self.scrollable"));
+        assert!(source.contains(".overflow_y_scroll()"));
+    }
+
+    #[test]
+    fn navigation_menu_scroll_builder_is_explicit() {
+        assert!(!NavigationMenu::new().scrollable);
+        assert!(NavigationMenu::new().scrollable().scrollable);
+    }
+
     #[test]
     fn submenu_popover_triggers_do_not_block_popover_click_handler() {
         let source = include_str!("navigation_menu.rs")

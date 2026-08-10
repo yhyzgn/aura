@@ -936,6 +936,11 @@ let menu = NavigationMenu::new()
     });
 ```
 
+Vertical `NavigationMenu` does not create a scroll region by default. When it
+is hosted in `Sidebar`, enable `.scrollable()` on the `Sidebar` so the sidebar
+owns the single scroll container. For a standalone bounded menu, opt in with
+`NavigationMenu::new().scrollable()` instead of nesting both scroll regions.
+
 ### App shell with `Shell`, `TitleBar`, and `Sidebar`
 
 Use `Shell` for most application windows. It is the high-level Liora app-frame component that owns the common regions: optional custom `TitleBar`, header, left sidebar, right sidebar / inspector, scrollable main content, footer, and overlays. Use `TitleBar` and `Sidebar` directly when you are building a lower-level composition, but prefer `Shell` when you want a single fluent entry point for highly customizable app layout.

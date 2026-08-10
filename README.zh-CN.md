@@ -935,6 +935,11 @@ let menu = NavigationMenu::new()
     });
 ```
 
+垂直模式的 `NavigationMenu` 默认不会创建内部滚动区。将它放进
+`Sidebar` 时，应只在 `Sidebar` 上启用 `.scrollable()`，由侧栏统一拥有一个
+滚动容器。只有在独立且有边界的菜单场景，才使用
+`NavigationMenu::new().scrollable()`；不要把两层滚动容器嵌套起来。
+
 ### `Shell`、`TitleBar` 和 `Sidebar` 应用框架
 
 大多数应用窗口优先使用 `Shell`。它是 Liora 高层应用框架控件，统一管理可选自定义 `TitleBar`、header、左侧 sidebar、右侧 sidebar / inspector、可滚动 main、footer 和 overlay 等区域。只有在需要更底层组合时，才直接使用 `TitleBar`、`Sidebar`、`Container` 和 `AppWindowFrame`。
