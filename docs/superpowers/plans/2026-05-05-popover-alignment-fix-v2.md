@@ -133,4 +133,4 @@ Run: `cargo run -p liora-gallery`
 Check if Left/Right also center correctly vertically.
 
 - [ ] **Step 3: Update documentation/memory**
-Update `.memory/sessions.md` with the new alignment strategy.
+Update `.context/tasks/000_legacy_session_history.md` with the new alignment strategy.

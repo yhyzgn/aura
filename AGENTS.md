@@ -1,3 +1,69 @@
+# Liora Repository Agent Contract
+
+## Reading order
+1. `AGENTS.md`
+2. `.context/README.md`
+3. Plan file: `.context/plans/001_ctx_takeover.md`
+4. Task file: `.context/tasks/001_ctx_takeover.md`
+5. `.context/system/overview.md`
+6. `.context/system/conventions.md`
+7. `.context/system/risks.md`
+
+## Project summary
+Liora is a Rust edition 2024 Cargo workspace for a pure Rust + GPUI native enterprise UI component library with canonical apps `apps/liora-gallery` and `apps/liora-docs`.
+
+## Business boundaries
+- SDK crates stay app-agnostic.
+- Gallery/Docs are the only canonical dogfooding surfaces.
+- Keep implementations pure Rust + native GPUI.
+
+## Invariants
+- Prefer evidence over memory.
+- Verify before claiming completion.
+- Keep diffs small, reviewable, and reversible.
+- Do not use warning-suppression bypasses.
+- Do not introduce WebView/Tauri/HTML/CSS/DOM runtime paths.
+
+## Technical red lines
+- Use official `zed-industries/zed` GPUI sources and the pinned revision in the workspace.
+- Do not couple SDK crates to Gallery/Docs business logic.
+- Keep public entry/core files thin.
+
+## Lifecycle and context rules
+- `.context/` is the only repository-owned long-lived context system.
+- Legacy `prompt.md`, `.memory/`, and `.prompt/` live only under `.context/archive/legacy-sources/` after migration.
+- Update `system/` for stable facts, `plans/` for phase direction, and `tasks/` for bounded work.
+
+## External infrastructure
+- Release/signing/notarization/public release actions remain protected-environment work.
+- Follow the repository release workflows and checklist before any tag release.
+
+## Safe validation commands
+- `python scripts/context_bootstrap.py validate --root .`
+- `cargo check --workspace --all-targets`
+- `cargo test --workspace`
+- `cargo run --release -p xtask -- package validate`
+- `cargo run --release -p xtask -- package release-readiness`
+- `git diff --check -- . ':(exclude).omx'`
+
+## Risk and rollback
+- If CTX migration or validation fails, restore from `.context/archive/legacy-sources/` or `git restore .`.
+- If a change affects release or packaging behavior, rerun the packaging gates before merging.
+
+## Review, commit, and push policy
+- Verify first, then commit.
+- Keep commits focused.
+- Push only after validation unless the user explicitly asks otherwise.
+
+## Legacy migration coverage
+- `prompt.md`, `.memory/`, and `.prompt/` have been migrated into `.context/` and archived.
+- Future work must use `.context/` pointers only.
+
+## Current context pointers
+- Current plan: `.context/plans/001_ctx_takeover.md`
+- Current task: `.context/tasks/001_ctx_takeover.md`
+
+
 <claude-mem-context>
 # Memory Context
 
@@ -14,13 +80,3 @@ How it works: `/how-it-works`
 
 This message disappears once the first observation lands.
 </claude-mem-context>
-
-# Project Development Rules
-
-## Official-source-first rule
-
-- For all GPUI, Zed, platform integration, packaging, release, CI, updater, and third-party API work, verify behavior against official upstream sources before implementing.
-- Preferred evidence order: official repository source code and examples, official documentation, official release notes, then local verified behavior.
-- Do not guess APIs from memory, do not invent unsupported patterns, and do not use unofficial forks such as `open-gpui`. Liora must stay on official `zed-industries/zed` GPUI unless the owner explicitly approves a temporary local patch for app-only validation.
-- When upstream behavior is unclear, inspect the exact dependency revision in `Cargo.lock` or the official upstream commit and document the rationale in code comments, tests, or commit notes as appropriate.
-- Keep implementations pure Rust + native GPUI. Do not introduce WebView/Tauri/HTML/CSS/DOM runtime paths.

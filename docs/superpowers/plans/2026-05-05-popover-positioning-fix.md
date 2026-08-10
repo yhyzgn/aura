@@ -222,4 +222,4 @@ Run: `cargo run -p liora-gallery`
 Ensure Dropdown still works and closes correctly.
 
 - [ ] **Step 3: Update documentation/memory if needed**
-Update `.memory/sessions.md` with the new findings.
+Update `.context/tasks/000_legacy_session_history.md` with the new findings.

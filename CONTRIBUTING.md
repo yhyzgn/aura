@@ -55,6 +55,6 @@ Docs pages should keep each effect next to its corresponding code block: effect 
 
 ## Release changes
 
-Packaging and release changes must use `xtask package` and `liora-packager`. Update `docs/packaging-installer-technical-plan.md`, `apps/liora-docs/content/pages/packaging_workflow.md`, and `.prompt/P12-packaging.md` when release policy changes.
+Packaging and release changes must use `xtask package` and `liora-packager`. Update `docs/packaging-installer-technical-plan.md`, `apps/liora-docs/content/pages/packaging_workflow.md`, and `.context/system/overview.md and .context/system/risks.md` when release policy changes.
 
 Formal release signing/notarization credentials must be provided only through protected release environments and secrets documented in `packaging/signing-policy.md`.

@@ -12467,7 +12467,10 @@ mod tests {
         let checklist = include_str!("../../../docs/release-candidate-checklist.md");
         let readme = include_str!("../../../README.md");
         let changelog = include_str!("../../../CHANGELOG.md");
-        let prompt = include_str!("../../../prompt.md");
+        let agents = include_str!("../../../AGENTS.md");
+        let context_readme = include_str!("../../../.context/README.md");
+        let plan = include_str!("../../../.context/plans/001_ctx_takeover.md");
+        let task = include_str!("../../../.context/tasks/001_ctx_takeover.md");
         let cargo = include_str!("../../../Cargo.toml");
         let package_workflow = include_str!("../../../.github/workflows/package.yml");
         let sdk_workflow = include_str!("../../../.github/workflows/release-sdk.yml");
@@ -12542,7 +12545,10 @@ mod tests {
             assert!(!logo.contains(wrong_name));
         }
         assert!(changelog.contains("P21 release-candidate readiness"));
-        assert!(prompt.contains(".prompt/P21-release-candidate-readiness.md"));
+        assert!(agents.contains(".context/plans/001_ctx_takeover.md"));
+        assert!(context_readme.contains("Canonical reading order"));
+        assert!(plan.contains("CTX Takeover"));
+        assert!(task.contains("CTX Takeover Execution"));
         assert!(!cargo.contains("examples/minimal-app"));
         assert!(!cargo.contains("examples/dashboard-app"));
         assert!(!cargo.contains("[patch.crates-io]"));

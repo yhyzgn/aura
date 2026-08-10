@@ -1,0 +1,17 @@
+{
+  "created_at": "2026-08-10T14:32:03",
+  "moves": [
+    {
+      "source": "prompt.md",
+      "destination": ".context/archive/legacy-sources/prompt.md"
+    },
+    {
+      "source": ".memory",
+      "destination": ".context/archive/legacy-sources/.memory"
+    },
+    {
+      "source": ".prompt",
+      "destination": ".context/archive/legacy-sources/.prompt"
+    }
+  ]
+}

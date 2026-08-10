@@ -37,7 +37,7 @@ The GUI smoke commands are expected to exit with status `124` under `timeout` af
 Before a tag release, verify these files agree:
 
 - `Cargo.toml` and every workspace package manifest include repository-owned metadata. SDK crates (`liora`, `liora-theme`, `liora-core`, `liora-icons`, `liora-icons-lucide`, `liora-icons-antd`, `liora-icons-ionic`, `liora-icons-tabler`, `liora-icons-carbon`, `liora-icons-material`, `liora-components`, `liora-tray`, `liora-packager`, `liora-updater`) use `license-file = "../../LICENSE.md"` and `publish = true`; apps and `xtask` keep `license = "LicenseRef-Liora"` and `publish = false`.
-- `README.md`, `CHANGELOG.md`, `prompt.md`, `.prompt/P21-release-candidate-readiness.md`, and `.memory/state.md` all describe the same RC boundary.
+- `README.md`, `CHANGELOG.md`, `AGENTS.md`, `.context/README.md`, `.context/plans/001_ctx_takeover.md`, and `.context/tasks/001_ctx_takeover.md` all describe the same RC boundary.
 - `docs/packaging-installer-technical-plan.md` and `apps/liora-docs/content/pages/packaging_workflow.md` keep packaging as a pure native installer pipeline.
 - `.github/workflows/ci.yml` remains validation-only and must not publish installers or mutate GitHub Releases.
 - `.github/workflows/package.yml` owns native app preview/release artifacts: cross-platform raw binaries for Docs/Gallery, Gallery installer packages, grouped changelog generation, and `v*` GitHub Release publication.
@@ -54,4 +54,4 @@ These items are intentionally outside local developer machines and ordinary CI d
 
 ## Completion definition
 
-The RC gate is complete when the repository contains this checklist, the phase prompt and memory entries are updated, package metadata is explicit, regression tests lock the RC boundaries, the local RC gates pass, and the resulting commit is pushed to `main`.
+The RC gate is complete when the repository contains this checklist, AGENTS.md and `.context/` entries are updated, package metadata is explicit, regression tests lock the RC boundaries, the local RC gates pass, and the resulting commit is pushed to `main`.
