@@ -132,7 +132,7 @@ jobs:
           liora = { path = "$PWD/crates/liora", default-features = true }
 
           [patch.crates-io]
-          gpui = { git = "https://github.com/zed-industries/zed", rev = "$zed_gpui_rev" }
+          gpui = { git = "https://github.com/zed-industries/zed", rev = "$zed_gpui_rev", version = "=0.2.2" }
           EOF
           mkdir -p "$tmp/src"
           cat > "$tmp/src/main.rs" <<'EOF'
