@@ -3383,7 +3383,25 @@ impl LiveDemoContent {
 }
 
 impl Render for LiveDemoContent {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        let is_icon_catalog = matches!(
+            self.component.as_ref(),
+            "IconCatalogLucide"
+                | "IconCatalogAntd"
+                | "IconCatalogIonic"
+                | "IconCatalogTabler"
+                | "IconCatalogCarbon"
+                | "IconCatalogMaterial"
+        );
+        if is_icon_catalog {
+            if let Some(list) = self.virtualized_lists.first().cloned() {
+                // The catalog owns its scrolling viewport. Keep it at the current
+                // window height so it fills the docs content area and follows resizes.
+                let height = window.viewport_size().height;
+                list.update(_cx, |list, _cx| list.set_height(Some(height)));
+            }
+        }
+
         match self.component.as_ref() {
             "Button" => Space::new()
                 .vertical()
@@ -7346,7 +7364,6 @@ fn docs_icon_library_catalog(
         let end = (start + chunk_size).min(entries.len());
         icon_catalog_grid(&entries[start..end]).into_any_element()
     });
-    list.set_height(Some(px(620.0)));
     list.set_item_spacing(px(12.0));
     list.set_overdraw(px(160.0));
     list
@@ -12291,6 +12308,10 @@ mod tests {
         assert!(ICON_MATERIAL_DOC.contains("IconCatalogMaterial"));
 
         let source = include_str!("markdown.rs");
+        let production = source
+            .rsplit_once("#[cfg(test)]\nmod tests")
+            .map(|(production, _)| production)
+            .expect("production source should precede tests");
         let icon_item_source = &source[source.find("fn icon_catalog_item").unwrap()
             ..source.find("fn icon_catalog_entries").unwrap()];
         assert!(source.contains("docs_icon_library_catalog"));
@@ -12302,6 +12323,8 @@ mod tests {
         assert!(source.contains(".fit_columns(ICON_CATALOG_GRID_COLUMNS as u16)"));
         assert!(source.contains("GridItem::new"));
         assert!(source.contains("list.set_overdraw(px(160.0));"));
+        assert!(production.contains("window.viewport_size().height"));
+        assert!(!production.contains("list.set_height(Some(px(620.0)))"));
         assert!(source.contains(
             "let chunk_size = ICON_CATALOG_GRID_COLUMNS * ICON_CATALOG_GRID_ROWS_PER_VIRTUAL_ITEM;"
         ));
