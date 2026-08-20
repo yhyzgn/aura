@@ -36,7 +36,7 @@ Current upgrade branch target: official `zed-industries/zed` revision `492acd6c8
 
 ## Current release state
 
-Latest local release commit/tag before CTX takeover: `v0.2.9` pushed from `main` on 2026-07-06 session history. Re-verify with `git tag --sort=-v:refname | head` before future releases.
+Release candidate prepared on `main` as `0.3.0`; after the protected tag push, verify `git tag --sort=-v:refname | head` and the GitHub Actions package/release workflow before treating it as published.
 
 <!-- ctx-managed-legacy-migration:start -->
 

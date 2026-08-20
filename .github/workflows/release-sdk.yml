@@ -20,7 +20,6 @@ permissions:
 
 env:
   CRATES_IO_CRATES: "liora-theme liora-icons-optimizer liora-core liora-icons liora-icons-lucide liora-icons-antd liora-icons-ionic liora-icons-tabler liora-icons-carbon liora-icons-material liora-components liora-tray liora-packager liora-updater liora"
-  ZED_GPUI_REV: "2c346f60a76fe3f0367ef924927f50a6efdf5718"
 
 jobs:
   package-sdk-crates:
@@ -107,6 +106,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          zed_gpui_rev="$(python - <<'PY'
+          from pathlib import Path
+          import tomllib
+
+          root = tomllib.loads(Path("Cargo.toml").read_text())
+          print(root["workspace"]["dependencies"]["gpui"]["rev"])
+          PY
+          )"
+          if [[ -z "${zed_gpui_rev}" ]]; then
+            echo "Could not resolve the pinned official Zed GPUI revision from Cargo.toml." >&2
+            exit 1
+          fi
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           cat > "$tmp/Cargo.toml" <<EOF
@@ -121,7 +132,7 @@ jobs:
           liora = { path = "$PWD/crates/liora", default-features = true }
 
           [patch.crates-io]
-          gpui = { git = "https://github.com/zed-industries/zed", rev = "$ZED_GPUI_REV" }
+          gpui = { git = "https://github.com/zed-industries/zed", rev = "$zed_gpui_rev" }
           EOF
           mkdir -p "$tmp/src"
           cat > "$tmp/src/main.rs" <<'EOF'

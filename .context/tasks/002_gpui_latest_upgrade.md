@@ -1,6 +1,6 @@
 # 002 GPUI Latest Upgrade Execution
 
-- 状态: 进行中
+- 状态: 已完成
 - 计划: `.context/plans/002_gpui_latest_upgrade.md`
 - 规模: 大
 - 依赖: 官方 `zed-industries/zed` GPUI main
@@ -18,7 +18,7 @@
 
 ## 3. 非目标
 
-- 不发布 release/tag。
+- 不在 GPUI 适配任务中实现额外的发布流水线功能；版本发布由独立 release 步骤执行。
 - 不进行无关组件重构。
 - 不引入非官方 GPUI fork。
 
@@ -58,4 +58,6 @@ git diff --check -- . ':(exclude).omx'
 
 ## 8. 完成记录
 
-待完成。
+- GPUI 和 `gpui_platform` 已统一指向官方 Zed revision `492acd6c815cbe8c7366d54e6092341340afa6c7`。
+- 已通过 workspace 编译、workspace 测试、Docs snippet 编译、workspace 文档生成、CTX 校验和 release readiness 检查。
+- SDK 仍保持 app-agnostic，Gallery/Docs 业务未进入 SDK crate。

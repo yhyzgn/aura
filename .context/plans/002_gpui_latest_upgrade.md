@@ -1,6 +1,6 @@
 # 002 GPUI Latest Upgrade
 
-- 状态: 进行中
+- 状态: 已完成
 - 负责人: Codex
 - 当前任务: `.context/tasks/002_gpui_latest_upgrade.md`
 
@@ -39,3 +39,9 @@
 - 分支包含 GPUI 最新 revision 升级。
 - 新能力清单逐项有代码接入、文档说明、测试/验证或明确不可接入原因。
 - 验证结果写入任务完成记录。
+
+## 完成记录
+
+- 官方 Zed GPUI revision: `492acd6c815cbe8c7366d54e6092341340afa6c7`。
+- 已完成 `Render`/`ViewElement`、同步动画、accessibility、图片绘制签名和滚动相关适配。
+- 当前分支已合并回 `main`，并准备发布 `v0.3.0`。

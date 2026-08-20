@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-08-20
+
+- Upgraded the workspace to the official Zed GPUI revision `492acd6c815cbe8c7366d54e6092341340afa6c7`, including the new animation, accessibility, and native platform API integrations documented in `docs/gpui-latest-upgrade.md`.
+- Added the reusable `Accessible` API and synchronized icon rotation behavior for native loading indicators.
+- Fixed nested navigation scrolling so Gallery and Docs sidebars keep smooth, bounded scrolling without competing scroll containers.
+- Fixed Docs icon-library catalog pages so their virtualized grids fill the current window viewport and follow window resizing.
+
 ## 0.2.9 - 2026-07-06
 
 - Added Docs navigation search and kept the Gallery navigation search constrained to a single line.
