@@ -197,8 +197,6 @@ impl Render for Switch {
         }
 
         let mut el = gpui::div().p(px(2.0)).child(track);
-        let id = self.id.clone();
-
         if focused && !self.disabled {
             el = el
                 .rounded(px((h + 4.0) / 2.0))
@@ -220,12 +218,7 @@ impl Render for Switch {
             el = el.cursor_not_allowed();
         }
 
-        let element = el.on_action(cx.listener(Self::toggle));
-        if let Some(id) = id {
-            gpui::div().id(id).child(element).into_any_element()
-        } else {
-            element.into_any_element()
-        }
+        el.on_action(cx.listener(Self::toggle))
     }
 }
 

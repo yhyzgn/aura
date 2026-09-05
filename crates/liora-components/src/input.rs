@@ -1700,11 +1700,7 @@ impl Render for Input {
             );
         }
 
-        if let Some(id) = self.id.clone() {
-            gpui::div().id(id).child(row).into_any_element()
-        } else {
-            row.into_any_element()
-        }
+        row.into_any_element()
     }
 }
 

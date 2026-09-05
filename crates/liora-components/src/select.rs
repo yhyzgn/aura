@@ -933,7 +933,6 @@ impl Render for Select {
         let close_on_click_outside = self.close_on_click_outside;
 
         let element = el
-            .child(trigger_content)
             .child(
                 gpui::div()
                     .absolute()
@@ -944,6 +943,7 @@ impl Render for Select {
                         select: cx.entity().clone(),
                     }),
             )
+            .child(trigger_content)
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, _, window, cx| {
@@ -958,11 +958,7 @@ impl Render for Select {
             })
             .on_action(cx.listener(Self::close_on_escape_action))
             .into_any_element();
-        if let Some(id) = self.id.clone() {
-            gpui::div().id(id).child(element).into_any_element()
-        } else {
-            element
-        }
+        element
     }
 }
 
